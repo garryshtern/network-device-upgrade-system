@@ -1,0 +1,30 @@
+---
+# Required Ansible Collections for Network Device Upgrade System
+# Exact versions as specified in requirements
+
+collections:
+  # Cisco Collections
+  - name: cisco.nxos
+    version: ">=5.0.0"
+  - name: cisco.ios  
+    version: ">=5.0.0"
+  
+  # Fortinet Collections
+  - name: fortinet.fortios
+    version: ">=2.0.0"
+  
+  # Core Collections
+  - name: ansible.netcommon
+    version: ">=5.0.0"
+  - name: community.general
+    version: ">=6.0.0"
+  
+  # Additional utility collections
+  - name: ansible.posix
+    version: ">=1.5.0"
+  - name: ansible.utils
+    version: ">=2.10.0"
+  
+  # NetBox integration
+  - name: netbox.netbox
+    version: ">=3.13.0"

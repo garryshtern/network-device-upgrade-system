@@ -1,0 +1,46 @@
+---
+# Cisco NX-OS Upgrade Role - Main Tasks
+# Handles ISSU-capable upgrades with comprehensive validation
+
+- name: Initialize NX-OS upgrade variables
+  set_fact:
+    nxos_upgrade_state:
+      device: "{{ inventory_hostname }}"
+      current_version: ""
+      target_version: "{{ target_firmware_version }}"
+      issu_capable: false
+      upgrade_method: "disruptive"
+      boot_variables: []
+      
+- name: Gather NX-OS device facts
+  cisco.nxos.nxos_facts:
+    gather_subset:
+      - hardware
+      - config
+      - interfaces
+  register: nxos_facts
+  
+- name: Set current firmware version
+  set_fact:
+    nxos_upgrade_state: "{{ nxos_upgrade_state | combine({
+      'current_version': nxos_facts.ansible_facts.ansible_net_version
+    }) }}"
+    
+- name: Check ISSU compatibility
+  include_tasks: check-issu-capability.yml
+  
+- name: Display upgrade plan
+  debug:
+    msg: |
+      NX-OS Upgrade Plan for {{ inventory_hostname }}:
+      Current Version: {{ nxos_upgrade_state.current_version }}
+      Target Version: {{ nxos_upgrade_state.target_version }}
+      ISSU Capable: {{ nxos_upgrade_state.issu_capable }}
+      Upgrade Method: {{ nxos_upgrade_state.upgrade_method }}
+      
+- name: Validate upgrade path
+  assert:
+    that:
+      - nxos_upgrade_state.current_version != nxos_upgrade_state.target_version
+      - nxos_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+\\([0-9]+\\)")
+    fail_msg: "Invalid upgrade path or target version format"

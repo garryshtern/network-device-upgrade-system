@@ -1,0 +1,254 @@
+---
+# Main Upgrade Workflow Orchestrator
+# Coordinates the complete two-phase upgrade process with comprehensive validation
+
+- name: Network Device Firmware Upgrade - Main Workflow
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  serial: "{{ upgrade_batch_size | default(10) }}"
+  vars:
+    upgrade_job_id: "{{ ansible_job_id | default(ansible_date_time.epoch) }}"
+    workflow_start_time: "{{ ansible_date_time.iso8601 }}"
+    
+  pre_tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - target_firmware_version is defined
+          - firmware_url is defined
+          - firmware_sha512 is defined
+        fail_msg: "Required variables missing: target_firmware_version, firmware_url, firmware_sha512"
+        
+    - name: Initialize workflow tracking
+      set_fact:
+        workflow_state:
+          job_id: "{{ upgrade_job_id }}"
+          device: "{{ inventory_hostname }}"
+          start_time: "{{ workflow_start_time }}"
+          target_version: "{{ target_firmware_version }}"
+          current_phase: "initialization"
+          phase_1_complete: false
+          phase_2_complete: false
+          rollback_available: false
+          errors: []
+          
+    - name: Log workflow start to InfluxDB
+      uri:
+        url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
+        method: POST
+        headers:
+          Authorization: "Token {{ influxdb_token }}"
+        body: |
+          upgrade_progress,device_id={{ inventory_hostname }},device_type={{ ansible_network_os | default('unknown') }},site_location={{ site_name | default('unknown') }},batch_id={{ upgrade_job_id }},vendor={{ vendor | default('unknown') }},platform={{ ansible_network_os | default('unknown') }} state="workflow_started",progress_percent=0,duration_seconds=0 {{ ansible_date_time.epoch }}000000000
+      when: 
+        - influxdb_url is defined
+        - send_metrics | default(true)
+      ignore_errors: true
+
+  tasks:
+    # PHASE 1: IMAGE LOADING (Business Hours Safe)
+    - name: "PHASE 1: Image Loading Workflow"
+      block:
+        - name: Update workflow state - Phase 1
+          set_fact:
+            workflow_state: "{{ workflow_state | combine({'current_phase': 'phase_1_image_loading'}) }}"
+            
+        - name: Execute Phase 1 - Image Loading
+          include: image-loading.yml
+          vars:
+            phase_name: "Phase 1 - Image Loading"
+            
+        - name: Mark Phase 1 complete
+          set_fact:
+            workflow_state: "{{ workflow_state | combine({'phase_1_complete': true}) }}"
+            
+        - name: Log Phase 1 completion to InfluxDB
+          uri:
+            url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
+            method: POST
+            headers:
+              Authorization: "Token {{ influxdb_token }}"
+            body: |
+              upgrade_progress,device_id={{ inventory_hostname }},device_type={{ ansible_network_os | default('unknown') }},site_location={{ site_name | default('unknown') }},batch_id={{ upgrade_job_id }},vendor={{ vendor | default('unknown') }},platform={{ ansible_network_os | default('unknown') }} state="phase_1_complete",progress_percent=50,duration_seconds={{ ((ansible_date_time.epoch | int) - (workflow_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | int)) }} {{ ansible_date_time.epoch }}000000000
+          when: 
+            - influxdb_url is defined
+            - send_metrics | default(true)
+          ignore_errors: true
+            
+      rescue:
+        - name: Handle Phase 1 failure
+          set_fact:
+            workflow_state: "{{ workflow_state | combine({
+              'errors': workflow_state.errors + ['Phase 1 failed: ' + ansible_failed_result.msg | default('Unknown error')]
+            }) }}"
+            
+        - name: Log Phase 1 failure to InfluxDB
+          uri:
+            url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
+            method: POST
+            headers:
+              Authorization: "Token {{ influxdb_token }}"
+            body: |
+              upgrade_progress,device_id={{ inventory_hostname }},device_type={{ ansible_network_os | default('unknown') }},site_location={{ site_name | default('unknown') }},batch_id={{ upgrade_job_id }},vendor={{ vendor | default('unknown') }},platform={{ ansible_network_os | default('unknown') }} state="phase_1_failed",progress_percent=25,duration_seconds={{ ((ansible_date_time.epoch | int) - (workflow_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | int)) }},error_code=1 {{ ansible_date_time.epoch }}000000000
+          when: 
+            - influxdb_url is defined
+            - send_metrics | default(true)
+          ignore_errors: true
+          
+        - name: Fail workflow on Phase 1 error
+          fail:
+            msg: "Phase 1 (Image Loading) failed for {{ inventory_hostname }}"
+
+    # Wait for maintenance window if Phase 1 completes
+    - name: Wait for maintenance window approval
+      pause:
+        prompt: |
+          
+          ============================================================
+          PHASE 1 COMPLETE - MAINTENANCE WINDOW REQUIRED FOR PHASE 2
+          ============================================================
+          
+          Device: {{ inventory_hostname }}
+          Phase 1 Status: {{ 'COMPLETE' if workflow_state.phase_1_complete else 'FAILED' }}
+          Image Status: Staged and verified
+          Target Version: {{ target_firmware_version }}
+          
+          Phase 2 will perform the actual firmware installation and reboot.
+          This requires a maintenance window as it will disrupt device operation.
+          
+          Press ENTER to proceed with Phase 2 or Ctrl+C to abort...
+          
+      when: 
+        - workflow_state.phase_1_complete
+        - require_maintenance_window_approval | default(true)
+
+    # PHASE 2: IMAGE INSTALLATION (Maintenance Window)
+    - name: "PHASE 2: Image Installation Workflow"
+      block:
+        - name: Update workflow state - Phase 2
+          set_fact:
+            workflow_state: "{{ workflow_state | combine({'current_phase': 'phase_2_image_installation'}) }}"
+            
+        - name: Execute Phase 2 - Image Installation
+          include: image-installation.yml
+          vars:
+            phase_name: "Phase 2 - Image Installation"
+            
+        - name: Mark Phase 2 complete
+          set_fact:
+            workflow_state: "{{ workflow_state | combine({'phase_2_complete': true}) }}"
+            
+        - name: Log Phase 2 completion to InfluxDB
+          uri:
+            url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
+            method: POST
+            headers:
+              Authorization: "Token {{ influxdb_token }}"
+            body: |
+              upgrade_progress,device_id={{ inventory_hostname }},device_type={{ ansible_network_os | default('unknown') }},site_location={{ site_name | default('unknown') }},batch_id={{ upgrade_job_id }},vendor={{ vendor | default('unknown') }},platform={{ ansible_network_os | default('unknown') }} state="phase_2_complete",progress_percent=100,duration_seconds={{ ((ansible_date_time.epoch | int) - (workflow_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | int)) }} {{ ansible_date_time.epoch }}000000000
+          when: 
+            - influxdb_url is defined
+            - send_metrics | default(true)
+          ignore_errors: true
+            
+      rescue:
+        - name: Handle Phase 2 failure
+          set_fact:
+            workflow_state: "{{ workflow_state | combine({
+              'errors': workflow_state.errors + ['Phase 2 failed: ' + ansible_failed_result.msg | default('Unknown error')]
+            }) }}"
+            
+        - name: Log Phase 2 failure to InfluxDB
+          uri:
+            url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
+            method: POST
+            headers:
+              Authorization: "Token {{ influxdb_token }}"
+            body: |
+              upgrade_progress,device_id={{ inventory_hostname }},device_type={{ ansible_network_os | default('unknown') }},site_location={{ site_name | default('unknown') }},batch_id={{ upgrade_job_id }},vendor={{ vendor | default('unknown') }},platform={{ ansible_network_os | default('unknown') }} state="phase_2_failed",progress_percent=75,duration_seconds={{ ((ansible_date_time.epoch | int) - (workflow_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | int)) }},error_code=2 {{ ansible_date_time.epoch }}000000000
+          when: 
+            - influxdb_url is defined
+            - send_metrics | default(true)
+          ignore_errors: true
+            
+        - name: Initiate emergency rollback on Phase 2 failure
+          include: emergency-rollback.yml
+          vars:
+            rollback_reason: "Phase 2 installation failure"
+          when: 
+            - auto_rollback_on_failure | default(true)
+            - workflow_state.rollback_available | default(false)
+            
+        - name: Fail workflow on Phase 2 error
+          fail:
+            msg: "Phase 2 (Image Installation) failed for {{ inventory_hostname }}"
+      when: workflow_state.phase_1_complete
+
+  post_tasks:
+    - name: Update NetBox with final upgrade status
+      uri:
+        url: "{{ netbox_url }}/api/dcim/devices/"
+        method: PATCH
+        headers:
+          Authorization: "Token {{ netbox_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ inventory_hostname }}"
+          custom_fields:
+            firmware_version: "{{ target_firmware_version if workflow_state.phase_2_complete else current_firmware_version | default('unknown') }}"
+            upgrade_status: "{{ 'completed' if workflow_state.phase_2_complete else 'failed' }}"
+            last_upgrade_date: "{{ ansible_date_time.date }}"
+        status_code: [200, 201]
+      when: 
+        - netbox_url is defined
+        - netbox_token is defined
+        - update_netbox | default(true)
+      ignore_errors: true
+      
+    - name: Log final workflow completion to InfluxDB
+      uri:
+        url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
+        method: POST
+        headers:
+          Authorization: "Token {{ influxdb_token }}"
+        body: |
+          upgrade_state_transitions,device_id={{ inventory_hostname }},from_state=running,to_state={{ 'upgraded' if workflow_state.phase_2_complete else 'failed' }},batch_id={{ upgrade_job_id }},operator_id={{ ansible_user_id | default('system') }} transition_duration_ms={{ ((ansible_date_time.epoch | int) - (workflow_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | int)) * 1000 }},automated=true,success={{ workflow_state.phase_2_complete | lower }},retry_count=0 {{ ansible_date_time.epoch }}000000000
+      when: 
+        - influxdb_url is defined
+        - send_metrics | default(true)
+      ignore_errors: true
+      
+    - name: Generate workflow completion report
+      template:
+        src: upgrade_completion_report.j2
+        dest: "/var/log/network-upgrade/reports/upgrade_{{ inventory_hostname }}_{{ ansible_date_time.epoch }}.txt"
+      vars:
+        workflow_duration: "{{ ((ansible_date_time.epoch | int) - (workflow_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | int)) }}"
+      delegate_to: localhost
+      
+    - name: Display workflow summary
+      debug:
+        msg: |
+          
+          ========================================
+          UPGRADE WORKFLOW SUMMARY
+          ========================================
+          Device: {{ inventory_hostname }}
+          Job ID: {{ workflow_state.job_id }}
+          Start Time: {{ workflow_state.start_time }}
+          Duration: {{ ((ansible_date_time.epoch | int) - (workflow_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | int)) }} seconds
+          Target Version: {{ workflow_state.target_version }}
+          
+          Phase 1 (Image Loading): {{ 'COMPLETE' if workflow_state.phase_1_complete else 'FAILED' }}
+          Phase 2 (Installation): {{ 'COMPLETE' if workflow_state.phase_2_complete else 'FAILED' if workflow_state.phase_1_complete else 'SKIPPED' }}
+          
+          Overall Status: {{ 'SUCCESS' if workflow_state.phase_2_complete else 'FAILED' }}
+          
+          {% if workflow_state.errors %}
+          Errors:
+          {% for error in workflow_state.errors %}
+          - {{ error }}
+          {% endfor %}
+          {% endif %}
+          ========================================
