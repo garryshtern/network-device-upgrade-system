@@ -4,119 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="87629bf4-cfe3-439f-a321-a3033a721acb" name="Changes" comment="Initial revision">
-      <change afterPath="$PROJECT_DIR$/ansible-content/inventory/group_vars/all.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/inventory/group_vars/cisco_iosxe.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/inventory/group_vars/cisco_nxos.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/inventory/group_vars/fortios.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/inventory/group_vars/metamako_mos.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/inventory/group_vars/opengear.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/inventory/netbox_dynamic.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/playbooks/compliance-audit.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/playbooks/config-backup.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/playbooks/emergency-rollback.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/playbooks/health-check.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/playbooks/image-installation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/playbooks/network-validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/playbooks/storage-cleanup.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/bundle-mode.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/check-install-mode.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/image-installation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/image-loading.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/install-mode.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/main.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/defaults/main.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/meta/main.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/check-issu-capability.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/epld-upgrade.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-installation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-loading.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/issu-procedures.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/reboot.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/common/meta/main.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/common/tasks/connectivity-check.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/common/tasks/metrics-export.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/ha-cluster-upgrade.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/ha-coordination.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/image-installation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/image-loading.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/license-validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/main.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/standalone-upgrade.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/metamako-mos-upgrade/tasks/check-metawatch-metamux.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/metamako-mos-upgrade/tasks/image-installation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/metamako-mos-upgrade/tasks/image-loading.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/metamako-mos-upgrade/tasks/latency-validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/metamako-mos-upgrade/tasks/main.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/metamako-mos-upgrade/tasks/validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/meta/main.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/arp-validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/interface-validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/multicast-validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/protocol-convergence.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/routing-validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/console-server-check.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-loading.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/main.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/serial-management.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/smart-pdu-check.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/validation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/web-automation.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/templates/compliance-report.j2" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/templates/validation-summary.j2" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ansible-content/validation-templates/health-summary.j2" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/awx-config/inventories.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/awx-config/job-templates.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/awx-config/workflow-templates.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/install/backup-scripts.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/install/configure-redis.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/install/configure-telegraf.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/install/create-services.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/install/install-netbox.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/install/setup-ssl.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/integration/netbox/dynamic-inventory.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/integration/netbox/sync-scripts/device-import.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/integration/netbox/sync-scripts/firmware-sync.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/integration/scripts/health-check.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/integration/scripts/metrics-export.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/ansible-tests/syntax-tests.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/integration-tests/workflow-tests.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/run-all-tests.sh" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/validation-tests/network-validation-tests.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/vendor-tests/cisco-nxos-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/network-device-upgrade-system.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/network-device-upgrade-system.iml" afterDir="false" />
+    <list default="true" id="87629bf4-cfe3-439f-a321-a3033a721acb" name="Changes" comment="Added implementations">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CLAUDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/CLAUDE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/PROJECT_REQUIREMENTS.md" beforeDir="false" afterPath="$PROJECT_DIR$/PROJECT_REQUIREMENTS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/IMPLEMENTATION_STATUS.md" beforeDir="false" afterPath="$PROJECT_DIR$/IMPLEMENTATION_STATUS.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/collections/requirements.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/collections/requirements.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/image-loading.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/image-loading.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/main-upgrade-workflow.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/main-upgrade-workflow.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/main.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/main.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/bgp-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/bgp-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/defaults/main.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/defaults/main.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/installation-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/installation-guide.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/cli.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/cli/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/integrations/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/integrations/influxdb.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/integrations/netbox.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/models/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/models/device.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/models/upgrade.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/utils/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/utils/config.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/validators/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/validators/firmware.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/netupgrade/validators/network.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/uv.lock" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/install/backup-scripts.sh" beforeDir="false" afterPath="$PROJECT_DIR$/install/backup-scripts.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/install/create-services.sh" beforeDir="false" afterPath="$PROJECT_DIR$/install/create-services.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -126,6 +25,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;garryshtern&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/garryshtern/network-device-upgrade-system.git&quot;,
+    &quot;accountId&quot;: &quot;93f47172-7581-4553-95cf-6b4def9963d5&quot;
+  }
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
@@ -134,25 +45,25 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "/Users/shtern/Git/network-device-upgrade-system",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/shtern/Git/network-device-upgrade-system&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -177,8 +88,18 @@
       <workItem from="1756729475164" duration="5280000" />
       <workItem from="1756860744816" duration="268000" />
       <workItem from="1756861021857" duration="170000" />
-      <workItem from="1756895195040" duration="4806000" />
+      <workItem from="1756895195040" duration="5130000" />
+      <workItem from="1756951775422" duration="3293000" />
     </task>
+    <task id="LOCAL-00001" summary="Added implementations">
+      <option name="closed" value="true" />
+      <created>1756951598307</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1756951598307</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -194,5 +115,9 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Added implementations" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added implementations" />
   </component>
 </project>
