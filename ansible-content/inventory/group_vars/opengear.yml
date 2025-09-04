@@ -2,9 +2,11 @@
 # Opengear Specific Configuration
 # For console servers and smart PDUs
 
-# Connection settings  
-ansible_connection: local  # We use API calls, not SSH
+# Connection settings (auto-detected based on device architecture)
+ansible_connection: ssh  # Default to SSH, overridden for modern API devices
 ansible_host: "{{ inventory_hostname }}"
+ansible_user: "{{ opengear_username }}"
+ansible_ssh_pass: "{{ opengear_password }}"
 opengear_username: "{{ vault_opengear_username | default('admin') }}"
 opengear_password: "{{ vault_opengear_password }}"
 opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
@@ -23,13 +25,26 @@ validate_certs: false
 # Device type detection
 auto_detect_device_type: true
 supported_models:
-  console_servers:
-    - "OM2200"
-    - "CM8100" 
-    - "CM7100"
-    - "IM7200"
-  smart_pdus:
-    - "CM8100"  # Can be both console server and PDU
+  legacy_cli:
+    console_servers:
+      - "OM2200"    # Legacy console server - CLI only
+      - "CM7100"    # Legacy console server - CLI only
+  modern_api:
+    console_servers:
+      - "CM8100"    # Modern console server - Full API + CLI
+      - "IM7200"    # Modern infrastructure manager - Full API + CLI  
+    smart_pdus:
+      - "CM8100"    # Can be both console server and PDU
+
+# Architecture detection settings
+architecture_detection:
+  api_test_timeout: 10
+  api_test_endpoints:
+    - "/api/v1/system/info"
+    - "/api/v2/system/info"
+  legacy_cli_commands:
+    - "show system info"
+    - "show system status"
 
 # Firmware management
 firmware_upload_timeout: 3600
@@ -86,8 +101,24 @@ environmental_sensors:
 # Upgrade process settings
 pre_upgrade_checks: true
 post_upgrade_validation: true
-reboot_wait_time: 120  # Opengear devices boot relatively quickly
-service_initialization_wait: 60
+
+# Architecture-specific boot times
+boot_times:
+  modern_api: 
+    reboot_wait_time: 120
+    service_initialization_wait: 60
+  legacy_cli:
+    reboot_wait_time: 180  # Legacy devices boot slower
+    service_initialization_wait: 120
+
+# Legacy CLI specific settings
+legacy_cli:
+  upgrade_timeout: 1800  # 30 minutes for legacy upgrades
+  progress_check_interval: 30
+  max_retries: 60
+  cli_timeout: 30
+  session_message_delay: 60  # Time to warn users before upgrade
+  cleanup_firmware_after_install: true
 
 # Web interface settings
 web_interface_timeout: 30

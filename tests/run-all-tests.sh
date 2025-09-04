@@ -184,8 +184,11 @@ main() {
     declare -A test_suites=(
         ["Syntax_Tests"]="../tests/ansible-tests/syntax-tests.yml"
         ["Workflow_Integration"]="../tests/integration-tests/workflow-tests.yml"
+        ["Multi_Platform_Integration"]="../tests/integration-tests/multi-platform-integration-tests.yml"
         ["Network_Validation"]="../tests/validation-tests/network-validation-tests.yml"
+        ["Comprehensive_Validation"]="../tests/validation-tests/comprehensive-validation-tests.yml"
         ["Cisco_NXOS_Tests"]="../tests/vendor-tests/cisco-nxos-tests.yml"
+        ["Opengear_Multi_Arch_Tests"]="../tests/vendor-tests/opengear-tests.yml"
     )
     
     # Run each test suite

@@ -1,0 +1,206 @@
+---
+# Legacy Opengear Image Installation (CLI-based)  
+# For OM2200 and CM7100 models without REST API
+
+- name: Pre-installation validation (Legacy)
+  block:
+    - name: Verify firmware staging marker exists
+      raw: |
+        test -f /usr/local/upgrade/.{{ target_firmware_filename }}.staged
+      register: staging_marker_check
+      delegate_to: "{{ inventory_hostname }}"
+      failed_when: staging_marker_check.rc != 0
+      
+    - name: Display staging information
+      raw: |
+        cat /usr/local/upgrade/.{{ target_firmware_filename }}.staged
+      register: staging_info
+      delegate_to: "{{ inventory_hostname }}"
+      
+    - name: Log pre-installation status
+      debug:
+        msg: |
+          Pre-Installation Status:
+          {{ staging_info.stdout }}
+          Ready for installation: YES
+
+- name: Legacy console server preparation
+  block:
+    - name: Check for active console sessions
+      raw: |
+        echo "show serial" | /bin/cli | grep -c "Connected"
+      register: active_sessions_check
+      delegate_to: "{{ inventory_hostname }}"
+      failed_when: false
+      
+    - name: Warn about active sessions
+      debug:
+        msg: |
+          WARNING: {{ active_sessions_check.stdout | default('0') }} active console sessions detected.
+          These sessions will be disconnected during the upgrade.
+      when: active_sessions_check.stdout | default('0') | int > 0
+      
+    - name: Send maintenance message to active sessions
+      raw: |
+        echo "send message all 'MAINTENANCE: Firmware upgrade starting in 60 seconds. Console sessions will be disconnected.'" | /bin/cli
+      delegate_to: "{{ inventory_hostname }}"
+      when: active_sessions_check.stdout | default('0') | int > 0
+      
+    - name: Wait for users to disconnect gracefully
+      pause:
+        seconds: 60
+        prompt: "Waiting 60 seconds for users to disconnect console sessions"
+      when: active_sessions_check.stdout | default('0') | int > 0
+
+- name: Execute firmware installation (Legacy CLI)
+  block:
+    - name: Final pre-installation checksum verification
+      raw: |
+        sha512sum /usr/local/upgrade/{{ target_firmware_filename }} | awk '{print $1}'
+      register: final_checksum_check
+      delegate_to: "{{ inventory_hostname }}"
+      
+    - name: Validate final checksum
+      assert:
+        that:
+          - final_checksum_check.stdout | trim == device_calculated_checksum
+        fail_msg: "Final checksum validation failed before installation"
+      
+    - name: Initiate firmware installation via CLI
+      raw: |
+        echo "upgrade firmware /usr/local/upgrade/{{ target_firmware_filename }}" | /bin/cli
+      register: upgrade_initiation
+      delegate_to: "{{ inventory_hostname }}"
+      async: 1800  # 30 minutes timeout
+      poll: 0
+      
+    - name: Monitor installation progress
+      raw: |
+        echo "show upgrade status" | /bin/cli
+      register: upgrade_status
+      delegate_to: "{{ inventory_hostname }}"
+      until: upgrade_status.stdout is search("Installation complete|Upgrade complete|Ready to reboot")
+      retries: 60
+      delay: 30
+      failed_when: upgrade_status.stdout is search("Installation failed|Upgrade failed|Error")
+
+- name: Handle legacy device reboot
+  block:
+    - name: Initiate system reboot
+      raw: |
+        echo "reboot" | /bin/cli
+      delegate_to: "{{ inventory_hostname }}"
+      async: 60
+      poll: 0
+      
+    - name: Wait for device to become unreachable (reboot confirmation)
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        state: stopped
+        timeout: 300
+        delay: 30
+      delegate_to: localhost
+      
+    - name: Wait for device to come back online
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        state: started
+        timeout: 1200  # Legacy devices may take longer to boot
+        delay: 60
+      delegate_to: localhost
+      
+    - name: Wait for system services to initialize
+      pause:
+        seconds: 120  # Legacy devices need more time
+        prompt: "Waiting for legacy device services to fully initialize"
+
+- name: Post-installation validation (Legacy)
+  block:
+    - name: Re-establish SSH connection
+      wait_for_connection:
+        timeout: 300
+        delay: 30
+      delegate_to: "{{ inventory_hostname }}"
+      
+    - name: Verify new firmware version is active
+      raw: |
+        echo "show system info" | /bin/cli | grep "Version:"
+      register: post_install_version
+      delegate_to: "{{ inventory_hostname }}"
+      retries: 5
+      delay: 30
+      
+    - name: Parse new version information
+      set_fact:
+        installed_version: "{{ post_install_version.stdout | regex_search('Version:\\s+([\\d\\.]+)', '\\1') | first }}"
+      
+    - name: Confirm target firmware version is active
+      assert:
+        that:
+          - opengear_upgrade_state.target_version in installed_version
+        fail_msg: "Installation completed but target version not active: {{ installed_version }}"
+        
+    - name: Verify system functionality
+      block:
+        - name: Check system status
+          raw: |
+            echo "show system status" | /bin/cli
+          register: system_status_check
+          delegate_to: "{{ inventory_hostname }}"
+          
+        - name: Validate system is operational
+          assert:
+            that:
+              - not (system_status_check.stdout is search("Error|Failed|Critical"))
+            fail_msg: "System status check indicates problems after installation"
+
+- name: Post-installation device-specific validation (Legacy)
+  block:
+    - name: Validate console server functionality
+      block:
+        - name: Check serial port status
+          raw: |
+            echo "show serial" | /bin/cli
+          register: post_serial_status
+          delegate_to: "{{ inventory_hostname }}"
+          
+        - name: Parse serial port count
+          set_fact:
+            active_serial_ports: "{{ post_serial_status.stdout | regex_findall('Serial\\d+') | length }}"
+            
+        - name: Validate serial port functionality
+          assert:
+            that:
+              - active_serial_ports | int > 0
+            fail_msg: "Serial ports not operational after upgrade"
+
+- name: Cleanup post-installation
+  block:
+    - name: Remove staging marker
+      raw: |
+        rm -f /usr/local/upgrade/.{{ target_firmware_filename }}.staged
+      delegate_to: "{{ inventory_hostname }}"
+      failed_when: false
+      
+    - name: Optional firmware file cleanup
+      raw: |
+        rm -f /usr/local/upgrade/{{ target_firmware_filename }}
+      delegate_to: "{{ inventory_hostname }}"
+      when: cleanup_firmware_after_install | default(true)
+      failed_when: false
+
+- name: Log legacy installation completion
+  debug:
+    msg: |
+      Legacy Opengear Installation Completed Successfully:
+      - Device Model: {{ opengear_upgrade_state.device_model }}
+      - Architecture: Legacy CLI
+      - Previous Version: {{ opengear_upgrade_state.current_version }}
+      - New Version: {{ installed_version }}
+      - Installation Method: CLI Command
+      - Serial Ports: {{ active_serial_ports | default('Unknown') }} operational
+      - System Status: Operational
+      - Upgrade Duration: {{ ansible_date_time.iso8601 }}
+      - Status: SUCCESS

@@ -276,11 +276,20 @@ curl -H "Authorization: Token $NETBOX_TOKEN" \
 3. Add NetBox inventory source with API token
 4. Configure sync to pull devices from existing NetBox
 
+**Device-Specific Configuration Notes**:
+- **Opengear Devices**: System automatically detects architecture (Legacy CLI vs Modern API)
+  - Legacy Models (OM2200, CM7100): SSH access required for CLI automation
+  - Modern Models (CM8100, IM7200): API tokens required for REST automation
+  - Mixed environments supported with automatic routing
+
 ### 4. Firmware Repository Setup
 
 ```bash
 # Create firmware storage directory
 mkdir -p $HOME/network-upgrade/firmware/{cisco,arista,fortinet,metamako,opengear}
+
+# Create Opengear subdirectories for different models
+mkdir -p $HOME/network-upgrade/firmware/opengear/{legacy,modern}
 
 # Set proper permissions
 chmod 755 $HOME/network-upgrade/firmware
@@ -317,6 +326,15 @@ su - network-upgrade -c "podman logs awx"
 # Run device health check job template in AWX
 # Navigate to Templates → Device Health Check → Launch
 # Select a few test devices and run validation
+```
+
+**Opengear Architecture Detection Testing**:
+```bash
+# Test automatic architecture detection for Opengear devices
+# Run health check against mixed Opengear environment:
+# - Legacy devices (OM2200, CM7100) should show "CLI" method
+# - Modern devices (CM8100, IM7200) should show "API" method
+# Check job output logs for architecture detection results
 ```
 
 ### 4. Verify Monitoring Integration
@@ -491,7 +509,7 @@ After successful installation:
 5. **Process Documentation**: Document your specific upgrade procedures
 6. **Staff Training**: Train operations staff on the web interfaces and procedures
 
-For detailed operational procedures, see the [User Guide](user-guide.md) and [Administrator Guide](administrator-guide.md).
+For operational procedures, see the [Upgrade Workflow Guide](UPGRADE_WORKFLOW_GUIDE.md) and [Platform Implementation Guide](PLATFORM_IMPLEMENTATION_GUIDE.md).
 
 ## Support and Maintenance
 
@@ -508,7 +526,7 @@ For detailed operational procedures, see the [User Guide](user-guide.md) and [Ad
 - **Quarterly**: Full system backup verification
 
 ### Getting Help
-- Review the [Troubleshooting Guide](troubleshooting.md)
 - Check system health with `/usr/local/bin/network-upgrade-health`
 - Examine log files in `$HOME/.local/share/network-upgrade/logs/`
-- Consult vendor-specific guides in [docs/vendor-guides/](vendor-guides/)
+- Review the [Platform Implementation Guide](PLATFORM_IMPLEMENTATION_GUIDE.md) for platform-specific issues
+- See the [Documentation Hub](README.md) for comprehensive documentation

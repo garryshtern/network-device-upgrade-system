@@ -14,22 +14,77 @@
       power_ports: []
       web_session: ""
       
-- name: Detect Opengear device type and model
-  uri:
-    url: "https://{{ ansible_host }}/api/v1/system/info"
-    method: GET
-    headers:
-      Authorization: "Token {{ opengear_api_token }}"
-    validate_certs: false
-  register: device_info
-  
-- name: Parse device information
-  set_fact:
-    opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
-      'device_model': device_info.json.model,
-      'current_version': device_info.json.version,
-      'device_type': 'smart_pdu' if 'CM8100' in device_info.json.model else 'console_server'
-    }) }}"
+- name: Detect device architecture (API vs CLI)
+  block:
+    - name: Test for modern API support
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/info"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_api_token | default('') }}"
+        validate_certs: false
+        timeout: 10
+      register: api_test
+      failed_when: false
+      
+    - name: Set architecture type based on API availability
+      set_fact:
+        opengear_architecture: "{{ 'modern' if api_test.status == 200 else 'legacy' }}"
+        api_available: "{{ api_test.status == 200 }}"
+  rescue:
+    - name: API unavailable, assume legacy architecture
+      set_fact:
+        opengear_architecture: "legacy"
+        api_available: false
+
+- name: Detect device information (Modern API)
+  block:
+    - name: Get device info via API
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/info"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: device_info_api
+      
+    - name: Parse API device information
+      set_fact:
+        opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
+          'device_model': device_info_api.json.model,
+          'current_version': device_info_api.json.version,
+          'device_type': 'smart_pdu' if 'CM8100' in device_info_api.json.model else 'console_server',
+          'architecture': 'modern',
+          'upgrade_method': 'api'
+        }) }}"
+  when: api_available
+
+- name: Detect device information (Legacy CLI)
+  block:
+    - name: Get device info via SSH
+      raw: |
+        echo "show system info" | /bin/cli
+      register: device_info_cli
+      when: not api_available
+      delegate_to: "{{ inventory_hostname }}"
+      
+    - name: Parse CLI device information
+      set_fact:
+        device_model_parsed: "{{ device_info_cli.stdout | regex_search('Model:\\s+(\\S+)', '\\1') | first }}"
+        current_version_parsed: "{{ device_info_cli.stdout | regex_search('Version:\\s+([\\d\\.]+)', '\\1') | first }}"
+      when: not api_available
+      
+    - name: Set legacy device information
+      set_fact:
+        opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
+          'device_model': device_model_parsed,
+          'current_version': current_version_parsed,
+          'device_type': 'console_server',  # Legacy devices are console servers
+          'architecture': 'legacy',
+          'upgrade_method': 'cli'
+        }) }}"
+      when: not api_available
+  when: not api_available
     
 - name: Check device-specific capabilities
   include_tasks: "{{ 'smart-pdu-check.yml' if opengear_upgrade_state.device_type == 'smart_pdu' else 'console-server-check.yml' }}"
@@ -39,9 +94,12 @@
     msg: |
       Opengear Upgrade Plan for {{ inventory_hostname }}:
       Model: {{ opengear_upgrade_state.device_model }}
+      Architecture: {{ opengear_upgrade_state.architecture | title }}
       Type: {{ opengear_upgrade_state.device_type }}
       Current Version: {{ opengear_upgrade_state.current_version }}
       Target Version: {{ opengear_upgrade_state.target_version }}
+      Upgrade Method: {{ opengear_upgrade_state.upgrade_method | upper }}
+      API Available: {{ api_available | string | title }}
       Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}
       Power Outlets: {{ opengear_upgrade_state.power_ports | length }}
       
@@ -52,8 +110,18 @@
       - opengear_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+")
     fail_msg: "Invalid upgrade path or target version format"
     
-- name: Execute image loading
+- name: Execute image loading (Modern API)
   include_tasks: image-loading.yml
+  when: opengear_upgrade_state.upgrade_method == 'api'
   
-- name: Execute image installation
+- name: Execute image loading (Legacy CLI)
+  include_tasks: image-loading-legacy.yml
+  when: opengear_upgrade_state.upgrade_method == 'cli'
+  
+- name: Execute image installation (Modern API)
   include_tasks: image-installation.yml
+  when: opengear_upgrade_state.upgrade_method == 'api'
+  
+- name: Execute image installation (Legacy CLI)
+  include_tasks: image-installation-legacy.yml
+  when: opengear_upgrade_state.upgrade_method == 'cli'

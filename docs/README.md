@@ -37,118 +37,30 @@ docs/
    - Platform readiness status and implementation details
    - Architecture patterns for each platform
 
-## 🏗️ System Architecture Visual Guide
+## 🏗️ System Architecture
 
-### High-Level System Overview
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                    NETWORK UPGRADE MANAGEMENT ECOSYSTEM                             │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+The system follows a container-based architecture with AWX orchestrating Ansible automation across network devices.
 
-    👤 Users                🖥️ Management Layer          📡 Network Layer
- ┌───────────┐           ┌─────────────────────┐       ┌─────────────────┐
- │ Network   │          │       AWX           │       │ Network Devices │
- │ Engineers │─────────▶│   Job Control       │──────▶│                 │
- │           │          │   Web Interface     │       │ • Cisco NX-OS   │
- │ • Execute │          │                     │       │ • Cisco IOS-XE  │
- │ • Monitor │          │ ┌─────────────────┐ │       │ • FortiOS       │
- │ • Approve │          │ │   Ansible       │ │       │ • Metamako MOS  │
- └───────────┘          │ │   Engine        │ │       │ • Opengear      │
-                        │ │                 │ │       │                 │
- ┌───────────┐          │ │ • Playbooks     │ │       │ 1000+ Devices   │
- │ System    │          │ │ • Vendor Roles  │ │       └─────────────────┘
- │ Admins    │─────────▶│ │ • Validation    │ │               │
- │           │          │ │ • Workflows     │ │               │
- │ • Install │          │ └─────────────────┘ │               ▼
- │ • Config  │          │                     │       ┌─────────────────┐
- │ • Maintain│          │ ┌─────────────────┐ │       │ Metrics Export  │
- └───────────┘          │ │   NetBox        │ │       │                 │
-                        │ │   Inventory     │ │◀──────│ • State Data    │
-                        │ └─────────────────┘ │       │ • Performance   │
-                        └─────────────────────┘       │ • Validation    │
-                                 │                    └─────────────────┘
-                                 ▼                            │
-                        ┌─────────────────────┐              ▼
-                        │  Monitoring Stack   │    ┌─────────────────┐
-                        │                     │    │   InfluxDB v2   │
-                        │ • Grafana Dash      │◀───│   Time Series   │
-                        │ • Alerting          │    │                 │
-                        │ • Reporting         │    │ • Metrics       │
-                        └─────────────────────┘    │ • Trends        │
-                                                   │ • Analytics     │
-                                                   └─────────────────┘
-```
+**For detailed architecture diagrams and flow charts, see**:
+- **[UPGRADE_WORKFLOW_GUIDE.md](UPGRADE_WORKFLOW_GUIDE.md)** - Comprehensive workflow diagrams
+- **[PLATFORM_IMPLEMENTATION_GUIDE.md](PLATFORM_IMPLEMENTATION_GUIDE.md)** - Platform-specific architecture
 
 ### Documentation Navigation by Role
 
-#### 🔧 **System Administrator Path**
-```
-START HERE ─────▶ Installation Guide ─────▶ System Configuration
-     │                     │                        │
-     │                     ▼                        ▼
-     │            System Requirements       SSL & Security Setup
-     │                     │                        │
-     │                     ▼                        ▼
-     └────────▶    Container Deployment     Monitoring Integration
-                           │                        │
-                           ▼                        ▼
-                  AWX & NetBox Setup      Production Validation
-```
-
-#### 👨‍💻 **Network Engineer Path**  
-```
-START HERE ─────▶ Workflow Guide ─────▶ Platform Details
-     │                   │                      │
-     │                   ▼                      ▼
-     │          Phase-Separated Process   Vendor Specifics
-     │                   │                      │
-     │                   ▼                      ▼
-     └────────▶   Validation Framework   Troubleshooting Guide
-                         │                      │
-                         ▼                      ▼
-                Operational Procedures   Best Practices
-```
-
-#### 🛠️ **Developer/Integrator Path**
-```
-START HERE ─────▶ Platform Guide ─────▶ Implementation Status
-     │                  │                        │
-     │                  ▼                        ▼
-     │         Architecture Patterns      Gap Analysis
-     │                  │                        │
-     │                  ▼                        ▼
-     └────────▶  Completion Roadmap      Code Reviews
-                        │                        │
-                        ▼                        ▼
-                API Integration          Testing Framework
-```
+| Role | Start Here | Key Documents | Focus Areas |
+|------|------------|---------------|-------------|
+| **🔧 System Administrator** | [Installation Guide](installation-guide.md) | System setup, SSL, monitoring | Deployment & maintenance |
+| **👨‍💻 Network Engineer** | [Workflow Guide](UPGRADE_WORKFLOW_GUIDE.md) | Process flows, validation | Operations & troubleshooting |
+| **🛠️ Developer/Integrator** | [Platform Guide](PLATFORM_IMPLEMENTATION_GUIDE.md) | Architecture, status | Integration & customization |
 
 ## 📊 Current Implementation Status
 
-### Platform Readiness Dashboard
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                        IMPLEMENTATION COMPLETION STATUS                             │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+**Project Status**: 95% Complete - Production Ready  
+**All platforms**: Enterprise deployment ready
 
-Overall Project: 95% Complete █████████░
-
-Platform Breakdown:
-├── ✅ Cisco NX-OS    100% ██████████ PRODUCTION READY
-├── ✅ Cisco IOS-XE    95% █████████░ PRODUCTION READY  
-├── ✅ FortiOS         90% █████████░ PRODUCTION READY
-├── ✅ Metamako MOS    85% ████████░░ PRODUCTION READY
-└── ✅ Opengear        80% ████████░░ PRODUCTION READY
-
-Core Systems:
-├── ✅ Architecture    100% ██████████ COMPLETE
-├── ✅ Workflow        100% ██████████ COMPLETE  
-├── ✅ Security        95%  █████████░ COMPLETE
-├── ✅ Monitoring      90%  █████████░ COMPLETE
-└── 🟡 Documentation   85%  ████████░░ IN PROGRESS
-
-Critical Path: Complete IOS-XE validation (IPSec, BFD, Optics)
-```
+For detailed platform status and completion analysis, see:
+- **[README.md](../README.md)** - Current project status and overview
+- **[IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)** - Comprehensive platform analysis
 
 ## 🎯 Documentation Quick Reference
 
