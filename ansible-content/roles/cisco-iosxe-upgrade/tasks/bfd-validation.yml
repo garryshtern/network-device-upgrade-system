@@ -1,0 +1,188 @@
+---
+# BFD (Bidirectional Forwarding Detection) Validation Tasks for Cisco IOS-XE Devices
+# Validates BFD session status and neighbor connectivity post-upgrade
+
+- name: BFD session validation
+  block:
+    - name: Check BFD summary
+      cisco.ios.ios_command:
+        commands:
+          - show bfd summary
+      register: bfd_summary
+      failed_when: false
+      
+    - name: Check BFD neighbors
+      cisco.ios.ios_command:
+        commands:
+          - show bfd neighbors
+      register: bfd_neighbors
+      failed_when: false
+      
+    - name: Check BFD neighbor details
+      cisco.ios.ios_command:
+        commands:
+          - show bfd neighbors details
+      register: bfd_neighbor_details
+      failed_when: false
+
+- name: Parse BFD session information
+  block:
+    - name: Extract BFD session count from summary
+      set_fact:
+        bfd_total_sessions: >-
+          {{ bfd_summary.stdout[0] | 
+             regex_search('Number of BFD Sessions:\s+(\d+)', '\\1') | first | int }}
+      when: 
+        - bfd_summary.rc == 0
+        - '"Number of BFD Sessions:" in bfd_summary.stdout[0]'
+        
+    - name: Parse BFD neighbor sessions
+      set_fact:
+        bfd_active_neighbors: >-
+          {{ bfd_neighbors.stdout[0] | 
+             regex_findall('(\d+\.\d+\.\d+\.\d+)\s+(\S+)\s+(\S+)\s+(Up|Down)', multiline=True) }}
+      when: bfd_neighbors.rc == 0
+      
+    - name: Count UP BFD sessions
+      set_fact:
+        bfd_up_sessions: >-
+          {{ bfd_active_neighbors | selectattr('3', 'equalto', 'Up') | list | length }}
+      when: bfd_active_neighbors is defined
+      
+    - name: Count DOWN BFD sessions
+      set_fact:
+        bfd_down_sessions: >-
+          {{ bfd_active_neighbors | selectattr('3', 'equalto', 'Down') | list | length }}
+      when: bfd_active_neighbors is defined
+
+- name: Extract detailed BFD metrics
+  block:
+    - name: Parse BFD session details
+      set_fact:
+        bfd_session_details: >-
+          {{ bfd_neighbor_details.stdout[0] | 
+             regex_findall('NeighAddr:\s+(\S+).*?State:\s+(\S+).*?MinTxInt:\s+(\d+).*?MinRxInt:\s+(\d+)', 
+             multiline=True, dotall=True) }}
+      when: 
+        - bfd_neighbor_details.rc == 0
+        - bfd_neighbor_details.stdout[0] | length > 0
+
+- name: Validate BFD session health
+  block:
+    - name: Verify BFD sessions exist
+      assert:
+        that:
+          - bfd_total_sessions is defined
+          - bfd_total_sessions | int > 0
+        fail_msg: "No BFD sessions configured on device"
+        success_msg: "{{ bfd_total_sessions }} BFD session(s) configured"
+      when: bfd_total_sessions is defined
+      
+    - name: Verify BFD neighbors are reachable
+      assert:
+        that:
+          - bfd_active_neighbors is defined
+          - bfd_active_neighbors | length > 0
+        fail_msg: "No BFD neighbors found"
+        success_msg: "{{ bfd_active_neighbors | length }} BFD neighbor(s) found"
+      when: bfd_active_neighbors is defined
+      
+    - name: Verify majority of BFD sessions are UP
+      assert:
+        that:
+          - bfd_up_sessions | int > 0
+          - (bfd_up_sessions | int) >= ((bfd_active_neighbors | length) * 0.8)
+        fail_msg: |
+          BFD session health check failed:
+          - UP sessions: {{ bfd_up_sessions }}
+          - DOWN sessions: {{ bfd_down_sessions }}
+          - Total neighbors: {{ bfd_active_neighbors | length }}
+          At least 80% of BFD sessions should be UP
+        success_msg: "BFD sessions healthy: {{ bfd_up_sessions }}/{{ bfd_active_neighbors | length }} UP"
+      when: 
+        - bfd_up_sessions is defined
+        - bfd_down_sessions is defined
+        - bfd_active_neighbors is defined
+
+- name: Check specific BFD neighbor connectivity
+  block:
+    - name: Test BFD neighbor reachability
+      cisco.ios.ios_command:
+        commands:
+          - ping {{ item[0] }} repeat 3
+      register: bfd_ping_results
+      loop: "{{ bfd_active_neighbors }}"
+      when: 
+        - bfd_active_neighbors is defined
+        - bfd_active_neighbors | length > 0
+        - item[3] == 'Up'
+      failed_when: false
+      
+    - name: Verify BFD neighbor ping success
+      assert:
+        that:
+          - "'Success rate is 100 percent' in item.stdout[0] or 'Success rate is 66 percent' in item.stdout[0]"
+        fail_msg: "BFD neighbor {{ bfd_active_neighbors[item.item_index][0] }} ping failed"
+        success_msg: "BFD neighbor {{ bfd_active_neighbors[item.item_index][0] }} ping successful"
+      loop: "{{ bfd_ping_results.results }}"
+      when: 
+        - bfd_ping_results is defined
+        - item.rc == 0
+      loop_control:
+        index_var: item_index
+
+- name: BFD validation summary
+  debug:
+    msg: |
+      BFD Validation Summary:
+      ======================
+      Total BFD Sessions: {{ bfd_total_sessions if bfd_total_sessions is defined else 'N/A' }}
+      Active Neighbors: {{ bfd_active_neighbors | length if bfd_active_neighbors is defined else 'N/A' }}
+      Sessions UP: {{ bfd_up_sessions if bfd_up_sessions is defined else 'N/A' }}
+      Sessions DOWN: {{ bfd_down_sessions if bfd_down_sessions is defined else 'N/A' }}
+      
+      {% if bfd_active_neighbors is defined %}
+      BFD Neighbor Status:
+      {% for neighbor in bfd_active_neighbors %}
+      - {{ neighbor[0] }} ({{ neighbor[1] }}) - {{ neighbor[3] }}
+      {% endfor %}
+      {% endif %}
+      
+      Health Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions | int > 0) else 'CHECK' }}
+      
+- name: Store BFD validation baseline
+  copy:
+    content: |
+      # BFD Validation Baseline - {{ ansible_date_time.iso8601 }}
+      # Generated during firmware upgrade validation
+      
+      Total_BFD_Sessions: {{ bfd_total_sessions if bfd_total_sessions is defined else 0 }}
+      Active_Neighbors: {{ bfd_active_neighbors | length if bfd_active_neighbors is defined else 0 }}
+      Sessions_UP: {{ bfd_up_sessions if bfd_up_sessions is defined else 0 }}
+      Sessions_DOWN: {{ bfd_down_sessions if bfd_down_sessions is defined else 0 }}
+      
+      {% if bfd_active_neighbors is defined %}
+      Neighbor_Details:
+      {% for neighbor in bfd_active_neighbors %}
+        - IP: {{ neighbor[0] }}
+          Interface: {{ neighbor[1] }}
+          Local_Discriminator: {{ neighbor[2] }}
+          State: {{ neighbor[3] }}
+      {% endfor %}
+      {% endif %}
+      
+      {% if bfd_session_details is defined %}
+      Session_Metrics:
+      {% for session in bfd_session_details %}
+        - Neighbor: {{ session[0] }}
+          State: {{ session[1] }}
+          Min_Tx_Interval: {{ session[2] }}ms
+          Min_Rx_Interval: {{ session[3] }}ms
+      {% endfor %}
+      {% endif %}
+      
+      Validation_Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions | int > 0) else 'CHECK' }}
+      Timestamp: {{ ansible_date_time.iso8601 }}
+    dest: "/tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_date_time.epoch }}.txt"
+    mode: '0644'
+  delegate_to: localhost

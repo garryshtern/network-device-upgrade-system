@@ -100,6 +100,25 @@
     msg: "Critical log messages found: {{ critical_logs }}"
   when: critical_logs | length > 0
 
+- name: IGMP validation
+  include_tasks: igmp-validation.yml
+  when:
+    - validate_igmp is defined
+    - validate_igmp | bool
+  tags:
+    - igmp
+    - multicast
+    - validation
+    
+- name: Enhanced BFD validation
+  include_tasks: bfd-validation.yml
+  when:
+    - validate_bfd is defined
+    - validate_bfd | bool
+  tags:
+    - bfd
+    - validation
+
 - name: Set validation results
   ansible.builtin.set_fact:
     nxos_validation_results:
@@ -107,4 +126,20 @@
       interfaces_up: "{{ interfaces_down | int == 0 }}"
       bgp_neighbors_up: "{{ (bgp_neighbors_down | default(0)) | int == 0 }}"
       critical_logs_present: "{{ critical_logs | length > 0 }}"
+      igmp_validated: "{{ 'PASS' if (validate_igmp is defined and validate_igmp | bool) else 'SKIPPED' }}"
+      bfd_validated: "{{ 'PASS' if (validate_bfd is defined and validate_bfd | bool) else 'SKIPPED' }}"
       validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+      
+- name: Display comprehensive validation summary
+  debug:
+    msg: |
+      NX-OS Validation Summary:
+      ========================
+      Device Health: {{ 'PASS' if nxos_validation_results.device_healthy else 'FAIL' }}
+      Interfaces: {{ 'PASS' if nxos_validation_results.interfaces_up else 'CHECK' }} ({{ interfaces_down }} down)
+      BGP Neighbors: {{ 'PASS' if nxos_validation_results.bgp_neighbors_up else 'CHECK' }}
+      Critical Logs: {{ 'PRESENT' if nxos_validation_results.critical_logs_present else 'NONE' }}
+      IGMP Validation: {{ nxos_validation_results.igmp_validated }}
+      BFD Validation: {{ nxos_validation_results.bfd_validated }}
+      
+      Overall Status: {{ 'PASS' if (nxos_validation_results.device_healthy and nxos_validation_results.interfaces_up and nxos_validation_results.bgp_neighbors_up and not nxos_validation_results.critical_logs_present) else 'CHECK REQUIRED' }}

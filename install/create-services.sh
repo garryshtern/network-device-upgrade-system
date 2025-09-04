@@ -26,10 +26,7 @@ error_exit() {
     exit 1
 }
 
-# Check if running as root
-if [[ $EUID -ne 0 ]]; then
-    error_exit "This script must be run as root"
-fi
+# No need to run as root - using user systemd services
 
 # Check if base system is installed
 if [[ ! -f "/etc/network-upgrade/config.yml" ]]; then
@@ -122,9 +119,9 @@ start_services() {
     
     # Start core services first
     for service in "${CORE_SERVICES[@]}"; do
-        if systemctl is-enabled "$service" &>/dev/null; then
+        if systemctl --user --user is-enabled "$service" &>/dev/null; then
             echo -n "Starting $service... "
-            if systemctl start "$service"; then
+            if systemctl --user --user start "$service"; then
                 echo -e "${GREEN}✓${NC}"
             else
                 echo -e "${RED}✗${NC}"
@@ -138,9 +135,9 @@ start_services() {
     
     # Start application services
     for service in "${APPLICATION_SERVICES[@]}"; do
-        if systemctl is-enabled "$service" &>/dev/null; then
+        if systemctl --user is-enabled "$service" &>/dev/null; then
             echo -n "Starting $service... "
-            if systemctl start "$service"; then
+            if systemctl --user start "$service"; then
                 echo -e "${GREEN}✓${NC}"
             else
                 echo -e "${RED}✗${NC}"
@@ -151,9 +148,9 @@ start_services() {
     
     # Start monitoring services
     for service in "${MONITORING_SERVICES[@]}"; do
-        if systemctl is-enabled "$service" &>/dev/null; then
+        if systemctl --user is-enabled "$service" &>/dev/null; then
             echo -n "Starting $service... "
-            if systemctl start "$service"; then
+            if systemctl --user start "$service"; then
                 echo -e "${GREEN}✓${NC}"
             else
                 echo -e "${RED}✗${NC}"
@@ -163,9 +160,9 @@ start_services() {
     
     # Start timers
     for timer in "${TIMER_SERVICES[@]}"; do
-        if systemctl list-unit-files "$timer" &>/dev/null; then
+        if systemctl --user list-unit-files "$timer" &>/dev/null; then
             echo -n "Starting $timer... "
-            if systemctl start "$timer"; then
+            if systemctl --user start "$timer"; then
                 echo -e "${GREEN}✓${NC}"
             else
                 echo -e "${RED}✗${NC}"
@@ -181,26 +178,26 @@ stop_services() {
     
     # Stop timers first
     for timer in "${TIMER_SERVICES[@]}"; do
-        if systemctl is-active "$timer" &>/dev/null; then
+        if systemctl --user is-active "$timer" &>/dev/null; then
             echo -n "Stopping $timer... "
-            systemctl stop "$timer" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
+            systemctl --user stop "$timer" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
         fi
     done
     
     # Stop monitoring services
     for service in "${MONITORING_SERVICES[@]}"; do
-        if systemctl is-active "$service" &>/dev/null; then
+        if systemctl --user is-active "$service" &>/dev/null; then
             echo -n "Stopping $service... "
-            systemctl stop "$service" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
+            systemctl --user stop "$service" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
         fi
     done
     
     # Stop application services in reverse order
     for ((i=${#APPLICATION_SERVICES[@]}-1; i>=0; i--)); do
         service="${APPLICATION_SERVICES[i]}"
-        if systemctl is-active "$service" &>/dev/null; then
+        if systemctl --user is-active "$service" &>/dev/null; then
             echo -n "Stopping $service... "
-            systemctl stop "$service" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
+            systemctl --user stop "$service" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
             sleep 2
         fi
     done
@@ -208,9 +205,9 @@ stop_services() {
     # Stop core services last (except nginx for graceful shutdown pages)
     for ((i=${#CORE_SERVICES[@]}-1; i>=0; i--)); do
         service="${CORE_SERVICES[i]}"
-        if [[ "$service" != "nginx" ]] && systemctl is-active "$service" &>/dev/null; then
+        if [[ "$service" != "nginx" ]] && systemctl --user is-active "$service" &>/dev/null; then
             echo -n "Stopping $service... "
-            systemctl stop "$service" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
+            systemctl --user stop "$service" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
         fi
     done
     
@@ -231,8 +228,8 @@ show_status() {
     echo ""
     echo -e "${YELLOW}Core Services:${NC}"
     for service in "${CORE_SERVICES[@]}"; do
-        if systemctl is-enabled "$service" &>/dev/null; then
-            status=$(systemctl is-active "$service" 2>/dev/null || echo "inactive")
+        if systemctl --user is-enabled "$service" &>/dev/null; then
+            status=$(systemctl --user is-active "$service" 2>/dev/null || echo "inactive")
             if [[ "$status" == "active" ]]; then
                 echo -e "  $service: ${GREEN}✓ $status${NC}"
             else
@@ -244,8 +241,8 @@ show_status() {
     echo ""
     echo -e "${YELLOW}Application Services:${NC}"
     for service in "${APPLICATION_SERVICES[@]}"; do
-        if systemctl is-enabled "$service" &>/dev/null; then
-            status=$(systemctl is-active "$service" 2>/dev/null || echo "inactive")
+        if systemctl --user is-enabled "$service" &>/dev/null; then
+            status=$(systemctl --user is-active "$service" 2>/dev/null || echo "inactive")
             if [[ "$status" == "active" ]]; then
                 echo -e "  $service: ${GREEN}✓ $status${NC}"
             else
@@ -257,8 +254,8 @@ show_status() {
     echo ""
     echo -e "${YELLOW}Monitoring Services:${NC}"
     for service in "${MONITORING_SERVICES[@]}"; do
-        if systemctl is-enabled "$service" &>/dev/null; then
-            status=$(systemctl is-active "$service" 2>/dev/null || echo "inactive")
+        if systemctl --user is-enabled "$service" &>/dev/null; then
+            status=$(systemctl --user is-active "$service" 2>/dev/null || echo "inactive")
             if [[ "$status" == "active" ]]; then
                 echo -e "  $service: ${GREEN}✓ $status${NC}"
             else
@@ -270,8 +267,8 @@ show_status() {
     echo ""
     echo -e "${YELLOW}Timers:${NC}"
     for timer in "${TIMER_SERVICES[@]}"; do
-        if systemctl list-unit-files "$timer" &>/dev/null; then
-            status=$(systemctl is-active "$timer" 2>/dev/null || echo "inactive")
+        if systemctl --user list-unit-files "$timer" &>/dev/null; then
+            status=$(systemctl --user is-active "$timer" 2>/dev/null || echo "inactive")
             if [[ "$status" == "active" ]]; then
                 echo -e "  $timer: ${GREEN}✓ $status${NC}"
             else
@@ -295,7 +292,7 @@ enable_services() {
     
     for service in "${ALL_SERVICES[@]}"; do
         echo -n "Enabling $service... "
-        if systemctl enable "$service"; then
+        if systemctl --user enable "$service"; then
             echo -e "${GREEN}✓${NC}"
         else
             echo -e "${RED}✗${NC}"
@@ -303,9 +300,9 @@ enable_services() {
     done
     
     for timer in "${TIMER_SERVICES[@]}"; do
-        if systemctl list-unit-files "$timer" &>/dev/null; then
+        if systemctl --user list-unit-files "$timer" &>/dev/null; then
             echo -n "Enabling $timer... "
-            if systemctl enable "$timer"; then
+            if systemctl --user enable "$timer"; then
                 echo -e "${GREEN}✓${NC}"
             else
                 echo -e "${RED}✗${NC}"
@@ -320,16 +317,16 @@ disable_services() {
     echo -e "${BLUE}Disabling Network Upgrade System services from auto-start...${NC}"
     
     for timer in "${TIMER_SERVICES[@]}"; do
-        if systemctl is-enabled "$timer" &>/dev/null; then
+        if systemctl --user is-enabled "$timer" &>/dev/null; then
             echo -n "Disabling $timer... "
-            systemctl disable "$timer" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
+            systemctl --user disable "$timer" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
         fi
     done
     
     for service in "${ALL_SERVICES[@]}"; do
-        if systemctl is-enabled "$service" &>/dev/null; then
+        if systemctl --user is-enabled "$service" &>/dev/null; then
             echo -n "Disabling $service... "
-            systemctl disable "$service" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
+            systemctl --user disable "$service" && echo -e "${GREEN}✓${NC}" || echo -e "${RED}✗${NC}"
         fi
     done
     
@@ -341,10 +338,10 @@ show_logs() {
     echo "================================================"
     
     for service in "${ALL_SERVICES[@]}"; do
-        if systemctl is-active "$service" &>/dev/null; then
+        if systemctl --user is-active "$service" &>/dev/null; then
             echo ""
             echo -e "${YELLOW}=== $service ===${NC}"
-            journalctl -u "$service" --no-pager -n 10
+            journalctl --user -u "$service" --no-pager -n 10
         fi
     done
 }
@@ -389,16 +386,16 @@ start_core_services() {
     
     for service in "${CORE_SERVICES[@]}"; do
         log "Starting $service..."
-        systemctl enable "$service"
-        systemctl start "$service"
+        systemctl --user enable "$service"
+        systemctl --user start "$service"
         
         # Verify service is running
         sleep 3
-        if systemctl is-active --quiet "$service"; then
+        if systemctl --user is-active --quiet "$service"; then
             log "${GREEN}✓ $service started successfully${NC}"
         else
             log "${RED}✗ $service failed to start${NC}"
-            systemctl status "$service" --no-pager
+            systemctl --user status "$service" --no-pager
         fi
     done
     
@@ -412,19 +409,19 @@ start_application_services() {
     log "${BLUE}Starting application services...${NC}"
     
     for service in "${APPLICATION_SERVICES[@]}"; do
-        if systemctl list-unit-files "$service.service" &>/dev/null; then
+        if systemctl --user list-unit-files "$service.service" &>/dev/null; then
             log "Starting $service..."
-            systemctl enable "$service"
-            systemctl start "$service"
+            systemctl --user enable "$service"
+            systemctl --user start "$service"
             
             # Give each service time to start
             sleep 5
             
-            if systemctl is-active --quiet "$service"; then
+            if systemctl --user is-active --quiet "$service"; then
                 log "${GREEN}✓ $service started successfully${NC}"
             else
                 log "${YELLOW}⚠ $service may not have started correctly${NC}"
-                systemctl status "$service" --no-pager | head -10
+                systemctl --user status "$service" --no-pager | head -10
             fi
         else
             log "${YELLOW}⚠ $service not available (not installed?)${NC}"
@@ -438,12 +435,12 @@ start_monitoring_services() {
     
     # Start monitoring services
     for service in "${MONITORING_SERVICES[@]}"; do
-        if systemctl list-unit-files "$service.service" &>/dev/null; then
+        if systemctl --user list-unit-files "$service.service" &>/dev/null; then
             log "Starting $service..."
-            systemctl enable "$service"
-            systemctl start "$service"
+            systemctl --user enable "$service"
+            systemctl --user start "$service"
             
-            if systemctl is-active --quiet "$service"; then
+            if systemctl --user is-active --quiet "$service"; then
                 log "${GREEN}✓ $service started successfully${NC}"
             else
                 log "${YELLOW}⚠ $service failed to start${NC}"
@@ -453,12 +450,12 @@ start_monitoring_services() {
     
     # Enable and start timers
     for timer in "${TIMER_SERVICES[@]}"; do
-        if systemctl list-unit-files "$timer" &>/dev/null; then
+        if systemctl --user list-unit-files "$timer" &>/dev/null; then
             log "Enabling $timer..."
-            systemctl enable "$timer"
-            systemctl start "$timer"
+            systemctl --user enable "$timer"
+            systemctl --user start "$timer"
             
-            if systemctl is-active --quiet "$timer"; then
+            if systemctl --user is-active --quiet "$timer"; then
                 log "${GREEN}✓ $timer enabled and started${NC}"
             else
                 log "${YELLOW}⚠ $timer failed to start${NC}"
@@ -508,8 +505,8 @@ echo ""
 echo -e "${BLUE}=== Service Status ===${NC}"
 services=("redis" "nginx" "netbox" "netbox-rq" "awx-web" "awx-task" "awx-scheduler" "telegraf")
 for service in "${services[@]}"; do
-    if systemctl list-unit-files "$service.service" &>/dev/null; then
-        status=$(systemctl is-active "$service" 2>/dev/null)
+    if systemctl --user list-unit-files "$service.service" &>/dev/null; then
+        status=$(systemctl --user is-active "$service" 2>/dev/null)
         if [[ "$status" == "active" ]]; then
             echo -e "$service: ${GREEN}✓ running${NC}"
         else
@@ -525,10 +522,10 @@ echo ""
 echo -e "${BLUE}=== Timer Status ===${NC}"
 timers=("netbox-housekeeping.timer" "ssl-cert-renewal.timer" "redis-monitor.timer")
 for timer in "${timers[@]}"; do
-    if systemctl list-unit-files "$timer" &>/dev/null; then
-        status=$(systemctl is-active "$timer" 2>/dev/null)
+    if systemctl --user list-unit-files "$timer" &>/dev/null; then
+        status=$(systemctl --user is-active "$timer" 2>/dev/null)
         if [[ "$status" == "active" ]]; then
-            next_run=$(systemctl list-timers "$timer" --no-pager | grep "$timer" | awk '{print $1, $2, $3}')
+            next_run=$(systemctl --user list-timers "$timer" --no-pager | grep "$timer" | awk '{print $1, $2, $3}')
             echo -e "$timer: ${GREEN}✓ active${NC} (next: $next_run)"
         else
             echo -e "$timer: ${RED}✗ $status${NC}"
@@ -621,13 +618,13 @@ echo ""
 
 # Recent errors
 echo -e "${BLUE}=== Recent System Errors ===${NC}"
-error_count=$(journalctl --since="24 hours ago" -p err --no-pager | wc -l)
+error_count=$(journalctl --user --since="24 hours ago" -p err --no-pager | wc -l)
 if [[ $error_count -eq 0 ]]; then
     echo -e "System errors (24h): ${GREEN}✓ none${NC}"
 else
     echo -e "System errors (24h): ${YELLOW}⚠ $error_count errors${NC}"
     echo "Recent errors:"
-    journalctl --since="24 hours ago" -p err --no-pager | tail -5
+    journalctl --user --since="24 hours ago" -p err --no-pager | tail -5
 fi
 echo ""
 
@@ -652,7 +649,7 @@ verify_services() {
     
     # Core services
     for service in "${CORE_SERVICES[@]}"; do
-        if systemctl is-active --quiet "$service"; then
+        if systemctl --user is-active --quiet "$service"; then
             log "${GREEN}✓ $service is running${NC}"
         else
             log "${RED}✗ $service is not running${NC}"
@@ -662,8 +659,8 @@ verify_services() {
     
     # Application services
     for service in "${APPLICATION_SERVICES[@]}"; do
-        if systemctl list-unit-files "$service.service" &>/dev/null; then
-            if systemctl is-active --quiet "$service"; then
+        if systemctl --user list-unit-files "$service.service" &>/dev/null; then
+            if systemctl --user is-active --quiet "$service"; then
                 log "${GREEN}✓ $service is running${NC}"
             else
                 log "${RED}✗ $service is not running${NC}"
@@ -674,8 +671,8 @@ verify_services() {
     
     # Monitoring services
     for service in "${MONITORING_SERVICES[@]}"; do
-        if systemctl list-unit-files "$service.service" &>/dev/null; then
-            if systemctl is-active --quiet "$service"; then
+        if systemctl --user list-unit-files "$service.service" &>/dev/null; then
+            if systemctl --user is-active --quiet "$service"; then
                 log "${GREEN}✓ $service is running${NC}"
             else
                 log "${RED}✗ $service is not running${NC}"
@@ -692,7 +689,7 @@ verify_services() {
         log "${YELLOW}⚠ Some services failed to start:${NC}"
         for service in "${failed_services[@]}"; do
             log "  - $service"
-            systemctl status "$service" --no-pager | head -5
+            systemctl --user status "$service" --no-pager | head -5
         done
         return 1
     fi
@@ -711,7 +708,7 @@ INSTALLATION_COMPLETED=true
 SYSTEM_VERSION=1.0.0
 
 # Service Status (at time of completion)
-$(systemctl is-active redis nginx netbox netbox-rq awx-web awx-task awx-scheduler telegraf 2>/dev/null | \
+$(systemctl --user is-active redis nginx netbox netbox-rq awx-web awx-task awx-scheduler telegraf 2>/dev/null | \
   paste <(echo -e "redis\nnginx\nnetbox\nnetbox-rq\nawx-web\nawx-task\nawx-scheduler\ntelegraf") - | \
   sed 's/\t/=/')
 

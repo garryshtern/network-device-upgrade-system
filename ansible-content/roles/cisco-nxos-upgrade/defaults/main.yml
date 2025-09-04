@@ -35,6 +35,15 @@ nxos_validate_version_after_upgrade: true
 nxos_validate_interfaces_after_upgrade: true
 nxos_validate_bgp_after_upgrade: true
 
+# Enhanced validation modules
+validate_igmp: true         # Enable IGMP/multicast validation
+validate_bfd: true          # Enable enhanced BFD validation
+
+# Validation thresholds and parameters
+igmp_validation_timeout: 120
+bfd_validation_timeout: 120
+bfd_success_threshold: 0.8  # 80% of BFD sessions must be UP
+
 # Rollback settings
 nxos_enable_rollback: true
 nxos_rollback_timeout: 600
@@ -73,6 +82,8 @@ nxos_commands:
   bgp_summary: "show bgp ipv4 unicast summary"
   vpc_status: "show vpc brief"
   bfd_neighbors: "show bfd neighbors"
+  igmp_snooping: "show ip igmp snooping"
+  igmp_groups: "show ip igmp groups"
   issu_status: "show install all status"
 
 # File patterns

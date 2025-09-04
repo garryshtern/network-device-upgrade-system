@@ -93,13 +93,44 @@
       register: error_logs
       failed_when: false
       
+- name: IPSec tunnel validation
+  include_tasks: ipsec-validation.yml
+  when: 
+    - validate_ipsec is defined 
+    - validate_ipsec | bool
+  tags:
+    - ipsec
+    - validation
+    
+- name: BFD session validation  
+  include_tasks: bfd-validation.yml
+  when:
+    - validate_bfd is defined
+    - validate_bfd | bool
+  tags:
+    - bfd
+    - validation
+    
+- name: Interface optics validation
+  include_tasks: optics-validation.yml  
+  when:
+    - validate_optics is defined
+    - validate_optics | bool
+  tags:
+    - optics
+    - validation
+
 - name: Log validation results
   debug:
     msg: |
       IOS-XE Validation Results:
+      ==========================
       - Version: {{ 'PASS' if target_firmware_version in version_check.stdout[0] else 'FAIL' }}
       - Interfaces: {{ 'PASS' if 'up' in interface_status.stdout[0] else 'CHECK' }}
       - Routing: {{ 'PASS' if routing_summary.stdout[0] else 'CHECK' }}
       - ARP Table: {{ 'PASS' if arp_table.stdout[0] | length > 100 else 'CHECK' }}
       - BGP: {{ 'PASS' if bgp_status.rc == 0 else 'N/A' }}
+      - IPSec: {{ 'VALIDATED' if (validate_ipsec is defined and validate_ipsec | bool) else 'SKIPPED' }}
+      - BFD: {{ 'VALIDATED' if (validate_bfd is defined and validate_bfd | bool) else 'SKIPPED' }}
+      - Optics: {{ 'VALIDATED' if (validate_optics is defined and validate_optics | bool) else 'SKIPPED' }}
       - Errors: {{ 'NONE' if error_logs.stdout[0] == '' else 'CHECK LOGS' }}

@@ -1,6 +1,6 @@
 # Installation Guide
 
-Complete installation guide for the Network Device Upgrade Management System. This guide covers single server deployment with SQLite backend optimized for 1000+ device management.
+Complete installation guide for the Network Device Upgrade Management System. This guide covers single server deployment with containerized AWX and pre-existing NetBox integration, optimized for 1000+ device management.
 
 ## System Requirements
 
@@ -26,7 +26,7 @@ Complete installation guide for the Network Device Upgrade Management System. Th
 
 Before beginning installation, ensure:
 
-- [ ] Fresh server installation with root access
+- [ ] Fresh server installation with unprivileged user account
 - [ ] All system updates applied
 - [ ] Firewall rules allow SSH (port 22)
 - [ ] DNS resolution working properly
@@ -41,13 +41,13 @@ Before beginning installation, ensure:
 ```mermaid
 graph LR
     subgraph "Network Upgrade System Installation - Single Server Deployment"
-        A[Prerequisites<br/>Server Prep<br/>• Fresh OS<br/>• Root User<br/>• Network<br/>• DNS/NTP<br/><br/>⏱️ 5-10 min<br/>Manual] --> B[Base System<br/>System Deps<br/>• Python<br/>• Redis<br/>• Nginx<br/>• Firewall<br/><br/>⏱️ 15-30min<br/>Automated]
+        A[Prerequisites<br/>Server Prep<br/>• Fresh OS<br/>• Root User<br/>• Network<br/>• DNS/NTP<br/>• NetBox Pre-existing<br/><br/>⏱️ 5-10 min<br/>Manual] --> B[Base System<br/>System Deps<br/>• Python<br/>• Podman<br/>• Nginx<br/>• Firewall<br/><br/>⏱️ 15-30min<br/>Automated]
         
-        B --> C[AWX Platform<br/>AWX Install<br/>• SQLite DB<br/>• Web UI<br/>• API<br/>• Templates<br/><br/>⏱️ 30-45min<br/>Automated]
+        B --> C[AWX Container<br/>Podman Deploy<br/>• AWX Image<br/>• Volume Mount<br/>• Port Mapping<br/><br/>⏱️ 10-15min<br/>Automated]
         
-        C --> D[Integration<br/>NetBox & Monitoring<br/>• NetBox DB<br/>• Telegraf<br/>• SSL Certs<br/><br/>⏱️ 20-30min<br/>Automated]
+        C --> D[Integration<br/>Monitoring & Config<br/>• Telegraf<br/>• SSL Certs<br/>• NetBox Connect<br/><br/>⏱️ 15-20min<br/>Automated]
         
-        D --> E[PRODUCTION READY<br/>Total: ~90m]
+        D --> E[PRODUCTION READY<br/>Total: ~45m]
     end
     
     style A fill:#e8f5e8
@@ -76,70 +76,88 @@ chmod +x install/*.sh
 Install the base system components including Python, Redis, and Nginx:
 
 ```bash
-# Run as root
-sudo ./install/install-system.sh
+# Run as unprivileged user
+./install/install-system.sh
 ```
 
 This script will:
 - Detect your operating system and version
 - Install required system packages
-- Create the `network-upgrade` user and directories
+- Configure the current user environment and directories
 - Configure Redis with optimized settings
 - Set up Nginx with SSL-ready configuration
 - Configure firewall rules
-- Create systemd service templates
+- Create systemd user service templates
 - Set up log rotation and cron jobs
 
 **Expected Duration**: 15-30 minutes
 
-### Step 3: AWX Installation
+### Step 3: AWX Container Deployment
 
-Install AWX (Ansible automation platform) with SQLite backend:
-
-```bash
-# Run as root
-sudo ./install/install-awx.sh
-```
-
-This script will:
-- Install AWX dependencies (Node.js, Python packages)
-- Download and install AWX 23.5.0
-- Configure SQLite database backend
-- Create AWX systemd services
-- Generate admin credentials
-- Configure Nginx reverse proxy
-- Test the installation
-
-**Expected Duration**: 30-45 minutes
-
-**Important**: Save the admin credentials displayed at the end of installation.
-
-### Step 4: NetBox Installation
-
-Install NetBox (DCIM/IPAM system) for device inventory:
+Deploy AWX using rootless Podman container:
 
 ```bash
-# Run as root
-sudo ./install/install-netbox.sh
+# Run as network-upgrade user (rootless)
+su - network-upgrade
+podman run -d --name awx \
+  -p 8043:8043 \
+  -v awx_data:/var/lib/awx \
+  -v /opt/network-upgrade/ansible-content:/var/lib/awx/projects/network-automation:Z \
+  -e POSTGRES_DB=awx \
+  -e POSTGRES_USER=awx \
+  -e POSTGRES_PASSWORD=awxpass \
+  docker.io/ansible/awx:latest
+
+# Enable lingering for rootless containers to start at boot
+loginctl enable-linger network-upgrade
+
+# Create user systemd service for AWX container
+./install/create-awx-container-service.sh
 ```
 
-This script will:
-- Install NetBox with SQLite backend
-- Configure device inventory structure
-- Create custom fields for upgrade tracking
-- Set up NetBox systemd services
-- Configure Nginx integration
-- Create initial superuser account
+This will:
+- Pull the latest AWX container image
+- Create persistent volume for AWX data
+- Mount Ansible content directory
+- Configure container networking
+- Create systemd user service for automatic startup
 
-**Expected Duration**: 20-30 minutes
+**Expected Duration**: 10-15 minutes
+
+**Important**: AWX will be available at https://localhost:8043 with default admin/password credentials. Rootless containers run without root privileges for better security.
+
+### Step 4: NetBox Integration Verification
+
+Verify NetBox integration (NetBox is pre-existing):
+
+```bash
+# Verify NetBox is accessible
+curl -k https://localhost:8000/api/
+
+# Test NetBox API token
+export NETBOX_URL="https://localhost:8000"
+export NETBOX_TOKEN="your_netbox_token_here"
+curl -H "Authorization: Token $NETBOX_TOKEN" \
+     -H "Content-Type: application/json" \
+     $NETBOX_URL/api/dcim/devices/
+```
+
+This will:
+- Verify NetBox API connectivity
+- Test authentication with existing NetBox instance
+- Confirm device inventory access
+
+**Expected Duration**: 5 minutes
+
+**Important**: Obtain NetBox API token from existing NetBox administrator.
 
 ### Step 5: Telegraf Configuration
 
 Configure Telegraf for metrics collection and InfluxDB integration:
 
 ```bash
-# Run as root  
-sudo ./install/configure-telegraf.sh
+# Run as unprivileged user
+./install/configure-telegraf.sh
 ```
 
 You will be prompted for:
@@ -155,8 +173,8 @@ You will be prompted for:
 Configure SSL certificates for secure web access:
 
 ```bash
-# Run as root
-sudo ./install/setup-ssl.sh
+# Run as unprivileged user
+./install/setup-ssl.sh
 ```
 
 Options available:
@@ -171,13 +189,13 @@ Options available:
 Create and start all system services:
 
 ```bash
-# Run as root
-sudo ./install/create-services.sh
+# Run as unprivileged user
+./install/create-services.sh
 ```
 
 This will:
-- Enable all systemd services
-- Start Redis, AWX, NetBox, and Telegraf
+- Enable systemd user services for base components
+- Start Redis, AWX container, and Telegraf as user services
 - Configure service dependencies
 - Verify all services are running
 - Test web interface connectivity
@@ -209,16 +227,16 @@ This script will:
 
 **AWX Admin Password**:
 ```bash
-# Access AWX web interface at https://your-server:8443
-# Login with credentials from /opt/network-upgrade/awx/config/admin_credentials.txt
+# Access AWX web interface at https://your-server:8043
+# Default credentials: admin/password (change immediately)
 # Go to Access → Users → admin → Edit to change password
 ```
 
-**NetBox Admin Password**:
+**NetBox Integration**:
 ```bash
-# Access NetBox web interface at https://your-server:8000
-# Login with credentials from /opt/network-upgrade/netbox/config/admin_credentials.txt
-# Go to Admin → Authentication and Authorization → Users to change password
+# NetBox is pre-existing at https://your-server:8000
+# Obtain API token from NetBox administrator
+# Configure AWX inventory to use NetBox as source
 ```
 
 ### 2. Configure Device Access Credentials
@@ -241,30 +259,31 @@ ssh-keygen -t rsa -b 4096 -f /opt/network-upgrade/config/device_ssh_key -N ""
 
 ### 3. Device Inventory Setup
 
-**NetBox Device Import**:
+**NetBox Device Verification**:
 ```bash
-# Import devices from CSV file
-./netbox-config/import-scripts/import-from-csv.py devices.csv
+# Verify devices are accessible in NetBox
+curl -H "Authorization: Token $NETBOX_TOKEN" \
+     $NETBOX_URL/api/dcim/devices/ | jq '.count'
 
-# Or sync from existing inventory system
-./netbox-config/import-scripts/sync-from-inventory.py
+# Check device types and platforms
+curl -H "Authorization: Token $NETBOX_TOKEN" \
+     $NETBOX_URL/api/dcim/platforms/ | jq '.results[].name'
 ```
 
 **AWX Inventory Sync**:
 1. In AWX, go to Resources → Inventories
-2. Select "Network Devices" inventory
-3. Go to Sources → NetBox Source
-4. Click "Sync" to pull devices from NetBox
+2. Create "Network Devices" inventory
+3. Add NetBox inventory source with API token
+4. Configure sync to pull devices from existing NetBox
 
 ### 4. Firmware Repository Setup
 
 ```bash
 # Create firmware storage directory
-mkdir -p /opt/network-upgrade/firmware/{cisco,arista,fortinet,metamako,opengear}
+mkdir -p $HOME/network-upgrade/firmware/{cisco,arista,fortinet,metamako,opengear}
 
 # Set proper permissions
-chown -R network-upgrade:network-upgrade /opt/network-upgrade/firmware
-chmod 755 /opt/network-upgrade/firmware
+chmod 755 $HOME/network-upgrade/firmware
 
 # Create firmware hash files (example)
 echo "abc123def456...sha512hash" > /opt/network-upgrade/firmware/cisco/n9000-dk9.10.2.3.F.bin.sha512
@@ -279,13 +298,17 @@ echo "abc123def456...sha512hash" > /opt/network-upgrade/firmware/cisco/n9000-dk9
 /usr/local/bin/network-upgrade-health
 
 # Check individual services
-systemctl status redis nginx awx-web awx-task awx-scheduler netbox telegraf
+systemctl --user status redis nginx telegraf
+
+# Check AWX container (as network-upgrade user)
+su - network-upgrade -c "podman ps | grep awx"
+su - network-upgrade -c "podman logs awx"
 ```
 
 ### 2. Web Interface Access
 
-- **AWX**: https://your-server:8443
-- **NetBox**: https://your-server:8000
+- **AWX**: https://your-server:8043
+- **NetBox**: https://your-server:8000 (pre-existing)
 - **System Health**: Use `/usr/local/bin/network-upgrade-health`
 
 ### 3. Test Device Connectivity
@@ -300,10 +323,10 @@ systemctl status redis nginx awx-web awx-task awx-scheduler netbox telegraf
 
 ```bash
 # Check Telegraf metrics collection
-systemctl status telegraf
+systemctl --user status telegraf
 
 # Verify InfluxDB connectivity
-telegraf --test --config /etc/telegraf/telegraf.conf --input-filter influxdb_v2_listener
+telegraf --test --config $HOME/.config/telegraf/telegraf.conf --input-filter influxdb_v2_listener
 ```
 
 ## Troubleshooting Common Issues
@@ -314,12 +337,12 @@ telegraf --test --config /etc/telegraf/telegraf.conf --input-filter influxdb_v2_
 **Solution**: 
 ```bash
 # Update package repositories
-sudo dnf update -y    # RHEL/CentOS
-sudo apt update -y    # Ubuntu
+dnf update -y    # RHEL/CentOS
+apt update -y    # Ubuntu
 
 # Clear package cache
-sudo dnf clean all    # RHEL/CentOS  
-sudo apt clean        # Ubuntu
+dnf clean all    # RHEL/CentOS  
+apt clean        # Ubuntu
 ```
 
 **Problem**: Service startup failures
@@ -340,12 +363,12 @@ free -h
 **Problem**: Cannot access AWX web interface
 **Solution**:
 ```bash
-# Check AWX services
-systemctl status awx-web awx-task
+# Check AWX container (as network-upgrade user)
+su - network-upgrade -c "podman ps | grep awx"
+su - network-upgrade -c "podman logs awx"
 
-# Check Nginx configuration
-nginx -t
-systemctl status nginx
+# Check container networking
+su - network-upgrade -c "podman port awx"
 
 # Check firewall
 firewall-cmd --list-all   # RHEL/CentOS
@@ -356,29 +379,29 @@ ufw status               # Ubuntu
 **Solution**:
 ```bash
 # Regenerate self-signed certificates
-sudo ./install/setup-ssl.sh
+./install/setup-ssl.sh
 
 # Check certificate validity
-openssl x509 -in /etc/ssl/certs/network-upgrade.crt -text -noout
+openssl x509 -in $HOME/.config/network-upgrade/ssl/network-upgrade.crt -text -noout
 ```
 
-### Database Issues
+### Container Issues
 
-**Problem**: SQLite database corruption
+**Problem**: AWX container issues
 **Solution**:
 ```bash
-# Stop services
-systemctl stop awx-web awx-task netbox
+# Check container status (as network-upgrade user)
+su - network-upgrade -c "podman ps -a | grep awx"
 
-# Backup databases
-cp /opt/network-upgrade/awx/database/awx.db /var/backups/network-upgrade/
-cp /opt/network-upgrade/netbox/database/netbox.db /var/backups/network-upgrade/
+# Restart container
+su - network-upgrade -c "podman restart awx"
 
-# Check database integrity
-sqlite3 /opt/network-upgrade/awx/database/awx.db "PRAGMA integrity_check;"
+# Check container logs
+su - network-upgrade -c "podman logs awx --tail 50"
 
-# Restore from backup if needed
-/usr/local/bin/network-upgrade-restore
+# Recreate container if needed
+su - network-upgrade -c "podman stop awx && podman rm awx"
+# Run the container deployment command again as network-upgrade user
 ```
 
 ## Backup and Recovery
@@ -404,11 +427,10 @@ Daily backups are configured automatically:
 /usr/local/bin/network-upgrade-backup
 
 # Backup specific components
-systemctl stop awx-web awx-task netbox
-cp /opt/network-upgrade/awx/database/awx.db /backup/location/
-cp /opt/network-upgrade/netbox/database/netbox.db /backup/location/
-cp -r /etc/network-upgrade /backup/location/
-systemctl start awx-web awx-task netbox
+podman stop awx
+podman export awx > $HOME/backups/awx-container-backup.tar
+cp -r $HOME/.config/network-upgrade $HOME/backups/
+podman start awx
 ```
 
 ## Performance Tuning
@@ -417,7 +439,7 @@ systemctl start awx-web awx-task netbox
 
 **Increase Connection Limits**:
 ```bash
-# Edit /etc/network-upgrade/config.yml
+# Edit $HOME/.config/network-upgrade/config.yml
 performance:
   max_concurrent_jobs: 100
   max_device_connections: 200
@@ -474,10 +496,10 @@ For detailed operational procedures, see the [User Guide](user-guide.md) and [Ad
 ## Support and Maintenance
 
 ### Log Locations
-- **System Logs**: `/var/log/network-upgrade/`
-- **AWX Logs**: `/var/log/awx/`
-- **NetBox Logs**: `/var/log/netbox/`
-- **Nginx Logs**: `/var/log/nginx/`
+- **System Logs**: `$HOME/.local/share/network-upgrade/logs/`
+- **AWX Logs**: `$HOME/.local/share/awx/logs/`
+- **NetBox Logs**: `$HOME/.local/share/netbox/logs/`
+- **Nginx Logs**: `$HOME/.local/share/nginx/logs/`
 
 ### Maintenance Schedule
 - **Daily**: Automated backups and health checks
@@ -488,5 +510,5 @@ For detailed operational procedures, see the [User Guide](user-guide.md) and [Ad
 ### Getting Help
 - Review the [Troubleshooting Guide](troubleshooting.md)
 - Check system health with `/usr/local/bin/network-upgrade-health`
-- Examine log files in `/var/log/network-upgrade/`
+- Examine log files in `$HOME/.local/share/network-upgrade/logs/`
 - Consult vendor-specific guides in [docs/vendor-guides/](vendor-guides/)

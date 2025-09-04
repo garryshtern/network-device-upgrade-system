@@ -27,10 +27,7 @@ error_exit() {
     exit 1
 }
 
-# Check if running as root
-if [[ $EUID -ne 0 ]]; then
-    error_exit "This script must be run as root"
-fi
+# No need to run as root - using user systemd services
 
 # Create backup directories
 create_backup_directories() {
@@ -206,7 +203,7 @@ backup_system_state() {
     cat /etc/os-release >> "$backup_dir/system/system_info.txt"
     
     # Service status
-    systemctl list-units --type=service --state=active > "$backup_dir/system/active_services.txt"
+    systemctl --user list-units --type=service --state=active > "$backup_dir/system/active_services.txt"
     
     # Network configuration
     ip addr show > "$backup_dir/system/network_config.txt"
@@ -629,16 +626,16 @@ WantedBy=timers.target
 EOF
 
     # Enable all backup timers
-    systemctl daemon-reload
-    systemctl enable network-upgrade-daily-backup.timer
-    systemctl enable network-upgrade-weekly-backup.timer
-    systemctl enable network-upgrade-monthly-backup.timer
-    systemctl enable backup-monitor.timer
+    systemctl --user daemon-reload
+    systemctl --user enable network-upgrade-daily-backup.timer
+    systemctl --user enable network-upgrade-weekly-backup.timer
+    systemctl --user enable network-upgrade-monthly-backup.timer
+    systemctl --user enable backup-monitor.timer
     
-    systemctl start network-upgrade-daily-backup.timer
-    systemctl start network-upgrade-weekly-backup.timer
-    systemctl start network-upgrade-monthly-backup.timer
-    systemctl start backup-monitor.timer
+    systemctl --user start network-upgrade-daily-backup.timer
+    systemctl --user start network-upgrade-weekly-backup.timer
+    systemctl --user start network-upgrade-monthly-backup.timer
+    systemctl --user start backup-monitor.timer
     
     log "${GREEN}✓ Backup automation configured and enabled${NC}"
 }
@@ -708,7 +705,7 @@ This document provides step-by-step procedures for recovering the Network Device
 1. Check certificate status: `/usr/local/bin/validate-ssl-cert`
 2. If expired, renew: `/usr/local/bin/renew-ssl-cert` (Let's Encrypt)
 3. Or restore from backup: Extract SSL certificates from backup
-4. Reload nginx: `systemctl reload nginx`
+4. Reload nginx: `systemctl --user reload nginx`
 
 ### Scenario 4: Complete System Failure
 
@@ -730,22 +727,22 @@ This document provides step-by-step procedures for recovering the Network Device
 ### Scenario 5: Service-Specific Failures
 
 #### AWX Service Issues
-1. Check service status: `systemctl status awx-web awx-task awx-scheduler`
+1. Check service status: `systemctl --user status awx-web awx-task awx-scheduler`
 2. Check logs: `journalctl -u awx-web -n 50`
-3. Restart services: `systemctl restart awx-web awx-task awx-scheduler`
+3. Restart services: `systemctl --user restart awx-web awx-task awx-scheduler`
 4. If database issues, restore AWX database from backup
 
 #### NetBox Service Issues
-1. Check service status: `systemctl status netbox netbox-rq`
+1. Check service status: `systemctl --user status netbox netbox-rq`
 2. Check logs: `journalctl -u netbox -n 50`
-3. Restart services: `systemctl restart netbox netbox-rq`
+3. Restart services: `systemctl --user restart netbox netbox-rq`
 4. If database issues, restore NetBox database from backup
 
 #### Redis Issues
-1. Check Redis status: `systemctl status redis`
+1. Check Redis status: `systemctl --user status redis`
 2. Test connectivity: `redis-cli -a ChangeMeInProduction123! ping`
 3. Check memory usage: `redis-cli -a ChangeMeInProduction123! info memory`
-4. Restart if needed: `systemctl restart redis`
+4. Restart if needed: `systemctl --user restart redis`
 
 ## Recovery Testing
 

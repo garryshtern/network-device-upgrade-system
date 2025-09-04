@@ -1,0 +1,240 @@
+---
+# Interface Optics Validation Tasks for Cisco IOS-XE Devices
+# Validates SFP/transceiver health and optical power levels post-upgrade
+
+- name: Interface optics validation
+  block:
+    - name: Check interface transceivers
+      cisco.ios.ios_command:
+        commands:
+          - show interfaces transceiver
+      register: interface_transceivers
+      failed_when: false
+      
+    - name: Check platform hardware transceivers
+      cisco.ios.ios_command:
+        commands:
+          - show platform hardware transceiver
+      register: platform_transceivers
+      failed_when: false
+      
+    - name: Check interface transceiver details
+      cisco.ios.ios_command:
+        commands:
+          - show interfaces transceiver detail
+      register: transceiver_details
+      failed_when: false
+      
+    - name: Check DOM (Digital Optical Monitoring) information
+      cisco.ios.ios_command:
+        commands:
+          - show interfaces transceiver dom
+      register: transceiver_dom
+      failed_when: false
+
+- name: Parse transceiver information
+  block:
+    - name: Extract active transceivers
+      set_fact:
+        active_transceivers: >-
+          {{ interface_transceivers.stdout[0] | 
+             regex_findall('(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)', multiline=True) }}
+      when: 
+        - interface_transceivers.rc == 0
+        - interface_transceivers.stdout[0] | length > 100
+        
+    - name: Parse optical power levels from DOM
+      set_fact:
+        optical_power_levels: >-
+          {{ transceiver_dom.stdout[0] | 
+             regex_findall('(\S+)\s+.*?Tx Power\s+([-\d\.]+)\s+dBm.*?Rx Power\s+([-\d\.]+)\s+dBm', 
+             multiline=True, dotall=True) }}
+      when: 
+        - transceiver_dom.rc == 0
+        - '"Tx Power" in transceiver_dom.stdout[0]'
+        
+    - name: Extract temperature information
+      set_fact:
+        transceiver_temperatures: >-
+          {{ transceiver_dom.stdout[0] | 
+             regex_findall('(\S+)\s+.*?Temperature\s+([\d\.]+)\s+Celsius', 
+             multiline=True, dotall=True) }}
+      when: 
+        - transceiver_dom.rc == 0
+        - '"Temperature" in transceiver_dom.stdout[0]'
+
+- name: Validate transceiver health
+  block:
+    - name: Verify transceivers are detected
+      assert:
+        that:
+          - active_transceivers is defined
+          - active_transceivers | length > 0
+        fail_msg: "No active transceivers found on device"
+        success_msg: "{{ active_transceivers | length }} active transceiver(s) detected"
+      when: active_transceivers is defined
+      
+    - name: Check optical power levels are within acceptable range
+      assert:
+        that:
+          - item[1] | float > -15.0  # Tx Power > -15 dBm
+          - item[1] | float < 5.0    # Tx Power < 5 dBm
+          - item[2] | float > -15.0  # Rx Power > -15 dBm
+          - item[2] | float < 5.0    # Rx Power < 5 dBm
+        fail_msg: |
+          Interface {{ item[0] }} optical power out of range:
+          Tx: {{ item[1] }} dBm, Rx: {{ item[2] }} dBm
+          Expected range: -15 to +5 dBm
+        success_msg: "Interface {{ item[0] }} optical power OK (Tx: {{ item[1] }}dBm, Rx: {{ item[2] }}dBm)"
+      loop: "{{ optical_power_levels }}"
+      when: 
+        - optical_power_levels is defined
+        - optical_power_levels | length > 0
+        
+    - name: Check transceiver temperatures
+      assert:
+        that:
+          - item[1] | float < 75.0   # Temperature < 75°C
+          - item[1] | float > 0.0    # Temperature > 0°C
+        fail_msg: "Interface {{ item[0] }} temperature {{ item[1] }}°C is outside normal range (0-75°C)"
+        success_msg: "Interface {{ item[0] }} temperature OK ({{ item[1] }}°C)"
+      loop: "{{ transceiver_temperatures }}"
+      when: 
+        - transceiver_temperatures is defined
+        - transceiver_temperatures | length > 0
+
+- name: Check for transceiver errors
+  block:
+    - name: Check interface error counters
+      cisco.ios.ios_command:
+        commands:
+          - show interfaces | include line protocol|Input errors|Output errors
+      register: interface_errors
+      
+    - name: Parse interface error counters
+      set_fact:
+        interface_error_summary: >-
+          {{ interface_errors.stdout[0] | 
+             regex_findall('(\S+) is \S+, line protocol is (\S+).*?Input errors: (\d+).*?Output errors: (\d+)', 
+             multiline=True, dotall=True) }}
+      when: interface_errors.rc == 0
+      
+    - name: Verify low error rates on active interfaces
+      assert:
+        that:
+          - item[2] | int < 100  # Input errors < 100
+          - item[3] | int < 100  # Output errors < 100
+        fail_msg: |
+          Interface {{ item[0] }} has high error count:
+          Input errors: {{ item[2] }}, Output errors: {{ item[3] }}
+        success_msg: "Interface {{ item[0] }} error count acceptable"
+      loop: "{{ interface_error_summary }}"
+      when: 
+        - interface_error_summary is defined
+        - item[1] == 'up'  # Only check interfaces that are up
+
+- name: Advanced optics diagnostics
+  block:
+    - name: Check for alarm conditions
+      cisco.ios.ios_command:
+        commands:
+          - show platform hardware transceiver | include ALARM
+      register: transceiver_alarms
+      failed_when: false
+      
+    - name: Verify no critical alarms
+      assert:
+        that:
+          - '"ALARM" not in transceiver_alarms.stdout[0]'
+        fail_msg: "Transceiver alarms detected: {{ transceiver_alarms.stdout[0] }}"
+        success_msg: "No transceiver alarms detected"
+      when: 
+        - transceiver_alarms.rc == 0
+        - transceiver_alarms.stdout[0] | length > 0
+
+- name: Optics validation summary
+  debug:
+    msg: |
+      Optics Validation Summary:
+      =========================
+      Active Transceivers: {{ active_transceivers | length if active_transceivers is defined else 'N/A' }}
+      Optical Power Readings: {{ optical_power_levels | length if optical_power_levels is defined else 'N/A' }}
+      Temperature Readings: {{ transceiver_temperatures | length if transceiver_temperatures is defined else 'N/A' }}
+      
+      {% if active_transceivers is defined %}
+      Transceiver Details:
+      {% for transceiver in active_transceivers %}
+      - Interface: {{ transceiver[0] }}
+        Type: {{ transceiver[1] }}
+        Part Number: {{ transceiver[2] }}
+      {% endfor %}
+      {% endif %}
+      
+      {% if optical_power_levels is defined %}
+      Optical Power Levels:
+      {% for power in optical_power_levels %}
+      - {{ power[0] }}: Tx {{ power[1] }}dBm, Rx {{ power[2] }}dBm
+      {% endfor %}
+      {% endif %}
+      
+      {% if transceiver_temperatures is defined %}
+      Temperatures:
+      {% for temp in transceiver_temperatures %}
+      - {{ temp[0] }}: {{ temp[1] }}°C
+      {% endfor %}
+      {% endif %}
+      
+      Health Status: {{ 'PASS' if (active_transceivers is defined and active_transceivers | length > 0) else 'CHECK' }}
+
+- name: Store optics validation baseline
+  copy:
+    content: |
+      # Optics Validation Baseline - {{ ansible_date_time.iso8601 }}
+      # Generated during firmware upgrade validation
+      
+      Active_Transceivers: {{ active_transceivers | length if active_transceivers is defined else 0 }}
+      Optical_Power_Readings: {{ optical_power_levels | length if optical_power_levels is defined else 0 }}
+      Temperature_Readings: {{ transceiver_temperatures | length if transceiver_temperatures is defined else 0 }}
+      
+      {% if active_transceivers is defined %}
+      Transceiver_Details:
+      {% for transceiver in active_transceivers %}
+        - Interface: {{ transceiver[0] }}
+          Type: {{ transceiver[1] }}
+          Part_Number: {{ transceiver[2] }}
+          Serial_Number: {{ transceiver[3] if transceiver[3] is defined else 'N/A' }}
+      {% endfor %}
+      {% endif %}
+      
+      {% if optical_power_levels is defined %}
+      Optical_Power_Levels:
+      {% for power in optical_power_levels %}
+        - Interface: {{ power[0] }}
+          Tx_Power_dBm: {{ power[1] }}
+          Rx_Power_dBm: {{ power[2] }}
+      {% endfor %}
+      {% endif %}
+      
+      {% if transceiver_temperatures is defined %}
+      Temperature_Readings:
+      {% for temp in transceiver_temperatures %}
+        - Interface: {{ temp[0] }}
+          Temperature_Celsius: {{ temp[1] }}
+      {% endfor %}
+      {% endif %}
+      
+      {% if interface_error_summary is defined %}
+      Interface_Error_Summary:
+      {% for intf in interface_error_summary %}
+        - Interface: {{ intf[0] }}
+          Status: {{ intf[1] }}
+          Input_Errors: {{ intf[2] }}
+          Output_Errors: {{ intf[3] }}
+      {% endfor %}
+      {% endif %}
+      
+      Validation_Status: {{ 'PASS' if (active_transceivers is defined and active_transceivers | length > 0) else 'CHECK' }}
+      Timestamp: {{ ansible_date_time.iso8601 }}
+    dest: "/tmp/optics_validation_{{ inventory_hostname }}_{{ ansible_date_time.epoch }}.txt"
+    mode: '0644'
+  delegate_to: localhost

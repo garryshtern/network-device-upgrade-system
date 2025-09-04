@@ -1,0 +1,31 @@
+---
+# Default variables for Cisco IOS-XE upgrade role
+# These can be overridden in playbooks, inventory, or host_vars
+
+# Validation control flags
+# Enable/disable specific validation modules
+validate_ipsec: true        # Enable IPSec tunnel validation
+validate_bfd: true          # Enable BFD session validation  
+validate_optics: true       # Enable interface optics validation
+
+# Upgrade behavior settings
+check_install_mode: true    # Verify install vs bundle mode before upgrade
+verify_space: true          # Check available storage space
+backup_config: true         # Create configuration backup before upgrade
+rollback_on_failure: true   # Automatically rollback on upgrade failure
+
+# Validation thresholds
+max_acceptable_errors: 10   # Maximum interface errors before flagging
+min_optical_power: -15.0    # Minimum acceptable optical power (dBm)
+max_optical_power: 5.0      # Maximum acceptable optical power (dBm)
+max_temperature: 75.0       # Maximum acceptable transceiver temperature (°C)
+bfd_success_threshold: 0.8  # Minimum percentage of BFD sessions that must be UP
+
+# Timing controls
+validation_timeout: 300     # Timeout for validation tasks (seconds)
+reboot_timeout: 900        # Timeout for device reboot (seconds)
+convergence_wait: 120      # Wait time for protocol convergence (seconds)
+
+# File paths
+validation_output_dir: "/tmp"
+baseline_storage_dir: "/tmp/baselines"
