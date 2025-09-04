@@ -4,47 +4,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Python-based network device upgrade system. The project is in early stages with minimal setup - only a basic `pyproject.toml` configuration file exists currently.
+This is an AWX-based network device upgrade management system for 1000+ heterogeneous network devices. The system automates firmware upgrades across multiple vendor platforms using pure Ansible configuration with no custom development required.
 
 ## Project Structure
 
-- **Root directory**: Contains core configuration (`pyproject.toml`)
-- **`.claude/`**: Claude Code configuration with custom commands
-- **`.venv/`**: Python virtual environment
-- **`.idea/`**: IntelliJ/PyCharm IDE configuration
+- **`ansible-content/`**: Primary focus - Pure Ansible playbooks, roles, and templates
+  - `playbooks/`: Core workflow orchestration including main-upgrade-workflow.yml
+  - `roles/`: Vendor-specific upgrade logic (cisco-nxos-upgrade, cisco-iosxe-upgrade, etc.)
+  - `collections/requirements.yml`: Ansible collection dependencies
+- **`awx-config/`**: AWX Configuration (YAML only) - job templates, workflows, inventories
+- **`install/`**: Container-based installation scripts and configurations
+- **`integration/`**: External system integration (NetBox, Grafana, InfluxDB)
+- **`tests/`**: Testing framework with comprehensive test runner
+- **`docs/`**: Documentation and vendor-specific guides
 
 ## Development Commands
 
-This project uses `uv` for dependency management. Key commands:
+This project uses Ansible for automation. Key commands:
 
 ```bash
-# Install dependencies and sync environment
-uv sync
+# Install Ansible collections
+ansible-galaxy install -r ansible-content/collections/requirements.yml --force
 
-# Install project in development mode
-uv pip install -e .
+# Run comprehensive test suite
+./tests/run-all-tests.sh
 
-# Run Python modules
-uv run python -m <module_name>
+# Test playbook syntax
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
 
-# Add new dependencies
-uv add <package_name>
+# Run playbooks in check mode
+ansible-playbook --check ansible-content/playbooks/health-check.yml
 
-# Activate virtual environment (if needed)
-source .venv/bin/activate
+# Lint Ansible content (if available)
+ansible-lint ansible-content/playbooks/
+yamllint ansible-content/
 ```
+
+## Testing
+
+The project includes a comprehensive test framework:
+- **`./tests/run-all-tests.sh`**: Main test runner that executes all test suites
+- **Syntax validation**: Automated syntax checking for all playbooks and roles
+- **Integration tests**: End-to-end workflow validation
+- **Vendor-specific tests**: Platform-specific test cases
 
 ## Code Standards and Contribution Guidelines
 
-Based on the existing Claude commands, follow these standards:
+Follow these Ansible and DevOps standards:
 
-- **PEP 8 coding standards**: Maintain consistent Python style
-- **Type hints**: Use type hints for all new functions and methods
-- **Testing**: Write unit tests for new features with 100% test coverage goal
-- **Documentation**: Update documentation as needed and document new features
-- **Commit practices**: Use meaningful commit messages and commit frequently
-- **Dependency management**: Keep dependencies up to date
-- **Code organization**: Adhere to existing code style and patterns, avoid large monolithic changes
+- **Ansible Best Practices**: Follow official Ansible development guidelines
+- **Idempotency**: All tasks must be idempotent and support check mode
+- **YAML Standards**: Consistent YAML formatting and structure
+- **Documentation**: Comprehensive inline documentation for all playbooks and roles
+- **Testing**: Unit tests for custom modules and comprehensive integration tests
+- **Version Control**: Git-based version control with meaningful commit messages
+- **Security**: All sensitive data encrypted with Ansible Vault
 
 ## Claude Code Custom Commands
 
@@ -53,13 +67,79 @@ Two custom commands are configured:
 1. **`/code-commit`**: Performs careful code review and commit with push
 2. **`/code-review`**: Comprehensive code review with standards checking
 
-Note: The `/code-review` command currently references TypeScript/React example files that are not applicable to this Python project. These references should be updated once Python modules are established.
-
 ## Architecture Notes
 
-This appears to be a fresh Python project setup. The architecture will likely involve:
-- Network device management and upgrade orchestration
-- Python-based automation and scripting
-- Configuration management for different device types
+This is a container-based, configuration-only system with the following architecture:
+- **AWX**: Open source automation platform with web UI for job orchestration
+- **NetBox**: Device inventory and IPAM management (pre-existing deployment)
+- **Telegraf**: Metrics collection for existing InfluxDB v2
+- **Redis**: Job queuing and caching
+- **Single Server Deployment**: All services containerized on single Linux server
 
-As the codebase develops, update this file with specific architectural patterns, main modules, and established development workflows.
+### Upgrade Workflow Architecture
+
+The system implements a **phase-separated upgrade approach**:
+
+1. **Phase 1: Image Loading** (Business hours safe)
+   - Device health check and baseline capture
+   - Storage cleanup and preparation  
+   - Firmware image transfer and staging
+   - Cryptographic hash verification
+
+2. **Phase 2: Image Installation** (Maintenance window)
+   - Final pre-installation validation
+   - Firmware activation and installation
+   - Device reboot and recovery monitoring
+   - Comprehensive post-upgrade validation
+
+3. **Phase 3: Validation and Rollback**
+   - Network state comparison (pre/post)
+   - Protocol convergence validation
+   - Automatic rollback on failure
+   - Metrics export to InfluxDB
+
+### Supported Platforms with Specific Features
+
+- **Cisco NX-OS**: ISSU support, EPLD upgrades, boot variable management
+- **Cisco IOS-XE**: Install mode vs bundle mode handling, boot system configuration  
+- **Metamako MOS**: Ultra-low latency procedures, custom CLI handling, latency validation
+- **Opengear**: Web interface automation, serial port management, power coordination
+- **FortiOS**: HA cluster coordination, license validation, VPN handling
+
+### Key Implementation Details
+
+- **Master Workflow**: `ansible-content/playbooks/main-upgrade-workflow.yml` orchestrates all phases
+- **Vendor Roles**: Each platform has dedicated roles in `ansible-content/roles/`
+- **Validation Framework**: Comprehensive network state validation with pre/post comparison
+- **Security**: SHA512 hash verification, signature validation, encrypted secrets
+- **Error Handling**: Automatic rollback triggers, manual intervention procedures
+- **Metrics Integration**: Real-time progress tracking via InfluxDB line protocol
+
+## Implementation Status & Known Gaps
+
+**Overall Completion**: 85% - Production ready for most platforms
+
+### Platform Readiness Status
+- ✅ **Cisco NX-OS**: 95% complete (production ready)
+- ⚠️ **Cisco IOS-XE**: 70% complete (missing IPSec, BFD, optics validation)
+- ✅ **FortiOS**: 90% complete (production ready)
+- ✅ **Metamako MOS**: 85% complete (production ready)  
+- ✅ **Opengear**: 80% complete (production ready)
+
+### Critical Gaps for IOS-XE Platform
+The IOS-XE implementation is missing required validation components per PROJECT_REQUIREMENTS.md:
+
+**Missing Validation Tasks** (High Priority):
+- `ansible-content/roles/cisco-iosxe-upgrade/tasks/ipsec-validation.yml` - IPSec tunnel validation
+- `ansible-content/roles/cisco-iosxe-upgrade/tasks/bfd-validation.yml` - BFD session validation  
+- `ansible-content/roles/cisco-iosxe-upgrade/tasks/optics-validation.yml` - Interface optics validation
+
+These must be implemented and integrated into the main validation workflow before IOS-XE production deployment.
+
+### Development Priorities
+1. **High**: Complete IOS-XE validation suite
+2. **Medium**: Add IGMP validation for NX-OS
+3. **Medium**: Enhance BFD validation across all platforms
+4. **Low**: Complete documentation and vendor guides
+
+See `IMPLEMENTATION_STATUS.md` for detailed compliance analysis.

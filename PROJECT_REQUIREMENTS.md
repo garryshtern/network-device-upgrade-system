@@ -7,15 +7,19 @@ Build a complete AWX-based network device upgrade management system for 1000+ he
 ## System Architecture Requirements
 
 ### Single Server Deployment
-- **Container Deploymnet**: Single Linux server (no clustering)
+- **Container Deployment**: Single Linux server (no clustering)
+- **Container Management**: AWX, Telegraf, Redis, NetBox in containers
+- **Minimal Coding**: Configuration only, no custom development
+- **Maximum Simplicity**: Easy to maintain by staff with basic Linux/Ansible skills
+- **Ansible-Based**: All automation via Ansible playbooks and AWX job templates
 - **Database Backend**: SQLite only (no PostgreSQL clusters)
-- **Service Management**: user systemd services for all components
+- **Service Management**: Use systemd services for all components
 - **High Availability**: Not required, but ensure graceful recovery from failures
 
 
 ### Core Components
 1. **AWX**: Open source automation platform with web UI
-2. **Netbox**: Device inventory and IPAM management
+2. **NetBox**: Device inventory and IPAM management. Already deployed.
 3. **Telegraf**: Metrics collection for existing InfluxDB v2
 4. **Redis**: Job queuing and caching
 5. **File Storage**: Local filesystem for configurations and firmware
@@ -32,7 +36,7 @@ Build support for the following network device platforms:
 ### 2. Cisco IOS-XE (Enterprise Routers/Switches)  
 - **Collection**: `cisco.ios`
 - **Features**: Install mode vs. bundle mode handling
-- **Validation**: interface & optics states, BGP, routing tables, ARP
+- **Validation**: interface & optics states, BGP, routing tables, ARP, IPSec, BFD
 
 ### 3. Metamako MOS (Ultra-Low Latency Switches)
 - **Collection**: `ansible.netcommon` with custom CLI modules
@@ -364,36 +368,50 @@ required_arp_checks:
 
 ## File Structure Requirements
 
-Create the following complete project structure:
+Create the following simplified, container-based project structure optimized for configuration-only deployment:
 
 ```
 network-upgrade-system/
 ├── README.md                           # Project overview and quick start
 ├── PROJECT_REQUIREMENTS.md             # This requirements document
-├── install/
-│   ├── install-system.sh               # Base system preparation
-│   ├── install-awx.sh                  # AWX installation (SQLite backend)
-│   ├── install-netbox.sh               # Netbox installation (SQLite backend)
-│   ├── configure-telegraf.sh           # Telegraf metrics collection setup
-│   ├── configure-redis.sh              # Redis installation and configuration
-│   ├── setup-ssl.sh                    # SSL certificate configuration
-│   ├── create-services.sh              # systemd service creation
-│   └── backup-scripts.sh               # Backup and recovery scripts
-├── ansible-content/
-│   ├── ansible.cfg                     # Ansible configuration
-│   ├── playbooks/
-│   │   ├── main-upgrade-workflow.yml   # Master workflow orchestrator
-│   │   ├── image-loading.yml           # Phase 1: Image transfer and staging
-│   │   ├── image-installation.yml      # Phase 2: Installation and activation
-│   │   ├── health-check.yml            # Device health validation
-│   │   ├── config-backup.yml           # Configuration backup
-│   │   ├── storage-cleanup.yml         # Device storage management
-│   │   ├── network-validation.yml      # Comprehensive network state checks
-│   │   ├── compliance-audit.yml        # Firmware compliance reporting
-│   │   ├── emergency-rollback.yml      # Rollback procedures
-│   │   └── batch-operations.yml        # Multi-device coordination
-│   ├── roles/
-│   │   ├── cisco-nxos-upgrade/         # Cisco NX-OS specific procedures
+│
+├── install/                           # Container-based installation
+│   ├── install-containers.sh          # Main container deployment script
+│   ├── install-podman.sh              # Podman installation and setup
+│   ├── compose/                       # Container orchestration
+│   │   ├── docker-compose.yml         # Multi-container setup
+│   │   ├── awx-compose.yml            # AWX container configuration
+│   │   ├── redis-compose.yml          # Redis container configuration
+│   │   └── telegraf-compose.yml       # Telegraf container configuration
+│   ├── configs/                       # Container configuration files
+│   │   ├── awx/                       # AWX container configs
+│   │   │   ├── settings.py.template   # AWX settings template
+│   │   │   └── nginx.conf             # AWX reverse proxy config
+│   │   ├── redis/                     # Redis container config
+│   │   │   └── redis.conf             # Redis configuration
+│   │   └── telegraf/                  # Telegraf container config
+│   │       ├── telegraf.conf          # Main Telegraf configuration
+│   │       └── scripts/               # Custom metric collection scripts
+│   ├── backup-scripts.sh              # Backup and recovery scripts
+│   └── setup-ssl.sh                   # SSL certificate configuration
+│
+├── ansible-content/                   # **PRIMARY FOCUS** - Pure Ansible
+│   ├── ansible.cfg                    # Ansible configuration
+│   ├── collections/
+│   │   └── requirements.yml           # Required Ansible collections
+│   ├── playbooks/                     # **CORE DELIVERABLE**
+│   │   ├── main-upgrade-workflow.yml  # Master workflow orchestrator
+│   │   ├── image-loading.yml          # Phase 1: Image transfer and staging
+│   │   ├── image-installation.yml     # Phase 2: Installation and activation
+│   │   ├── health-check.yml           # Device health validation
+│   │   ├── config-backup.yml          # Configuration backup
+│   │   ├── storage-cleanup.yml        # Device storage management
+│   │   ├── network-validation.yml     # Comprehensive network state checks
+│   │   ├── compliance-audit.yml       # Firmware compliance reporting
+│   │   ├── emergency-rollback.yml     # Rollback procedures
+│   │   └── batch-operations.yml       # Multi-device coordination
+│   ├── roles/                         # **VENDOR-SPECIFIC LOGIC**
+│   │   ├── cisco-nxos-upgrade/        # Cisco NX-OS specific procedures
 │   │   │   ├── tasks/main.yml
 │   │   │   ├── tasks/image-loading.yml
 │   │   │   ├── tasks/image-installation.yml
@@ -401,7 +419,7 @@ network-upgrade-system/
 │   │   │   ├── tasks/validation.yml
 │   │   │   ├── vars/main.yml
 │   │   │   └── templates/
-│   │   ├── cisco-iosxe-upgrade/        # Cisco IOS-XE specific procedures
+│   │   ├── cisco-iosxe-upgrade/       # Cisco IOS-XE specific procedures
 │   │   │   ├── tasks/main.yml
 │   │   │   ├── tasks/image-loading.yml
 │   │   │   ├── tasks/image-installation.yml
@@ -409,20 +427,20 @@ network-upgrade-system/
 │   │   │   ├── tasks/validation.yml
 │   │   │   ├── vars/main.yml
 │   │   │   └── templates/
-│   │   ├── metamako-mos-upgrade/       # Metamako MOS specific procedures
+│   │   ├── metamako-mos-upgrade/      # Metamako MOS specific procedures
 │   │   │   ├── tasks/main.yml
 │   │   │   ├── tasks/image-loading.yml
 │   │   │   ├── tasks/image-installation.yml
 │   │   │   ├── tasks/latency-validation.yml
 │   │   │   ├── vars/main.yml
 │   │   │   └── templates/
-│   │   ├── opengear-upgrade/           # Opengear specific procedures
+│   │   ├── opengear-upgrade/          # Opengear specific procedures
 │   │   │   ├── tasks/main.yml
 │   │   │   ├── tasks/web-automation.yml
 │   │   │   ├── tasks/serial-management.yml
 │   │   │   ├── vars/main.yml
 │   │   │   └── templates/
-│   │   ├── fortios-upgrade/            # FortiOS specific procedures
+│   │   ├── fortios-upgrade/           # FortiOS specific procedures
 │   │   │   ├── tasks/main.yml
 │   │   │   ├── tasks/image-loading.yml
 │   │   │   ├── tasks/image-installation.yml
@@ -430,99 +448,80 @@ network-upgrade-system/
 │   │   │   ├── tasks/license-validation.yml
 │   │   │   ├── vars/main.yml
 │   │   │   └── templates/
-│   │   ├── image-validation/           # Cryptographic verification
+│   │   ├── image-validation/          # Cryptographic verification
 │   │   │   ├── tasks/hash-verification.yml
 │   │   │   ├── tasks/signature-validation.yml
 │   │   │   └── tasks/integrity-audit.yml
-│   │   ├── space-management/           # Storage validation and cleanup
+│   │   ├── space-management/          # Storage validation and cleanup
 │   │   │   ├── tasks/space-check.yml
 │   │   │   ├── tasks/cleanup-images.yml
 │   │   │   └── tasks/storage-monitoring.yml
-│   │   ├── network-validation/         # Comprehensive state checks
+│   │   ├── network-validation/        # Comprehensive state checks
 │   │   │   ├── tasks/bgp-validation.yml
 │   │   │   ├── tasks/interface-validation.yml
 │   │   │   ├── tasks/routing-validation.yml
 │   │   │   ├── tasks/multicast-validation.yml
 │   │   │   ├── tasks/arp-validation.yml
 │   │   │   └── tasks/protocol-convergence.yml
-│   │   └── common/                     # Shared tasks and utilities
+│   │   └── common/                    # Shared tasks and utilities
 │   │       ├── tasks/connectivity-check.yml
 │   │       ├── tasks/logging.yml
 │   │       ├── tasks/error-handling.yml
 │   │       └── tasks/metrics-export.yml
 │   ├── inventory/
 │   │   ├── group_vars/
-│   │   │   ├── all.yml                 # Global variables
-│   │   │   ├── cisco_nxos.yml          # NX-OS specific configurations
-│   │   │   ├── cisco_iosxe.yml         # IOS-XE specific configurations
-│   │   │   ├── metamako_mos.yml        # Metamako configurations
-│   │   │   ├── opengear.yml            # Opengear configurations
-│   │   │   └── fortios.yml             # FortiOS configurations
-│   │   └── netbox_dynamic.yml          # Netbox dynamic inventory config
-│   ├── collections/
-│   │   └── requirements.yml            # Required Ansible collections
+│   │   │   ├── all.yml                # Global variables
+│   │   │   ├── cisco_nxos.yml         # NX-OS specific configurations
+│   │   │   ├── cisco_iosxe.yml        # IOS-XE specific configurations
+│   │   │   ├── metamako_mos.yml       # Metamako configurations
+│   │   │   ├── opengear.yml           # Opengear configurations
+│   │   │   └── fortios.yml            # FortiOS configurations
+│   │   └── netbox_dynamic.yml         # NetBox dynamic inventory config
 │   └── validation-templates/
-│       ├── bfd-validation.j2           # BFD state validation templates
-│       ├── bgp-validation.j2           # BGP state validation templates
-│       ├── interface-validation.j2     # Interface state templates
-│       ├── routing-validation.j2       # Routing validation templates
-│       ├── multicast-validation.j2     # PIM/IGMP validation templates
-│       └── arp-validation.j2           # ARP validation templates
-├── netbox-config/
-│   ├── import-scripts/
-│   │   ├── import-from-csv.py          # CSV import utility
-│   │   ├── sync-from-inventory.py      # External inventory sync
-│   │   └── validate-import.py          # Import validation
-│   └── api-integration/
-│       ├── awx-dynamic-inventory.py    # AWX integration script
-│       └── netbox-api-client.py        # Netbox API utilities
-├── awx-config/
+│       ├── bfd-validation.j2          # BFD state validation templates
+│       ├── bgp-validation.j2          # BGP state validation templates
+│       ├── interface-validation.j2    # Interface state templates
+│       ├── routing-validation.j2      # Routing validation templates
+│       ├── multicast-validation.j2    # PIM/IGMP validation templates
+│       └── arp-validation.j2          # ARP validation templates
+│
+├── awx-config/                        # AWX Configuration (YAML only)
 │   ├── job-templates/
-│   │   ├── device-health-check.yml     # Health validation template
-│   │   ├── storage-cleanup.yml         # Storage management template
-│   │   ├── image-loading.yml           # Image loading template
-│   │   ├── image-verification.yml      # Image integrity verification
-│   │   ├── image-installation.yml      # Image installation template
-│   │   ├── post-validation.yml         # Post-upgrade validation
-│   │   ├── emergency-rollback.yml      # Rollback template
-│   │   └── compliance-audit.yml        # Compliance reporting
+│   │   ├── device-health-check.yml    # Health validation template
+│   │   ├── storage-cleanup.yml        # Storage management template
+│   │   ├── image-loading.yml          # Image loading template
+│   │   ├── image-verification.yml     # Image integrity verification
+│   │   ├── image-installation.yml     # Image installation template
+│   │   ├── post-validation.yml        # Post-upgrade validation
+│   │   ├── emergency-rollback.yml     # Rollback template
+│   │   └── compliance-audit.yml       # Compliance reporting
 │   ├── workflow-templates/
-│   │   ├── full-upgrade-workflow.yml   # Complete upgrade orchestration
-│   │   ├── emergency-upgrade.yml       # Fast-track security updates
-│   │   ├── bulk-upgrade.yml            # Multiple device coordination
-│   │   └── validation-workflow.yml     # Validation-only workflow
+│   │   ├── full-upgrade-workflow.yml  # Complete upgrade orchestration
+│   │   ├── emergency-upgrade.yml      # Fast-track security updates
+│   │   ├── bulk-upgrade.yml           # Multiple device coordination
+│   │   └── validation-workflow.yml    # Validation-only workflow
 │   ├── inventories/
-│   │   ├── netbox-dynamic.yml          # Dynamic inventory configuration
-│   │   └── static-groups.yml           # Static device groupings
+│   │   ├── netbox-dynamic.yml         # NetBox dynamic inventory configuration
+│   │   └── static-groups.yml          # Static device groupings
 │   ├── credentials/
-│   │   ├── network-ssh-keys.yml        # SSH credential configurations
-│   │   ├── vendor-api-keys.yml         # Vendor API credentials
-│   │   └── service-accounts.yml        # Service account credentials
+│   │   ├── network-ssh-keys.yml       # SSH credential configurations
+│   │   ├── vendor-api-keys.yml        # Vendor API credentials
+│   │   └── service-accounts.yml       # Service account credentials
 │   ├── projects/
-│   │   └── network-automation.yml      # SCM project configuration
+│   │   └── network-automation.yml     # SCM project configuration
 │   ├── organizations/
-│   │   └── network-operations.yml      # Organization and team setup
+│   │   └── network-operations.yml     # Organization and team setup
 │   └── notifications/
-│       ├── email-notifications.yml     # Email notification templates
-│       ├── slack-integration.yml       # Slack notification setup
-│       └── webhook-notifications.yml   # Webhook configurations
-├── integration/
-│   ├── telegraf/
-│   │   ├── telegraf.conf               # Main Telegraf configuration
-│   │   └── scripts/
-│   │       ├── awx-metrics.py          # AWX job status metrics
-│   │       ├── netbox-metrics.py       # Device compliance metrics
-│   │       ├── network-state-metrics.py # BGP/routing state metrics
-│   │       ├── validation-metrics.py   # Network validation results
-│   │       └── storage-metrics.py      # Device storage monitoring
-│   ├── influxdb/
-│   │   ├── bucket-setup.sql            # InfluxDB bucket configuration
-│   │   ├── retention-policies.sql      # Data retention policies
-│   │   └── measurement-schemas/
-│   │       ├── upgrade-progress.txt    # Upgrade tracking schema
-│   │       ├── network-validation.txt  # Network state schema
-│   │       ├── device-compliance.txt   # Compliance tracking schema
-│   │       └── storage-management.txt  # Storage monitoring schema
+│       ├── email-notifications.yml    # Email notification templates
+│       ├── slack-integration.yml      # Slack notification setup
+│       └── webhook-notifications.yml  # Webhook configurations
+│
+├── integration/                       # External system integration
+│   ├── netbox/                        # NetBox integration (existing deployment)
+│   │   ├── dynamic-inventory.py       # AWX dynamic inventory script
+│   │   └── sync-scripts/              # Data synchronization utilities
+│   │       ├── device-import.sh       # Device data import
+│   │       └── firmware-sync.sh       # Firmware version sync
 │   ├── grafana/
 │   │   ├── dashboards/
 │   │   │   ├── executive-overview.json # High-level metrics dashboard
@@ -537,43 +536,64 @@ network-upgrade-system/
 │   │   │   └── storage-alerts.yml      # Storage space alerts
 │   │   └── data-sources/
 │   │       └── influxdb-datasource.json # InfluxDB connection config
-│   └── external-apis/
-│       ├── inventory-sync.py           # External inventory integration
-│       ├── monitoring-integration.py   # Monitoring system integration
-│       └── itsm-integration.py         # ITSM system integration
-├── scripts/
-│   ├── system-health.sh                # System health monitoring
-│   ├── backup-system.sh                # Complete system backup
-│   ├── restore-system.sh               # System restoration
-│   ├── log-rotation.sh                 # Log management
-│   └── maintenance/
-│       ├── daily-maintenance.sh        # Daily maintenance tasks
-│       ├── weekly-reports.sh           # Weekly reporting
-│       └── cleanup-old-data.sh         # Data cleanup procedures
-├── tests/
-│   ├── unit-tests/                     # Ansible playbook unit tests
-│   ├── integration-tests/              # End-to-end integration tests
-│   ├── vendor-tests/                   # Vendor-specific test cases
-│   └── validation-tests/               # Network state validation tests
-├── docs/
-│   ├── installation-guide.md          # Complete installation instructions
-│   ├── user-guide.md                  # AWX web interface usage
-│   ├── administrator-guide.md         # System administration procedures
+│   ├── influxdb/
+│   │   ├── bucket-setup.flux          # InfluxDB bucket configuration
+│   │   ├── retention-policies.flux    # Data retention policies
+│   │   └── measurement-schemas/
+│   │       ├── upgrade-progress.txt   # Upgrade tracking schema
+│   │       ├── network-validation.txt # Network state schema
+│   │       ├── device-compliance.txt  # Compliance tracking schema
+│   │       └── storage-management.txt # Storage monitoring schema
+│   └── scripts/                       # **MINIMAL** utility scripts
+│       ├── metrics-export.sh          # Basic metrics export
+│       └── health-check.sh            # System health monitoring
+│
+├── configs/                           # Configuration templates and examples
+│   ├── system/                        # System configuration files
+│   │   ├── environment.template       # Environment variables template
+│   │   └── firewall-rules.sh         # Firewall configuration
+│   ├── containers/                    # Container-specific configurations
+│   │   ├── volumes.yml               # Volume mappings
+│   │   └── networks.yml              # Container networking
+│   └── examples/                      # Example configurations
+│       ├── sample-inventory.yml      # Sample device inventory
+│       ├── sample-credentials.yml    # Sample credential configuration
+│       └── sample-workflow.yml       # Sample workflow configuration
+│
+├── tests/                            # Testing framework
+│   ├── ansible-tests/                # Ansible playbook tests
+│   │   ├── syntax-tests.yml          # YAML syntax validation
+│   │   ├── playbook-tests.yml        # Playbook execution tests
+│   │   └── role-tests/               # Individual role tests
+│   ├── integration-tests/            # End-to-end tests
+│   │   ├── container-tests.sh        # Container deployment tests
+│   │   ├── workflow-tests.yml        # Full workflow tests
+│   │   └── validation-tests.yml      # Network validation tests
+│   └── vendor-tests/                 # Vendor-specific test cases
+│       ├── cisco-tests.yml           # Cisco platform tests
+│       ├── metamako-tests.yml        # Metamako platform tests
+│       └── opengear-tests.yml        # Opengear platform tests
+│
+├── docs/                             # Documentation
+│   ├── installation-guide.md         # Container installation guide
+│   ├── user-guide.md                 # AWX web interface usage
+│   ├── administrator-guide.md        # System administration procedures
 │   ├── vendor-guides/
-│   │   ├── cisco-nxos-procedures.md    # NX-OS specific procedures
-│   │   ├── cisco-iosxe-procedures.md   # IOS-XE specific procedures
-│   │   ├── metamako-procedures.md     # Metamako specific procedures
-│   │   ├── opengear-procedures.md     # Opengear specific procedures
-│   │   └── fortios-procedures.md      # FortiOS specific procedures
-│   ├── integration-guide.md           # External system integration
-│   ├── security-guide.md              # Security procedures and validation
-│   ├── troubleshooting.md             # Common issues and solutions
-│   ├── backup-recovery.md             # Disaster recovery procedures
-│   └── api-reference.md               # API documentation
-└── examples/
-    ├── sample-configurations/         # Example device configurations
-    ├── test-inventories/              # Sample inventory data
-    └── demo-workflows/                # Demonstration workflows
+│   │   ├── cisco-nxos-procedures.md  # NX-OS specific procedures
+│   │   ├── cisco-iosxe-procedures.md # IOS-XE specific procedures
+│   │   ├── metamako-procedures.md    # Metamako specific procedures
+│   │   ├── opengear-procedures.md    # Opengear specific procedures
+│   │   └── fortios-procedures.md     # FortiOS specific procedures
+│   ├── integration-guide.md          # External system integration
+│   ├── security-guide.md             # Security procedures and validation
+│   ├── troubleshooting.md            # Common issues and solutions
+│   ├── backup-recovery.md            # Disaster recovery procedures
+│   └── api-reference.md              # API documentation
+│
+└── examples/                         # Working examples and demos
+    ├── sample-configurations/        # Example device configurations
+    ├── demo-workflows/               # Demonstration workflows
+    └── test-data/                    # Sample test data for validation
 ```
 
 ## Implementation Standards
