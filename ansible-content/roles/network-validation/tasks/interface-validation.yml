@@ -1,0 +1,154 @@
+---
+# Interface State Validation
+# Validates interface operational status, error counters, and optics
+
+- name: Gather interface information
+  block:
+    - name: Get interface status (NX-OS)
+      cisco.nxos.nxos_command:
+        commands:
+          - show interface brief | json
+          - show interface status | json
+          - show interface counters errors | json
+      register: nxos_interface_info
+      when: ansible_network_os == "cisco.nxos.nxos"
+      
+    - name: Get interface status (IOS-XE)
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+          - show interfaces summary
+          - show interfaces counters errors
+      register: ios_interface_info
+      when: ansible_network_os == "cisco.ios.ios"
+      
+    - name: Get interface status (Generic)
+      ansible.netcommon.cli_command:
+        command: "{{ item }}"
+      register: generic_interface_info
+      loop:
+        - "show interface brief"
+        - "show interface status"
+      when: ansible_network_os not in ["cisco.nxos.nxos", "cisco.ios.ios"]
+      failed_when: false
+
+- name: Parse interface status for NX-OS
+  block:
+    - name: Extract NX-OS interface data
+      set_fact:
+        interface_brief: "{{ nxos_interface_info.stdout[0] | from_json }}"
+        interface_status: "{{ nxos_interface_info.stdout[1] | from_json }}"
+        interface_errors: "{{ nxos_interface_info.stdout[2] | from_json }}"
+      when: ansible_network_os == "cisco.nxos.nxos"
+      
+    - name: Parse interface states
+      set_fact:
+        up_interfaces: "{{ interface_brief.TABLE_interface.ROW_interface | selectattr('state', 'equalto', 'up') | list }}"
+        down_interfaces: "{{ interface_brief.TABLE_interface.ROW_interface | selectattr('state', 'equalto', 'down') | list }}"
+        admin_down_interfaces: "{{ interface_brief.TABLE_interface.ROW_interface | selectattr('admin_state', 'equalto', 'down') | list }}"
+      when: ansible_network_os == "cisco.nxos.nxos" and interface_brief.TABLE_interface is defined
+
+- name: Interface operational validation
+  block:
+    - name: Check critical interface states
+      assert:
+        that:
+          - up_interfaces | length > 0
+        fail_msg: "No interfaces are in 'up' state"
+        
+    - name: Validate management interface is up
+      assert:
+        that:
+          - interface_brief.TABLE_interface.ROW_interface | selectattr('interface', 'match', 'mgmt.*') | selectattr('state', 'equalto', 'up') | list | length > 0
+        fail_msg: "Management interface is not operational"
+      when: ansible_network_os == "cisco.nxos.nxos" and interface_brief.TABLE_interface is defined
+      failed_when: false
+      
+    - name: Check for interface errors
+      debug:
+        msg: |
+          Interface Error Summary:
+          {% for intf in interface_errors.TABLE_interface.ROW_interface | default([]) %}
+          {% if intf.in_error | int > 0 or intf.out_error | int > 0 %}
+          - {{ intf.interface }}: In Errors: {{ intf.in_error }}, Out Errors: {{ intf.out_error }}
+          {% endif %}
+          {% endfor %}
+      when: ansible_network_os == "cisco.nxos.nxos" and interface_errors.TABLE_interface is defined
+
+- name: VLAN assignment validation
+  block:
+    - name: Get VLAN information
+      cisco.nxos.nxos_command:
+        commands:
+          - show vlan brief | json
+      register: vlan_info
+      when: ansible_network_os == "cisco.nxos.nxos"
+      
+    - name: Validate VLAN assignments
+      debug:
+        msg: |
+          VLAN Summary:
+          Active VLANs: {{ vlan_info.stdout[0] | from_json | json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief[?vlanshowbr_vlanstate==`active`]') | length }}
+          Total VLANs: {{ vlan_info.stdout[0] | from_json | json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief') | length }}
+      when: ansible_network_os == "cisco.nxos.nxos" and vlan_info.stdout[0] | from_json
+
+- name: Link aggregation validation
+  block:
+    - name: Check port-channel status
+      cisco.nxos.nxos_command:
+        commands:
+          - show port-channel summary | json
+      register: portchannel_info
+      when: ansible_network_os == "cisco.nxos.nxos"
+      failed_when: false
+      
+    - name: Validate port-channel states
+      debug:
+        msg: |
+          Port-Channel Summary:
+          {% for pc in portchannel_info.stdout[0] | from_json | json_query('TABLE_channel.ROW_channel') | default([]) %}
+          - {{ pc.group }}: {{ pc.port_channel }} ({{ pc.protocol }}) - {{ pc.ports | length }} members
+          {% endfor %}
+      when: ansible_network_os == "cisco.nxos.nxos" and portchannel_info is defined and portchannel_info.rc == 0
+
+- name: Optics diagnostics validation
+  block:
+    - name: Get transceiver information
+      cisco.nxos.nxos_command:
+        commands:
+          - show interface transceiver details | json
+      register: transceiver_info
+      when: ansible_network_os == "cisco.nxos.nxos"
+      failed_when: false
+      
+    - name: Check SFP/QSFP status
+      debug:
+        msg: |
+          Transceiver Status:
+          {% for intf in transceiver_info.stdout[0] | from_json | json_query('TABLE_interface.ROW_interface') | default([]) %}
+          {% if intf.sfp is defined %}
+          - {{ intf.interface }}: {{ intf.sfp }} ({{ intf.type | default('Unknown') }})
+          {% endif %}
+          {% endfor %}
+      when: ansible_network_os == "cisco.nxos.nxos" and transceiver_info is defined and transceiver_info.rc == 0
+
+- name: Store interface baseline (for comparison)
+  set_fact:
+    interface_baseline:
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      total_interfaces: "{{ interface_brief.TABLE_interface.ROW_interface | length if interface_brief.TABLE_interface is defined else 0 }}"
+      up_interfaces: "{{ up_interfaces | length if up_interfaces is defined else 0 }}"
+      down_interfaces: "{{ down_interfaces | length if down_interfaces is defined else 0 }}"
+      admin_down: "{{ admin_down_interfaces | length if admin_down_interfaces is defined else 0 }}"
+      interface_list: "{{ up_interfaces | map(attribute='interface') | list if up_interfaces is defined else [] }}"
+      
+- name: Interface validation summary
+  debug:
+    msg: |
+      Interface Validation Results:
+      - Total Interfaces: {{ interface_baseline.total_interfaces }}
+      - Operational (Up): {{ interface_baseline.up_interfaces }}
+      - Down: {{ interface_baseline.down_interfaces }}
+      - Admin Down: {{ interface_baseline.admin_down }}
+      - Critical Interfaces Up: {{ 'PASS' if interface_baseline.up_interfaces > 0 else 'FAIL' }}
+      - Validation Status: {{ 'COMPLETE' if interface_baseline.total_interfaces > 0 else 'NO DATA' }}

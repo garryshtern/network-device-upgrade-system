@@ -1,0 +1,110 @@
+---
+# Cisco NX-OS Image Loading Tasks
+# Downloads and stages firmware images on the device
+
+- name: Get current storage information
+  cisco.nxos.nxos_command:
+    commands:
+      - dir bootflash: | json
+  register: nxos_storage_info
+
+- name: Parse storage information
+  ansible.builtin.set_fact:
+    nxos_storage_data: "{{ nxos_storage_info.stdout[0] | from_json }}"
+
+- name: Calculate free space
+  ansible.builtin.set_fact:
+    available_space_mb: "{{ (nxos_storage_data.dir_size.free | int / 1024 / 1024) | int }}"
+    required_space_mb: "{{ firmware_size_mb | default(nxos_minimum_free_space_mb) }}"
+
+- name: Verify sufficient storage space
+  ansible.builtin.assert:
+    that:
+      - available_space_mb | int >= required_space_mb | int
+    fail_msg: "Insufficient storage space. Available: {{ available_space_mb }}MB, Required: {{ required_space_mb }}MB"
+
+- name: Check if target firmware already exists
+  cisco.nxos.nxos_command:
+    commands:
+      - dir bootflash:{{ target_firmware_version }}
+  register: firmware_exists_check
+  ignore_errors: true
+
+- name: Set firmware exists flag
+  ansible.builtin.set_fact:
+    target_firmware_exists: "{{ 'No such file' not in firmware_exists_check.stdout[0] }}"
+
+- name: Skip download if firmware already exists
+  ansible.builtin.debug:
+    msg: "Target firmware {{ target_firmware_version }} already exists on device"
+  when: target_firmware_exists
+
+- name: Download firmware image to device
+  block:
+    - name: Copy firmware image to NX-OS device
+      cisco.nxos.nxos_file_copy:
+        file_system: bootflash:
+        local_file: "{{ source_file }}"
+        remote_file: "{{ target_firmware_version }}"
+        file_pull: false
+        connect_ssh_port: "{{ ansible_ssh_port | default(22) }}"
+      register: nxos_file_copy_result
+
+    - name: Verify file copy completed successfully
+      ansible.builtin.assert:
+        that:
+          - nxos_file_copy_result is succeeded
+        fail_msg: "Firmware file copy failed"
+
+  when: not target_firmware_exists
+
+- name: Verify firmware file on device
+  cisco.nxos.nxos_command:
+    commands:
+      - dir bootflash:{{ target_firmware_version }} | json
+  register: firmware_verification
+
+- name: Parse firmware file information
+  ansible.builtin.set_fact:
+    firmware_file_info: "{{ firmware_verification.stdout[0] | from_json }}"
+
+- name: Validate firmware file integrity
+  ansible.builtin.assert:
+    that:
+      - firmware_file_info.file_list | length > 0
+      - firmware_file_info.file_list[0].size > 1024000  # Minimum 1MB
+    fail_msg: "Firmware file validation failed"
+
+- name: Calculate MD5 hash of firmware file on device
+  cisco.nxos.nxos_command:
+    commands:
+      - show file bootflash:{{ target_firmware_version }} md5sum
+  register: nxos_firmware_hash
+  when: firmware_md5_hash is defined
+
+- name: Verify firmware MD5 hash
+  ansible.builtin.assert:
+    that:
+      - firmware_md5_hash in nxos_firmware_hash.stdout[0]
+    fail_msg: |
+      Firmware MD5 hash mismatch!
+      Expected: {{ firmware_md5_hash }}
+      Device hash output: {{ nxos_firmware_hash.stdout[0] }}
+  when: firmware_md5_hash is defined
+
+- name: Set image loading results
+  ansible.builtin.set_fact:
+    nxos_image_loading_results:
+      firmware_file: "{{ target_firmware_version }}"
+      file_size_bytes: "{{ firmware_file_info.file_list[0].size }}"
+      loading_successful: true
+      hash_verified: "{{ firmware_md5_hash is defined }}"
+      loading_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: Display image loading results
+  ansible.builtin.debug:
+    msg:
+      - "Firmware image loading completed successfully"
+      - "File: {{ nxos_image_loading_results.firmware_file }}"
+      - "Size: {{ (nxos_image_loading_results.file_size_bytes | int / 1024 / 1024) | round(2) }}MB"
+      - "Hash verified: {{ nxos_image_loading_results.hash_verified }}"

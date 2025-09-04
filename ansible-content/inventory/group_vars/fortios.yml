@@ -1,0 +1,135 @@
+---
+# FortiOS Specific Configuration
+# For Fortinet FortiGate firewalls
+
+# Connection settings
+ansible_network_os: fortinet.fortios.fortios
+ansible_connection: httpapi
+ansible_host: "{{ inventory_hostname }}"
+ansible_user: "{{ vault_fortios_username | default('admin') }}"
+ansible_password: "{{ vault_fortios_password }}"
+ansible_httpapi_use_ssl: true
+ansible_httpapi_validate_certs: false
+ansible_httpapi_port: 443
+
+# Platform specific settings
+platform_type: "fortios"
+vendor: "fortinet"
+device_family: "fortigate"
+
+# VDOM settings
+vdom: "root"
+multi_vdom_mode: false
+target_vdom: "root"
+
+# HA cluster settings
+ha_enabled: false  # Set to true for HA deployments
+ha_mode: "standalone"  # standalone, active-passive, active-active
+ha_group_id: 1
+ha_priority: 128
+check_ha_sync: true
+
+# License and FortiCare settings
+validate_forticare_license: true
+check_support_contract: true
+license_grace_period_days: 30
+
+# Firmware management
+firmware_download_method: "fortiguard"  # fortiguard, local_upload
+fortiguard_timeout: 3600
+local_firmware_path: "{{ firmware_base_path }}/fortios"
+verify_firmware_signature: true
+
+# Security service validation
+validate_security_services: true
+security_services:
+  antivirus: true
+  ips: true
+  web_filter: true
+  application_control: true
+  email_filter: false
+  dlp: false
+
+# Network validation
+validate_interfaces: true
+validate_routing: true
+validate_firewall_policies: true
+policy_validation_timeout: 180
+
+# VPN validation
+validate_ssl_vpn: true
+validate_ipsec_vpn: true
+vpn_tunnel_recovery_timeout: 300
+
+# Performance thresholds
+max_cpu_utilization: 85
+max_memory_utilization: 90
+max_session_count: 500000
+max_policy_count: 10000
+
+# System validation
+validate_system_time: true
+ntp_sync_required: true
+validate_dns_resolution: true
+
+# Backup and configuration
+backup_before_upgrade: true
+backup_scope: "global"  # global, vdom-specific
+config_validation_enabled: true
+
+# FortiGuard services
+fortiguard_services:
+  antivirus_db: true
+  ips_db: true
+  webfilter_db: true
+  application_db: true
+
+# Upgrade process settings
+upgrade_method: "standard"  # standard, coordinated (for HA)
+pre_upgrade_backup: true
+post_upgrade_validation_timeout: 600
+
+# HA specific settings (when ha_enabled: true)
+ha_coordination:
+  upgrade_sequence: "secondary_first"
+  sync_timeout: 1800
+  failover_test: false  # Set to true for testing
+
+# Logging and monitoring
+log_validation: true
+log_disk_usage_threshold: 85
+syslog_validation: false
+
+# Network services
+dhcp_server_validation: false
+dns_server_validation: false
+web_proxy_validation: false
+
+# SSL inspection
+ssl_inspection_enabled: false
+certificate_validation: true
+
+# User authentication
+user_auth_validation: false
+ldap_validation: false
+radius_validation: false
+
+# Reporting and analytics
+fortianalyzer_integration: false
+fortimanager_integration: false
+
+# Advanced features
+sd_wan_validation: false
+security_fabric_validation: false
+outbreak_prevention: true
+
+# Recovery settings
+auto_recovery: true
+recovery_timeout: 900
+emergency_access_enabled: true
+
+# Validation timeouts
+interface_recovery_timeout: 120
+routing_recovery_timeout: 300
+policy_recovery_timeout: 180
+service_recovery_timeout: 240

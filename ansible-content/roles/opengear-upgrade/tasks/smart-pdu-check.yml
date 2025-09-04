@@ -1,0 +1,81 @@
+---
+# Smart PDU Specific Checks for Opengear
+# Validate power management capabilities and outlet status
+
+- name: Get power outlet configuration
+  uri:
+    url: "https://{{ ansible_host }}/api/v1/power/outlets"
+    method: GET
+    headers:
+      Authorization: "Token {{ opengear_api_token }}"
+    validate_certs: false
+  register: power_outlets_info
+  
+- name: Parse power outlet information
+  set_fact:
+    opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
+      'power_ports': power_outlets_info.json
+    }) }}"
+    
+- name: Check outlet status and power consumption
+  uri:
+    url: "https://{{ ansible_host }}/api/v1/power/outlets/{{ item.id }}/status"
+    method: GET
+    headers:
+      Authorization: "Token {{ opengear_api_token }}"
+    validate_certs: false
+  register: outlet_status
+  loop: "{{ opengear_upgrade_state.power_ports }}"
+  when: opengear_upgrade_state.power_ports | length > 0
+  
+- name: Analyze power consumption
+  block:
+    - name: Calculate total power usage
+      set_fact:
+        total_power_usage: "{{ outlet_status.results | map(attribute='json.power_draw') | map('float') | sum | default(0) }}"
+        active_outlets: "{{ outlet_status.results | selectattr('json.status', 'equalto', 'on') | list | length | default(0) }}"
+      when: outlet_status is defined
+      
+    - name: Check power capacity
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/power/status"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: power_capacity
+      
+- name: Validate smart PDU readiness
+  block:
+    - name: Check for critical power loads
+      set_fact:
+        power_utilization: "{{ (total_power_usage | float / power_capacity.json.max_capacity | float * 100) | round(1) }}"
+      when: power_capacity is defined and total_power_usage is defined
+      
+    - name: Warn about high power utilization
+      debug:
+        msg: |
+          WARNING: Power utilization is {{ power_utilization }}%.
+          High utilization may affect upgrade stability.
+      when: power_utilization | default(0) | float > 80
+      
+- name: Check environmental sensors (if available)
+  uri:
+    url: "https://{{ ansible_host }}/api/v1/environmental/sensors"
+    method: GET
+    headers:
+      Authorization: "Token {{ opengear_api_token }}"
+    validate_certs: false
+  register: environmental_sensors
+  failed_when: false
+
+- name: Log smart PDU assessment
+  debug:
+    msg: |
+      Smart PDU Assessment:
+      - Model: {{ opengear_upgrade_state.device_model }}
+      - Power Outlets: {{ opengear_upgrade_state.power_ports | length }}
+      - Active Outlets: {{ active_outlets | default(0) }}
+      - Power Usage: {{ total_power_usage | default(0) }}W ({{ power_utilization | default(0) }}%)
+      - Environmental Sensors: {{ environmental_sensors.json | length if environmental_sensors.json is defined else 0 }}
+      - Ready for Upgrade: {{ 'Yes' if power_utilization | default(0) | float < 90 else 'Caution - High Load' }}

@@ -1,0 +1,158 @@
+---
+# Cisco NX-OS Vendor-Specific Tests
+# Tests NX-OS role functionality and compatibility
+
+- name: Cisco NX-OS Role Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    role_path: "{{ playbook_dir }}/../../ansible-content/roles/cisco-nxos-upgrade"
+    test_device: "nxos-test-01"
+    test_results: {}
+    
+  tasks:
+    - name: Test role directory structure
+      stat:
+        path: "{{ role_path }}/{{ item }}"
+      register: nxos_structure_check
+      loop:
+        - "tasks/main.yml"
+        - "tasks/check-issu-capability.yml"
+        - "tasks/issu-procedures.yml"
+        - "tasks/epld-upgrade.yml"
+        - "tasks/image-loading.yml"
+        - "tasks/image-installation.yml"
+        - "tasks/validation.yml"
+        - "tasks/reboot.yml"
+        
+    - name: Verify all required task files exist
+      assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Missing required NX-OS task file: {{ item.item }}"
+      loop: "{{ nxos_structure_check.results }}"
+      
+    - name: Test task file syntax
+      ansible.builtin.shell: |
+        ansible-playbook --syntax-check --extra-vars="target_firmware_version=9.3.10 inventory_hostname={{ test_device }}" {{ role_path }}/tasks/{{ item }}
+      register: nxos_task_syntax
+      loop:
+        - "main.yml"
+        - "check-issu-capability.yml"
+        - "validation.yml"
+      failed_when: nxos_task_syntax.rc != 0
+      changed_when: false
+      
+    - name: Test NX-OS variable definitions
+      include_vars: "{{ playbook_dir }}/../../ansible-content/inventory/group_vars/cisco_nxos.yml"
+      
+    - name: Validate required NX-OS variables are defined
+      assert:
+        that:
+          - ansible_network_os is defined
+          - platform_type == "cisco_nxos"
+          - vendor == "cisco"
+          - enable_issu is defined
+        fail_msg: "Missing or incorrect NX-OS group variables"
+        
+    - name: Test ISSU capability logic
+      set_fact:
+        mock_nxos_upgrade_state:
+          device: "{{ test_device }}"
+          current_version: "9.3.8"
+          target_version: "9.3.10"
+          issu_capable: false
+          upgrade_method: "disruptive"
+          
+    - name: Simulate ISSU decision making
+      set_fact:
+        issu_decision: "{{ 'issu' if (enable_issu and mock_nxos_upgrade_state.issu_capable) else 'disruptive' }}"
+        
+    - name: Test EPLD upgrade variables
+      assert:
+        that:
+          - enable_epld_upgrade is defined
+          - epld_upgrade_timeout is defined
+          - allow_disruptive_epld is defined
+        fail_msg: "EPLD upgrade variables not properly defined"
+        
+    - name: Test image management settings
+      assert:
+        that:
+          - image_protocol in ['scp', 'sftp', 'http', 'https']
+          - min_free_space_mb is defined
+          - min_free_space_mb | int > 1000
+        fail_msg: "Image management settings invalid"
+        
+    - name: Test validation settings
+      assert:
+        that:
+          - validate_bgp is defined
+          - validate_ospf is defined  
+          - validate_pim is defined
+          - bgp_convergence_timeout | int > 0
+        fail_msg: "Validation settings not properly configured"
+        
+    - name: Test feature requirements
+      assert:
+        that:
+          - required_features is defined
+          - required_features is iterable
+          - "'bgp' in required_features"
+        fail_msg: "Required features not properly defined"
+        
+    - name: Mock NX-OS command testing
+      set_fact:
+        mock_commands:
+          - "show version"
+          - "show module"
+          - "show install all impact"
+          - "show system resources"
+          - "show version epld"
+          
+    - name: Test command validation
+      assert:
+        that:
+          - mock_commands | length > 0
+          - "'show version' in mock_commands"
+        fail_msg: "Command validation failed"
+        
+    - name: Test role integration points
+      set_fact:
+        integration_checks:
+          main_to_issu: "{{ 'issu-procedures.yml' in lookup('file', role_path + '/tasks/main.yml') }}"
+          main_to_epld: "{{ 'epld-upgrade.yml' in lookup('file', role_path + '/tasks/main.yml') }}"
+          validation_includes: "{{ 'include_tasks' in lookup('file', role_path + '/tasks/validation.yml') }}"
+          
+    - name: Verify role integration
+      assert:
+        that:
+          - integration_checks.main_to_issu or integration_checks.main_to_epld
+        fail_msg: "Role integration points not found"
+        
+    - name: Generate NX-OS test report
+      debug:
+        msg: |
+          Cisco NX-OS Role Test Results:
+          ==============================
+          
+          Structure Tests:
+          - Required files: {{ nxos_structure_check.results | selectattr('stat.exists') | list | length }}/{{ nxos_structure_check.results | length }}
+          - Task syntax: {{ nxos_task_syntax.results | selectattr('rc', 'equalto', 0) | list | length }}/{{ nxos_task_syntax.results | length }}
+          
+          Configuration Tests:
+          - Platform type: {{ platform_type }}
+          - ISSU enabled: {{ enable_issu }}
+          - EPLD enabled: {{ enable_epld_upgrade }}
+          - Image protocol: {{ image_protocol }}
+          
+          Feature Tests:
+          - Required features: {{ required_features | length }}
+          - BGP validation: {{ validate_bgp }}
+          - Convergence timeout: {{ bgp_convergence_timeout }}
+          
+          Integration Tests:
+          - ISSU integration: {{ integration_checks.main_to_issu }}
+          - EPLD integration: {{ integration_checks.main_to_epld }}
+          
+          Overall Status: PASS

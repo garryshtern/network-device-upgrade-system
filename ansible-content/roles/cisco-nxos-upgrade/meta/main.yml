@@ -1,0 +1,25 @@
+---
+galaxy_info:
+  role_name: cisco-nxos-upgrade
+  author: Network Operations
+  description: Cisco NX-OS firmware upgrade automation
+  company: Enterprise Network Management
+  license: proprietary
+  min_ansible_version: 2.15
+  platforms:
+    - name: EL
+      versions:
+        - 8
+        - 9
+  galaxy_tags:
+    - networking
+    - cisco
+    - nxos
+    - firmware
+    - upgrade
+
+dependencies:
+  - role: common
+  - role: network-validation
+  - role: image-validation
+  - role: space-management

@@ -1,0 +1,118 @@
+---
+# Cisco NX-OS Reboot Tasks
+# Handles device reboot with proper timing and validation
+
+- name: Display reboot notification
+  ansible.builtin.debug:
+    msg:
+      - "=== NX-OS Device Reboot Required ==="
+      - "Device: {{ inventory_hostname }}"
+      - "Reason: {{ reboot_reason | default('firmware_upgrade') }}"
+      - "Timeout: {{ nxos_reboot_timeout }}s"
+      - "================================="
+
+- name: Get pre-reboot system uptime
+  cisco.nxos.nxos_command:
+    commands:
+      - show system uptime
+  register: pre_reboot_uptime
+
+- name: Initiate system reload
+  cisco.nxos.nxos_command:
+    commands:
+      - reload
+    timeout: 30
+  register: reload_command
+  ignore_errors: true
+  vars:
+    ansible_command_timeout: 30
+
+- name: Wait for device to become unreachable
+  ansible.builtin.wait_for_connection:
+    timeout: 60
+    sleep: 5
+  ignore_errors: true
+
+- name: Wait additional time for complete shutdown
+  ansible.builtin.pause:
+    seconds: "{{ nxos_reboot_delay }}"
+
+- name: Wait for device to come back online
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ nxos_reboot_timeout }}"
+    delay: 30
+    sleep: 10
+
+- name: Wait for NX-OS services to stabilize
+  ansible.builtin.pause:
+    seconds: "{{ nxos_post_reboot_delay }}"
+
+- name: Verify device is responsive after reboot
+  cisco.nxos.nxos_command:
+    commands:
+      - show version brief
+      - show system uptime
+  register: post_reboot_verification
+  retries: 3
+  delay: 10
+
+- name: Parse post-reboot information
+  ansible.builtin.set_fact:
+    post_reboot_version: "{{ post_reboot_verification.stdout[0] | regex_search('system:\\s+version\\s+([0-9\\.\\(\\)]+)', '\\1') | first }}"
+    post_reboot_uptime: "{{ post_reboot_verification.stdout[1] }}"
+
+- name: Validate system came up with new firmware
+  ansible.builtin.assert:
+    that:
+      - target_firmware_version is defined
+      - target_firmware_version | regex_replace('\\.bin$', '') in post_reboot_version
+    fail_msg: |
+      Device did not boot with target firmware version
+      Expected: {{ target_firmware_version }}
+      Actual version: {{ post_reboot_version }}
+  when: reboot_reason | default('firmware_upgrade') == 'firmware_upgrade'
+
+- name: Check for boot issues in system logs
+  cisco.nxos.nxos_command:
+    commands:
+      - show logging last 50 | grep -i "error\|fail\|warn"
+  register: boot_log_check
+  ignore_errors: true
+
+- name: Display boot warnings if found
+  ansible.builtin.debug:
+    msg: "Boot warnings/errors found: {{ boot_log_check.stdout[0] }}"
+  when: 
+    - boot_log_check is succeeded
+    - boot_log_check.stdout[0] | length > 0
+
+- name: Verify critical interfaces are operational
+  cisco.nxos.nxos_command:
+    commands:
+      - show interface brief | json
+  register: post_reboot_interfaces
+
+- name: Parse interface status
+  ansible.builtin.set_fact:
+    interfaces_down_post_reboot: "{{ post_reboot_interfaces.stdout[0] | from_json | json_query('TABLE_interface.ROW_interface[?state != `up`]') | length }}"
+
+- name: Set reboot completion status
+  ansible.builtin.set_fact:
+    nxos_reboot_results:
+      reboot_successful: true
+      new_firmware_version: "{{ post_reboot_version }}"
+      uptime_after_reboot: "{{ post_reboot_uptime }}"
+      interfaces_down_count: "{{ interfaces_down_post_reboot }}"
+      boot_warnings_present: "{{ (boot_log_check.stdout[0] | default('') | length) > 0 }}"
+      reboot_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: Display reboot completion status
+  ansible.builtin.debug:
+    msg:
+      - "=== NX-OS Reboot Complete ==="
+      - "Device: {{ inventory_hostname }}"
+      - "New firmware version: {{ nxos_reboot_results.new_firmware_version }}"
+      - "Interfaces down: {{ nxos_reboot_results.interfaces_down_count }}"
+      - "Boot warnings: {{ nxos_reboot_results.boot_warnings_present }}"
+      - "Status: SUCCESS"
+      - "============================="

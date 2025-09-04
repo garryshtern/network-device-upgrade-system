@@ -1,0 +1,50 @@
+---
+# Cisco IOS-XE Upgrade Role - Main Tasks
+# Handles both install mode and bundle mode upgrades
+
+- name: Initialize IOS-XE upgrade variables
+  set_fact:
+    iosxe_upgrade_state:
+      device: "{{ inventory_hostname }}"
+      current_version: ""
+      target_version: "{{ target_firmware_version }}"
+      install_mode: false
+      boot_mode: "bundle"
+      available_space: 0
+      required_space: 0
+      
+- name: Gather IOS-XE device facts
+  cisco.ios.ios_facts:
+    gather_subset:
+      - hardware
+      - config
+      - interfaces
+  register: iosxe_facts
+  
+- name: Set current firmware version
+  set_fact:
+    iosxe_upgrade_state: "{{ iosxe_upgrade_state | combine({
+      'current_version': iosxe_facts.ansible_facts.ansible_net_version
+    }) }}"
+    
+- name: Check install mode capability
+  include_tasks: check-install-mode.yml
+  
+- name: Display upgrade plan
+  debug:
+    msg: |
+      IOS-XE Upgrade Plan for {{ inventory_hostname }}:
+      Current Version: {{ iosxe_upgrade_state.current_version }}
+      Target Version: {{ iosxe_upgrade_state.target_version }}
+      Install Mode: {{ iosxe_upgrade_state.install_mode }}
+      Boot Mode: {{ iosxe_upgrade_state.boot_mode }}
+      
+- name: Validate upgrade path
+  assert:
+    that:
+      - iosxe_upgrade_state.current_version != iosxe_upgrade_state.target_version
+      - iosxe_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+\\.[0-9]+")
+    fail_msg: "Invalid upgrade path or target version format"
+    
+- name: Execute upgrade based on mode
+  include_tasks: "{{ 'install-mode.yml' if iosxe_upgrade_state.install_mode else 'bundle-mode.yml' }}"

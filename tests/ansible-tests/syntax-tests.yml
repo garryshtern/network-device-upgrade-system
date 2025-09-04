@@ -1,0 +1,127 @@
+---
+# Ansible Syntax and Lint Tests
+# Validates YAML syntax and Ansible best practices
+
+- name: Ansible Syntax Validation Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    ansible_content_dir: "{{ playbook_dir }}/../../ansible-content"
+    test_results: []
+    
+  tasks:
+    - name: Find all Ansible playbooks
+      find:
+        paths: "{{ ansible_content_dir }}/playbooks"
+        patterns: "*.yml,*.yaml"
+        recurse: true
+      register: playbook_files
+      
+    - name: Find all Ansible roles
+      find:
+        paths: "{{ ansible_content_dir }}/roles"
+        patterns: "*.yml,*.yaml"
+        recurse: true
+      register: role_files
+      
+    - name: Find all inventory files
+      find:
+        paths: "{{ ansible_content_dir }}/inventory"
+        patterns: "*.yml,*.yaml"
+        recurse: true
+      register: inventory_files
+
+    - name: Test playbook syntax
+      ansible.builtin.shell: |
+        ansible-playbook --syntax-check {{ item.path }}
+      register: playbook_syntax_results
+      loop: "{{ playbook_files.files }}"
+      failed_when: playbook_syntax_results.rc != 0
+      changed_when: false
+      
+    - name: Test YAML syntax for all files
+      ansible.builtin.shell: |
+        python -c "import yaml; yaml.safe_load(open('{{ item.path }}'))"
+      register: yaml_syntax_results
+      loop: "{{ (playbook_files.files + role_files.files + inventory_files.files) }}"
+      failed_when: yaml_syntax_results.rc != 0
+      changed_when: false
+      
+    - name: Run ansible-lint on playbooks
+      ansible.builtin.shell: |
+        ansible-lint {{ item.path }}
+      register: ansible_lint_results
+      loop: "{{ playbook_files.files[:5] }}"  # Test first 5 to avoid long runs
+      failed_when: false  # Don't fail on warnings
+      changed_when: false
+      
+    - name: Run yamllint on configuration files
+      ansible.builtin.shell: |
+        yamllint {{ item.path }}
+      register: yaml_lint_results
+      loop: "{{ inventory_files.files }}"
+      failed_when: false
+      changed_when: false
+      
+    - name: Check for undefined variables in templates
+      find:
+        paths: "{{ ansible_content_dir }}/roles"
+        patterns: "*.j2"
+        recurse: true
+      register: template_files
+      
+    - name: Validate Jinja2 templates
+      ansible.builtin.shell: |
+        python -c "
+        from jinja2 import Environment, FileSystemLoader
+        import os
+        env = Environment(loader=FileSystemLoader(os.path.dirname('{{ item.path }}')))
+        template = env.get_template(os.path.basename('{{ item.path }}'))
+        print('Template syntax valid')
+        "
+      register: template_validation
+      loop: "{{ template_files.files }}"
+      failed_when: template_validation.rc != 0
+      changed_when: false
+      when: template_files.files | length > 0
+      
+    - name: Check for common Ansible anti-patterns
+      ansible.builtin.shell: |
+        grep -n "become_user.*root" {{ item.path }} || true
+        grep -n "ansible_user.*root" {{ item.path }} || true  
+        grep -n "ignore_errors.*true" {{ item.path }} || true
+      register: antipattern_check
+      loop: "{{ (playbook_files.files + role_files.files)[:10] }}"
+      changed_when: false
+      failed_when: false
+      
+    - name: Generate syntax test report
+      debug:
+        msg: |
+          Ansible Syntax Test Results:
+          ================================
+          
+          Playbook Files Tested: {{ playbook_files.files | length }}
+          Role Files Tested: {{ role_files.files | length }}
+          Inventory Files Tested: {{ inventory_files.files | length }}
+          Template Files Tested: {{ template_files.files | length | default(0) }}
+          
+          Syntax Errors:
+          - Playbook Syntax: {{ playbook_syntax_results.results | selectattr('rc', 'ne', 0) | list | length }} failures
+          - YAML Syntax: {{ yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length }} failures
+          - Template Syntax: {{ template_validation.results | selectattr('rc', 'ne', 0) | list | length if template_validation.results is defined else 0 }} failures
+          
+          Linting Results:
+          - Ansible-lint warnings: {{ ansible_lint_results.results | selectattr('rc', 'ne', 0) | list | length }} files with issues
+          - YAML-lint warnings: {{ yaml_lint_results.results | selectattr('rc', 'ne', 0) | list | length }} files with issues
+          
+          Anti-pattern Check: Completed for {{ antipattern_check.results | length }} files
+          
+          Overall Status: {{ 'PASS' if (playbook_syntax_results.results | selectattr('rc', 'ne', 0) | list | length == 0 and yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length == 0) else 'ISSUES FOUND' }}
+
+    - name: Fail if critical syntax errors found
+      fail:
+        msg: "Critical syntax errors found. Check the test output above."
+      when: >
+        (playbook_syntax_results.results | selectattr('rc', 'ne', 0) | list | length > 0) or
+        (yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length > 0)

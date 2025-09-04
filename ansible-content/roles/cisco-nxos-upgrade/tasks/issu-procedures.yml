@@ -1,0 +1,87 @@
+---
+# ISSU (In-Service Software Upgrade) Procedures for Cisco NX-OS
+# Non-disruptive upgrade process for dual-supervisor systems
+
+- name: Pre-ISSU validation
+  block:
+    - name: Verify dual supervisor status
+      cisco.nxos.nxos_command:
+        commands:
+          - show system redundancy status
+      register: redundancy_status
+      
+    - name: Ensure both supervisors are active
+      assert:
+        that:
+          - "'Active' in redundancy_status.stdout[0]"
+          - "'Standby' in redundancy_status.stdout[0]"
+        fail_msg: "Both supervisors must be present and healthy for ISSU"
+        
+    - name: Check system resources before ISSU
+      cisco.nxos.nxos_command:
+        commands:
+          - show system resources
+          - show install all status
+      register: pre_issu_resources
+
+- name: Execute ISSU upgrade
+  block:
+    - name: Install image on standby supervisor
+      cisco.nxos.nxos_command:
+        commands:
+          - install all nxos {{ target_image_path }} non-disruptive
+        wait_for:
+          - result[0] contains "Install is successful"
+        timeout: 1800
+      register: issu_install_result
+      
+    - name: Monitor ISSU progress
+      cisco.nxos.nxos_command:
+        commands:
+          - show install all status
+      register: issu_status
+      until: "'Success' in issu_status.stdout[0] or 'Failed' in issu_status.stdout[0]"
+      retries: 60
+      delay: 30
+      
+    - name: Validate ISSU completion
+      assert:
+        that:
+          - "'Success' in issu_status.stdout[0]"
+        fail_msg: "ISSU installation failed: {{ issu_status.stdout[0] }}"
+
+- name: Post-ISSU validation
+  block:
+    - name: Verify new image is active
+      cisco.nxos.nxos_command:
+        commands:
+          - show version
+      register: post_issu_version
+      
+    - name: Confirm target version is running
+      assert:
+        that:
+          - nxos_upgrade_state.target_version in post_issu_version.stdout[0]
+        fail_msg: "ISSU completed but target version not active"
+        
+    - name: Check supervisor synchronization
+      cisco.nxos.nxos_command:
+        commands:
+          - show system redundancy status
+      register: post_issu_redundancy
+      
+    - name: Validate system stability
+      cisco.nxos.nxos_command:
+        commands:
+          - show processes cpu summary
+          - show logging last 50
+      register: post_issu_stability
+      
+- name: Log ISSU completion
+  debug:
+    msg: |
+      ISSU Upgrade Completed Successfully:
+      - Previous Version: {{ nxos_upgrade_state.current_version }}
+      - New Version: {{ nxos_upgrade_state.target_version }}
+      - Method: Non-disruptive ISSU
+      - Supervisors: {{ 'Synchronized' if 'Active' in post_issu_redundancy.stdout[0] and 'Standby' in post_issu_redundancy.stdout[0] else 'Check Required' }}

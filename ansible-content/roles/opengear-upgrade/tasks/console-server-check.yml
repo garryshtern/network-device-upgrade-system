@@ -1,0 +1,67 @@
+---
+# Console Server Specific Checks for Opengear
+# Validate serial port configurations and connectivity
+
+- name: Get serial port configuration
+  uri:
+    url: "https://{{ ansible_host }}/api/v1/serialports"
+    method: GET
+    headers:
+      Authorization: "Token {{ opengear_api_token }}"
+    validate_certs: false
+  register: serial_ports_info
+  
+- name: Parse serial port information
+  set_fact:
+    opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
+      'serial_ports': serial_ports_info.json
+    }) }}"
+    
+- name: Check active serial connections
+  uri:
+    url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
+    method: GET
+    headers:
+      Authorization: "Token {{ opengear_api_token }}"
+    validate_certs: false
+  register: port_status
+  loop: "{{ opengear_upgrade_state.serial_ports }}"
+  when: opengear_upgrade_state.serial_ports | length > 0
+  
+- name: Validate console server readiness
+  block:
+    - name: Check for active console sessions
+      set_fact:
+        active_sessions: "{{ port_status.results | selectattr('json.connected', 'equalto', true) | list | length | default(0) }}"
+      when: port_status is defined
+      
+    - name: Warn about active sessions
+      debug:
+        msg: |
+          WARNING: {{ active_sessions | default(0) }} active console sessions detected.
+          These may be disconnected during the upgrade process.
+      when: active_sessions | default(0) | int > 0
+      
+- name: Check network connectivity to managed devices
+  uri:
+    url: "https://{{ ansible_host }}/api/v1/ping/{{ item.target_ip }}"
+    method: POST
+    headers:
+      Authorization: "Token {{ opengear_api_token }}"
+    validate_certs: false
+    body_format: json
+    body:
+      count: 3
+  register: connectivity_check
+  loop: "{{ console_targets | default([]) }}"
+  failed_when: false
+  when: console_targets is defined
+
+- name: Log console server assessment
+  debug:
+    msg: |
+      Console Server Assessment:
+      - Model: {{ opengear_upgrade_state.device_model }}
+      - Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}
+      - Active Sessions: {{ active_sessions | default(0) }}
+      - Ready for Upgrade: {{ 'Yes' if active_sessions | default(0) | int == 0 else 'Caution - Active Sessions' }}

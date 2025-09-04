@@ -1,0 +1,123 @@
+---
+# Opengear Specific Configuration
+# For console servers and smart PDUs
+
+# Connection settings  
+ansible_connection: local  # We use API calls, not SSH
+ansible_host: "{{ inventory_hostname }}"
+opengear_username: "{{ vault_opengear_username | default('admin') }}"
+opengear_password: "{{ vault_opengear_password }}"
+opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
+
+# Platform specific settings
+platform_type: "opengear"
+vendor: "opengear" 
+device_family: "console_server"  # or smart_pdu
+
+# API settings
+api_base_url: "https://{{ ansible_host }}/api/v1"
+api_timeout: 60
+api_retries: 3
+validate_certs: false
+
+# Device type detection
+auto_detect_device_type: true
+supported_models:
+  console_servers:
+    - "OM2200"
+    - "CM8100" 
+    - "CM7100"
+    - "IM7200"
+  smart_pdus:
+    - "CM8100"  # Can be both console server and PDU
+
+# Firmware management
+firmware_upload_timeout: 3600
+firmware_chunk_size: 1048576  # 1MB chunks
+verify_firmware_checksum: true
+local_firmware_path: "{{ firmware_base_path }}/opengear"
+
+# Console server specific settings
+console_server:
+  max_serial_ports: 48
+  notify_active_sessions: true
+  maintenance_mode_message: "Console server firmware upgrade in progress"
+  session_timeout_warning: 300  # 5 minutes
+  graceful_session_closure: true
+
+# Smart PDU specific settings
+smart_pdu:
+  max_power_outlets: 24
+  power_safety_threshold: 90  # Percentage
+  critical_outlet_protection: true
+  environmental_monitoring: true
+  power_cycle_delay: 5  # seconds
+
+# Serial port management
+serial_port_validation:
+  test_connectivity: true
+  test_timeout: 30
+  max_test_ports: 5  # Don't test all ports to avoid disruption
+
+# Power management validation
+power_outlet_validation:
+  test_non_critical_only: true
+  max_test_outlets: 3
+  power_cycle_test: false  # Too risky for production
+
+# Network validation
+network_connectivity_test:
+  enabled: true
+  test_host: "8.8.8.8"
+  ping_count: 3
+  timeout: 10
+
+# Configuration management
+backup_config_before_upgrade: true
+config_validation_enabled: true
+restore_config_on_failure: true
+
+# Environmental monitoring (if available)
+environmental_sensors:
+  temperature: true
+  humidity: true  
+  validate_thresholds: true
+
+# Upgrade process settings
+pre_upgrade_checks: true
+post_upgrade_validation: true
+reboot_wait_time: 120  # Opengear devices boot relatively quickly
+service_initialization_wait: 60
+
+# Web interface settings
+web_interface_timeout: 30
+max_upload_retries: 3
+session_keepalive: true
+
+# Monitoring integration
+export_metrics: true
+metric_collection_interval: 60
+alert_on_upgrade_failure: true
+
+# Security settings
+change_default_passwords: false  # Assume already done
+validate_ssl_certificates: false  # Often self-signed
+enable_audit_logging: true
+
+# Rollback settings
+enable_automatic_rollback: true
+rollback_timeout: 600
+preserve_user_data: true
+
+# Validation settings specific to device type
+console_server_validation:
+  - serial_port_count
+  - port_connectivity
+  - session_capability
+  - logging_functionality
+
+smart_pdu_validation:
+  - outlet_count
+  - power_measurement
+  - outlet_control
+  - environmental_data

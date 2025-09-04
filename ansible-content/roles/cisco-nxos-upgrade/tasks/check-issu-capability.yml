@@ -1,0 +1,52 @@
+---
+# Check ISSU Capability for Cisco NX-OS Devices
+# Determines if In-Service Software Upgrade is supported
+
+- name: Check current system mode
+  cisco.nxos.nxos_command:
+    commands:
+      - show system mode
+  register: system_mode_output
+  
+- name: Check installed modules for dual-sup
+  cisco.nxos.nxos_command:
+    commands:
+      - show module
+  register: module_output
+  
+- name: Check current ISSU state
+  cisco.nxos.nxos_command:
+    commands:
+      - show install all impact
+  register: issu_impact
+  failed_when: false
+  
+- name: Analyze dual supervisor setup
+  set_fact:
+    has_dual_sup: "{{ 'Supervisor' in module_output.stdout[0] and module_output.stdout[0].count('Supervisor') >= 2 }}"
+    
+- name: Check platform ISSU support
+  set_fact:
+    platform_supports_issu: >-
+      {{
+        'N9K' in ansible_net_platform or
+        'N7K' in ansible_net_platform or
+        'N6K' in ansible_net_platform
+      }}
+      
+- name: Determine ISSU compatibility
+  set_fact:
+    nxos_upgrade_state: "{{ nxos_upgrade_state | combine({
+      'issu_capable': (has_dual_sup and platform_supports_issu and 'impact' in issu_impact.stdout[0] | default('')),
+      'upgrade_method': 'issu' if (has_dual_sup and platform_supports_issu) else 'disruptive'
+    }) }}"
+    
+- name: Display ISSU capability assessment
+  debug:
+    msg: |
+      ISSU Capability Assessment:
+      - Platform: {{ ansible_net_platform }}
+      - Dual Supervisors: {{ has_dual_sup }}
+      - Platform ISSU Support: {{ platform_supports_issu }}
+      - ISSU Capable: {{ nxos_upgrade_state.issu_capable }}
+      - Selected Method: {{ nxos_upgrade_state.upgrade_method }}

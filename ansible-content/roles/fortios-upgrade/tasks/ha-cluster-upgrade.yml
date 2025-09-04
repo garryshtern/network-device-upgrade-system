@@ -1,0 +1,152 @@
+---
+# HA Cluster Upgrade for FortiOS
+# Coordinated upgrade of clustered FortiGate units
+
+- name: Pre-upgrade HA cluster validation
+  block:
+    - name: Final HA health check
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_ha_status"
+      register: final_ha_check
+      
+    - name: Ensure cluster is stable
+      assert:
+        that:
+          - final_ha_check.meta.results.sync_status == "synchronized"
+          - final_ha_check.meta.results.role in ["primary", "secondary"]
+        fail_msg: "HA cluster not in stable state for upgrade"
+
+- name: Secondary unit upgrade (if this is secondary)
+  block:
+    - name: Backup secondary configuration
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_config_backup"
+        params:
+          scope: "global"
+      register: secondary_backup
+      
+    - name: Install firmware on secondary
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_firmware_upgrade"
+        params:
+          version: "{{ fortios_upgrade_state.target_version }}"
+          source: "upload"
+      register: secondary_upgrade
+      
+    - name: Wait for secondary reboot
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 443
+        delay: 60
+        timeout: 900
+        
+    - name: Verify secondary upgrade completion
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_status"
+      register: secondary_post_upgrade
+      
+    - name: Confirm secondary version
+      assert:
+        that:
+          - fortios_upgrade_state.target_version in secondary_post_upgrade.meta.results.version
+        fail_msg: "Secondary unit upgrade failed"
+        
+  when: fortios_upgrade_state.ha_role == "secondary"
+
+- name: Primary unit upgrade (if this is primary)
+  block:
+    - name: Wait for secondary to complete upgrade
+      pause:
+        seconds: 30
+        
+    - name: Check secondary readiness
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_ha_peer"
+      register: secondary_readiness
+      
+    - name: Verify secondary is ready
+      assert:
+        that:
+          - secondary_readiness.meta.results | selectattr('status', 'equalto', 'up') | list | length > 0
+        fail_msg: "Secondary unit not ready after upgrade"
+        
+    - name: Backup primary configuration
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_config_backup"
+        params:
+          scope: "global"
+      register: primary_backup
+      
+    - name: Install firmware on primary
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_firmware_upgrade"
+        params:
+          version: "{{ fortios_upgrade_state.target_version }}"
+          source: "upload"
+      register: primary_upgrade
+      
+    - name: Wait for primary reboot
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 443
+        delay: 60
+        timeout: 900
+        
+    - name: Verify primary upgrade completion
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_status"
+      register: primary_post_upgrade
+      
+    - name: Confirm primary version
+      assert:
+        that:
+          - fortios_upgrade_state.target_version in primary_post_upgrade.meta.results.version
+        fail_msg: "Primary unit upgrade failed"
+        
+  when: fortios_upgrade_state.ha_role == "primary"
+
+- name: Post-upgrade HA cluster validation
+  block:
+    - name: Wait for HA synchronization
+      pause:
+        seconds: 120
+        
+    - name: Check final HA status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_ha_status"
+      register: final_cluster_status
+      
+    - name: Verify cluster health
+      assert:
+        that:
+          - final_cluster_status.meta.results.sync_status == "synchronized"
+          - final_cluster_status.meta.results.members | length >= 2
+        fail_msg: "HA cluster not properly synchronized after upgrade"
+        
+    - name: Release cluster upgrade lock
+      fortinet.fortios.fortios_configuration:
+        vdom: "root"
+        system_ha:
+          group_name: "{{ ha_cluster_info.group_id }}"
+          upgrade_mode: "normal"
+      when: fortios_upgrade_state.ha_role == "primary"
+
+- name: Log HA cluster upgrade completion
+  debug:
+    msg: |
+      FortiOS HA Cluster Upgrade Completed:
+      - Unit Role: {{ fortios_upgrade_state.ha_role }}
+      - New Version: {{ fortios_upgrade_state.target_version }}
+      - HA Sync Status: {{ final_cluster_status.meta.results.sync_status }}
+      - Cluster Members: {{ final_cluster_status.meta.results.members | length }}
+      - Upgrade Method: {{ 'Coordinated HA Upgrade' }}
+      - Status: {{ 'Success' if final_cluster_status.meta.results.sync_status == 'synchronized' else 'Check Required' }}

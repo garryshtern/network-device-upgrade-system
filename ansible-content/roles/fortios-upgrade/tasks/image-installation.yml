@@ -1,0 +1,211 @@
+---
+# Image Installation for FortiOS Devices
+# Handles firmware installation for both standalone and HA cluster configurations
+
+- name: Pre-installation validation
+  block:
+    - name: Verify firmware image is staged and ready
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_firmware_list"
+      register: pre_install_firmware_check
+      
+    - name: Confirm target firmware is available
+      assert:
+        that:
+          - pre_install_firmware_check.meta.results | selectattr('version', 'equalto', fortios_upgrade_state.target_version) | list | length > 0
+        fail_msg: "Target firmware not found in staged images"
+        
+    - name: Verify system readiness
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_status"
+      register: pre_install_system_status
+
+- name: Backup configuration before installation
+  block:
+    - name: Create comprehensive system backup
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_config_backup"
+        params:
+          scope: "global"
+          vdom: "all"
+          destination: "local"
+      register: pre_install_backup
+      
+    - name: Verify backup completion
+      assert:
+        that:
+          - pre_install_backup.meta.results.status == "success"
+        fail_msg: "System backup failed - aborting installation"
+
+- name: Execute firmware installation
+  block:
+    - name: Install firmware image
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_firmware_upgrade"
+        params:
+          version: "{{ fortios_upgrade_state.target_version }}"
+          source: "upload"
+          format: "normal"
+          reboot: true
+      register: firmware_installation
+      timeout: 1800
+      
+    - name: Monitor installation progress
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_firmware_upgrade_status"
+      register: install_progress
+      until: install_progress.meta.results.status in ['completed', 'failed', 'rebooting']
+      retries: 60
+      delay: 30
+      failed_when: install_progress.meta.results.status == 'failed'
+      
+    - name: Validate installation initiation
+      assert:
+        that:
+          - install_progress.meta.results.status in ['completed', 'rebooting']
+        fail_msg: "Firmware installation failed to complete properly"
+
+- name: Handle system reboot and recovery
+  block:
+    - name: Wait for system reboot to begin
+      pause:
+        seconds: 60
+        
+    - name: Wait for device to become unreachable (reboot confirmation)
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 443
+        state: stopped
+        timeout: 600
+        delay: 30
+      delegate_to: localhost
+      
+    - name: Wait for device to come back online
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 443
+        state: started
+        timeout: 1200
+        delay: 60
+      delegate_to: localhost
+      
+    - name: Wait for FortiOS services to initialize
+      pause:
+        seconds: 180
+
+- name: Post-installation validation
+  block:
+    - name: Verify system responsiveness
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_status"
+      register: post_install_system_status
+      retries: 10
+      delay: 30
+      
+    - name: Confirm target firmware version is active
+      assert:
+        that:
+          - fortios_upgrade_state.target_version in post_install_system_status.meta.results.version
+        fail_msg: "Installation completed but target version not active: {{ post_install_system_status.meta.results.version }}"
+        
+    - name: Verify system health post-installation
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_resource_usage"
+      register: post_install_health
+      
+    - name: Check critical system services
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_performance_status"
+      register: post_install_performance
+      failed_when: false
+
+- name: Validate security functionality
+  block:
+    - name: Check firewall policies status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "firewall_policy_stats"
+      register: post_install_policies
+      
+    - name: Verify interface operational status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_interface_physical"
+      register: post_install_interfaces
+      
+    - name: Check VPN tunnel status (if applicable)
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "vpn_ssl_stats"
+      register: post_install_vpn
+      failed_when: false
+      
+    - name: Verify routing table
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "router_info_routing_table_all"
+      register: post_install_routing
+      failed_when: false
+
+- name: HA cluster specific validation
+  block:
+    - name: Check HA cluster synchronization
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_ha_status"
+      register: post_install_ha_status
+      when: fortios_upgrade_state.ha_mode != "standalone"
+      
+    - name: Verify HA cluster health
+      assert:
+        that:
+          - post_install_ha_status.meta.results.sync_status == "synchronized"
+        fail_msg: "HA cluster not synchronized after installation"
+      when: fortios_upgrade_state.ha_mode != "standalone" and post_install_ha_status is defined
+      
+    - name: Check HA peer status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_ha_peer"
+      register: post_install_ha_peers
+      when: fortios_upgrade_state.ha_mode != "standalone"
+      failed_when: false
+
+- name: Licensing and feature validation
+  block:
+    - name: Verify license status after upgrade
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "license_status"
+      register: post_install_license
+      
+    - name: Check feature availability
+      assert:
+        that:
+          - post_install_license.meta.results.status in ["valid", "registered"]
+        fail_msg: "License validation failed after installation"
+      when: post_install_license.meta is defined
+
+- name: Installation completion logging
+  debug:
+    msg: |
+      FortiOS Installation Completed Successfully:
+      - Device Type: {{ 'HA Cluster' if fortios_upgrade_state.ha_mode != 'standalone' else 'Standalone' }}
+      - Previous Version: {{ fortios_upgrade_state.current_version }}
+      - New Version: {{ post_install_system_status.meta.results.version }}
+      - HA Mode: {{ fortios_upgrade_state.ha_mode }}
+      - System Health: {{ 'OK' if post_install_health.meta.results.cpu_usage | int < 50 else 'High Load' }}
+      - Active Policies: {{ post_install_policies.meta.results.total_policies | default(0) }}
+      - Interface Status: {{ post_install_interfaces.meta.results | selectattr('status', 'equalto', 'up') | list | length }} up
+      - VPN Tunnels: {{ post_install_vpn.meta.results.active_sessions | default('N/A') }}
+      - HA Sync Status: {{ post_install_ha_status.meta.results.sync_status | default('N/A') }}
+      - License Status: {{ post_install_license.meta.results.status | default('Unknown') }}
+      - Status: SUCCESS

@@ -1,1 +1,0 @@
-"""Data models for network device upgrade system."""

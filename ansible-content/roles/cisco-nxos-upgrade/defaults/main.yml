@@ -1,0 +1,82 @@
+---
+# Cisco NX-OS Upgrade Role - Default Variables
+
+# Connection settings
+nxos_connection_timeout: 300
+nxos_command_timeout: 60
+nxos_ssh_retries: 3
+
+# Image management
+nxos_image_directory: "bootflash:"
+nxos_backup_image_directory: "bootflash:backup/"
+nxos_image_extension: "bin"
+nxos_verify_image_signature: true
+
+# Storage management
+nxos_minimum_free_space_mb: 4096
+nxos_cleanup_old_images: true
+nxos_preserve_current_image: true
+nxos_preserve_backup_image: true
+
+# Boot configuration
+nxos_boot_variable_path: "bootflash:"
+nxos_backup_boot_config: true
+nxos_validate_boot_config: true
+
+# Reboot settings
+nxos_reboot_required: true
+nxos_reboot_timeout: 900
+nxos_reboot_delay: 60
+nxos_post_reboot_delay: 120
+
+# Validation settings
+nxos_validation_timeout: 300
+nxos_validate_version_after_upgrade: true
+nxos_validate_interfaces_after_upgrade: true
+nxos_validate_bgp_after_upgrade: true
+
+# Rollback settings
+nxos_enable_rollback: true
+nxos_rollback_timeout: 600
+nxos_preserve_rollback_image: true
+
+# Feature-specific settings
+nxos_vpc_consistency_check: true
+nxos_issu_capable: false
+nxos_bfd_consistency_check: true
+
+# Platform-specific settings by model
+nxos_model_specific:
+  N9K:
+    min_free_space_mb: 6144
+    reboot_timeout: 1200
+    issu_capable: true
+  N7K:
+    min_free_space_mb: 8192
+    reboot_timeout: 1500
+    issu_capable: false
+  N5K:
+    min_free_space_mb: 2048
+    reboot_timeout: 600
+    issu_capable: false
+  N3K:
+    min_free_space_mb: 1024
+    reboot_timeout: 480
+    issu_capable: false
+
+# Command patterns
+nxos_commands:
+  version: "show version"
+  boot_variables: "show boot"
+  storage: "dir bootflash: | json"
+  interfaces: "show interface brief"
+  bgp_summary: "show bgp ipv4 unicast summary"
+  vpc_status: "show vpc brief"
+  bfd_neighbors: "show bfd neighbors"
+  issu_status: "show install all status"
+
+# File patterns
+nxos_image_patterns:
+  - "*.bin"
+  - "nxos*.bin"
+  - "*-n[397]000-*.bin"

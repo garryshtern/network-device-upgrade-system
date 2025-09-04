@@ -1,0 +1,255 @@
+---
+# Validation Tasks for Opengear Devices
+# Console server and smart PDU functionality validation
+
+- name: Basic system validation
+  block:
+    - name: Re-authenticate to Opengear API for validation
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/auth/login"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          username: "{{ opengear_username }}"
+          password: "{{ opengear_password }}"
+        validate_certs: false
+      register: validation_auth
+      
+    - name: Store validation API token
+      set_fact:
+        validation_api_token: "{{ validation_auth.json.token }}"
+        
+    - name: Verify system information
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/info"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: system_info_validation
+      
+    - name: Confirm target version is active
+      assert:
+        that:
+          - opengear_upgrade_state.target_version in system_info_validation.json.version
+        fail_msg: "Target version not active: {{ system_info_validation.json.version }}"
+
+- name: System health validation
+  block:
+    - name: Check system health status
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/health"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: system_health_validation
+      
+    - name: Verify system health
+      assert:
+        that:
+          - system_health_validation.json.status in ['healthy', 'ok', 'normal']
+        fail_msg: "System health check failed: {{ system_health_validation.json.status }}"
+        
+    - name: Check system resources
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/resources"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: system_resources_validation
+      failed_when: false
+
+- name: Console server specific validation
+  block:
+    - name: Validate serial port functionality
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/serialports"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: serial_ports_validation
+      
+    - name: Check serial port operational status
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: serial_port_status_check
+      loop: "{{ serial_ports_validation.json[:5] }}"  # Check first 5 ports
+      failed_when: false
+      
+    - name: Test serial port connectivity
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/test"
+        method: POST
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: serial_connectivity_test
+      loop: "{{ serial_ports_validation.json[:3] }}"  # Test first 3 ports
+      failed_when: false
+      when: serial_ports_validation.json | length > 0
+      
+    - name: Validate console server functionality
+      debug:
+        msg: |
+          Console Server Validation:
+          - Total Serial Ports: {{ serial_ports_validation.json | length }}
+          - Operational Ports: {{ serial_port_status_check.results | selectattr('json.status', 'equalto', 'available') | list | length if serial_port_status_check.results is defined else 0 }}
+          - Connectivity Tests: {{ serial_connectivity_test.results | selectattr('json.status', 'equalto', 'ok') | list | length if serial_connectivity_test.results is defined else 'N/A' }}/{{ serial_connectivity_test.results | length if serial_connectivity_test.results is defined else 0 }}
+      when: opengear_upgrade_state.device_type == "console_server"
+
+- name: Smart PDU specific validation
+  block:
+    - name: Validate power outlet functionality
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/power/outlets"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: power_outlets_validation
+      
+    - name: Check power outlet status
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/power/outlets/{{ item.id }}/status"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: power_outlet_status_check
+      loop: "{{ power_outlets_validation.json[:8] }}"  # Check first 8 outlets
+      failed_when: false
+      
+    - name: Check overall power status
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/power/status"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: overall_power_status
+      
+    - name: Test power outlet control (non-critical outlets only)
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/power/outlets/{{ item.id }}/test"
+        method: POST
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: power_outlet_test
+      loop: "{{ power_outlets_validation.json | selectattr('critical', 'equalto', false) | list[:2] }}"  # Test 2 non-critical outlets
+      failed_when: false
+      when: power_outlets_validation.json | selectattr('critical', 'equalto', false) | list | length > 0
+      
+    - name: Validate smart PDU functionality
+      debug:
+        msg: |
+          Smart PDU Validation:
+          - Total Power Outlets: {{ power_outlets_validation.json | length }}
+          - Operational Outlets: {{ power_outlet_status_check.results | selectattr('json.status', 'equalto', 'on') | list | length if power_outlet_status_check.results is defined else 0 }}
+          - Power Capacity: {{ overall_power_status.json.max_capacity }}W
+          - Current Usage: {{ overall_power_status.json.current_usage }}W ({{ (overall_power_status.json.current_usage / overall_power_status.json.max_capacity * 100) | round(1) }}%)
+          - Control Tests: {{ power_outlet_test.results | selectattr('json.status', 'equalto', 'success') | list | length if power_outlet_test.results is defined else 'N/A' }}/{{ power_outlet_test.results | length if power_outlet_test.results is defined else 0 }}
+      when: opengear_upgrade_state.device_type == "smart_pdu"
+
+- name: Network connectivity validation
+  block:
+    - name: Test network connectivity
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/network/ping"
+        method: POST
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          host: "{{ network_test_host | default('8.8.8.8') }}"
+          count: 3
+        validate_certs: false
+      register: network_connectivity_test
+      failed_when: false
+      
+    - name: Check network interface status
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/network/interfaces"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: network_interfaces_validation
+      failed_when: false
+
+- name: Configuration integrity validation
+  block:
+    - name: Verify configuration is intact
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/config/validate"
+        method: POST
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: config_validation
+      failed_when: false
+      
+    - name: Check backup availability
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/config/backups"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: backup_availability
+      failed_when: false
+
+- name: Environmental monitoring validation
+  block:
+    - name: Check environmental sensors (if available)
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/environmental/sensors"
+        method: GET
+        headers:
+          Authorization: "Token {{ validation_api_token }}"
+        validate_certs: false
+      register: environmental_sensors_check
+      failed_when: false
+      
+    - name: Validate environmental conditions
+      debug:
+        msg: |
+          Environmental Monitoring:
+          {% if environmental_sensors_check.json is defined and environmental_sensors_check.json | length > 0 %}
+          - Temperature Sensors: {{ environmental_sensors_check.json | selectattr('type', 'equalto', 'temperature') | list | length }}
+          - Humidity Sensors: {{ environmental_sensors_check.json | selectattr('type', 'equalto', 'humidity') | list | length }}
+          - All Sensors Normal: {{ 'YES' if environmental_sensors_check.json | selectattr('status', 'ne', 'normal') | list | length == 0 else 'CHECK REQUIRED' }}
+          {% else %}
+          - Environmental Sensors: Not Available
+          {% endif %}
+      when: environmental_sensors_check is defined
+
+- name: Validation summary
+  debug:
+    msg: |
+      Opengear Validation Results:
+      - Device Model: {{ opengear_upgrade_state.device_model }}
+      - Device Type: {{ opengear_upgrade_state.device_type | title }}
+      - Version: {{ 'PASS' if opengear_upgrade_state.target_version in system_info_validation.json.version else 'FAIL' }}
+      - System Health: {{ system_health_validation.json.status if system_health_validation.json is defined else 'Unknown' }}
+      - Network Connectivity: {{ 'PASS' if network_connectivity_test.json.success | default(false) else 'CHECK' }}
+      {% if opengear_upgrade_state.device_type == 'console_server' %}
+      - Serial Ports: {{ serial_ports_validation.json | length }} total, {{ serial_port_status_check.results | selectattr('json.status', 'equalto', 'available') | list | length if serial_port_status_check.results is defined else 'Unknown' }} operational
+      {% endif %}
+      {% if opengear_upgrade_state.device_type == 'smart_pdu' %}
+      - Power Outlets: {{ power_outlets_validation.json | length }} total, {{ power_outlet_status_check.results | selectattr('json.status', 'defined') | list | length if power_outlet_status_check.results is defined else 'Unknown' }} responsive
+      - Power Usage: {{ (overall_power_status.json.current_usage / overall_power_status.json.max_capacity * 100) | round(1) if overall_power_status.json is defined else 'Unknown' }}%
+      {% endif %}
+      - Configuration: {{ 'VALID' if config_validation.json.status == 'valid' else 'CHECK' if config_validation.json is defined else 'Not Tested' }}
+      - Backups Available: {{ backup_availability.json | length if backup_availability.json is defined else 'Unknown' }}
+      - Overall Status: {{ 'VALIDATION COMPLETE' if opengear_upgrade_state.target_version in system_info_validation.json.version else 'CHECK REQUIRED' }}

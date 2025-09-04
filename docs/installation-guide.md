@@ -34,7 +34,28 @@ Before beginning installation, ensure:
 - [ ] Sufficient disk space available
 - [ ] Network connectivity to target devices tested
 
-## Installation Process
+## Installation Process Overview
+
+### Installation Flow Diagram
+
+```mermaid
+graph LR
+    subgraph "Network Upgrade System Installation - Single Server Deployment"
+        A[Prerequisites<br/>Server Prep<br/>• Fresh OS<br/>• Root User<br/>• Network<br/>• DNS/NTP<br/><br/>⏱️ 5-10 min<br/>Manual] --> B[Base System<br/>System Deps<br/>• Python<br/>• Redis<br/>• Nginx<br/>• Firewall<br/><br/>⏱️ 15-30min<br/>Automated]
+        
+        B --> C[AWX Platform<br/>AWX Install<br/>• SQLite DB<br/>• Web UI<br/>• API<br/>• Templates<br/><br/>⏱️ 30-45min<br/>Automated]
+        
+        C --> D[Integration<br/>NetBox & Monitoring<br/>• NetBox DB<br/>• Telegraf<br/>• SSL Certs<br/><br/>⏱️ 20-30min<br/>Automated]
+        
+        D --> E[PRODUCTION READY<br/>Total: ~90m]
+    end
+    
+    style A fill:#e8f5e8
+    style B fill:#fff3e0
+    style C fill:#f3e5f5
+    style D fill:#e1f5fe
+    style E fill:#c8e6c9
+```
 
 ### Step 1: Download and Prepare
 

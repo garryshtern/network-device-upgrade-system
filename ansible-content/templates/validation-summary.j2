@@ -1,0 +1,79 @@
+{
+  "validation_summary": {
+    "device_name": "{{ summary_data.device_name }}",
+    "platform": "{{ summary_data.platform }}",
+    "validation_type": "{{ summary_data.validation_type }}",
+    "timestamp": "{{ summary_data.validation_timestamp }}",
+    "tests_executed": {
+      "total": {{ (summary_data.tests_passed | length) + (summary_data.tests_failed | length) + (summary_data.tests_skipped | length) }},
+      "passed": {{ summary_data.tests_passed | length }},
+      "failed": {{ summary_data.tests_failed | length }},
+      "skipped": {{ summary_data.tests_skipped | length }}
+    },
+    "test_results": {
+      "passed_tests": {{ summary_data.tests_passed | to_json }},
+      "failed_tests": {{ summary_data.tests_failed | to_json }},
+      "skipped_tests": {{ summary_data.tests_skipped | to_json }}
+    },
+    "validation_score": {
+      "percentage": {{ validation_score | default(0) }},
+      "grade": "{% if validation_score >= 95 %}A{% elif validation_score >= 90 %}B{% elif validation_score >= 80 %}C{% elif validation_score >= 70 %}D{% else %}F{% endif %}",
+      "status": "{{ 'PASS' if summary_data.tests_failed | length == 0 else 'FAIL' }}"
+    },
+    "network_state": {
+      "bgp_validation": {
+        "enabled": {{ 'bgp_validation' in (summary_data.tests_passed + summary_data.tests_failed) }},
+        "status": "{{ 'PASS' if 'bgp_validation' in summary_data.tests_passed else 'FAIL' if 'bgp_validation' in summary_data.tests_failed else 'SKIP' }}"
+      },
+      "interface_validation": {
+        "enabled": {{ 'interface_validation' in (summary_data.tests_passed + summary_data.tests_failed) }},
+        "status": "{{ 'PASS' if 'interface_validation' in summary_data.tests_passed else 'FAIL' if 'interface_validation' in summary_data.tests_failed else 'SKIP' }}"
+      },
+      "routing_validation": {
+        "enabled": {{ 'routing_validation' in (summary_data.tests_passed + summary_data.tests_failed) }},
+        "status": "{{ 'PASS' if 'routing_validation' in summary_data.tests_passed else 'FAIL' if 'routing_validation' in summary_data.tests_failed else 'SKIP' }}"
+      },
+      "multicast_validation": {
+        "enabled": {{ 'multicast_validation' in (summary_data.tests_passed + summary_data.tests_failed) }},
+        "status": "{{ 'PASS' if 'multicast_validation' in summary_data.tests_passed else 'FAIL' if 'multicast_validation' in summary_data.tests_failed else 'SKIP' }}"
+      },
+      "arp_validation": {
+        "enabled": {{ 'arp_validation' in (summary_data.tests_passed + summary_data.tests_failed) }},
+        "status": "{{ 'PASS' if 'arp_validation' in summary_data.tests_passed else 'FAIL' if 'arp_validation' in summary_data.tests_failed else 'SKIP' }}"
+      },
+      "protocol_convergence": {
+        "enabled": {{ 'protocol_convergence' in (summary_data.tests_passed + summary_data.tests_failed) }},
+        "status": "{{ 'PASS' if 'protocol_convergence' in summary_data.tests_passed else 'FAIL' if 'protocol_convergence' in summary_data.tests_failed else 'SKIP' }}"
+      }
+    },
+    "recommendations": [
+      {% if 'bgp_validation' in summary_data.tests_failed %}
+      "BGP validation failed - verify neighbor configurations and connectivity",
+      {% endif %}
+      {% if 'interface_validation' in summary_data.tests_failed %}
+      "Interface validation failed - check for unexpected interface state changes",
+      {% endif %}
+      {% if 'routing_validation' in summary_data.tests_failed %}
+      "Routing validation failed - verify routing table convergence",
+      {% endif %}
+      {% if 'protocol_convergence' in summary_data.tests_failed %}
+      "Protocol convergence failed - allow additional time for network stabilization",
+      {% endif %}
+      {% if summary_data.tests_failed | length == 0 %}
+      "All validation tests passed - network upgrade completed successfully"
+      {% endif %}
+    ],
+    "next_actions": [
+      {% if summary_data.tests_failed | length > 0 %}
+      "Review failed validation tests and determine if rollback is required",
+      "Check device logs for error messages related to failed validations",
+      "Verify network connectivity from monitoring systems",
+      {% else %}
+      "Proceed with post-upgrade compliance audit",
+      "Update device documentation with new firmware version",
+      "Schedule next maintenance window for additional devices",
+      {% endif %}
+      "Monitor device performance for 24-48 hours post-upgrade"
+    ]
+  }
+}

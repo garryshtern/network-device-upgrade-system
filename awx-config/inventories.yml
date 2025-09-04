@@ -1,0 +1,224 @@
+---
+# AWX Inventories Configuration
+# Defines inventory sources and organization
+
+inventories:
+  # Primary NetBox Dynamic Inventory
+  - name: "NetBox Dynamic Inventory"
+    description: "Dynamic inventory sourced from NetBox DCIM system"
+    organization: "Network Operations"
+    variables:
+      # Global inventory variables
+      ansible_connection: network_cli
+      ansible_network_os_autodetect: true
+      ansible_become: true
+      ansible_become_method: enable
+      
+      # Connection timeout settings
+      ansible_command_timeout: 60
+      ansible_connect_timeout: 30
+      ansible_ssh_timeout: 30
+      
+      # SSH connection parameters
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+      ansible_persistent_connect_timeout: 300
+      ansible_persistent_command_timeout: 300
+      
+      # Upgrade workflow control
+      firmware_base_path: "/var/lib/network-upgrade/firmware"
+      backup_base_path: "/var/lib/network-upgrade/backups"
+      baseline_data_path: "/var/lib/network-upgrade/baselines"
+      validation_results_path: "/var/lib/network-upgrade/validation"
+      
+      # Monitoring and metrics
+      send_metrics: true
+      update_netbox: true
+      log_metrics_locally: false
+      
+      # Notification settings
+      send_notifications: true
+      notification_webhook_url: "{{ lookup('env', 'NOTIFICATION_WEBHOOK_URL') }}"
+      
+      # InfluxDB configuration for metrics
+      influxdb_url: "{{ lookup('env', 'INFLUXDB_URL') }}"
+      influxdb_bucket: "network_upgrades"
+      influxdb_org: "network_ops"
+      influxdb_token: "{{ lookup('env', 'INFLUXDB_TOKEN') }}"
+      
+      # NetBox integration
+      netbox_url: "{{ lookup('env', 'NETBOX_URL') }}"
+      netbox_token: "{{ lookup('env', 'NETBOX_TOKEN') }}"
+
+    inventory_sources:
+      - name: "NetBox DCIM Source"
+        description: "Primary NetBox inventory source for all network devices"
+        source: "netbox"
+        source_vars:
+          url: "{{ lookup('env', 'NETBOX_URL') }}"
+          token: "{{ lookup('env', 'NETBOX_TOKEN') }}"
+          config_context: true
+          flatten_config_context: true
+          device_query_filters:
+            - "status=active"
+            - "role__name__in=switch,router,firewall,load_balancer"
+          compose:
+            ansible_host: primary_ip4.address | default(primary_ip6.address) | default(name)
+            ansible_network_os: "{{ platform.slug | default('unknown') }}"
+            ansible_user: "{{ config_context.ansible_user | default(lookup('env', 'ANSIBLE_USER')) }}"
+            ansible_password: "{{ config_context.ansible_password | default(lookup('env', 'ANSIBLE_PASSWORD')) }}"
+            ansible_ssh_private_key_file: "{{ config_context.ssh_key_file | default('/var/lib/awx/.ssh/id_rsa') }}"
+            
+            # Device metadata
+            device_role: role.name
+            device_type: device_type.slug
+            site_name: site.name
+            rack_name: "{{ rack.name | default('unknown') }}"
+            vendor: "{{ device_type.manufacturer.name }}"
+            model: device_type.model
+            serial_number: serial
+            
+            # Platform-specific variables
+            platform: platform.slug
+            firmware_directory: "{{ config_context.firmware_directory | default('bootflash:') }}"
+            minimum_free_space_mb: "{{ config_context.min_storage_mb | default(4096) }}"
+            
+            # Feature flags from NetBox custom fields
+            multicast_enabled: "{{ custom_fields.multicast_enabled | default(true) }}"
+            bfd_enabled: "{{ custom_fields.bfd_enabled | default(false) }}"
+            vpc_enabled: "{{ custom_fields.vpc_enabled | default(false) }}"
+            
+            # Maintenance window information
+            maintenance_window: "{{ config_context.maintenance_window | default('TBD') }}"
+            change_window: "{{ config_context.change_window | default('standard') }}"
+            
+          group_by:
+            - device_role
+            - device_type.manufacturer.name
+            - platform.slug
+            - site.name
+            - status.value
+            
+          keyed_groups:
+            # Group by vendor
+            - key: device_type.manufacturer.name | lower | regex_replace(' ', '_')
+              prefix: vendor
+              
+            # Group by platform/OS
+            - key: platform.slug | default('unknown')
+              prefix: platform
+              
+            # Group by site
+            - key: site.name | lower | regex_replace(' ', '_')
+              prefix: site
+              
+            # Group by device role
+            - key: role.name | lower | regex_replace(' ', '_')
+              prefix: role
+              
+            # Group by upgrade status (custom field)
+            - key: custom_fields.upgrade_status | default('unknown')
+              prefix: upgrade_status
+              
+            # Group by maintenance window
+            - key: config_context.maintenance_window | default('tbd')
+              prefix: maintenance
+
+        update_on_launch: true
+        update_cache_timeout: 0
+        overwrite: true
+        overwrite_vars: true
+
+  # Cisco Devices Inventory (Filtered)
+  - name: "Cisco Network Devices"
+    description: "Filtered inventory containing only Cisco network devices"
+    organization: "Network Operations" 
+    kind: "smart"
+    host_filter: "vendor_cisco"
+    variables:
+      # Cisco-specific defaults
+      ansible_network_os: nxos  # Default, will be overridden by host vars
+      ansible_connection: network_cli
+      ansible_become: true
+      ansible_become_method: enable
+      
+      # Cisco-specific paths and settings
+      cisco_image_directory: "bootflash:"
+      cisco_backup_directory: "bootflash:backup/"
+      cisco_config_register: "0x2102"
+
+  # Test/Lab Environment Inventory
+  - name: "Lab Network Devices"
+    description: "Test and lab environment devices for upgrade testing"
+    organization: "Network Operations"
+    kind: "smart"
+    host_filter: "site_lab or site_test"
+    variables:
+      # Lab-specific settings
+      skip_validation: false
+      enable_debug_logging: true
+      test_mode: true
+      
+      # Relaxed timeouts for lab environment
+      ansible_command_timeout: 120
+      validation_timeout: 600
+      
+      # Lab-specific paths
+      firmware_base_path: "/var/lib/network-upgrade/firmware/lab"
+      backup_base_path: "/var/lib/network-upgrade/backups/lab"
+
+  # Production Network Devices
+  - name: "Production Network Devices"
+    description: "Production network devices requiring strict validation"
+    organization: "Network Operations"
+    kind: "smart" 
+    host_filter: "site_production or site_datacenter"
+    variables:
+      # Production-specific settings
+      skip_validation: false
+      enable_debug_logging: false
+      production_mode: true
+      
+      # Strict validation and safety settings
+      rollback_on_failure: true
+      require_maintenance_window: true
+      max_concurrent_upgrades: 3
+      
+      # Enhanced monitoring
+      send_metrics: true
+      send_notifications: true
+      compliance_audit_required: true
+
+  # Emergency/Critical Devices
+  - name: "Critical Infrastructure"
+    description: "Critical network infrastructure requiring special handling"
+    organization: "Network Operations"
+    kind: "smart"
+    host_filter: "role_core_switch or role_core_router or custom_fields.criticality=high"
+    variables:
+      # Critical device settings
+      max_concurrent_upgrades: 1  # One at a time
+      enhanced_validation: true
+      backup_required: true
+      rollback_timeout: 1200  # Extended rollback timeout
+      
+      # Enhanced monitoring and alerting
+      critical_device: true
+      immediate_notification: true
+      escalation_required: true
+
+# Static Groups (for specific operational needs)
+static_groups:
+  - name: "Upgrade Candidates"
+    description: "Devices explicitly selected for firmware upgrades"
+    variables:
+      upgrade_eligible: true
+      
+  - name: "Maintenance Window Group"
+    description: "Devices currently in maintenance window"
+    variables:
+      maintenance_active: true
+      
+  - name: "Recently Upgraded" 
+    description: "Devices upgraded in the last 7 days"
+    variables:
+      recently_upgraded: true

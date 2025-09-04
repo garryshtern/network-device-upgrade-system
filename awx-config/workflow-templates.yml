@@ -1,0 +1,358 @@
+---
+# AWX Workflow Templates Configuration
+# Defines workflow templates for orchestrated network device upgrades
+
+workflow_templates:
+  # Complete Network Upgrade Workflow
+  - name: "Complete Network Upgrade Workflow"
+    description: "Orchestrated multi-phase network device upgrade with validation and rollback capabilities"
+    organization: "Network Operations"
+    survey_enabled: true
+    survey:
+      name: "Network Upgrade Workflow Survey"
+      description: "Configure parameters for the complete upgrade workflow"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Target Firmware Version"
+          question_description: "Target firmware version filename"
+          variable: "target_firmware"
+          type: "text"
+          required: true
+        - question_name: "Firmware URL"
+          question_description: "URL to download firmware from"
+          variable: "firmware_url"
+          type: "text"
+          required: true
+        - question_name: "Firmware SHA512 Hash"
+          question_description: "SHA512 hash for firmware verification"
+          variable: "firmware_sha512"
+          type: "text"
+          required: true
+        - question_name: "Maintenance Window Start"
+          question_description: "Maintenance window start time (YYYY-MM-DD HH:MM)"
+          variable: "maintenance_start"
+          type: "text"
+          required: true
+        - question_name: "Maximum Concurrent Devices"
+          question_description: "Maximum devices to upgrade simultaneously"
+          variable: "max_concurrent"
+          type: "integer"
+          min: 1
+          max: 50
+          default: 5
+          required: true
+        - question_name: "Skip Pre-validation"
+          question_description: "Skip pre-upgrade validation checks"
+          variable: "skip_validation"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "false"
+          required: true
+        - question_name: "Auto-approve Phase 2"
+          question_description: "Automatically proceed to installation phase"
+          variable: "auto_approve_installation"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "false"
+          required: true
+
+    workflow_nodes:
+      # Node 1: Pre-upgrade Health Check and Baseline
+      - identifier: "health_check"
+        unified_job_template: "Network Device Health Check"
+        success_nodes: ["storage_cleanup"]
+        failure_nodes: ["upgrade_failed"]
+        always_nodes: []
+        extra_data:
+          target_hosts: "{{ target_hosts }}"
+          skip_validation: "{{ skip_validation }}"
+
+      # Node 2: Storage Cleanup
+      - identifier: "storage_cleanup"
+        unified_job_template: "Storage Cleanup"
+        success_nodes: ["config_backup"]
+        failure_nodes: ["upgrade_failed"]
+        always_nodes: []
+        extra_data:
+          target_hosts: "{{ target_hosts }}"
+          required_space_gb: 6
+
+      # Node 3: Configuration Backup
+      - identifier: "config_backup"
+        unified_job_template: "Configuration Backup"
+        success_nodes: ["firmware_loading"]
+        failure_nodes: ["upgrade_failed"]
+        always_nodes: []
+        extra_data:
+          target_hosts: "{{ target_hosts }}"
+          backup_type: "pre_upgrade"
+
+      # Node 4: Firmware Image Loading (Phase 1)
+      - identifier: "firmware_loading"
+        unified_job_template: "Firmware Image Loading"
+        success_nodes: ["phase1_complete"]
+        failure_nodes: ["upgrade_failed"]
+        always_nodes: []
+        extra_data:
+          target_hosts: "{{ target_hosts }}"
+          firmware_version: "{{ target_firmware }}"
+          firmware_url: "{{ firmware_url }}"
+          firmware_sha512: "{{ firmware_sha512 }}"
+
+      # Node 5: Phase 1 Completion Notification
+      - identifier: "phase1_complete"
+        unified_job_template: "Send Notification"
+        success_nodes: ["maintenance_window_check"]
+        failure_nodes: []
+        always_nodes: []
+        extra_data:
+          notification_type: "phase1_complete"
+          message: "Phase 1 (Image Loading) completed successfully. Ready for Phase 2 installation during maintenance window."
+
+      # Node 6: Maintenance Window Validation
+      - identifier: "maintenance_window_check"
+        unified_job_template: "Maintenance Window Validator"
+        success_nodes: ["firmware_installation"]
+        failure_nodes: ["waiting_for_maintenance"]
+        always_nodes: []
+        extra_data:
+          maintenance_start: "{{ maintenance_start }}"
+          auto_approve: "{{ auto_approve_installation }}"
+
+      # Node 7: Waiting for Maintenance Window
+      - identifier: "waiting_for_maintenance"
+        unified_job_template: "Approval Node"
+        success_nodes: ["firmware_installation"]
+        failure_nodes: ["upgrade_cancelled"]
+        always_nodes: []
+        extra_data:
+          approval_message: "Maintenance window validation failed. Manual approval required to proceed with Phase 2 installation."
+          timeout: 86400  # 24 hours
+
+      # Node 8: Firmware Installation (Phase 2)
+      - identifier: "firmware_installation"
+        unified_job_template: "Firmware Installation"
+        success_nodes: ["post_upgrade_validation"]
+        failure_nodes: ["emergency_rollback"]
+        always_nodes: []
+        extra_data:
+          target_hosts: "{{ target_hosts }}"
+          firmware_version: "{{ target_firmware }}"
+          maintenance_window: true
+          auto_rollback: true
+
+      # Node 9: Post-upgrade Network Validation
+      - identifier: "post_upgrade_validation"
+        unified_job_template: "Network State Validation"
+        success_nodes: ["compliance_audit"]
+        failure_nodes: ["emergency_rollback"]
+        always_nodes: []
+        extra_data:
+          target_hosts: "{{ target_hosts }}"
+          validation_type: "post_upgrade"
+          network_state_comparison: true
+
+      # Node 10: Compliance Audit
+      - identifier: "compliance_audit"
+        unified_job_template: "Compliance Audit"
+        success_nodes: ["upgrade_success"]
+        failure_nodes: ["upgrade_warning"]
+        always_nodes: []
+        extra_data:
+          target_hosts: "{{ target_hosts }}"
+          compliance_standards: ["security_baseline", "network_hardening"]
+          generate_report: true
+
+      # Node 11: Upgrade Success Notification
+      - identifier: "upgrade_success"
+        unified_job_template: "Send Notification"
+        success_nodes: []
+        failure_nodes: []
+        always_nodes: []
+        extra_data:
+          notification_type: "upgrade_success"
+          message: "Network device upgrade completed successfully. All validation checks passed."
+
+      # Node 12: Emergency Rollback (Failure Path)
+      - identifier: "emergency_rollback"
+        unified_job_template: "Emergency Rollback"
+        success_nodes: ["rollback_success"]
+        failure_nodes: ["rollback_failed"]
+        always_nodes: []
+        extra_data:
+          target_hosts: "{{ target_hosts }}"
+          rollback_reason: "upgrade_failure"
+          restore_config: true
+          restore_firmware: true
+
+      # Node 13: Rollback Success Notification
+      - identifier: "rollback_success"
+        unified_job_template: "Send Notification"
+        success_nodes: []
+        failure_nodes: []
+        always_nodes: []
+        extra_data:
+          notification_type: "rollback_success"
+          message: "Emergency rollback completed successfully. Device restored to previous state."
+
+      # Node 14: Rollback Failed (Critical)
+      - identifier: "rollback_failed"
+        unified_job_template: "Send Notification"
+        success_nodes: []
+        failure_nodes: []
+        always_nodes: []
+        extra_data:
+          notification_type: "critical_failure"
+          message: "CRITICAL: Emergency rollback failed. Manual intervention required immediately."
+          urgency: "critical"
+
+      # Node 15: Upgrade Failed
+      - identifier: "upgrade_failed"
+        unified_job_template: "Send Notification"
+        success_nodes: []
+        failure_nodes: []
+        always_nodes: []
+        extra_data:
+          notification_type: "upgrade_failed"
+          message: "Network device upgrade failed during preparation phase. No changes made to devices."
+
+      # Node 16: Upgrade Cancelled
+      - identifier: "upgrade_cancelled"
+        unified_job_template: "Send Notification"
+        success_nodes: []
+        failure_nodes: []
+        always_nodes: []
+        extra_data:
+          notification_type: "upgrade_cancelled"
+          message: "Network device upgrade cancelled. Devices remain in Phase 1 state (images loaded)."
+
+      # Node 17: Upgrade Warning (Compliance Issues)
+      - identifier: "upgrade_warning"
+        unified_job_template: "Send Notification"
+        success_nodes: []
+        failure_nodes: []
+        always_nodes: []
+        extra_data:
+          notification_type: "upgrade_warning"
+          message: "Network device upgrade completed but compliance audit found issues. Review compliance report."
+
+  # Phase 1 Only Workflow (Business Hours Safe)
+  - name: "Phase 1 Image Loading Workflow"
+    description: "Business hours safe workflow - loads and validates firmware images without installation"
+    organization: "Network Operations"
+    survey_enabled: true
+    survey:
+      name: "Phase 1 Loading Survey"
+      description: "Configure Phase 1 image loading workflow"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Target Firmware Version"
+          question_description: "Target firmware version filename"
+          variable: "target_firmware"
+          type: "text"
+          required: true
+        - question_name: "Firmware URL"
+          question_description: "URL to download firmware from"
+          variable: "firmware_url"
+          type: "text"
+          required: true
+        - question_name: "Firmware SHA512 Hash"
+          question_description: "SHA512 hash for firmware verification"
+          variable: "firmware_sha512"
+          type: "text"
+          required: true
+
+    workflow_nodes:
+      - identifier: "health_check"
+        unified_job_template: "Network Device Health Check"
+        success_nodes: ["storage_cleanup"]
+        failure_nodes: ["phase1_failed"]
+        
+      - identifier: "storage_cleanup"
+        unified_job_template: "Storage Cleanup"
+        success_nodes: ["config_backup"]
+        failure_nodes: ["phase1_failed"]
+        
+      - identifier: "config_backup"
+        unified_job_template: "Configuration Backup"
+        success_nodes: ["firmware_loading"]
+        failure_nodes: ["phase1_failed"]
+        
+      - identifier: "firmware_loading"
+        unified_job_template: "Firmware Image Loading"
+        success_nodes: ["phase1_success"]
+        failure_nodes: ["phase1_failed"]
+        
+      - identifier: "phase1_success"
+        unified_job_template: "Send Notification"
+        extra_data:
+          notification_type: "phase1_success"
+          message: "Phase 1 (Image Loading) completed successfully. Devices ready for Phase 2 installation."
+          
+      - identifier: "phase1_failed"
+        unified_job_template: "Send Notification"
+        extra_data:
+          notification_type: "phase1_failed"
+          message: "Phase 1 (Image Loading) failed. No changes made to device firmware."
+
+  # Emergency Rollback Workflow
+  - name: "Emergency Rollback Workflow"
+    description: "Emergency rollback workflow with comprehensive validation and notification"
+    organization: "Network Operations"
+    survey_enabled: true
+    survey:
+      name: "Emergency Rollback Survey"
+      description: "Configure emergency rollback workflow"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames requiring rollback (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Rollback Reason"
+          question_description: "Reason for emergency rollback"
+          variable: "rollback_reason"
+          type: "multiplechoice"
+          choices: ["upgrade_failure", "network_issues", "performance_issues", "security_issue"]
+          required: true
+
+    workflow_nodes:
+      - identifier: "rollback_approval"
+        unified_job_template: "Approval Node"
+        success_nodes: ["emergency_rollback"]
+        failure_nodes: ["rollback_cancelled"]
+        extra_data:
+          approval_message: "EMERGENCY ROLLBACK REQUESTED. Confirm to proceed with rollback of firmware and configuration."
+          
+      - identifier: "emergency_rollback"
+        unified_job_template: "Emergency Rollback"
+        success_nodes: ["post_rollback_validation"]
+        failure_nodes: ["rollback_failed_critical"]
+        
+      - identifier: "post_rollback_validation"
+        unified_job_template: "Network State Validation"
+        success_nodes: ["rollback_success"]
+        failure_nodes: ["rollback_validation_failed"]
+        extra_data:
+          validation_type: "post_rollback"
+          
+      - identifier: "rollback_success"
+        unified_job_template: "Send Notification"
+        extra_data:
+          notification_type: "rollback_success"
+          message: "Emergency rollback completed successfully. Devices restored and validated."
+          
+      - identifier: "rollback_failed_critical"
+        unified_job_template: "Send Notification"
+        extra_data:
+          notification_type: "critical_failure"
+          message: "CRITICAL: Emergency rollback failed. Immediate manual intervention required."
+          urgency: "critical"

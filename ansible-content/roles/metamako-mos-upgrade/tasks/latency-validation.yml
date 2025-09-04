@@ -1,0 +1,92 @@
+---
+# Latency Validation for Metamako MOS
+# Critical latency measurements and validation
+
+- name: Pre-upgrade latency measurement
+  block:
+    - name: Measure current latency baseline
+      ansible.netcommon.cli_command:
+        command: show latency statistics
+      register: pre_upgrade_latency
+      
+    - name: Get interface latency stats
+      ansible.netcommon.cli_command:
+        command: show interface latency
+      register: pre_interface_latency
+      
+    - name: Store baseline latency metrics
+      set_fact:
+        baseline_latency:
+          system_latency: "{{ pre_upgrade_latency.stdout | regex_search('Average: ([\\d\\.]+)', '\\1') | first | default('0') }}"
+          max_latency: "{{ pre_upgrade_latency.stdout | regex_search('Maximum: ([\\d\\.]+)', '\\1') | first | default('0') }}"
+          interface_metrics: "{{ pre_interface_latency.stdout }}"
+
+- name: Latency-sensitive upgrade preparation
+  block:
+    - name: Enable latency monitoring
+      ansible.netcommon.cli_command:
+        command: latency monitor enable
+      failed_when: false
+      
+    - name: Set low-latency mode for upgrade
+      ansible.netcommon.cli_command:
+        command: system upgrade-mode low-latency
+      failed_when: false
+      
+    - name: Verify system is in optimal state
+      ansible.netcommon.cli_command:
+        command: show system performance
+      register: system_performance
+
+- name: Execute upgrade with latency monitoring
+  block:
+    - name: Start continuous latency monitoring
+      ansible.netcommon.cli_command:
+        command: latency monitor start continuous
+      failed_when: false
+      
+    - name: Perform the actual upgrade
+      include_tasks: image-installation.yml
+      
+    - name: Monitor latency during upgrade
+      ansible.netcommon.cli_command:
+        command: show latency monitor real-time
+      register: upgrade_latency_monitor
+      failed_when: false
+
+- name: Post-upgrade latency validation
+  block:
+    - name: Measure post-upgrade latency
+      ansible.netcommon.cli_command:
+        command: show latency statistics
+      register: post_upgrade_latency
+      
+    - name: Get updated interface latency stats
+      ansible.netcommon.cli_command:
+        command: show interface latency
+      register: post_interface_latency
+      
+    - name: Parse post-upgrade metrics
+      set_fact:
+        post_latency:
+          system_latency: "{{ post_upgrade_latency.stdout | regex_search('Average: ([\\d\\.]+)', '\\1') | first | default('0') }}"
+          max_latency: "{{ post_upgrade_latency.stdout | regex_search('Maximum: ([\\d\\.]+)', '\\1') | first | default('0') }}"
+          interface_metrics: "{{ post_interface_latency.stdout }}"
+          
+    - name: Validate latency performance
+      assert:
+        that:
+          - post_latency.system_latency | float <= (baseline_latency.system_latency | float * 1.1)
+          - post_latency.max_latency | float <= (baseline_latency.max_latency | float * 1.2)
+        fail_msg: "Latency degradation detected after upgrade"
+        
+- name: Latency validation report
+  debug:
+    msg: |
+      Metamako Latency Validation Results:
+      Pre-Upgrade Average: {{ baseline_latency.system_latency }}ns
+      Post-Upgrade Average: {{ post_latency.system_latency }}ns
+      Pre-Upgrade Maximum: {{ baseline_latency.max_latency }}ns
+      Post-Upgrade Maximum: {{ post_latency.max_latency }}ns
+      Latency Change: {{ ((post_latency.system_latency | float - baseline_latency.system_latency | float) / baseline_latency.system_latency | float * 100) | round(2) }}%
+      Status: {{ 'PASS' if post_latency.system_latency | float <= baseline_latency.system_latency | float * 1.1 else 'DEGRADED' }}

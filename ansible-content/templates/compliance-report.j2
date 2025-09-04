@@ -1,0 +1,132 @@
+{
+  "compliance_report": {
+    "metadata": {
+      "device_name": "{{ report_data.device_name }}",
+      "platform": "{{ report_data.platform }}",
+      "firmware_version": "{{ report_data.firmware_version }}",
+      "audit_timestamp": "{{ report_data.audit_timestamp }}",
+      "report_version": "1.0",
+      "auditor": "Network Device Upgrade System"
+    },
+    "executive_summary": {
+      "compliance_score": {{ compliance_score }},
+      "total_checks": {{ total_checks_run }},
+      "checks_passed": {{ report_data.compliance_checks.passed | length }},
+      "checks_failed": {{ report_data.compliance_checks.failed | length }},
+      "warnings_issued": {{ report_data.compliance_checks.warnings | length }},
+      "overall_status": "{{ 'COMPLIANT' if compliance_score >= 90 else 'NON_COMPLIANT' }}",
+      "risk_level": "{% if compliance_score >= 95 %}LOW{% elif compliance_score >= 85 %}MEDIUM{% elif compliance_score >= 70 %}HIGH{% else %}CRITICAL{% endif %}"
+    },
+    "standards_audited": {{ report_data.standards_tested | to_json }},
+    "detailed_results": {
+      "passed_checks": [
+        {% for check in report_data.compliance_checks.passed %}
+        {
+          "check_id": "{{ check.id | default(loop.index) }}",
+          "check_name": "{{ check.name | default(check) }}",
+          "category": "{{ check.category | default('general') }}",
+          "description": "{{ check.description | default('Compliance check passed') }}",
+          "severity": "{{ check.severity | default('info') }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "failed_checks": [
+        {% for check in report_data.compliance_checks.failed %}
+        {
+          "check_id": "{{ check.id | default(loop.index) }}",
+          "check_name": "{{ check.name | default(check) }}",
+          "category": "{{ check.category | default('general') }}",
+          "description": "{{ check.description | default('Compliance check failed') }}",
+          "severity": "{{ check.severity | default('medium') }}",
+          "remediation": "{{ check.remediation | default('Review device configuration and apply necessary changes') }}",
+          "impact": "{{ check.impact | default('Potential security or operational risk') }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ],
+      "warnings": [
+        {% for warning in report_data.compliance_checks.warnings %}
+        {
+          "warning_id": "{{ warning.id | default(loop.index) }}",
+          "warning_name": "{{ warning.name | default(warning) }}",
+          "category": "{{ warning.category | default('general') }}",
+          "description": "{{ warning.description | default('Compliance warning issued') }}",
+          "recommendation": "{{ warning.recommendation | default('Review configuration for potential improvements') }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    },
+    "category_breakdown": {
+      "security_baseline": {
+        "total_checks": {{ report_data.compliance_checks.passed | selectattr('category', 'equalto', 'security') | list | length + report_data.compliance_checks.failed | selectattr('category', 'equalto', 'security') | list | length }},
+        "passed": {{ report_data.compliance_checks.passed | selectattr('category', 'equalto', 'security') | list | length }},
+        "failed": {{ report_data.compliance_checks.failed | selectattr('category', 'equalto', 'security') | list | length }},
+        "score": {{ ((report_data.compliance_checks.passed | selectattr('category', 'equalto', 'security') | list | length) / (report_data.compliance_checks.passed | selectattr('category', 'equalto', 'security') | list | length + report_data.compliance_checks.failed | selectattr('category', 'equalto', 'security') | list | length) * 100) | round(2) if (report_data.compliance_checks.passed | selectattr('category', 'equalto', 'security') | list | length + report_data.compliance_checks.failed | selectattr('category', 'equalto', 'security') | list | length) > 0 else 0 }}
+      },
+      "network_hardening": {
+        "total_checks": {{ report_data.compliance_checks.passed | selectattr('category', 'equalto', 'hardening') | list | length + report_data.compliance_checks.failed | selectattr('category', 'equalto', 'hardening') | list | length }},
+        "passed": {{ report_data.compliance_checks.passed | selectattr('category', 'equalto', 'hardening') | list | length }},
+        "failed": {{ report_data.compliance_checks.failed | selectattr('category', 'equalto', 'hardening') | list | length }},
+        "score": {{ ((report_data.compliance_checks.passed | selectattr('category', 'equalto', 'hardening') | list | length) / (report_data.compliance_checks.passed | selectattr('category', 'equalto', 'hardening') | list | length + report_data.compliance_checks.failed | selectattr('category', 'equalto', 'hardening') | list | length) * 100) | round(2) if (report_data.compliance_checks.passed | selectattr('category', 'equalto', 'hardening') | list | length + report_data.compliance_checks.failed | selectattr('category', 'equalto', 'hardening') | list | length) > 0 else 0 }}
+      },
+      "operational": {
+        "total_checks": {{ report_data.compliance_checks.passed | selectattr('category', 'equalto', 'operational') | list | length + report_data.compliance_checks.failed | selectattr('category', 'equalto', 'operational') | list | length }},
+        "passed": {{ report_data.compliance_checks.passed | selectattr('category', 'equalto', 'operational') | list | length }},
+        "failed": {{ report_data.compliance_checks.failed | selectattr('category', 'equalto', 'operational') | list | length }},
+        "score": {{ ((report_data.compliance_checks.passed | selectattr('category', 'equalto', 'operational') | list | length) / (report_data.compliance_checks.passed | selectattr('category', 'equalto', 'operational') | list | length + report_data.compliance_checks.failed | selectattr('category', 'equalto', 'operational') | list | length) * 100) | round(2) if (report_data.compliance_checks.passed | selectattr('category', 'equalto', 'operational') | list | length + report_data.compliance_checks.failed | selectattr('category', 'equalto', 'operational') | list | length) > 0 else 0 }}
+      }
+    },
+    "remediation_plan": {
+      "immediate_actions": [
+        {% for check in report_data.compliance_checks.failed %}
+        {% if check.severity | default('medium') in ['critical', 'high'] %}
+        {
+          "priority": "HIGH",
+          "action": "{{ check.remediation | default('Address failed compliance check: ' + check.name | default(check)) }}",
+          "check_name": "{{ check.name | default(check) }}",
+          "estimated_effort": "{{ check.effort | default('2-4 hours') }}"
+        }{% if not loop.last %},{% endif %}
+        {% endif %}
+        {% endfor %}
+      ],
+      "planned_actions": [
+        {% for check in report_data.compliance_checks.failed %}
+        {% if check.severity | default('medium') in ['medium', 'low'] %}
+        {
+          "priority": "MEDIUM",
+          "action": "{{ check.remediation | default('Address failed compliance check: ' + check.name | default(check)) }}",
+          "check_name": "{{ check.name | default(check) }}",
+          "estimated_effort": "{{ check.effort | default('1-2 hours') }}"
+        }{% if not loop.last %},{% endif %}
+        {% endif %}
+        {% endfor %}
+      ],
+      "recommendations": [
+        {% for warning in report_data.compliance_checks.warnings %}
+        {
+          "priority": "LOW",
+          "recommendation": "{{ warning.recommendation | default('Review warning: ' + warning.name | default(warning)) }}",
+          "warning_name": "{{ warning.name | default(warning) }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    },
+    "trend_analysis": {
+      "previous_audit": "{{ previous_audit_date | default('N/A') }}",
+      "score_trend": "{{ score_trend | default('N/A') }}",
+      "improvement_areas": {{ improvement_areas | default([]) | to_json }},
+      "regression_areas": {{ regression_areas | default([]) | to_json }}
+    },
+    "next_audit": {
+      "recommended_date": "{{ (ansible_date_time.epoch | int + 2592000) | strftime('%Y-%m-%d') }}",
+      "frequency": "monthly",
+      "focus_areas": [
+        {% if report_data.compliance_checks.failed | length > 0 %}
+        "Failed compliance checks remediation verification",
+        {% endif %}
+        "Firmware update compliance validation",
+        "Security configuration drift detection",
+        "Operational best practices adherence"
+      ]
+    }
+  }
+}

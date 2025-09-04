@@ -1,0 +1,169 @@
+---
+# Image Loading for Opengear Devices
+# Handles firmware image upload via web API
+
+- name: Pre-loading validation
+  block:
+    - name: Authenticate to Opengear API
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/auth/login"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          username: "{{ opengear_username }}"
+          password: "{{ opengear_password }}"
+        validate_certs: false
+      register: opengear_auth
+      
+    - name: Store authentication token
+      set_fact:
+        opengear_api_token: "{{ opengear_auth.json.token }}"
+        
+    - name: Check available storage space
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/storage"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: storage_info
+      
+    - name: Validate sufficient storage space
+      assert:
+        that:
+          - storage_info.json.available_mb | int > (target_firmware_size_mb | default(100) | int)
+        fail_msg: "Insufficient storage space: {{ storage_info.json.available_mb }}MB available, {{ target_firmware_size_mb | default(100) }}MB required"
+
+- name: Prepare firmware image for upload
+  block:
+    - name: Check if firmware file exists locally
+      stat:
+        path: "{{ local_firmware_path }}"
+      register: local_firmware_check
+      delegate_to: localhost
+      when: local_firmware_path is defined
+      
+    - name: Validate local firmware file
+      assert:
+        that:
+          - local_firmware_check.stat.exists
+        fail_msg: "Local firmware file not found: {{ local_firmware_path }}"
+      when: local_firmware_path is defined
+      
+    - name: Calculate firmware file checksum
+      stat:
+        path: "{{ local_firmware_path }}"
+        checksum_algorithm: md5
+      register: firmware_checksum
+      delegate_to: localhost
+      when: local_firmware_path is defined
+
+- name: Upload firmware image to Opengear device
+  block:
+    - name: Start firmware upload session
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/start"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          filename: "{{ target_firmware_filename }}"
+          size: "{{ firmware_checksum.stat.size if firmware_checksum is defined else target_firmware_size_mb | default(100) * 1024 * 1024 }}"
+          checksum: "{{ firmware_checksum.stat.checksum if firmware_checksum is defined else omit }}"
+        validate_certs: false
+      register: upload_session
+      
+    - name: Upload firmware file in chunks
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{ upload_session.json.session_id }}/chunk"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+          Content-Type: "application/octet-stream"
+        body: "{{ lookup('file', local_firmware_path, rstrip=False) | b64decode }}"
+        timeout: 3600
+        validate_certs: false
+      register: chunk_upload
+      when: local_firmware_path is defined
+      
+    - name: Complete firmware upload
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{ upload_session.json.session_id }}/complete"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: upload_complete
+
+- name: Alternative: Download firmware from URL
+  block:
+    - name: Download firmware from remote URL
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/download"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          url: "{{ remote_firmware_url }}"
+          filename: "{{ target_firmware_filename }}"
+        validate_certs: false
+      register: remote_download
+      when: remote_firmware_url is defined and local_firmware_path is not defined
+      
+    - name: Monitor remote download progress
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/download/{{ remote_download.json.download_id }}/status"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: download_status
+      until: download_status.json.status in ['completed', 'failed']
+      retries: 60
+      delay: 30
+      when: remote_download is defined
+
+- name: Verify firmware upload/download
+  block:
+    - name: Get list of available firmware images
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/list"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: firmware_list
+      
+    - name: Verify target firmware is available
+      assert:
+        that:
+          - firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | list | length > 0
+        fail_msg: "Target firmware file not found in device storage"
+        
+    - name: Extract firmware information
+      set_fact:
+        uploaded_firmware_info: "{{ firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | first }}"
+        
+    - name: Validate firmware integrity
+      assert:
+        that:
+          - uploaded_firmware_info.status == 'ready'
+          - uploaded_firmware_info.checksum == firmware_checksum.stat.checksum if firmware_checksum is defined else true
+        fail_msg: "Firmware integrity validation failed"
+
+- name: Log image loading completion
+  debug:
+    msg: |
+      Opengear Image Loading Completed:
+      - Device: {{ opengear_upgrade_state.device_model }}
+      - Firmware File: {{ target_firmware_filename }}
+      - Size: {{ uploaded_firmware_info.size_mb }}MB
+      - Checksum: {{ uploaded_firmware_info.checksum }}
+      - Upload Method: {{ 'Local File' if local_firmware_path is defined else 'Remote Download' }}
+      - Status: Ready for Installation

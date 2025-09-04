@@ -1,0 +1,50 @@
+{
+  "health_check_summary": {
+    "device_name": "{{ device_name }}",
+    "platform": "{{ platform }}",
+    "timestamp": "{{ check_timestamp }}",
+    "connectivity_status": "{{ connectivity_status }}",
+    "system_health": {
+      "cpu_usage_percent": {{ ansible_facts.cpu_usage | default(0) }},
+      "memory_usage_percent": {{ ansible_facts.memory_usage | default(0) }},
+      "uptime_seconds": {{ ansible_facts.uptime | default(0) }},
+      "temperature_celsius": {{ ansible_facts.temperature | default(0) }}
+    },
+    "interface_summary": {
+      "total_interfaces": {{ ansible_facts.interfaces | length | default(0) }},
+      "interfaces_up": {{ ansible_facts.interfaces_up | default(0) }},
+      "interfaces_down": {{ ansible_facts.interfaces_down | default(0) }},
+      "critical_interfaces_down": {{ ansible_facts.critical_interfaces_down | default(0) }}
+    },
+    "routing_summary": {
+      "bgp_neighbors_total": {{ bgp_neighbors_total | default(0) }},
+      "bgp_neighbors_established": {{ bgp_neighbors_established | default(0) }},
+      "ospf_neighbors_total": {{ ospf_neighbors_total | default(0) }},
+      "ospf_neighbors_full": {{ ospf_neighbors_full | default(0) }},
+      "routes_total": {{ routes_total | default(0) }}
+    },
+    "storage_summary": {
+      "total_space_mb": {{ storage_total_mb | default(0) }},
+      "used_space_mb": {{ storage_used_mb | default(0) }},
+      "free_space_mb": {{ storage_free_mb | default(0) }},
+      "free_space_percent": {{ ((storage_free_mb | default(1) / storage_total_mb | default(1)) * 100) | round(2) }}
+    },
+    "firmware_info": {
+      "current_version": "{{ current_firmware_version | default('unknown') }}",
+      "boot_image": "{{ boot_image | default('unknown') }}",
+      "system_image": "{{ system_image | default('unknown') }}"
+    },
+    "baseline_files": {{ baseline_files | to_json }},
+    "validation_results": {
+      "overall_status": "{{ 'healthy' if connectivity_status == 'success' else 'unhealthy' }}",
+      "critical_issues": {{ critical_issues | default([]) | length }},
+      "warnings": {{ warnings | default([]) | length }},
+      "recommendations": {{ recommendations | default([]) }}
+    },
+    "compliance_status": {
+      "last_audit": "{{ last_compliance_audit | default('never') }}",
+      "compliance_score": {{ compliance_score | default(0) }},
+      "security_issues": {{ security_issues | default([]) | length }}
+    }
+  }
+}

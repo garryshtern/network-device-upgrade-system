@@ -1,0 +1,387 @@
+---
+# AWX Job Templates Configuration
+# Defines all job templates for the network device upgrade system
+
+job_templates:
+  # Phase 1: Health Check and Baseline Capture
+  - name: "Network Device Health Check"
+    description: "Comprehensive device health validation and baseline network state capture"
+    project: "Network Device Upgrade System"
+    playbook: "ansible-content/playbooks/health-check.yml"
+    inventory: "NetBox Dynamic Inventory"
+    job_type: "run"
+    verbosity: 1
+    timeout: 1800  # 30 minutes
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    extra_vars:
+      validation_timeout: 300
+      baseline_data_path: "/var/lib/network-upgrade/baselines"
+    survey_enabled: true
+    survey:
+      name: "Device Health Check Survey"
+      description: "Select devices and options for health check"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+          default: "all"
+        - question_name: "Skip Validation"
+          question_description: "Skip detailed validation checks"
+          variable: "skip_validation"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "false"
+          required: true
+
+  # Phase 2: Image Loading (Business Hours Safe)
+  - name: "Firmware Image Loading"
+    description: "Download and stage firmware images on network devices (business hours safe)"
+    project: "Network Device Upgrade System"
+    playbook: "ansible-content/playbooks/image-loading.yml"
+    inventory: "NetBox Dynamic Inventory"
+    job_type: "run"
+    verbosity: 1
+    timeout: 3600  # 60 minutes
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    extra_vars:
+      firmware_base_path: "/var/lib/network-upgrade/firmware"
+      integrity_check_required: true
+    survey_enabled: true
+    survey:
+      name: "Firmware Loading Survey"
+      description: "Configure firmware loading parameters"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Firmware Version"
+          question_description: "Target firmware version filename"
+          variable: "firmware_version"
+          type: "text"
+          required: true
+        - question_name: "Firmware URL"
+          question_description: "URL to download firmware from"
+          variable: "firmware_url"
+          type: "text"
+          required: true
+        - question_name: "Firmware SHA512 Hash"
+          question_description: "SHA512 hash for firmware integrity verification"
+          variable: "firmware_sha512"
+          type: "text"
+          required: true
+
+  # Phase 3: Image Installation (Maintenance Window Required)
+  - name: "Firmware Installation"
+    description: "Install and activate firmware images (requires maintenance window)"
+    project: "Network Device Upgrade System"
+    playbook: "ansible-content/playbooks/image-installation.yml"
+    inventory: "NetBox Dynamic Inventory"
+    job_type: "run"
+    verbosity: 2
+    timeout: 5400  # 90 minutes
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    extra_vars:
+      maintenance_window: true
+      rollback_on_failure: true
+      reboot_wait_time: 600
+    survey_enabled: true
+    survey:
+      name: "Firmware Installation Survey"
+      description: "Configure firmware installation parameters"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Firmware Version"
+          question_description: "Target firmware version filename"
+          variable: "firmware_version"
+          type: "text"
+          required: true
+        - question_name: "Maintenance Window Confirmed"
+          question_description: "Confirm maintenance window is active"
+          variable: "maintenance_window"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "false"
+          required: true
+        - question_name: "Auto Rollback on Failure"
+          question_description: "Automatically rollback on upgrade failure"
+          variable: "auto_rollback"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "true"
+          required: true
+
+  # Complete Upgrade Workflow
+  - name: "Complete Network Device Upgrade"
+    description: "Full upgrade workflow with all phases (health check, loading, installation, validation)"
+    project: "Network Device Upgrade System"
+    playbook: "ansible-content/playbooks/main-upgrade-workflow.yml"
+    inventory: "NetBox Dynamic Inventory"
+    job_type: "run"
+    verbosity: 2
+    timeout: 7200  # 120 minutes
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    concurrent_jobs_enabled: false  # Prevent concurrent full upgrades
+    extra_vars:
+      upgrade_phase: "full"
+      max_concurrent: 5
+      rollback_on_failure: true
+    survey_enabled: true
+    survey:
+      name: "Complete Upgrade Survey"
+      description: "Configure complete upgrade workflow"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Target Firmware Version"
+          question_description: "Target firmware version filename"
+          variable: "target_firmware"
+          type: "text"
+          required: true
+        - question_name: "Firmware URL"
+          question_description: "URL to download firmware from"
+          variable: "firmware_url"
+          type: "text"
+          required: true
+        - question_name: "Firmware SHA512 Hash"
+          question_description: "SHA512 hash for firmware verification"
+          variable: "firmware_sha512"
+          type: "text"
+          required: true
+        - question_name: "Maintenance Window Active"
+          question_description: "Confirm maintenance window is active"
+          variable: "maintenance"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "false"
+          required: true
+        - question_name: "Maximum Concurrent Devices"
+          question_description: "Maximum number of devices to upgrade simultaneously"
+          variable: "max_concurrent"
+          type: "integer"
+          min: 1
+          max: 20
+          default: 5
+          required: true
+        - question_name: "Skip Pre-Upgrade Validation"
+          question_description: "Skip pre-upgrade validation checks"
+          variable: "skip_checks"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "false"
+          required: true
+
+  # Network State Validation
+  - name: "Network State Validation"
+    description: "Comprehensive network state validation and comparison with baseline"
+    project: "Network Device Upgrade System"
+    playbook: "ansible-content/playbooks/network-validation.yml"
+    inventory: "NetBox Dynamic Inventory"
+    job_type: "run"
+    verbosity: 1
+    timeout: 1800  # 30 minutes
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    extra_vars:
+      validation_type: "post_upgrade"
+      network_state_comparison: true
+    survey_enabled: true
+    survey:
+      name: "Network Validation Survey"
+      description: "Configure network validation parameters"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Validation Type"
+          question_description: "Type of validation to perform"
+          variable: "validation_type"
+          type: "multiplechoice"
+          choices: ["pre_upgrade", "post_upgrade", "periodic"]
+          default: "post_upgrade"
+          required: true
+        - question_name: "Compare with Baseline"
+          question_description: "Compare current state with baseline"
+          variable: "network_state_comparison"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "true"
+          required: true
+
+  # Emergency Rollback
+  - name: "Emergency Rollback"
+    description: "Emergency rollback procedure for failed upgrades"
+    project: "Network Device Upgrade System"
+    playbook: "ansible-content/playbooks/emergency-rollback.yml"
+    inventory: "NetBox Dynamic Inventory"
+    job_type: "run"
+    verbosity: 2
+    timeout: 3600  # 60 minutes
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    concurrent_jobs_enabled: false
+    extra_vars:
+      rollback_timeout: 600
+      emergency_mode: false
+    survey_enabled: true
+    survey:
+      name: "Emergency Rollback Survey"
+      description: "Configure emergency rollback parameters"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames requiring rollback (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Rollback Reason"
+          question_description: "Reason for initiating rollback"
+          variable: "rollback_reason"
+          type: "multiplechoice"
+          choices: ["upgrade_failure", "network_issues", "performance_degradation", "security_issue", "manual_request"]
+          default: "upgrade_failure"
+          required: true
+        - question_name: "Restore Configuration"
+          question_description: "Restore previous configuration from backup"
+          variable: "restore_config"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "true"
+          required: true
+        - question_name: "Restore Firmware"
+          question_description: "Rollback firmware to previous version"
+          variable: "restore_firmware"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "true"
+          required: true
+
+  # Compliance Audit
+  - name: "Compliance Audit"
+    description: "Post-upgrade compliance verification and security audit"
+    project: "Network Device Upgrade System"
+    playbook: "ansible-content/playbooks/compliance-audit.yml"
+    inventory: "NetBox Dynamic Inventory"
+    job_type: "run"
+    verbosity: 1
+    timeout: 2400  # 40 minutes
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    extra_vars:
+      generate_report: true
+    survey_enabled: true
+    survey:
+      name: "Compliance Audit Survey"
+      description: "Configure compliance audit parameters"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Compliance Standards"
+          question_description: "Select compliance standards to audit"
+          variable: "compliance_standards"
+          type: "multiselect"
+          choices: ["security_baseline", "network_hardening", "vendor_best_practices"]
+          default: ["security_baseline", "network_hardening"]
+          required: true
+        - question_name: "Generate HTML Report"
+          question_description: "Generate human-readable HTML compliance report"
+          variable: "generate_report"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "true"
+          required: true
+
+  # Storage Cleanup
+  - name: "Storage Cleanup"
+    description: "Clean up device storage and prepare for firmware loading"
+    project: "Network Device Upgrade System"
+    playbook: "ansible-content/playbooks/storage-cleanup.yml"
+    inventory: "NetBox Dynamic Inventory"
+    job_type: "run"
+    verbosity: 1
+    timeout: 1800  # 30 minutes
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    extra_vars:
+      cleanup_old_images: true
+    survey_enabled: true
+    survey:
+      name: "Storage Cleanup Survey"
+      description: "Configure storage cleanup parameters"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Required Free Space (GB)"
+          question_description: "Minimum free space required in GB"
+          variable: "required_space_gb"
+          type: "integer"
+          min: 1
+          max: 100
+          default: 4
+          required: true
+        - question_name: "Cleanup Old Images"
+          question_description: "Remove old firmware images to free space"
+          variable: "cleanup_old_images"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "true"
+          required: true
+
+  # Configuration Backup
+  - name: "Configuration Backup"
+    description: "Create comprehensive device configuration backups"
+    project: "Network Device Upgrade System"
+    playbook: "ansible-content/playbooks/config-backup.yml"
+    inventory: "NetBox Dynamic Inventory"
+    job_type: "run"
+    verbosity: 1
+    timeout: 1800  # 30 minutes
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    extra_vars:
+      backup_type: "manual"
+    survey_enabled: true
+    survey:
+      name: "Configuration Backup Survey"
+      description: "Configure backup parameters"
+      spec:
+        - question_name: "Target Devices"
+          question_description: "Enter device hostnames or groups (comma-separated)"
+          variable: "target_hosts"
+          type: "text"
+          required: true
+        - question_name: "Backup Type"
+          question_description: "Type of backup being performed"
+          variable: "backup_type"
+          type: "multiplechoice"
+          choices: ["pre_upgrade", "post_upgrade", "manual", "scheduled"]
+          default: "manual"
+          required: true
+        - question_name: "Include Startup Config"
+          question_description: "Include startup configuration in backup"
+          variable: "include_startup_config"
+          type: "multiplechoice"
+          choices: ["true", "false"]
+          default: "true"
+          required: true

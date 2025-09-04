@@ -1,0 +1,132 @@
+---
+# Cisco NX-OS Image Installation Tasks
+# Installs and activates firmware images
+
+- name: Get current boot configuration
+  cisco.nxos.nxos_command:
+    commands:
+      - show boot | json
+  register: current_boot_config
+
+- name: Parse current boot variables
+  ansible.builtin.set_fact:
+    current_boot_image: "{{ current_boot_config.stdout[0] | from_json | json_query('sys_img_name') }}"
+    current_kickstart: "{{ current_boot_config.stdout[0] | from_json | json_query('kick_img_name') }}"
+
+- name: Display current boot configuration
+  ansible.builtin.debug:
+    msg:
+      - "Current system image: {{ current_boot_image }}"
+      - "Current kickstart image: {{ current_kickstart }}"
+      - "Target system image: bootflash:{{ target_firmware_version }}"
+
+- name: Check if ISSU (In-Service Software Upgrade) is possible
+  block:
+    - name: Check ISSU compatibility
+      cisco.nxos.nxos_command:
+        commands:
+          - show install all impact system bootflash:{{ target_firmware_version }}
+      register: issu_compatibility_check
+      ignore_errors: true
+
+    - name: Set ISSU capability flag
+      ansible.builtin.set_fact:
+        issu_supported: "{{ 'compatible' in issu_compatibility_check.stdout[0] | lower }}"
+      when: issu_compatibility_check is succeeded
+
+    - name: Set ISSU not supported
+      ansible.builtin.set_fact:
+        issu_supported: false
+      when: issu_compatibility_check is failed
+
+  when: nxos_issu_capable | default(false)
+
+- name: Perform ISSU upgrade (if supported)
+  block:
+    - name: Start ISSU upgrade
+      cisco.nxos.nxos_command:
+        commands:
+          - install all system bootflash:{{ target_firmware_version }}
+        timeout: 1800  # 30 minutes timeout for ISSU
+      register: issu_upgrade_result
+
+    - name: Wait for ISSU completion
+      cisco.nxos.nxos_command:
+        commands:
+          - show install all status
+      register: issu_status
+      retries: 60
+      delay: 30
+      until: "'successful' in issu_status.stdout[0] | lower"
+
+    - name: Set installation method used
+      ansible.builtin.set_fact:
+        installation_method: "issu"
+
+  rescue:
+    - name: ISSU failed - falling back to disruptive upgrade
+      ansible.builtin.debug:
+        msg: "ISSU upgrade failed, proceeding with disruptive upgrade"
+      
+    - name: Set fallback to disruptive upgrade
+      ansible.builtin.set_fact:
+        issu_supported: false
+
+  when: issu_supported | default(false)
+
+- name: Perform disruptive upgrade (if ISSU not supported or failed)
+  block:
+    - name: Update boot variables for disruptive upgrade
+      cisco.nxos.nxos_config:
+        lines:
+          - boot system bootflash:{{ target_firmware_version }}
+        save_when: always
+      register: boot_config_update
+
+    - name: Verify boot configuration update
+      cisco.nxos.nxos_command:
+        commands:
+          - show boot | json
+      register: updated_boot_config
+
+    - name: Validate boot variable update
+      ansible.builtin.set_fact:
+        boot_update_successful: "{{ target_firmware_version in updated_boot_config.stdout[0] }}"
+
+    - name: Assert boot configuration was updated
+      ansible.builtin.assert:
+        that:
+          - boot_update_successful
+        fail_msg: "Failed to update boot variables"
+
+    - name: Set installation method used
+      ansible.builtin.set_fact:
+        installation_method: "disruptive"
+
+    - name: Save configuration before reboot
+      cisco.nxos.nxos_config:
+        save_when: always
+
+  when: not issu_supported | default(true)
+
+- name: Set installation completion status
+  ansible.builtin.set_fact:
+    nxos_installation_results:
+      target_firmware: "{{ target_firmware_version }}"
+      installation_method: "{{ installation_method }}"
+      boot_variables_updated: "{{ boot_update_successful | default(false) }}"
+      issu_performed: "{{ installation_method == 'issu' }}"
+      reboot_required: "{{ installation_method == 'disruptive' }}"
+      installation_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+- name: Display installation results
+  ansible.builtin.debug:
+    msg:
+      - "Firmware installation completed"
+      - "Method: {{ nxos_installation_results.installation_method }}"
+      - "Target firmware: {{ nxos_installation_results.target_firmware }}"
+      - "Reboot required: {{ nxos_installation_results.reboot_required }}"
+
+- name: Installation completion notification
+  ansible.builtin.debug:
+    msg: "NX-OS firmware installation phase completed successfully"

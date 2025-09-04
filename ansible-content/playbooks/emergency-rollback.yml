@@ -1,0 +1,278 @@
+---
+# Emergency Rollback Playbook
+# Automated rollback procedures for failed upgrades
+# Restores device to previous working state
+
+- name: Emergency Rollback Procedure
+  hosts: "{{ target_hosts | default(inventory_hostname) }}"
+  gather_facts: false
+  connection: network_cli
+  vars:
+    rollback_timestamp: "{{ ansible_date_time.iso8601 }}"
+    rollback_timeout: 600
+    restore_config: "{{ restore_config | default(true) }}"
+    restore_firmware: "{{ restore_firmware | default(true) }}"
+    emergency_mode: "{{ emergency_mode | default(false) }}"
+    
+  pre_tasks:
+    - name: Initialize rollback tracking
+      ansible.builtin.set_fact:
+        rollback_state:
+          device: "{{ inventory_hostname }}"
+          platform: "{{ ansible_network_os }}"
+          start_time: "{{ rollback_timestamp }}"
+          rollback_reason: "{{ rollback_reason | default('upgrade_failure') }}"
+          steps_completed: []
+          steps_failed: []
+          current_step: "initialization"
+
+  tasks:
+    - name: Log rollback initiation
+      ansible.builtin.debug:
+        msg:
+          - "=== EMERGENCY ROLLBACK INITIATED ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ ansible_network_os }}"
+          - "Reason: {{ rollback_state.rollback_reason }}"
+          - "Timestamp: {{ rollback_timestamp }}"
+          - "=================================="
+
+    # Step 1: Device connectivity and status check
+    - name: Step 1 - Device status assessment
+      block:
+        - name: Update rollback step
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'current_step': 'status_assessment'}) }}"
+
+        - name: Test device connectivity
+          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
+          ignore_errors: true
+
+        - name: Gather current device state
+          ansible.builtin.include_tasks: ../roles/common/tasks/device-status.yml
+          ignore_errors: true
+
+        - name: Mark status assessment complete
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['status_assessment']}) }}"
+
+      rescue:
+        - name: Mark status assessment failed
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['status_assessment']}) }}"
+
+    # Step 2: Platform-specific firmware rollback
+    - name: Step 2 - Firmware rollback
+      block:
+        - name: Update rollback step
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'current_step': 'firmware_rollback'}) }}"
+
+        - name: Rollback Cisco NX-OS firmware
+          ansible.builtin.include_role:
+            name: cisco-nxos-upgrade
+            tasks_from: rollback
+          vars:
+            rollback_type: "firmware"
+          when: ansible_network_os == 'nxos' and restore_firmware
+
+        - name: Rollback Cisco IOS-XE firmware
+          ansible.builtin.include_role:
+            name: cisco-iosxe-upgrade
+            tasks_from: rollback
+          vars:
+            rollback_type: "firmware"
+          when: ansible_network_os == 'ios' and restore_firmware
+
+        - name: Rollback Metamako MOS firmware
+          ansible.builtin.include_role:
+            name: metamako-mos-upgrade
+            tasks_from: rollback
+          vars:
+            rollback_type: "firmware"
+          when: ansible_network_os == 'mos' and restore_firmware
+
+        - name: Rollback Opengear firmware
+          ansible.builtin.include_role:
+            name: opengear-upgrade
+            tasks_from: rollback
+          vars:
+            rollback_type: "firmware"
+          when: ansible_network_os == 'opengear' and restore_firmware
+
+        - name: Rollback FortiOS firmware
+          ansible.builtin.include_role:
+            name: fortios-upgrade
+            tasks_from: rollback
+          vars:
+            rollback_type: "firmware"
+          when: ansible_network_os == 'fortios' and restore_firmware
+
+        - name: Mark firmware rollback complete
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['firmware_rollback']}) }}"
+
+      rescue:
+        - name: Mark firmware rollback failed
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['firmware_rollback']}) }}"
+
+    # Step 3: Configuration rollback
+    - name: Step 3 - Configuration rollback
+      block:
+        - name: Update rollback step
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'current_step': 'config_rollback'}) }}"
+
+        - name: Find latest configuration backup
+          ansible.builtin.find:
+            paths: "/var/lib/network-upgrade/backups/{{ inventory_hostname }}"
+            patterns: "*.tar.gz"
+            age: "-7d"
+            use_regex: false
+          register: backup_files
+          delegate_to: localhost
+
+        - name: Select most recent backup
+          ansible.builtin.set_fact:
+            latest_backup: "{{ (backup_files.files | sort(attribute='mtime') | last).path }}"
+          when: backup_files.files | length > 0
+
+        - name: Restore configuration from backup
+          ansible.builtin.include_role:
+            name: "{{ ansible_network_os }}-upgrade"
+            tasks_from: config-restore
+          vars:
+            backup_file: "{{ latest_backup }}"
+          when: restore_config and latest_backup is defined
+
+        - name: Mark config rollback complete
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['config_rollback']}) }}"
+
+      rescue:
+        - name: Mark config rollback failed
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['config_rollback']}) }}"
+
+    # Step 4: Device reboot (if required)
+    - name: Step 4 - Device reboot
+      block:
+        - name: Update rollback step
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'current_step': 'rollback_reboot'}) }}"
+
+        - name: Reboot device for rollback
+          ansible.builtin.include_role:
+            name: "{{ ansible_network_os }}-upgrade"
+            tasks_from: reboot
+          vars:
+            reboot_reason: "rollback"
+          when: restore_firmware
+
+        - name: Wait for device recovery after reboot
+          ansible.builtin.wait_for_connection:
+            timeout: "{{ rollback_timeout }}"
+            delay: 60
+          when: restore_firmware
+
+        - name: Mark rollback reboot complete
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['rollback_reboot']}) }}"
+
+      rescue:
+        - name: Mark rollback reboot failed
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['rollback_reboot']}) }}"
+
+    # Step 5: Post-rollback validation
+    - name: Step 5 - Post-rollback validation
+      block:
+        - name: Update rollback step
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'current_step': 'post_rollback_validation'}) }}"
+
+        - name: Validate device connectivity
+          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
+
+        - name: Run health check after rollback
+          ansible.builtin.include: health-check.yml
+          vars:
+            check_type: "post_rollback"
+
+        - name: Verify network services
+          ansible.builtin.include: network-validation.yml
+          vars:
+            validation_type: "post_rollback"
+            compare_with_baseline: false
+
+        - name: Mark post-rollback validation complete
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['post_rollback_validation']}) }}"
+
+      rescue:
+        - name: Mark post-rollback validation failed
+          ansible.builtin.set_fact:
+            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['post_rollback_validation']}) }}"
+
+  post_tasks:
+    - name: Calculate rollback duration
+      ansible.builtin.set_fact:
+        rollback_duration: "{{ ((ansible_date_time.epoch | int) - (rollback_timestamp | to_datetime('%Y-%m-%dT%H:%M:%SZ').strftime('%s') | int)) }}"
+
+    - name: Determine rollback success
+      ansible.builtin.set_fact:
+        rollback_successful: "{{ 'firmware_rollback' in rollback_state.steps_completed and 'post_rollback_validation' in rollback_state.steps_completed }}"
+
+    - name: Record rollback metrics
+      ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+      vars:
+        metric_type: "emergency_rollback"
+        metric_data:
+          device_id: "{{ inventory_hostname }}"
+          platform: "{{ ansible_network_os }}"
+          rollback_reason: "{{ rollback_state.rollback_reason }}"
+          rollback_duration: "{{ rollback_duration }}"
+          rollback_successful: "{{ rollback_successful }}"
+          steps_completed: "{{ rollback_state.steps_completed | length }}"
+          steps_failed: "{{ rollback_state.steps_failed | length }}"
+
+    - name: Update device status in NetBox
+      ansible.builtin.uri:
+        url: "{{ netbox_url }}/api/dcim/devices/"
+        method: PATCH
+        headers:
+          Authorization: "Token {{ netbox_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ inventory_hostname }}"
+          custom_fields:
+            upgrade_status: "{{ 'rollback_complete' if rollback_successful else 'rollback_failed' }}"
+            last_rollback: "{{ rollback_timestamp }}"
+      when: 
+        - netbox_url is defined
+        - netbox_token is defined
+      ignore_errors: true
+
+    - name: Display rollback summary
+      ansible.builtin.debug:
+        msg:
+          - "=== ROLLBACK SUMMARY ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ ansible_network_os }}"
+          - "Reason: {{ rollback_state.rollback_reason }}"
+          - "Duration: {{ rollback_duration }}s"
+          - "Steps Completed: {{ rollback_state.steps_completed | join(', ') }}"
+          - "Steps Failed: {{ rollback_state.steps_failed | join(', ') }}"
+          - "Rollback Status: {{ 'SUCCESS' if rollback_successful else 'FAILED' }}"
+          - "Timestamp: {{ rollback_timestamp }}"
+          - "========================"
+
+    - name: Fail if rollback unsuccessful
+      ansible.builtin.fail:
+        msg: |
+          Emergency rollback failed for {{ inventory_hostname }}
+          Failed steps: {{ rollback_state.steps_failed | join(', ') }}
+          Manual intervention required
+      when: not rollback_successful and not emergency_mode

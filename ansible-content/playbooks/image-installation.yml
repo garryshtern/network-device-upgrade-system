@@ -1,0 +1,191 @@
+---
+# Phase 2: Image Installation Playbook
+# Maintenance window required - installs and activates firmware
+# Includes reboot and service disruption
+
+- name: Phase 2 - Firmware Installation
+  hosts: "{{ target_hosts | default(inventory_hostname) }}"
+  gather_facts: false
+  connection: network_cli
+  vars:
+    installation_start_time: "{{ ansible_date_time.iso8601 }}"
+    reboot_required: true
+    max_reboot_wait: 600
+    validation_timeout: 300
+    
+  pre_tasks:
+    - name: Verify maintenance window
+      ansible.builtin.assert:
+        that:
+          - maintenance_window | bool
+        fail_msg: "Phase 2 installation requires maintenance_window=true"
+
+    - name: Set installation tracking variables
+      ansible.builtin.set_fact:
+        installation_state:
+          phase: "Phase 2 - Installation"
+          device: "{{ inventory_hostname }}"
+          start_time: "{{ installation_start_time }}"
+          current_step: "initialization"
+          pre_reboot_complete: false
+          reboot_started: false
+          post_reboot_complete: false
+
+  tasks:
+    # Step 1: Pre-installation validation
+    - name: Step 1 - Pre-installation validation
+      block:
+        - name: Update step tracking
+          ansible.builtin.set_fact:
+            installation_state: "{{ installation_state | combine({'current_step': 'pre_installation_validation'}) }}"
+
+        - name: Verify Phase 1 completion
+          ansible.builtin.include_tasks: ../roles/common/tasks/phase-validation.yml
+          vars:
+            required_phase: "phase_1_complete"
+
+        - name: Validate network convergence
+          ansible.builtin.include_tasks: ../roles/network-validation/tasks/protocol-convergence.yml
+
+        - name: Final device health check
+          ansible.builtin.include: health-check.yml
+          vars:
+            check_type: "pre_installation"
+
+    # Step 2: Platform-specific installation
+    - name: Step 2 - Firmware installation
+      block:
+        - name: Update step tracking
+          ansible.builtin.set_fact:
+            installation_state: "{{ installation_state | combine({'current_step': 'firmware_installation'}) }}"
+
+        - name: Install firmware - Cisco NX-OS
+          ansible.builtin.include_role:
+            name: cisco-nxos-upgrade
+            tasks_from: image-installation
+          when: ansible_network_os == 'nxos'
+
+        - name: Install firmware - Cisco IOS-XE  
+          ansible.builtin.include_role:
+            name: cisco-iosxe-upgrade
+            tasks_from: image-installation
+          when: ansible_network_os == 'ios'
+
+        - name: Install firmware - Metamako MOS
+          ansible.builtin.include_role:
+            name: metamako-mos-upgrade
+            tasks_from: image-installation
+          when: ansible_network_os == 'mos'
+
+        - name: Install firmware - Opengear
+          ansible.builtin.include_role:
+            name: opengear-upgrade
+            tasks_from: image-installation
+          when: ansible_network_os == 'opengear'
+
+        - name: Install firmware - FortiOS
+          ansible.builtin.include_role:
+            name: fortios-upgrade
+            tasks_from: image-installation
+          when: ansible_network_os == 'fortios'
+
+        - name: Mark pre-reboot tasks complete
+          ansible.builtin.set_fact:
+            installation_state: "{{ installation_state | combine({'pre_reboot_complete': true}) }}"
+
+    # Step 3: Device reboot (if required)
+    - name: Step 3 - Device reboot
+      block:
+        - name: Update step tracking
+          ansible.builtin.set_fact:
+            installation_state: "{{ installation_state | combine({'current_step': 'device_reboot', 'reboot_started': true}) }}"
+
+        - name: Execute platform-specific reboot
+          ansible.builtin.include_role:
+            name: "{{ ansible_network_os }}-upgrade"
+            tasks_from: reboot
+          when: reboot_required | bool
+
+        - name: Wait for device connectivity after reboot
+          ansible.builtin.wait_for_connection:
+            timeout: "{{ max_reboot_wait }}"
+            delay: 30
+          when: reboot_required | bool
+
+        - name: Verify device responsiveness
+          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
+
+    # Step 4: Post-installation validation
+    - name: Step 4 - Post-installation validation
+      block:
+        - name: Update step tracking
+          ansible.builtin.set_fact:
+            installation_state: "{{ installation_state | combine({'current_step': 'post_installation_validation'}) }}"
+
+        - name: Verify firmware version
+          ansible.builtin.include_tasks: ../roles/image-validation/tasks/version-verification.yml
+
+        - name: Run post-installation health check
+          ansible.builtin.include: health-check.yml
+          vars:
+            check_type: "post_installation"
+
+        - name: Validate network services
+          ansible.builtin.include: network-validation.yml
+          vars:
+            validation_type: "post_installation"
+
+        - name: Mark post-reboot validation complete
+          ansible.builtin.set_fact:
+            installation_state: "{{ installation_state | combine({'post_reboot_complete': true}) }}"
+
+    # Step 5: Installation completion
+    - name: Step 5 - Installation completion
+      block:
+        - name: Update step tracking
+          ansible.builtin.set_fact:
+            installation_state: "{{ installation_state | combine({'current_step': 'completion'}) }}"
+
+        - name: Record installation metrics
+          ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+          vars:
+            metric_type: "installation_completion"
+            metric_data:
+              device_id: "{{ inventory_hostname }}"
+              platform: "{{ ansible_network_os }}"
+              firmware_version: "{{ firmware_version }}"
+              status: "success"
+              reboot_required: "{{ reboot_required }}"
+
+        - name: Update device inventory
+          ansible.builtin.include_tasks: ../roles/common/tasks/inventory-update.yml
+
+  post_tasks:
+    - name: Calculate installation duration
+      ansible.builtin.set_fact:
+        installation_duration: "{{ ((ansible_date_time.epoch | int) - (installation_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ').strftime('%s') | int)) }}"
+
+    - name: Display installation summary
+      ansible.builtin.debug:
+        msg:
+          - "=== Phase 2 Installation Complete ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ ansible_network_os }}"
+          - "Firmware: {{ firmware_version }}"
+          - "Duration: {{ installation_duration }}s"
+          - "Reboot Required: {{ reboot_required }}"
+          - "Status: SUCCESS"
+          - "===================================="
+
+  rescue:
+    - name: Installation failure handling
+      ansible.builtin.include: emergency-rollback.yml
+      when: rollback_on_failure | default(true) | bool
+
+    - name: Log installation failure
+      ansible.builtin.debug:
+        msg: "Phase 2 installation failed for {{ inventory_hostname }}"
+
+    - name: Re-raise installation failure
+      ansible.builtin.fail:
+        msg: "Phase 2 (Installation) failed for {{ inventory_hostname }}"

@@ -3,7 +3,7 @@
 # Comprehensive BGP neighbor and routing validation as per requirements
 
 - name: Initialize BGP validation results
-  set_fact:
+  ansible.builtin.set_fact:
     bgp_validation:
       device: "{{ inventory_hostname }}"
       timestamp: "{{ ansible_date_time.iso8601 }}"
@@ -32,7 +32,7 @@
       when: ansible_network_os == 'arista.eos.eos'
       
     - name: Parse BGP neighbor states
-      set_fact:
+      ansible.builtin.set_fact:
         bgp_neighbors: "{{ bgp_summary_raw.stdout[0] | bgp_neighbors_parser }}"
       vars:
         bgp_neighbors_parser: |
@@ -59,7 +59,7 @@
           
   rescue:
     - name: Handle BGP command failure
-      set_fact:
+      ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({
           'errors': bgp_validation.errors + ['Failed to retrieve BGP summary: ' + ansible_failed_result.msg | default('Unknown error')]
         }) }}"
@@ -90,13 +90,13 @@
       
   rescue:
     - name: Log BGP detailed statistics failure
-      set_fact:
+      ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({
           'warnings': bgp_validation.warnings + ['Could not retrieve detailed BGP statistics']
         }) }}"
 
 - name: Analyze BGP neighbor states
-  set_fact:
+  ansible.builtin.set_fact:
     bgp_analysis:
       total_neighbors: "{{ bgp_neighbors | length }}"
       established_neighbors: "{{ bgp_neighbors | selectattr('state', 'equalto', 'Established') | list | length }}"
@@ -108,7 +108,7 @@
   when: bgp_neighbors is defined
 
 - name: Store current BGP state
-  set_fact:
+  ansible.builtin.set_fact:
     bgp_validation: "{{ bgp_validation | combine({
       'current': {
         'neighbors': bgp_neighbors | default([]),
@@ -120,20 +120,20 @@
 - name: Load baseline BGP state if available
   block:
     - name: Check for existing baseline
-      stat:
+      ansible.builtin.stat:
         path: "/var/log/network-upgrade/baselines/{{ inventory_hostname }}_bgp_baseline.json"
       register: baseline_file
       delegate_to: localhost
       
     - name: Load baseline data
-      set_fact:
+      ansible.builtin.set_fact:
         bgp_baseline: "{{ lookup('file', '/var/log/network-upgrade/baselines/' + inventory_hostname + '_bgp_baseline.json') | from_json }}"
       when: 
         - baseline_file.stat.exists
         - validation_mode == 'post_upgrade'
         
     - name: Store baseline in validation results
-      set_fact:
+      ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({
           'baseline': bgp_baseline | default({})
         }) }}"
@@ -141,13 +141,13 @@
       
   rescue:
     - name: Handle baseline loading failure
-      set_fact:
+      ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({
           'warnings': bgp_validation.warnings + ['Could not load BGP baseline for comparison']
         }) }}"
 
 - name: Save baseline BGP state (pre-upgrade only)
-  copy:
+  ansible.builtin.copy:
     content: "{{ bgp_validation.current | to_nice_json }}"
     dest: "/var/log/network-upgrade/baselines/{{ inventory_hostname }}_bgp_baseline.json"
     mode: '0644'
@@ -157,7 +157,7 @@
 - name: Compare BGP states (post-upgrade validation)
   block:
     - name: Perform BGP state comparison
-      set_fact:
+      ansible.builtin.set_fact:
         bgp_comparison:
           neighbor_count_match: "{{ bgp_validation.baseline.analysis.total_neighbors | default(0) == bgp_validation.current.analysis.total_neighbors | default(0) }}"
           established_count_match: "{{ bgp_validation.baseline.analysis.established_neighbors | default(0) == bgp_validation.current.analysis.established_neighbors | default(0) }}"
@@ -167,7 +167,7 @@
           recovered_neighbors: []
           
     - name: Identify neighbor state changes
-      set_fact:
+      ansible.builtin.set_fact:
         bgp_comparison: "{{ bgp_comparison | combine({
           'new_down_neighbors': current_down_neighbors | difference(baseline_down_neighbors | default([])),
           'recovered_neighbors': baseline_down_neighbors | default([]) | difference(current_down_neighbors)
@@ -177,7 +177,7 @@
         baseline_down_neighbors: "{{ bgp_validation.baseline.neighbors | default([]) | rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list }}"
         
     - name: Store comparison results
-      set_fact:
+      ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({
           'comparison': bgp_comparison
         }) }}"
@@ -187,7 +187,7 @@
     - bgp_validation.baseline != {}
 
 - name: Evaluate BGP validation results
-  set_fact:
+  ansible.builtin.set_fact:
     bgp_validation_passed: "{{ 
       bgp_validation.current.analysis.established_neighbors | default(0) > 0 and
       (validation_mode == 'pre_upgrade' or 
@@ -198,7 +198,7 @@
     }}"
 
 - name: Add validation errors for failures
-  set_fact:
+  ansible.builtin.set_fact:
     bgp_validation: "{{ bgp_validation | combine({
       'errors': bgp_validation.errors + validation_errors
     }) }}"
@@ -225,7 +225,7 @@
       {{ errors }}
 
 - name: Set final BGP validation status
-  set_fact:
+  ansible.builtin.set_fact:
     bgp_validation: "{{ bgp_validation | combine({
       'passed': bgp_validation_passed,
       'summary': {
@@ -237,7 +237,7 @@
     }) }}"
 
 - name: Log BGP validation to InfluxDB
-  uri:
+  ansible.builtin.uri:
     url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
     method: POST
     headers:
@@ -250,7 +250,7 @@
   ignore_errors: true
 
 - name: Display BGP validation results
-  debug:
+  ansible.builtin.debug:
     msg: |
       BGP Validation Results for {{ inventory_hostname }}:
       Status: {{ 'PASSED' if bgp_validation.passed else 'FAILED' }}

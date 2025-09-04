@@ -1,345 +1,92 @@
 ---
-# Phase 1: Image Loading Playbook
-# Business hours safe - downloads, stages, and validates firmware without disruption
+# Image Loading Playbook
+# Downloads and stages firmware images on network devices
+# Business hours safe - does not disrupt operations
 
-- name: "Phase 1: Image Loading - {{ inventory_hostname }}"
-  hosts: "{{ ansible_play_hosts }}"
+- name: Firmware Image Loading
+  hosts: "{{ target_hosts | default(inventory_hostname) }}"
   gather_facts: false
+  connection: network_cli
   vars:
-    phase_start_time: "{{ ansible_date_time.iso8601 }}"
+    firmware_source_path: "{{ firmware_base_path }}/{{ ansible_network_os }}"
+    device_storage_path: "/var/lib/firmware"
+    integrity_check_required: true
+    cleanup_old_images: true
     
-  pre_tasks:
-    - name: Set Phase 1 tracking variables
-      set_fact:
-        phase_state:
-          name: "Phase 1 - Image Loading"
-          device: "{{ inventory_hostname }}"
-          start_time: "{{ phase_start_time }}"
-          steps_completed: []
-          steps_failed: []
-          current_step: "initialization"
-
   tasks:
-    # Step 1: Device Health Check and Pre-validation
-    - name: "Step 1: Device Health Check"
-      block:
-        - name: Update step tracking
-          set_fact:
-            phase_state: "{{ phase_state | combine({'current_step': 'health_check'}) }}"
-            
-        - name: Execute comprehensive health check
-          include: health-check.yml
-          vars:
-            check_type: "pre_upgrade"
-            baseline_capture: true
-            
-        - name: Mark health check complete
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_completed': phase_state.steps_completed + ['health_check']
-            }) }}"
-            
-      rescue:
-        - name: Handle health check failure
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_failed': phase_state.steps_failed + ['health_check']
-            }) }}"
-            
-        - name: Fail on critical health check failure
-          fail:
-            msg: "Device health check failed for {{ inventory_hostname }}"
-          when: health_check_results.critical_failures | default([]) | length > 0
+    - name: Validate firmware file exists locally
+      ansible.builtin.stat:
+        path: "{{ firmware_source_path }}/{{ firmware_version }}"
+      register: firmware_file
+      delegate_to: localhost
+      
+    - name: Fail if firmware file not found
+      ansible.builtin.fail:
+        msg: "Firmware file not found: {{ firmware_source_path }}/{{ firmware_version }}"
+      when: not firmware_file.stat.exists
 
-    # Step 2: Storage Management and Cleanup
-    - name: "Step 2: Storage Management"
-      block:
-        - name: Update step tracking
-          set_fact:
-            phase_state: "{{ phase_state | combine({'current_step': 'storage_management'}) }}"
-            
-        - name: Execute storage cleanup
-          include: storage-cleanup.yml
-          vars:
-            target_firmware_file: "{{ target_firmware_version }}"
-            cleanup_old_images: true
-            
-        - name: Mark storage management complete
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_completed': phase_state.steps_completed + ['storage_management']
-            }) }}"
-            
-      rescue:
-        - name: Handle storage management failure
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_failed': phase_state.steps_failed + ['storage_management']
-            }) }}"
-            
-        - name: Fail on insufficient storage
-          fail:
-            msg: "Storage management failed - insufficient space on {{ inventory_hostname }}"
+    - name: Check device storage capacity
+      ansible.builtin.include_tasks: ../roles/space-management/tasks/space-check.yml
+      vars:
+        required_space_gb: "{{ firmware_size_gb | default(2) }}"
 
-    # Step 3: Configuration Backup
-    - name: "Step 3: Configuration Backup"
+    - name: Platform-specific image loading
       block:
-        - name: Update step tracking
-          set_fact:
-            phase_state: "{{ phase_state | combine({'current_step': 'config_backup'}) }}"
-            
-        - name: Execute configuration backup
-          include: config-backup.yml
-          vars:
-            backup_type: "pre_upgrade"
-            include_startup_config: true
-            
-        - name: Mark configuration backup complete
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_completed': phase_state.steps_completed + ['config_backup']
-            }) }}"
-            workflow_state: "{{ workflow_state | combine({'rollback_available': true}) }}"
-            
-      rescue:
-        - name: Handle backup failure
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_failed': phase_state.steps_failed + ['config_backup']
-            }) }}"
-            
-        - name: Continue without backup (with warning)
-          debug:
-            msg: "WARNING: Configuration backup failed but continuing with upgrade"
-          when: continue_without_backup | default(false)
-            
-        - name: Fail on backup failure
-          fail:
-            msg: "Configuration backup failed for {{ inventory_hostname }}"
-          when: not (continue_without_backup | default(false))
-
-    # Step 4: Firmware Image Download and Transfer
-    - name: "Step 4: Firmware Download and Transfer"
-      block:
-        - name: Update step tracking
-          set_fact:
-            phase_state: "{{ phase_state | combine({'current_step': 'firmware_download'}) }}"
-            
-        - name: Download firmware image locally (run once)
-          get_url:
-            url: "{{ firmware_url }}"
-            dest: "/tmp/firmware/{{ target_firmware_version }}.{{ firmware_extension | default('bin') }}"
-            mode: '0644'
-            timeout: 1800
-          delegate_to: localhost
-          run_once: true
-          register: firmware_download
-          
-        - name: Verify local firmware SHA512 hash
-          stat:
-            path: "/tmp/firmware/{{ target_firmware_version }}.{{ firmware_extension | default('bin') }}"
-            checksum_algorithm: sha512
-          delegate_to: localhost
-          register: local_firmware_stat
-          
-        - name: Validate firmware hash
-          assert:
-            that:
-              - local_firmware_stat.stat.checksum == firmware_sha512
-            fail_msg: |
-              Firmware hash validation failed!
-              Expected: {{ firmware_sha512 }}
-              Actual: {{ local_firmware_stat.stat.checksum }}
-              
-        - name: Transfer firmware to device using platform-specific method
-          include_role:
-            name: "{{ ansible_network_os | replace('.', '-') }}-upgrade"
+        # Cisco NX-OS Image Loading
+        - name: Load Cisco NX-OS image
+          ansible.builtin.include_role:
+            name: cisco-nxos-upgrade
             tasks_from: image-loading
-          vars:
-            source_file: "/tmp/firmware/{{ target_firmware_version }}.{{ firmware_extension | default('bin') }}"
-            
-        - name: Mark firmware download complete
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_completed': phase_state.steps_completed + ['firmware_download']
-            }) }}"
-            
-      rescue:
-        - name: Handle firmware download failure
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_failed': phase_state.steps_failed + ['firmware_download']
-            }) }}"
-            
-        - name: Cleanup failed firmware download
-          file:
-            path: "/tmp/firmware/{{ target_firmware_version }}.{{ firmware_extension | default('bin') }}"
-            state: absent
-          delegate_to: localhost
-          ignore_errors: true
-          
-        - name: Fail on firmware download failure
-          fail:
-            msg: "Firmware download/transfer failed for {{ inventory_hostname }}"
+          when: ansible_network_os == 'nxos'
 
-    # Step 5: Firmware Verification on Device
-    - name: "Step 5: Firmware Verification"
-      block:
-        - name: Update step tracking
-          set_fact:
-            phase_state: "{{ phase_state | combine({'current_step': 'firmware_verification'}) }}"
-            
-        - name: Verify firmware integrity on device
-          include_role:
-            name: image-validation
-            tasks_from: hash-verification
-          vars:
-            firmware_file: "{{ target_firmware_version }}.{{ firmware_extension | default('bin') }}"
-            expected_hash: "{{ firmware_sha512 }}"
-            hash_algorithm: "sha512"
-            
-        - name: Mark firmware verification complete
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_completed': phase_state.steps_completed + ['firmware_verification']
-            }) }}"
-            
-      rescue:
-        - name: Handle verification failure
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_failed': phase_state.steps_failed + ['firmware_verification']
-            }) }}"
-            
-        - name: Remove corrupted firmware from device
-          include_role:
-            name: "{{ ansible_network_os | replace('.', '-') }}-upgrade"
-            tasks_from: cleanup-firmware
-          ignore_errors: true
-          
-        - name: Fail on verification failure
-          fail:
-            msg: "Firmware verification failed for {{ inventory_hostname }}"
+        # Cisco IOS-XE Image Loading
+        - name: Load Cisco IOS-XE image
+          ansible.builtin.include_role:
+            name: cisco-iosxe-upgrade
+            tasks_from: image-loading
+          when: ansible_network_os == 'ios'
 
-    # Step 6: Final Phase 1 Validation
-    - name: "Step 6: Phase 1 Validation"
-      block:
-        - name: Update step tracking
-          set_fact:
-            phase_state: "{{ phase_state | combine({'current_step': 'phase1_validation'}) }}"
-            
-        - name: Validate Phase 1 completion requirements
-          assert:
-            that:
-              - "'health_check' in phase_state.steps_completed"
-              - "'storage_management' in phase_state.steps_completed"
-              - "'firmware_download' in phase_state.steps_completed"
-              - "'firmware_verification' in phase_state.steps_completed"
-              - "phase_state.steps_failed | length == 0"
-            fail_msg: "Phase 1 requirements not met"
-            
-        - name: Confirm device is ready for Phase 2
-          include_role:
-            name: "{{ ansible_network_os | replace('.', '-') }}-upgrade"
-            tasks_from: validate-ready-for-installation
-            
-        - name: Mark Phase 1 validation complete
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_completed': phase_state.steps_completed + ['phase1_validation']
-            }) }}"
-            
-      rescue:
-        - name: Handle Phase 1 validation failure
-          set_fact:
-            phase_state: "{{ phase_state | combine({
-              'steps_failed': phase_state.steps_failed + ['phase1_validation']
-            }) }}"
-            
-        - name: Fail Phase 1 on validation failure
-          fail:
-            msg: "Phase 1 validation failed for {{ inventory_hostname }}"
+        # Metamako MOS Image Loading
+        - name: Load Metamako MOS image
+          ansible.builtin.include_role:
+            name: metamako-mos-upgrade
+            tasks_from: image-loading
+          when: ansible_network_os == 'mos'
 
-  post_tasks:
-    - name: Calculate Phase 1 duration
-      set_fact:
-        phase1_duration: "{{ ((ansible_date_time.epoch | int) - (phase_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | int)) }}"
-        
-    - name: Log Phase 1 step completion to InfluxDB
-      uri:
-        url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
-        method: POST
-        headers:
-          Authorization: "Token {{ influxdb_token }}"
-        body: |
-          upgrade_progress,device_id={{ inventory_hostname }},device_type={{ ansible_network_os | default('unknown') }},site_location={{ site_name | default('unknown') }},batch_id={{ upgrade_job_id }},vendor={{ vendor | default('unknown') }},platform={{ ansible_network_os | default('unknown') }} state="phase_1_step_{{ item }}",progress_percent={{ (loop.index * 8) | int }},duration_seconds={{ phase1_duration }} {{ ansible_date_time.epoch }}000000000
-      loop: "{{ phase_state.steps_completed }}"
-      when: 
-        - influxdb_url is defined
-        - send_metrics | default(true)
-      ignore_errors: true
-      
-    - name: Update NetBox with Phase 1 completion
-      uri:
-        url: "{{ netbox_url }}/api/dcim/devices/"
-        method: PATCH
-        headers:
-          Authorization: "Token {{ netbox_token }}"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          name: "{{ inventory_hostname }}"
-          custom_fields:
-            upgrade_status: "phase_1_complete"
-            target_firmware_version: "{{ target_firmware_version }}"
-        status_code: [200, 201]
-      when: 
-        - netbox_url is defined
-        - netbox_token is defined
-        - update_netbox | default(true)
-      ignore_errors: true
-      
-    - name: Log Phase 1 summary
-      debug:
-        msg: |
-          
-          ==========================================
-          PHASE 1 COMPLETE: {{ inventory_hostname }}
-          ==========================================
-          Duration: {{ phase1_duration }} seconds
-          Steps Completed: {{ phase_state.steps_completed | join(', ') }}
-          {% if phase_state.steps_failed %}
-          Steps Failed: {{ phase_state.steps_failed | join(', ') }}
-          {% endif %}
-          
-          Firmware Status: Staged and Verified
-          Target Version: {{ target_firmware_version }}
-          Rollback Available: {{ workflow_state.rollback_available | default(false) }}
-          
-          Ready for Phase 2 (Installation)
-          ==========================================
+        # Opengear Image Loading
+        - name: Load Opengear image
+          ansible.builtin.include_role:
+            name: opengear-upgrade
+            tasks_from: image-loading
+          when: ansible_network_os == 'opengear'
 
-  # Global error handling for Phase 1
-  rescue:
-    - name: Log Phase 1 failure to InfluxDB
-      uri:
-        url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
-        method: POST
-        headers:
-          Authorization: "Token {{ influxdb_token }}"
-        body: |
-          upgrade_progress,device_id={{ inventory_hostname }},device_type={{ ansible_network_os | default('unknown') }},site_location={{ site_name | default('unknown') }},batch_id={{ upgrade_job_id }},vendor={{ vendor | default('unknown') }},platform={{ ansible_network_os | default('unknown') }} state="phase_1_failed",progress_percent=25,error_code=1 {{ ansible_date_time.epoch }}000000000
-      when: 
-        - influxdb_url is defined
-        - send_metrics | default(true)
-      ignore_errors: true
-      
-    - name: Cleanup on Phase 1 failure
-      include_role:
-        name: common
-        tasks_from: cleanup-failed-upgrade
-      ignore_errors: true
-      
-    - name: Re-raise Phase 1 failure
-      fail:
-        msg: "Phase 1 (Image Loading) failed for {{ inventory_hostname }}: {{ ansible_failed_result.msg | default('Unknown error') }}"
+        # FortiOS Image Loading
+        - name: Load FortiOS image
+          ansible.builtin.include_role:
+            name: fortios-upgrade
+            tasks_from: image-loading
+          when: ansible_network_os == 'fortios'
+
+    - name: Verify image integrity
+      ansible.builtin.include_tasks: ../roles/image-validation/tasks/hash-verification.yml
+
+    - name: Record image loading completion
+      ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+      vars:
+        metric_type: "image_loading"
+        metric_data:
+          device_id: "{{ inventory_hostname }}"
+          firmware_version: "{{ firmware_version }}"
+          platform: "{{ ansible_network_os }}"
+          status: "success"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+
+    - name: Display loading results
+      ansible.builtin.debug:
+        msg:
+          - "=== Image Loading Complete ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ ansible_network_os }}"
+          - "Firmware: {{ firmware_version }}"
+          - "Status: LOADED"
+          - "============================="

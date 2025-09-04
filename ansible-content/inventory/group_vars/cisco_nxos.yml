@@ -1,0 +1,87 @@
+---
+# Cisco NX-OS Specific Configuration
+# For Nexus switches and NX-OS devices
+
+# Connection settings
+ansible_network_os: cisco.nxos.nxos
+ansible_connection: ansible.netcommon.network_cli
+ansible_user: "{{ vault_cisco_nxos_username | default('admin') }}"
+ansible_password: "{{ vault_cisco_nxos_password }}"
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# Platform specific settings
+platform_type: "cisco_nxos"
+vendor: "cisco"
+device_family: "nexus"
+
+# ISSU settings
+enable_issu: true
+issu_timeout: 3600
+check_issu_compatibility: true
+
+# EPLD upgrade settings
+enable_epld_upgrade: false  # Set to true when EPLD upgrade is needed
+epld_upgrade_timeout: 7200
+allow_disruptive_epld: false
+
+# NX-OS specific timeouts
+nxos_install_timeout: 3600
+nxos_reboot_timeout: 900
+nxos_copy_timeout: 1800
+
+# Image management
+image_protocol: "scp"  # scp, sftp, http, https
+image_server: "{{ firmware_server | default('192.168.1.100') }}"
+image_server_username: "{{ vault_image_server_username }}"
+image_server_password: "{{ vault_image_server_password }}"
+
+# Storage management
+min_free_space_mb: 2000
+cleanup_old_images: true
+keep_image_count: 2
+
+# Validation specific to NX-OS
+validate_vdc_mode: true
+validate_feature_set: true
+check_license_usage: true
+
+# BGP validation
+validate_bgp: true
+bgp_convergence_timeout: 300
+expected_bgp_neighbors: []  # Define per host
+
+# OSPF validation  
+validate_ospf: true
+ospf_convergence_timeout: 180
+
+# Interface validation
+validate_port_channels: true
+validate_vpc: true
+check_transceiver_status: true
+
+# Multicast validation
+validate_pim: true
+validate_igmp: true
+check_rp_reachability: true
+
+# VDC settings (if applicable)
+vdc_mode: false
+target_vdc: "{{ ansible_host }}-vdc"
+
+# Boot variables
+primary_boot_image: "bootflash:///nxos.{{ target_firmware_version }}.bin"
+secondary_boot_image: "bootflash:///nxos.backup.bin"
+
+# Feature validation
+required_features:
+  - "bgp"
+  - "ospf"  
+  - "pim"
+  - "igmp"
+  - "vpc"
+  - "lacp"
+
+# Error thresholds
+max_interface_errors: 100
+max_crc_errors: 50
+max_late_collisions: 10

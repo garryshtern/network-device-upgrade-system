@@ -1,0 +1,49 @@
+---
+# Check Metawatch and Metamux Components
+# Validate specialized Metamako hardware components
+
+- name: Check for Metawatch components
+  ansible.netcommon.cli_command:
+    command: show metawatch status
+  register: metawatch_status
+  failed_when: false
+  
+- name: Check for Metamux components  
+  ansible.netcommon.cli_command:
+    command: show metamux status
+  register: metamux_status
+  failed_when: false
+  
+- name: Parse component status
+  set_fact:
+    metamako_upgrade_state: "{{ metamako_upgrade_state | combine({
+      'metawatch_enabled': metawatch_status.rc == 0 and 'enabled' in metawatch_status.stdout | lower,
+      'metamux_enabled': metamux_status.rc == 0 and 'enabled' in metamux_status.stdout | lower
+    }) }}"
+    
+- name: Get detailed metawatch info (if equipped)
+  ansible.netcommon.cli_command:
+    command: show metawatch detail
+  register: metawatch_detail
+  failed_when: false
+  when: metamako_upgrade_state.metawatch_enabled
+  
+- name: Get detailed metamux info (if equipped)
+  ansible.netcommon.cli_command:
+    command: show metamux detail
+  register: metamux_detail
+  failed_when: false
+  when: metamako_upgrade_state.metamux_enabled
+  
+- name: Display component status
+  debug:
+    msg: |
+      Metamako Component Status:
+      - Metawatch: {{ 'Enabled' if metamako_upgrade_state.metawatch_enabled else 'Not Available' }}
+      - Metamux: {{ 'Enabled' if metamako_upgrade_state.metamux_enabled else 'Not Available' }}
+      {% if metamako_upgrade_state.metawatch_enabled %}
+      - Metawatch Detail: {{ metawatch_detail.stdout | default('N/A') }}
+      {% endif %}
+      {% if metamako_upgrade_state.metamux_enabled %}
+      - Metamux Detail: {{ metamux_detail.stdout | default('N/A') }}
+      {% endif %}

@@ -1,0 +1,101 @@
+---
+# Image Loading for FortiOS Devices
+# Downloads and stages firmware images
+
+- name: Pre-load system checks
+  block:
+    - name: Check available disk space
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_storage"
+      register: storage_info
+      
+    - name: Verify sufficient space
+      assert:
+        that:
+          - storage_info.meta.results.available_mb | int > 1000
+        fail_msg: "Insufficient disk space for firmware download"
+        
+- name: Download firmware image
+  block:
+    - name: Initiate firmware download from FortiGuard
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_firmware_download"
+        params:
+          version: "{{ fortios_upgrade_state.target_version }}"
+      register: download_initiation
+      
+    - name: Monitor download progress
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_firmware_download_status"
+      register: download_status
+      until: download_status.meta.results.status in ["completed", "failed"]
+      retries: 60
+      delay: 30
+      failed_when: download_status.meta.results.status == "failed"
+      
+    - name: Verify download completion
+      assert:
+        that:
+          - download_status.meta.results.status == "completed"
+          - fortios_upgrade_state.target_version in download_status.meta.results.filename
+        fail_msg: "Firmware download failed or incomplete"
+
+- name: Alternative local image upload (if needed)
+  block:
+    - name: Upload local firmware image
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_firmware_upload"
+        params:
+          file_content: "{{ lookup('file', local_firmware_path) | b64encode }}"
+          filename: "{{ fortios_upgrade_state.target_version }}.out"
+      register: local_upload
+      when: local_firmware_path is defined
+      
+    - name: Verify local upload
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_firmware_list"
+      register: firmware_list
+      when: local_firmware_path is defined
+
+- name: Validate staged firmware
+  block:
+    - name: Get list of available firmware images
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_firmware_list"
+      register: available_firmware
+      
+    - name: Verify target firmware is available
+      assert:
+        that:
+          - available_firmware.meta.results | selectattr('version', 'equalto', fortios_upgrade_state.target_version) | list | length > 0
+        fail_msg: "Target firmware not found in available images"
+        
+    - name: Check firmware integrity
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"  
+        selector: "system_firmware_verify"
+        params:
+          version: "{{ fortios_upgrade_state.target_version }}"
+      register: firmware_verification
+      
+    - name: Confirm firmware integrity
+      assert:
+        that:
+          - firmware_verification.meta.results.status == "valid"
+        fail_msg: "Firmware integrity check failed"
+
+- name: Log loading completion
+  debug:
+    msg: |
+      FortiOS Image Loading Completed:
+      - Target Version: {{ fortios_upgrade_state.target_version }}
+      - Download Method: {{ 'FortiGuard' if download_initiation is defined else 'Local Upload' }}
+      - File Size: {{ available_firmware.meta.results | selectattr('version', 'equalto', fortios_upgrade_state.target_version) | map(attribute='size_mb') | first | default('Unknown') }}MB
+      - Integrity: {{ firmware_verification.meta.results.status | default('Not Verified') }}
+      - Status: Ready for Installation

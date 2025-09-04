@@ -1,0 +1,210 @@
+---
+# Multicast Protocol Validation
+# Validates PIM neighbors, IGMP groups, RP reachability, and Anycast RP
+
+- name: Gather PIM neighbor information
+  block:
+    - name: Get PIM neighbor status (NX-OS)
+      cisco.nxos.nxos_command:
+        commands:
+          - show ip pim neighbor | json
+          - show ip pim interface | json
+          - show ip pim rp | json
+      register: nxos_pim_info
+      when: ansible_network_os == "cisco.nxos.nxos"
+      failed_when: false
+      
+    - name: Get PIM neighbor status (IOS-XE)
+      cisco.ios.ios_command:
+        commands:
+          - show ip pim neighbor
+          - show ip pim interface
+          - show ip pim rp mapping
+      register: ios_pim_info
+      when: ansible_network_os == "cisco.ios.ios"
+      failed_when: false
+
+- name: Parse PIM information for NX-OS
+  block:
+    - name: Extract PIM data
+      set_fact:
+        pim_neighbors: "{{ nxos_pim_info.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | default([]) }}"
+        pim_interfaces: "{{ nxos_pim_info.stdout[1] | from_json | json_query('TABLE_intf.ROW_intf') | default([]) }}"
+        pim_rp_info: "{{ nxos_pim_info.stdout[2] | from_json | json_query('TABLE_rp.ROW_rp') | default([]) }}"
+      when: ansible_network_os == "cisco.nxos.nxos" and nxos_pim_info.rc == 0
+      
+    - name: Classify PIM neighbor states
+      set_fact:
+        pim_neighbors_up: "{{ pim_neighbors | selectattr('neighbor_state', 'equalto', 'up') | list }}"
+        pim_neighbors_down: "{{ pim_neighbors | selectattr('neighbor_state', 'equalto', 'down') | list }}"
+        pim_sparse_mode: "{{ pim_interfaces | selectattr('mode', 'equalto', 'sparse') | list }}"
+        pim_dense_mode: "{{ pim_interfaces | selectattr('mode', 'equalto', 'dense') | list }}"
+      when: pim_neighbors is defined and pim_interfaces is defined
+
+- name: PIM neighbor validation
+  block:
+    - name: Check PIM neighbor adjacencies
+      debug:
+        msg: |
+          PIM Neighbor Status:
+          Total Neighbors: {{ pim_neighbors | length }}
+          Neighbors Up: {{ pim_neighbors_up | length }}
+          Neighbors Down: {{ pim_neighbors_down | length }}
+          {% for neighbor in pim_neighbors_up %}
+          - {{ neighbor.neighbor_addr }}: {{ neighbor.neighbor_state }} ({{ neighbor.interface }})
+          {% endfor %}
+      when: pim_neighbors is defined
+      
+    - name: Validate PIM interface modes
+      debug:
+        msg: |
+          PIM Interface Modes:
+          Sparse Mode Interfaces: {{ pim_sparse_mode | length }}
+          Dense Mode Interfaces: {{ pim_dense_mode | length }}
+          {% for intf in pim_sparse_mode %}
+          - {{ intf.interface }}: {{ intf.mode }} mode, DR: {{ intf.dr_address }}
+          {% endfor %}
+      when: pim_interfaces is defined
+
+- name: IGMP group validation
+  block:
+    - name: Get IGMP group memberships
+      cisco.nxos.nxos_command:
+        commands:
+          - show ip igmp groups | json
+          - show ip igmp interface | json
+      register: igmp_info
+      when: ansible_network_os == "cisco.nxos.nxos"
+      failed_when: false
+      
+    - name: Parse IGMP information
+      set_fact:
+        igmp_groups: "{{ igmp_info.stdout[0] | from_json | json_query('TABLE_group.ROW_group') | default([]) }}"
+        igmp_interfaces: "{{ igmp_info.stdout[1] | from_json | json_query('TABLE_intf.ROW_intf') | default([]) }}"
+      when: igmp_info is defined and igmp_info.rc == 0
+      
+    - name: Validate IGMP groups
+      debug:
+        msg: |
+          IGMP Group Status:
+          Total Groups: {{ igmp_groups | length }}
+          IGMP Interfaces: {{ igmp_interfaces | length }}
+          {% for group in igmp_groups[:10] %}
+          - Group {{ group.group_addr }}: {{ group.uptime }} ({{ group.interface }})
+          {% endfor %}
+      when: igmp_groups is defined
+
+- name: Rendezvous Point (RP) validation
+  block:
+    - name: Validate RP configuration
+      debug:
+        msg: |
+          Rendezvous Point Status:
+          Total RPs: {{ pim_rp_info | length }}
+          {% for rp in pim_rp_info %}
+          - RP {{ rp.rp_addr }}: Groups {{ rp.group_range }} ({{ rp.rp_type }})
+          {% endfor %}
+      when: pim_rp_info is defined
+      
+    - name: Test RP reachability
+      cisco.nxos.nxos_command:
+        commands:
+          - "ping {{ item.rp_addr }} count 3 timeout 5"
+      register: rp_reachability
+      loop: "{{ pim_rp_info[:5] }}"  # Test first 5 RPs
+      when: ansible_network_os == "cisco.nxos.nxos" and pim_rp_info is defined and pim_rp_info | length > 0
+      failed_when: false
+      
+    - name: Report RP reachability results
+      debug:
+        msg: |
+          RP Reachability Test Results:
+          {% for result in rp_reachability.results | default([]) %}
+          - {{ pim_rp_info[loop.index0].rp_addr }}: {{ 'REACHABLE' if result.stdout[0] | regex_search('Success rate is [^0]') else 'UNREACHABLE' }}
+          {% endfor %}
+      when: rp_reachability is defined
+
+- name: Anycast RP validation
+  block:
+    - name: Check for Anycast RP configuration
+      cisco.nxos.nxos_command:
+        commands:
+          - show ip pim anycast-rp | json
+      register: anycast_rp_info
+      when: ansible_network_os == "cisco.nxos.nxos"
+      failed_when: false
+      
+    - name: Parse Anycast RP information
+      set_fact:
+        anycast_rp_sets: "{{ anycast_rp_info.stdout[0] | from_json | json_query('TABLE_anycast_rp.ROW_anycast_rp') | default([]) }}"
+      when: anycast_rp_info is defined and anycast_rp_info.rc == 0
+      
+    - name: Validate Anycast RP consistency
+      debug:
+        msg: |
+          Anycast RP Configuration:
+          {% if anycast_rp_sets | length > 0 %}
+          Total Anycast RP Sets: {{ anycast_rp_sets | length }}
+          {% for rp_set in anycast_rp_sets %}
+          - Set {{ rp_set.anycast_addr }}: Members {{ rp_set.rp_members | length }}
+          {% endfor %}
+          {% else %}
+          No Anycast RP configuration found
+          {% endif %}
+      when: anycast_rp_sets is defined
+
+- name: Multicast routing table validation
+  block:
+    - name: Get multicast routing table
+      cisco.nxos.nxos_command:
+        commands:
+          - show ip mroute summary | json
+          - show ip mroute | json
+      register: mroute_info
+      when: ansible_network_os == "cisco.nxos.nxos"
+      failed_when: false
+      
+    - name: Parse multicast routes
+      set_fact:
+        mroute_summary: "{{ mroute_info.stdout[0] | from_json }}"
+        mroute_entries: "{{ mroute_info.stdout[1] | from_json | json_query('TABLE_mroute.ROW_mroute') | default([]) }}"
+      when: mroute_info is defined and mroute_info.rc == 0
+      
+    - name: Validate multicast forwarding
+      debug:
+        msg: |
+          Multicast Routing Status:
+          {% if mroute_summary is defined %}
+          Total Entries: {{ mroute_summary.total_entries | default(0) }}
+          Active Entries: {{ mroute_entries | length }}
+          {% for route in mroute_entries[:5] %}
+          - ({{ route.source }}, {{ route.group }}): {{ route.incoming_intf }} -> {{ route.outgoing_intf_list | join(', ') }}
+          {% endfor %}
+          {% else %}
+          No multicast routing information available
+          {% endif %}
+      when: mroute_info is defined
+
+- name: Store multicast baseline
+  set_fact:
+    multicast_baseline:
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      pim_neighbors_total: "{{ pim_neighbors | length if pim_neighbors is defined else 0 }}"
+      pim_neighbors_up: "{{ pim_neighbors_up | length if pim_neighbors_up is defined else 0 }}"
+      pim_sparse_interfaces: "{{ pim_sparse_mode | length if pim_sparse_mode is defined else 0 }}"
+      igmp_groups_total: "{{ igmp_groups | length if igmp_groups is defined else 0 }}"
+      rp_count: "{{ pim_rp_info | length if pim_rp_info is defined else 0 }}"
+      anycast_rp_sets: "{{ anycast_rp_sets | length if anycast_rp_sets is defined else 0 }}"
+      mroute_entries: "{{ mroute_entries | length if mroute_entries is defined else 0 }}"
+
+- name: Multicast validation summary
+  debug:
+    msg: |
+      Multicast Protocol Validation Results:
+      - PIM Neighbors: {{ multicast_baseline.pim_neighbors_up }}/{{ multicast_baseline.pim_neighbors_total }}
+      - PIM Sparse Mode Interfaces: {{ multicast_baseline.pim_sparse_interfaces }}
+      - IGMP Groups: {{ multicast_baseline.igmp_groups_total }}
+      - Configured RPs: {{ multicast_baseline.rp_count }}
+      - Anycast RP Sets: {{ multicast_baseline.anycast_rp_sets }}
+      - Active Multicast Routes: {{ multicast_baseline.mroute_entries }}
+      - Overall Status: {{ 'CONFIGURED' if multicast_baseline.pim_neighbors_total > 0 or multicast_baseline.igmp_groups_total > 0 else 'NOT CONFIGURED' }}

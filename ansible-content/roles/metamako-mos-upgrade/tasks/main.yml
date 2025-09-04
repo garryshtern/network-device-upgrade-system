@@ -1,0 +1,49 @@
+---
+# Metamako MOS Upgrade Role - Main Tasks
+# Ultra-low latency switch upgrade procedures
+
+- name: Initialize Metamako upgrade variables
+  set_fact:
+    metamako_upgrade_state:
+      device: "{{ inventory_hostname }}"
+      current_version: ""
+      target_version: "{{ target_firmware_version }}"
+      device_type: ""
+      latency_mode: "normal"
+      metawatch_enabled: false
+      metamux_enabled: false
+      
+- name: Gather Metamako device facts
+  ansible.netcommon.cli_command:
+    command: show version
+  register: metamako_version
+  
+- name: Parse device information
+  set_fact:
+    metamako_upgrade_state: "{{ metamako_upgrade_state | combine({
+      'current_version': metamako_version.stdout | regex_search('Version: ([\\d\\.]+)', '\\1') | first,
+      'device_type': metamako_version.stdout | regex_search('Model: ([\\w\\d-]+)', '\\1') | first
+    }) }}"
+    
+- name: Check Metamako-specific components
+  include_tasks: check-metawatch-metamux.yml
+  
+- name: Display upgrade plan
+  debug:
+    msg: |
+      Metamako MOS Upgrade Plan for {{ inventory_hostname }}:
+      Device Type: {{ metamako_upgrade_state.device_type }}
+      Current Version: {{ metamako_upgrade_state.current_version }}
+      Target Version: {{ metamako_upgrade_state.target_version }}
+      Metawatch: {{ metamako_upgrade_state.metawatch_enabled }}
+      Metamux: {{ metamako_upgrade_state.metamux_enabled }}
+      
+- name: Validate upgrade path
+  assert:
+    that:
+      - metamako_upgrade_state.current_version != metamako_upgrade_state.target_version
+      - metamako_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+")
+    fail_msg: "Invalid upgrade path or target version format"
+    
+- name: Execute latency-sensitive upgrade
+  include_tasks: latency-validation.yml

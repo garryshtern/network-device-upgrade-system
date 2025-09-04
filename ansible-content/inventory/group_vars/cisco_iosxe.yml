@@ -1,0 +1,93 @@
+---
+# Cisco IOS-XE Specific Configuration  
+# For enterprise routers and switches
+
+# Connection settings
+ansible_network_os: cisco.ios.ios
+ansible_connection: ansible.netcommon.network_cli
+ansible_user: "{{ vault_cisco_iosxe_username | default('admin') }}"
+ansible_password: "{{ vault_cisco_iosxe_password }}"
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# Platform specific settings
+platform_type: "cisco_iosxe"
+vendor: "cisco" 
+device_family: "catalyst"
+
+# Install mode settings
+prefer_install_mode: true
+install_mode_timeout: 3600
+bundle_mode_timeout: 1800
+
+# Image management
+image_protocol: "scp"
+image_server: "{{ firmware_server | default('192.168.1.100') }}"
+image_server_username: "{{ vault_image_server_username }}"
+image_server_password: "{{ vault_image_server_password }}"
+
+# Storage settings
+min_bootflash_space_gb: 2
+cleanup_old_images: true
+keep_image_count: 2
+
+# Boot system management
+manage_boot_system: true
+clear_old_boot_entries: true
+verify_boot_config: true
+
+# Reboot settings (for bundle mode)
+bundle_mode_reboot_delay: 60
+post_reboot_wait: 180
+connectivity_test_retries: 10
+
+# Validation settings
+validate_stack: true
+validate_redundancy: true
+check_power_supplies: true
+
+# Interface validation
+validate_etherchannel: true
+check_interface_utilization: true
+validate_switchport_config: true
+
+# Routing validation
+validate_eigrp: true
+validate_ospf: true
+check_route_summarization: true
+eigrp_convergence_timeout: 240
+ospf_convergence_timeout: 180
+
+# QoS validation
+validate_qos_policies: true
+check_queue_stats: true
+
+# Security validation
+validate_acl_policies: true
+check_port_security: true
+validate_dhcp_snooping: true
+
+# SNMP settings
+validate_snmp: true
+snmp_community: "{{ vault_snmp_community | default('public') }}"
+
+# Stacking (if applicable)
+stack_mode: false
+validate_stack_members: true
+stack_master_priority: 15
+
+# Performance thresholds
+max_cpu_utilization: 80
+max_memory_utilization: 85
+max_interface_errors: 1000
+
+# Feature validation
+required_features: []  # IOS-XE features are usually enabled by default
+
+# Error thresholds specific to IOS-XE
+max_input_errors: 100
+max_output_errors: 100
+max_buffer_failures: 10
+
+# License validation
+check_license_status: true
+required_licenses: []  # Define per host if needed

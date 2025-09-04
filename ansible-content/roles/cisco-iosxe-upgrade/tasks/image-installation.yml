@@ -1,0 +1,179 @@
+---
+# Image Installation for Cisco IOS-XE Devices
+# Handles firmware installation based on install mode or bundle mode
+
+- name: Pre-installation validation
+  block:
+    - name: Verify image is loaded and staged
+      cisco.ios.ios_command:
+        commands:
+          - "dir bootflash:{{ target_image_filename }}"
+      register: staged_image_check
+      
+    - name: Confirm staged image exists
+      assert:
+        that:
+          - target_image_filename in staged_image_check.stdout[0]
+        fail_msg: "Target image not found on device storage"
+        
+    - name: Final connectivity check
+      cisco.ios.ios_command:
+        commands:
+          - show version
+      register: pre_install_connectivity
+
+- name: Execute installation based on mode
+  block:
+    - name: Install mode installation
+      block:
+        - name: Execute install mode upgrade
+          cisco.ios.ios_command:
+            commands:
+              - "request platform software package install switch all file bootflash:{{ target_image_filename }} activate commit"
+            timeout: 3600
+            wait_for:
+              - result[0] contains "SUCCESS"
+          register: install_mode_result
+          
+        - name: Verify install mode completion
+          assert:
+            that:
+              - "'SUCCESS' in install_mode_result.stdout[0]"
+            fail_msg: "Install mode installation failed"
+            
+      when: iosxe_upgrade_state.install_mode | default(false)
+      
+    - name: Bundle mode installation
+      block:
+        - name: Verify boot system configuration
+          cisco.ios.ios_command:
+            commands:
+              - show running-config | include boot system
+          register: boot_system_check
+          
+        - name: Confirm boot system is configured
+          assert:
+            that:
+              - target_image_filename in boot_system_check.stdout[0]
+            fail_msg: "Boot system not properly configured for bundle mode"
+            
+        - name: Save configuration before reboot
+          cisco.ios.ios_config:
+            save_when: always
+            
+        - name: Set reboot flag for bundle mode
+          set_fact:
+            bundle_mode_reboot_required: true
+            
+      when: not iosxe_upgrade_state.install_mode | default(false)
+
+- name: Handle device reboot (bundle mode)
+  block:
+    - name: Execute system reboot for bundle mode
+      cisco.ios.ios_command:
+        commands:
+          - reload
+        prompt:
+          - 'confirm'
+        answer:
+          - 'y'
+      register: reboot_command
+      when: bundle_mode_reboot_required | default(false)
+      
+    - name: Wait for device to become unreachable
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        state: stopped
+        timeout: 300
+        delay: 30
+      delegate_to: localhost
+      when: bundle_mode_reboot_required | default(false)
+      
+    - name: Wait for device to come back online
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 22
+        state: started
+        timeout: 900
+        delay: 60
+      delegate_to: localhost
+      when: bundle_mode_reboot_required | default(false)
+      
+    - name: Wait for device initialization
+      pause:
+        seconds: 120
+      when: bundle_mode_reboot_required | default(false)
+
+- name: Post-installation validation
+  block:
+    - name: Verify device responsiveness
+      cisco.ios.ios_command:
+        commands:
+          - show version
+      register: post_install_version
+      retries: 5
+      delay: 30
+      
+    - name: Confirm target version is active
+      assert:
+        that:
+          - iosxe_upgrade_state.target_version in post_install_version.stdout[0]
+        fail_msg: "Installation completed but target version not active"
+        
+    - name: Check system stability
+      cisco.ios.ios_command:
+        commands:
+          - show processes cpu sorted
+          - show memory statistics
+        timeout: 60
+      register: post_install_stability
+      
+    - name: Verify boot variables (bundle mode)
+      cisco.ios.ios_command:
+        commands:
+          - show boot
+      register: post_boot_check
+      when: bundle_mode_reboot_required | default(false)
+      
+    - name: Validate boot configuration
+      assert:
+        that:
+          - target_image_filename in post_boot_check.stdout[0]
+        fail_msg: "Boot configuration validation failed"
+      when: bundle_mode_reboot_required | default(false)
+
+- name: Installation cleanup and verification
+  block:
+    - name: Check for installation errors
+      cisco.ios.ios_command:
+        commands:
+          - show logging | include ERROR
+      register: post_install_errors
+      failed_when: false
+      
+    - name: Verify interfaces are operational
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+      register: post_install_interfaces
+      
+    - name: Basic connectivity test
+      cisco.ios.ios_command:
+        commands:
+          - "ping {{ ansible_host }} repeat 3"
+      register: connectivity_test
+      failed_when: false
+
+- name: Log installation completion
+  debug:
+    msg: |
+      IOS-XE Installation Completed:
+      - Previous Version: {{ iosxe_upgrade_state.current_version }}
+      - New Version: {{ iosxe_upgrade_state.target_version }}
+      - Installation Method: {{ 'Install Mode' if iosxe_upgrade_state.install_mode else 'Bundle Mode' }}
+      - Reboot Required: {{ bundle_mode_reboot_required | default(false) }}
+      - System Responsive: {{ 'YES' if post_install_version is defined else 'CHECK' }}
+      - Errors Found: {{ 'YES' if post_install_errors.stdout[0] != '' else 'NONE' }}
+      - Interfaces Up: {{ post_install_interfaces.stdout[0].count('up') if post_install_interfaces is defined else 'Unknown' }}
+      - Status: {{ 'SUCCESS' if iosxe_upgrade_state.target_version in post_install_version.stdout[0] else 'VERIFICATION REQUIRED' }}

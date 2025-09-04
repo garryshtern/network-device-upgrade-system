@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  role_name: common
+  author: Network Operations
+  description: Common utilities for network device upgrade system
+  company: Enterprise Network Management
+  license: proprietary
+  min_ansible_version: 2.15
+  platforms:
+    - name: EL
+      versions:
+        - 8
+        - 9
+  galaxy_tags:
+    - networking
+    - utilities
+    - common
+    - monitoring
+    - metrics
+
+dependencies: []

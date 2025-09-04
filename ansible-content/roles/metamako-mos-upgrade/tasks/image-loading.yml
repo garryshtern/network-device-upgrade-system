@@ -1,0 +1,89 @@
+---
+# Image Loading for Metamako MOS Devices
+# Specialized loading for ultra-low latency hardware
+
+- name: Pre-load validation
+  block:
+    - name: Check current storage usage
+      ansible.netcommon.cli_command:
+        command: show system storage
+      register: storage_status
+      
+    - name: Verify sufficient space
+      assert:
+        that:
+          - "'available' in storage_status.stdout | lower"
+        fail_msg: "Insufficient storage space for image loading"
+        
+    - name: Check network connectivity to image source
+      ansible.netcommon.cli_command:
+        command: "ping {{ image_server_ip | default('192.168.1.100') }}"
+      register: connectivity_check
+      when: image_server_ip is defined
+
+- name: MOS-specific image transfer
+  block:
+    - name: Set optimal transfer parameters
+      ansible.netcommon.cli_command:
+        command: system transfer-mode optimized
+      failed_when: false
+      
+    - name: Download firmware image
+      ansible.netcommon.cli_command:
+        command: "image download {{ source_image_url }} {{ target_image_filename }}"
+        timeout: 3600
+      register: download_result
+      
+    - name: Verify download completion
+      ansible.netcommon.cli_command:
+        command: "show image {{ target_image_filename }}"
+      register: image_verification
+      
+    - name: Validate image integrity
+      assert:
+        that:
+          - "'valid' in image_verification.stdout | lower"
+          - target_image_filename in image_verification.stdout
+        fail_msg: "Image download or validation failed"
+
+- name: MOS image staging
+  block:
+    - name: Stage image for installation
+      ansible.netcommon.cli_command:
+        command: "image stage {{ target_image_filename }}"
+      register: staging_result
+      
+    - name: Verify staging success
+      ansible.netcommon.cli_command:
+        command: show image staged
+      register: staged_verification
+      
+    - name: Confirm image is staged
+      assert:
+        that:
+          - target_image_filename in staged_verification.stdout
+        fail_msg: "Image staging failed"
+
+- name: Pre-installation checksums
+  block:
+    - name: Calculate image checksum
+      ansible.netcommon.cli_command:
+        command: "image checksum {{ target_image_filename }}"
+      register: image_checksum
+      when: expected_checksum is defined
+      
+    - name: Verify checksum matches expected
+      assert:
+        that:
+          - expected_checksum in image_checksum.stdout
+        fail_msg: "Image checksum validation failed"
+      when: expected_checksum is defined
+
+- name: Log loading completion
+  debug:
+    msg: |
+      Metamako Image Loading Completed:
+      - Image: {{ target_image_filename }}
+      - Size: {{ image_verification.stdout | regex_search('Size: ([\\d]+)', '\\1') | first | default('Unknown') }} bytes
+      - Checksum: {{ 'Verified' if expected_checksum is defined else 'Skipped' }}
+      - Status: {{ 'Staged and Ready' if target_image_filename in staged_verification.stdout else 'Check Required' }}

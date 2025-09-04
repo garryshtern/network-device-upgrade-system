@@ -1,0 +1,76 @@
+---
+# Common Connectivity Check Tasks
+# Tests basic device connectivity and responsiveness
+
+- name: Test basic connectivity to device
+  ansible.builtin.wait_for_connection:
+    timeout: 60
+    delay: 5
+  register: connectivity_test
+
+- name: Perform ping test to device
+  ansible.builtin.ping:
+  register: ping_result
+
+- name: Test SSH connectivity
+  block:
+    - name: Execute simple command to test SSH
+      ansible.builtin.raw: echo "SSH connectivity test"
+      register: ssh_test
+      changed_when: false
+
+    - name: Set SSH connectivity status
+      ansible.builtin.set_fact:
+        ssh_connectivity: true
+
+  rescue:
+    - name: SSH connectivity failed
+      ansible.builtin.set_fact:
+        ssh_connectivity: false
+
+- name: Network CLI connectivity test (for network devices)
+  block:
+    - name: Test network CLI connection
+      ansible.builtin.raw: show version
+      register: cli_test
+      changed_when: false
+      when: ansible_connection == 'network_cli'
+
+    - name: Set CLI connectivity status
+      ansible.builtin.set_fact:
+        cli_connectivity: "{{ cli_test is succeeded }}"
+      when: ansible_connection == 'network_cli'
+
+  rescue:
+    - name: CLI connectivity failed
+      ansible.builtin.set_fact:
+        cli_connectivity: false
+  when: ansible_connection == 'network_cli'
+
+- name: Set overall connectivity status
+  ansible.builtin.set_fact:
+    device_connectivity:
+      device: "{{ inventory_hostname }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      basic_connectivity: "{{ connectivity_test is succeeded }}"
+      ping_successful: "{{ ping_result is succeeded }}"
+      ssh_connectivity: "{{ ssh_connectivity | default(true) }}"
+      cli_connectivity: "{{ cli_connectivity | default(true) }}"
+      overall_status: "{{ (connectivity_test is succeeded) and (ping_result is succeeded) and (ssh_connectivity | default(true)) and (cli_connectivity | default(true)) }}"
+
+- name: Display connectivity results
+  ansible.builtin.debug:
+    msg:
+      - "=== Connectivity Check Results ==="
+      - "Device: {{ inventory_hostname }}"
+      - "Basic Connectivity: {{ 'PASS' if device_connectivity.basic_connectivity else 'FAIL' }}"
+      - "Ping Test: {{ 'PASS' if device_connectivity.ping_successful else 'FAIL' }}"
+      - "SSH Connectivity: {{ 'PASS' if device_connectivity.ssh_connectivity else 'FAIL' }}"
+      - "CLI Connectivity: {{ 'PASS' if device_connectivity.cli_connectivity else 'FAIL' }}"
+      - "Overall Status: {{ 'CONNECTED' if device_connectivity.overall_status else 'CONNECTION FAILED' }}"
+      - "================================="
+
+- name: Fail if device is not reachable
+  ansible.builtin.fail:
+    msg: "Device {{ inventory_hostname }} is not reachable - connectivity check failed"
+  when: not device_connectivity.overall_status

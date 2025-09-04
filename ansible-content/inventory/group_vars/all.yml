@@ -1,0 +1,71 @@
+---
+# Global Variables for Network Device Upgrade System
+# Applies to all devices across all vendors
+
+# Connection settings
+ansible_connection_timeout: 30
+ansible_command_timeout: 300
+ansible_connect_timeout: 30
+
+# Upgrade workflow settings
+max_concurrent_devices: 5
+max_retry_attempts: 3
+connectivity_timeout: 300
+reboot_wait_time: 600
+validation_timeout: 300
+
+# Phase control
+phase_1_timeout: 3600  # Image loading phase (1 hour)
+phase_2_timeout: 1800  # Installation phase (30 minutes)
+
+# Backup and rollback
+backup_enabled: true
+rollback_on_failure: true
+keep_backup_count: 3
+
+# Validation settings
+skip_validation: false
+network_state_comparison: true
+baseline_capture_enabled: true
+convergence_monitoring: true
+
+# Storage paths
+firmware_base_path: "/var/lib/network-upgrade/firmware"
+backup_base_path: "/var/lib/network-upgrade/backups"
+log_base_path: "/var/log/network-upgrade"
+
+# Timing settings
+pre_upgrade_delay: 30
+post_upgrade_delay: 60
+interface_stabilization_wait: 120
+protocol_convergence_timeout: 300
+
+# Security settings
+hash_verification_enabled: true
+signature_validation_enabled: false  # Enable if vendor supports it
+cleanup_images_after_upgrade: false
+
+# Monitoring and metrics
+export_metrics: true
+metrics_batch_size: 100
+metrics_export_interval: 30
+
+# Notification settings  
+send_notifications: true
+notification_on_failure: true
+notification_on_success: false
+
+# Environmental validation
+check_environmental_sensors: true
+temperature_threshold_celsius: 45
+power_threshold_percent: 85
+
+# Network validation settings
+ping_test_enabled: true
+ping_test_host: "8.8.8.8"
+ping_test_count: 3
+
+# Logging
+log_level: "info"  # debug, info, warning, error
+structured_logging: true
+log_retention_days: 30

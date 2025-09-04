@@ -1,0 +1,105 @@
+---
+# Validation Tasks for Cisco IOS-XE Devices
+# Post-upgrade verification and state validation
+
+- name: Basic system validation
+  block:
+    - name: Verify system is responsive
+      cisco.ios.ios_command:
+        commands:
+          - show version
+      register: version_check
+      
+    - name: Verify target version is active
+      assert:
+        that:
+          - target_firmware_version in version_check.stdout[0]
+        fail_msg: "Target firmware version not active: {{ version_check.stdout[0] }}"
+        
+    - name: Check system uptime
+      cisco.ios.ios_command:
+        commands:
+          - show version | include uptime
+      register: uptime_check
+
+- name: Interface validation
+  block:
+    - name: Get interface status
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief
+      register: interface_status
+      
+    - name: Verify critical interfaces are up
+      assert:
+        that:
+          - "'up' in interface_status.stdout[0]"
+        fail_msg: "Critical interfaces may be down"
+        
+- name: Routing validation
+  block:
+    - name: Check routing table
+      cisco.ios.ios_command:
+        commands:
+          - show ip route summary
+      register: routing_summary
+      
+    - name: Verify default route exists
+      cisco.ios.ios_command:
+        commands:
+          - show ip route 0.0.0.0
+      register: default_route
+      failed_when: false
+      
+    - name: Check BGP status (if configured)
+      cisco.ios.ios_command:
+        commands:
+          - show ip bgp summary
+      register: bgp_status
+      failed_when: false
+
+- name: ARP validation
+  block:
+    - name: Check ARP table
+      cisco.ios.ios_command:
+        commands:
+          - show arp
+      register: arp_table
+      
+    - name: Verify ARP entries exist
+      assert:
+        that:
+          - arp_table.stdout[0] | length > 100
+        fail_msg: "ARP table appears empty or minimal"
+        
+- name: System health validation
+  block:
+    - name: Check CPU utilization
+      cisco.ios.ios_command:
+        commands:
+          - show processes cpu sorted
+      register: cpu_usage
+      
+    - name: Check memory utilization
+      cisco.ios.ios_command:
+        commands:
+          - show memory statistics
+      register: memory_stats
+      
+    - name: Check for error messages
+      cisco.ios.ios_command:
+        commands:
+          - show logging | include ERROR
+      register: error_logs
+      failed_when: false
+      
+- name: Log validation results
+  debug:
+    msg: |
+      IOS-XE Validation Results:
+      - Version: {{ 'PASS' if target_firmware_version in version_check.stdout[0] else 'FAIL' }}
+      - Interfaces: {{ 'PASS' if 'up' in interface_status.stdout[0] else 'CHECK' }}
+      - Routing: {{ 'PASS' if routing_summary.stdout[0] else 'CHECK' }}
+      - ARP Table: {{ 'PASS' if arp_table.stdout[0] | length > 100 else 'CHECK' }}
+      - BGP: {{ 'PASS' if bgp_status.rc == 0 else 'N/A' }}
+      - Errors: {{ 'NONE' if error_logs.stdout[0] == '' else 'CHECK LOGS' }}

@@ -1,0 +1,102 @@
+---
+# HA Cluster Coordination for FortiOS Upgrades
+# Manages high availability cluster upgrade sequencing
+
+- name: Get HA cluster status
+  fortinet.fortios.fortios_monitor_fact:
+    vdom: "root"
+    selector: "system_ha_status"
+  register: ha_status
+  
+- name: Parse HA cluster information
+  set_fact:
+    ha_cluster_info:
+      mode: "{{ ha_status.meta.results.mode }}"
+      group_id: "{{ ha_status.meta.results.group_id }}"
+      priority: "{{ ha_status.meta.results.priority }}"
+      role: "{{ ha_status.meta.results.role }}"
+      sync_status: "{{ ha_status.meta.results.sync_status }}"
+      members: "{{ ha_status.meta.results.members | default([]) }}"
+      
+- name: Update HA information in upgrade state
+  set_fact:
+    fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
+      'ha_mode': ha_cluster_info.mode,
+      'ha_role': ha_cluster_info.role,
+      'cluster_member': ha_cluster_info.members | length
+    }) }}"
+
+- name: Validate HA cluster health
+  block:
+    - name: Check cluster synchronization
+      assert:
+        that:
+          - ha_cluster_info.sync_status == "synchronized"
+        fail_msg: "HA cluster not synchronized - upgrade cannot proceed safely"
+        
+    - name: Verify all cluster members are healthy
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_ha_peer"
+      register: ha_peers
+      
+    - name: Check peer connectivity
+      assert:
+        that:
+          - ha_peers.meta.results | selectattr('status', 'equalto', 'up') | list | length == (ha_cluster_info.members | length - 1)
+        fail_msg: "Not all HA cluster members are reachable"
+
+- name: Determine upgrade sequence
+  block:
+    - name: Set upgrade order for A-P cluster
+      set_fact:
+        upgrade_sequence:
+          - role: "secondary"
+            priority: 1
+          - role: "primary" 
+            priority: 2
+      when: ha_cluster_info.mode == "active-passive"
+      
+    - name: Set upgrade order for A-A cluster
+      set_fact:
+        upgrade_sequence:
+          - role: "secondary"
+            priority: 1
+          - role: "primary"
+            priority: 2
+      when: ha_cluster_info.mode == "active-active"
+      
+    - name: Determine current device upgrade priority
+      set_fact:
+        current_upgrade_priority: "{{ upgrade_sequence | selectattr('role', 'equalto', ha_cluster_info.role) | map(attribute='priority') | first }}"
+
+- name: Check for cluster-wide upgrade coordination
+  block:
+    - name: Set cluster upgrade lock
+      fortinet.fortios.fortios_configuration:
+        vdom: "root"
+        system_ha:
+          group_name: "{{ ha_cluster_info.group_id }}"
+          upgrade_mode: "coordinated"
+      when: ha_cluster_info.role == "primary"
+      
+    - name: Wait for cluster upgrade readiness
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_ha_status"
+      register: ha_readiness_check
+      until: ha_readiness_check.meta.results.upgrade_ready | default(false)
+      retries: 30
+      delay: 10
+      when: ha_cluster_info.role == "secondary"
+
+- name: Log HA coordination status
+  debug:
+    msg: |
+      HA Cluster Coordination:
+      - Mode: {{ ha_cluster_info.mode }}
+      - Role: {{ ha_cluster_info.role }}
+      - Sync Status: {{ ha_cluster_info.sync_status }}
+      - Cluster Members: {{ ha_cluster_info.members | length }}
+      - Upgrade Priority: {{ current_upgrade_priority }}
+      - Ready for Upgrade: {{ 'Yes' if ha_cluster_info.sync_status == 'synchronized' else 'No' }}

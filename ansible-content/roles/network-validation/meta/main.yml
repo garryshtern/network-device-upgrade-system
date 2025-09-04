@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  role_name: network-validation
+  author: Network Operations
+  description: Network state validation and comparison utilities
+  company: Enterprise Network Management
+  license: proprietary
+  min_ansible_version: 2.15
+  platforms:
+    - name: EL
+      versions:
+        - 8
+        - 9
+  galaxy_tags:
+    - networking
+    - validation
+    - bgp
+    - interfaces
+    - routing
+
+dependencies:
+  - role: common

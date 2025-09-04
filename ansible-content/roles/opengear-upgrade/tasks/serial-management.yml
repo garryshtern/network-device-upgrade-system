@@ -1,0 +1,100 @@
+---
+# Serial Port Management for Opengear Console Servers
+# Handle serial port operations during upgrades
+
+- name: Pre-upgrade serial port management
+  block:
+    - name: Get all active serial sessions
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/serialports/sessions"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: active_sessions
+      
+    - name: Notify users of impending maintenance
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.port_id }}/send"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        body_format: json
+        body:
+          message: "\r\n*** MAINTENANCE NOTICE: Console server upgrade in progress - connection may be interrupted ***\r\n"
+        validate_certs: false
+      loop: "{{ active_sessions.json }}"
+      when: active_sessions.json | length > 0
+      failed_when: false
+
+- name: Serial port state preservation
+  block:
+    - name: Backup serial port configurations
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/config"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: port_configs
+      loop: "{{ opengear_upgrade_state.serial_ports }}"
+      
+    - name: Store configuration backup
+      set_fact:
+        serial_port_backup: "{{ port_configs.results | map(attribute='json') | list }}"
+        
+    - name: Gracefully close active sessions
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/serialports/sessions/{{ item.session_id }}/close"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        body_format: json
+        body:
+          message: "Console server maintenance - session closed"
+        validate_certs: false
+      loop: "{{ active_sessions.json }}"
+      when: active_sessions.json | length > 0
+      failed_when: false
+
+- name: Post-upgrade serial port validation
+  block:
+    - name: Wait for serial ports to initialize
+      pause:
+        seconds: 30
+        
+    - name: Verify all serial ports are operational
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: post_upgrade_port_status
+      loop: "{{ opengear_upgrade_state.serial_ports }}"
+      
+    - name: Check port connectivity
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/test"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_api_token }}"
+        validate_certs: false
+      register: port_connectivity_test
+      loop: "{{ opengear_upgrade_state.serial_ports }}"
+      failed_when: false
+      
+    - name: Validate port configurations restored
+      assert:
+        that:
+          - post_upgrade_port_status.results | length == opengear_upgrade_state.serial_ports | length
+        fail_msg: "Not all serial ports are operational after upgrade"
+
+- name: Serial management summary
+  debug:
+    msg: |
+      Serial Port Management Summary:
+      - Total Ports: {{ opengear_upgrade_state.serial_ports | length }}
+      - Active Sessions (Pre): {{ active_sessions.json | length }}
+      - Ports Tested: {{ port_connectivity_test.results | selectattr('json.status', 'equalto', 'ok') | list | length | default(0) }}
+      - Status: {{ 'All Operational' if post_upgrade_port_status.results | length == opengear_upgrade_state.serial_ports | length else 'Check Required' }}

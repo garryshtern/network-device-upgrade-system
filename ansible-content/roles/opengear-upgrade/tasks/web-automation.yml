@@ -1,0 +1,158 @@
+---
+# Web Interface Automation for Opengear Upgrades
+# Handles firmware upload and installation via web API
+
+- name: Pre-upgrade web interface preparation
+  block:
+    - name: Authenticate to web interface
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/auth/login"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          username: "{{ opengear_username }}"
+          password: "{{ opengear_password }}"
+        validate_certs: false
+      register: web_auth
+      
+    - name: Store authentication token
+      set_fact:
+        opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
+          'web_session': web_auth.json.token
+        }) }}"
+        
+    - name: Verify API access
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/status"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_upgrade_state.web_session }}"
+        validate_certs: false
+      register: api_verification
+
+- name: Firmware upload process
+  block:
+    - name: Check current firmware status
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_upgrade_state.web_session }}"
+        validate_certs: false
+      register: current_firmware_status
+      
+    - name: Upload new firmware image
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/upload"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_upgrade_state.web_session }}"
+        body: "{{ lookup('file', firmware_image_path) }}"
+        body_format: form-multipart
+        timeout: 1800
+      register: firmware_upload
+      
+    - name: Verify firmware upload
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/status"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_upgrade_state.web_session }}"
+        validate_certs: false
+      register: upload_status
+      until: upload_status.json.status == 'completed' or upload_status.json.status == 'failed'
+      retries: 60
+      delay: 10
+
+- name: Firmware installation process
+  block:
+    - name: Validate uploaded firmware
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/validate"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_upgrade_state.web_session }}"
+        validate_certs: false
+      register: firmware_validation
+      
+    - name: Confirm validation success
+      assert:
+        that:
+          - firmware_validation.json.valid == true
+        fail_msg: "Firmware validation failed: {{ firmware_validation.json.message | default('Unknown error') }}"
+        
+    - name: Install firmware
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/install"
+        method: POST
+        headers:
+          Authorization: "Token {{ opengear_upgrade_state.web_session }}"
+        body_format: json
+        body:
+          reboot: true
+          backup_config: true
+        validate_certs: false
+      register: firmware_install
+      
+    - name: Monitor installation progress
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/install/status"
+        method: GET
+        headers:
+          Authorization: "Token {{ opengear_upgrade_state.web_session }}"
+        validate_certs: false
+      register: install_progress
+      until: install_progress.json.status == 'completed' or install_progress.json.status == 'failed'
+      retries: 60
+      delay: 15
+      failed_when: install_progress.json.status == 'failed'
+
+- name: Post-installation validation
+  block:
+    - name: Wait for device to come back online
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 443
+        delay: 30
+        timeout: 600
+        
+    - name: Re-authenticate after reboot
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/auth/login"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          username: "{{ opengear_username }}"
+          password: "{{ opengear_password }}"
+        validate_certs: false
+      register: post_reboot_auth
+      
+    - name: Verify new firmware version
+      uri:
+        url: "https://{{ ansible_host }}/api/v1/system/info"
+        method: GET
+        headers:
+          Authorization: "Token {{ post_reboot_auth.json.token }}"
+        validate_certs: false
+      register: post_upgrade_info
+      
+    - name: Confirm target version is active
+      assert:
+        that:
+          - opengear_upgrade_state.target_version in post_upgrade_info.json.version
+        fail_msg: "Web upgrade completed but target version not active"
+
+- name: Log web automation completion
+  debug:
+    msg: |
+      Opengear Web Automation Completed:
+      - Device: {{ opengear_upgrade_state.device_model }}
+      - Previous Version: {{ opengear_upgrade_state.current_version }}
+      - New Version: {{ post_upgrade_info.json.version }}
+      - Type: {{ opengear_upgrade_state.device_type | title }}
+      - Method: Web Interface API
+      - Status: {{ 'Success' if opengear_upgrade_state.target_version in post_upgrade_info.json.version else 'Verification Required' }}
