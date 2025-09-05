@@ -718,8 +718,8 @@ This document provides step-by-step procedures for recovering the Network Device
 4. Restore all configuration files
 5. Restore databases
 6. Install and configure services:
-   - `./install/install-awx.sh`
-   - `./install/install-netbox.sh`
+   - `./install/setup-awx.sh`
+   - `./install/setup-netbox.sh`
    - `./install/configure-telegraf.sh`
 7. Start services: `network-upgrade-services start`
 8. Verify all functionality

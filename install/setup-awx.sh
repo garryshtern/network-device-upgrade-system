@@ -37,7 +37,7 @@ fi
 
 # Check if base system is installed
 if [[ ! -f "/etc/network-upgrade/config.yml" ]]; then
-    error_exit "Base system not installed. Run ./install/install-system.sh first"
+    error_exit "Base system not installed. Run ./install/setup-system.sh first"
 fi
 
 # Install AWX dependencies
@@ -653,7 +653,7 @@ main() {
     log ""
     log "${YELLOW}Next steps:${NC}"
     log "1. Change the admin password on first login"
-    log "2. Run ./install/install-netbox.sh to install NetBox"
+    log "2. Run ./install/setup-netbox.sh to setup NetBox"
     log "3. Configure AWX job templates with ./scripts/configure-awx-templates.sh"
     log "4. Set up SSL certificates with ./install/setup-ssl.sh"
     

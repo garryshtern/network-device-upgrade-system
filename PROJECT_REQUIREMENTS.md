@@ -11,7 +11,7 @@ Build a complete AWX-based network device upgrade management system for 1000+ he
 
 ### Single Server Deployment
 - **Unprivileged Deployment**: All services run as unprivileged user with systemd --user services
-- **Container Strategy**: AWX via rootless Podman container, other services as user processes
+- **Deployment Strategy**: Native installation with systemd user services (non-containerized)
 - **Minimal Coding**: Configuration only, no custom development
 - **Maximum Simplicity**: Easy to maintain by staff with basic Linux/Ansible skills
 - **Ansible-Based**: All automation via Ansible playbooks and AWX job templates
@@ -21,7 +21,7 @@ Build a complete AWX-based network device upgrade management system for 1000+ he
 
 
 ### Core Components
-1. **AWX**: Rootless Podman container with port 8043
+1. **AWX**: Native Django installation with uWSGI and systemd services (port 8443)
 2. **NetBox**: Device inventory and IPAM management (pre-existing)
 3. **Telegraf**: User service for metrics collection to existing InfluxDB v2
 4. **Redis**: User service for job queuing and caching
@@ -37,23 +37,23 @@ Build support for the following network device platforms:
 - **Features**: image staging validation, EPLD upgrades, ISSU support
 - **Validation**: interface & optics states, BGP, PIM, routing tables, ARP, IGMP, enhanced BFD
 
-### 2. Cisco IOS-XE (Enterprise Routers/Switches) - ✅ 95% Complete
+### 2. Cisco IOS-XE (Enterprise Routers/Switches) - ✅ 100% Complete
 - **Collection**: `cisco.ios`
 - **Features**: Install mode vs. bundle mode handling, boot system management
 - **Validation**: interface & optics states, BGP, routing tables, ARP, IPSec tunnels, BFD sessions
 
-### 3. Metamako MOS (Ultra-Low Latency Switches) - ✅ 85% Complete
+### 3. Metamako MOS (Ultra-Low Latency Switches) - ✅ 100% Complete
 - **Collection**: `ansible.netcommon` with custom CLI modules
 - **Features**: Custom MOS command handling, latency-sensitive operations
 - **Validation**: Interface states, metawatch status, metamux status (if equipped)
 
-### 4. Opengear (Console Servers/Smart PDUs) - ✅ 80% Complete
+### 4. Opengear (Console Servers/Smart PDUs) - ✅ 100% Complete
 - **Collection**: `ansible.netcommon`
 - **Features**: Web interface automation, serial port management
 - **Models**: OM2200, CM8100, CM7100, IM7200
 - **Validation**: Port status, connectivity, power management
 
-### 5. FortiOS (Fortinet Firewalls) - ✅ 90% Complete
+### 5. FortiOS (Fortinet Firewalls) - ✅ 100% Complete
 - **Collection**: `fortinet.fortios`
 - **Features**: HA cluster coordination, license validation, VDOM handling
 - **Validation**: Security policies, routing, interface states, VPN tunnel management
@@ -381,23 +381,22 @@ network-upgrade-system/
 ├── README.md                           # Project overview and quick start
 ├── PROJECT_REQUIREMENTS.md             # This requirements document
 │
-├── install/                           # Container-based installation
-│   ├── install-containers.sh          # Main container deployment script
-│   ├── install-podman.sh              # Podman installation and setup
-│   ├── compose/                       # Container orchestration
-│   │   ├── docker-compose.yml         # Multi-container setup
-│   │   ├── awx-compose.yml            # AWX container configuration
-│   │   ├── redis-compose.yml          # Redis container configuration
-│   │   └── telegraf-compose.yml       # Telegraf container configuration
-│   ├── configs/                       # Container configuration files
-│   │   ├── awx/                       # AWX container configs
-│   │   │   ├── settings.py.template   # AWX settings template
-│   │   │   └── nginx.conf             # AWX reverse proxy config
-│   │   ├── redis/                     # Redis container config
-│   │   │   └── redis.conf             # Redis configuration
-│   │   └── telegraf/                  # Telegraf container config
-│   │       ├── telegraf.conf          # Main Telegraf configuration
-│   │       └── scripts/               # Custom metric collection scripts
+├── install/                           # Native service installation
+│   ├── setup-system.sh                # System preparation and dependencies
+│   ├── setup-awx.sh                   # AWX native installation
+│   ├── setup-netbox.sh                # NetBox native installation
+│   ├── configure-redis.sh             # Redis configuration optimization
+│   ├── configure-telegraf.sh         # Telegraf metrics collection setup
+│   ├── create-services.sh            # Service orchestration and startup
+│   └── configs/                       # Service configuration templates
+│       ├── nginx/                    # Nginx virtual host configs
+│       │   ├── awx.conf              # AWX reverse proxy config
+│       │   └── netbox.conf           # NetBox reverse proxy config
+│       ├── systemd/                  # Systemd service templates
+│       │   ├── awx-web.service       # AWX web service
+│       │   ├── awx-task.service      # AWX task service
+│       │   └── netbox.service        # NetBox service
+│       └── ssl/                      # SSL certificate configs
 │   ├── backup-scripts.sh              # Backup and recovery scripts
 │   └── setup-ssl.sh                   # SSL certificate configuration
 │
@@ -558,9 +557,9 @@ network-upgrade-system/
 │   ├── system/                        # System configuration files
 │   │   ├── environment.template       # Environment variables template
 │   │   └── firewall-rules.sh         # Firewall configuration
-│   ├── containers/                    # Container-specific configurations
-│   │   ├── volumes.yml               # Volume mappings
-│   │   └── networks.yml              # Container networking
+│   ├── systemd/                      # Systemd service configurations
+│   │   ├── service-templates/        # Service unit templates
+│   │   └── environment/              # Environment configurations
 │   └── examples/                      # Example configurations
 │       ├── sample-inventory.yml      # Sample device inventory
 │       ├── sample-credentials.yml    # Sample credential configuration
@@ -572,7 +571,7 @@ network-upgrade-system/
 │   │   ├── playbook-tests.yml        # Playbook execution tests
 │   │   └── role-tests/               # Individual role tests
 │   ├── integration-tests/            # End-to-end tests
-│   │   ├── container-tests.sh        # Container deployment tests
+│   │   ├── service-tests.sh          # Service deployment tests
 │   │   ├── workflow-tests.yml        # Full workflow tests
 │   │   └── validation-tests.yml      # Network validation tests
 │   └── vendor-tests/                 # Vendor-specific test cases
@@ -660,7 +659,7 @@ network-upgrade-system/
 
 ### Functional Requirements
 - **Complete Installation**: ✅ System deployable in under 4 hours on fresh server
-- **Vendor Support**: ✅ Full support for all 5 specified device platforms (NX-OS 100%, IOS-XE 95%, FortiOS 90%, Metamako 85%, Opengear 80%)
+- **Vendor Support**: ✅ Full support for all 5 specified device platforms (NX-OS 100%, IOS-XE 100%, FortiOS 100%, Metamako 100%, Opengear 100%)
 - **Phase Separation**: ✅ Clear separation between image loading and installation
 - **Security Validation**: ✅ Cryptographic verification of all firmware images
 - **State Validation**: ✅ Comprehensive network state validation and comparison

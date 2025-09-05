@@ -36,7 +36,7 @@ fi
 
 # Check if base system is installed
 if [[ ! -f "/etc/network-upgrade/config.yml" ]]; then
-    error_exit "Base system not installed. Run ./install/install-system.sh first"
+    error_exit "Base system not installed. Run ./install/setup-system.sh first"
 fi
 
 # Prompt for InfluxDB configuration

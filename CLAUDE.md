@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an AWX-based network device upgrade management system for 1000+ heterogeneous network devices. The system automates firmware upgrades across multiple vendor platforms using pure Ansible configuration with no custom development required.
+This is a native service-based network device upgrade management system for 1000+ heterogeneous network devices. The system automates firmware upgrades across multiple vendor platforms using pure Ansible configuration with AWX and NetBox running as native systemd services.
 
 ## Project Structure
 
@@ -13,7 +13,7 @@ This is an AWX-based network device upgrade management system for 1000+ heteroge
   - `roles/`: Vendor-specific upgrade logic (cisco-nxos-upgrade, cisco-iosxe-upgrade, etc.)
   - `collections/requirements.yml`: Ansible collection dependencies
 - **`awx-config/`**: AWX Configuration (YAML only) - job templates, workflows, inventories
-- **`install/`**: Container-based installation scripts and configurations
+- **`install/`**: Native service installation scripts and configurations
 - **`integration/`**: External system integration (NetBox, Grafana, InfluxDB)
 - **`tests/`**: Testing framework with comprehensive test runner
 - **`docs/`**: Documentation and vendor-specific guides
@@ -69,12 +69,12 @@ Two custom commands are configured:
 
 ## Architecture Notes
 
-This is a container-based, configuration-only system with the following architecture:
-- **AWX**: Open source automation platform with web UI for job orchestration
-- **NetBox**: Device inventory and IPAM management (pre-existing deployment)
-- **Telegraf**: Metrics collection for existing InfluxDB v2
-- **Redis**: Job queuing and caching
-- **Single Server Deployment**: All services containerized on single Linux server
+This is a native service-based, configuration-only system with the following architecture:
+- **AWX**: Open source automation platform running as systemd services with web UI for job orchestration
+- **NetBox**: Device inventory and IPAM management running as systemd services
+- **Telegraf**: Metrics collection service for existing InfluxDB v2
+- **Redis**: Native service for job queuing and caching
+- **Single Server Deployment**: All services running as systemd user services on single Linux server
 
 ### Upgrade Workflow Architecture
 

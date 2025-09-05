@@ -688,8 +688,8 @@ main() {
     
     echo ""
     log "${YELLOW}Next steps:${NC}"
-    log "1. Run ./install/install-awx.sh to install AWX"
-    log "2. Run ./install/install-netbox.sh to install NetBox"
+    log "1. Run ./install/setup-awx.sh to setup AWX"
+    log "2. Run ./install/setup-netbox.sh to setup NetBox"
     log "3. Run ./install/configure-telegraf.sh to configure monitoring"
     log "4. Run ./install/setup-ssl.sh to configure SSL certificates"
     log "5. Run ./install/create-services.sh to start all services"

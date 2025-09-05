@@ -46,13 +46,13 @@ check_prerequisites() {
     
     # Check if AWX is installed
     if [[ ! -f "/opt/network-upgrade/awx/config/settings.py" ]]; then
-        log "${YELLOW}⚠ AWX not installed. Run ./install/install-awx.sh first${NC}"
+        log "${YELLOW}⚠ AWX not installed. Run ./install/setup-awx.sh first${NC}"
         APPLICATION_SERVICES=("${APPLICATION_SERVICES[@]/awx-*/}")
     fi
     
     # Check if NetBox is installed
     if [[ ! -f "/opt/network-upgrade/netbox/config/configuration.py" ]]; then
-        log "${YELLOW}⚠ NetBox not installed. Run ./install/install-netbox.sh first${NC}"
+        log "${YELLOW}⚠ NetBox not installed. Run ./install/setup-netbox.sh first${NC}"
         APPLICATION_SERVICES=("${APPLICATION_SERVICES[@]/netbox*/}")
         TIMER_SERVICES=("${TIMER_SERVICES[@]/netbox-*/}")
     fi
