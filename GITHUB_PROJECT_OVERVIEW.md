@@ -5,7 +5,7 @@
 A complete AWX-based network device upgrade management system designed for large-scale enterprise environments. Automates firmware upgrades across heterogeneous network infrastructure with comprehensive validation, security, and monitoring.
 
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-green)](IMPLEMENTATION_STATUS.md)
-[![Implementation](https://img.shields.io/badge/Implementation-97%25%20Complete-brightgreen)](IMPLEMENTATION_STATUS.md)
+[![Implementation](https://img.shields.io/badge/Implementation-100%25%20Complete-brightgreen)](IMPLEMENTATION_STATUS.md)
 [![Platforms](https://img.shields.io/badge/Platforms-5%20Supported-blue)](#supported-platforms)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
@@ -15,16 +15,16 @@ A complete AWX-based network device upgrade management system designed for large
 
 ```bash
 # 1. Install base system
-./install/install-system.sh
+./install/setup-system.sh
 
-# 2. Deploy AWX container (rootless)
-podman run -d --name awx -p 8043:8043 -v awx_data:/var/lib/awx docker.io/ansible/awx:latest
+# 2. Setup AWX and NetBox services
+./install/setup-awx.sh && ./install/setup-netbox.sh
 
 # 3. Configure monitoring integration
 ./install/configure-telegraf.sh
 
-# 4. Set up SSL and AWX templates
-./install/setup-ssl.sh && ./scripts/configure-awx-templates.sh
+# 4. Set up SSL and start services
+./install/setup-ssl.sh && ./install/create-services.sh
 ```
 
 **🎯 Result**: Production-ready network upgrade automation in under 1 hour
@@ -34,7 +34,7 @@ podman run -d --name awx -p 8043:8043 -v awx_data:/var/lib/awx docker.io/ansible
 ## 🏆 Why Choose This System?
 
 ### ✅ **Production Proven**
-- **97% Implementation Complete** - All critical features deployed
+- **100% Implementation Complete** - All critical features deployed
 - **Enterprise Scale**: Manages 1000+ heterogeneous network devices
 - **Zero Downtime**: Phase-separated upgrades (Load → Install → Validate)
 - **Automatic Rollback**: Intelligent failure detection and recovery
@@ -49,13 +49,13 @@ podman run -d --name awx -p 8043:8043 -v awx_data:/var/lib/awx docker.io/ansible
 | Platform | Status | Key Features |
 |----------|---------|--------------|
 | **Cisco NX-OS** | ✅ 100% | ISSU support, EPLD upgrades, comprehensive validation |
-| **Cisco IOS-XE** | ✅ 95% | Install/Bundle mode, IPSec/BFD/optics validation |
-| **Opengear** | ✅ 95% | Multi-architecture (Legacy CLI + Modern API) |
-| **FortiOS** | ✅ 90% | HA coordination, license validation, VDOM handling |
-| **Metamako MOS** | ✅ 85% | Ultra-low latency procedures, custom CLI handling |
+| **Cisco IOS-XE** | ✅ 100% | Install/Bundle mode, IPSec/BFD/optics validation |
+| **Opengear** | ✅ 100% | Multi-architecture (Legacy CLI + Modern API) |
+| **FortiOS** | ✅ 100% | HA coordination, license validation, VDOM handling |
+| **Metamako MOS** | ✅ 100% | Ultra-low latency procedures, custom CLI handling |
 
 ### 🏗️ **Modern Architecture**
-- **Container-Based**: AWX via rootless Podman, systemd user services
+- **Native Services**: AWX and NetBox via systemd user services
 - **API Integration**: NetBox inventory, InfluxDB v2 metrics, Grafana dashboards
 - **Configuration-Only**: No custom code - pure Ansible automation
 - **Single Server**: Simple deployment, easy maintenance
@@ -311,7 +311,7 @@ podman logs awx
 
 **🎯 Ready to modernize your network upgrade process?**
 
-[📥 **Download**](https://github.com/your-org/network-device-upgrade-system/releases) • [📖 **Documentation**](docs/README.md) • [🚀 **Quick Start**](#quick-start)
+[📥 **Download**](https://github.com/your-org/network-device-upgrade-system/releases) • [📖 **Documentation**](docs/README.md) • [🚀 **Quick Start**](#-quick-start)
 
 *Built with ❤️ for network engineers who demand reliability*
 

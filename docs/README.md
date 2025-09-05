@@ -39,7 +39,7 @@ docs/
 
 ## 🏗️ System Architecture
 
-The system follows a container-based architecture with AWX orchestrating Ansible automation across network devices.
+The system follows a native service architecture with AWX orchestrating Ansible automation across network devices via systemd services.
 
 **For detailed architecture diagrams and flow charts, see**:
 - **[UPGRADE_WORKFLOW_GUIDE.md](UPGRADE_WORKFLOW_GUIDE.md)** - Comprehensive workflow diagrams

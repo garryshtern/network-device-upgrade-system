@@ -6,14 +6,14 @@ A complete AWX-based network device upgrade management system designed for manag
 
 This system provides automated firmware upgrade capabilities for:
 - **Cisco NX-OS** (Nexus Switches) with ISSU support ✅ *Production Ready - 100% Complete*
-- **Cisco IOS-XE** (Enterprise Routers/Switches) with Install Mode ✅ *Production Ready - 95% Complete*
-- **Metamako MOS** (Ultra-Low Latency Switches) ✅ *Production Ready - 85% Complete*
-- **Opengear** (Console Servers/Smart PDUs) ✅ *Production Ready - 95% Complete*
-- **FortiOS** (Fortinet Firewalls) with HA coordination ✅ *Production Ready - 90% Complete*
+- **Cisco IOS-XE** (Enterprise Routers/Switches) with Install Mode ✅ *Production Ready - 100% Complete*
+- **Metamako MOS** (Ultra-Low Latency Switches) ✅ *Production Ready - 100% Complete*
+- **Opengear** (Console Servers/Smart PDUs) ✅ *Production Ready - 100% Complete*
+- **FortiOS** (Fortinet Firewalls) with HA coordination ✅ *Production Ready - 100% Complete*
 
 ## ✅ Implementation Status: 100% Complete - Production Ready
 
-**All Platforms Production Ready**: NX-OS (100%), IOS-XE (95%), Opengear (95%), FortiOS (90%), Metamako MOS (85%)  
+**All Platforms Production Ready**: NX-OS (100%), IOS-XE (100%), Opengear (100%), FortiOS (100%), Metamako MOS (100%)  
 **System Integration**: Complete Grafana dashboard automation with multi-environment deployment  
 **Recent Completion**: All critical validation requirements fulfilled - IPSec, BFD, IGMP, and optics validation implemented  
 **Multi-Architecture Support**: Opengear implementation enhanced for legacy CLI (OM2200, CM7100) and modern API (CM8100, IM7200) devices
@@ -41,7 +41,7 @@ See `IMPLEMENTATION_STATUS.md` for detailed compliance analysis.
 - Protocol convergence timing with baseline comparison
 
 ### 🚀 **Enterprise Integration**
-- Container-based deployment (AWX via Podman)
+- Native systemd service deployment (AWX and NetBox)
 - Pre-existing NetBox integration
 - InfluxDB v2 metrics integration
 - ✅ **Complete Grafana dashboard automation** with multi-environment support
@@ -52,27 +52,24 @@ See `IMPLEMENTATION_STATUS.md` for detailed compliance analysis.
 
 ```bash
 # 1. Install base system
-./install/install-system.sh
+./install/setup-system.sh
 
-# 2. Run AWX via rootless Podman container
-podman run -d --name awx \
-  -p 8043:8043 \
-  -v awx_data:/var/lib/awx \
-  -e POSTGRES_DB=awx \
-  -e POSTGRES_USER=awx \
-  -e POSTGRES_PASSWORD=awxpass \
-  docker.io/ansible/awx:latest
+# 2. Setup AWX with native services
+./install/setup-awx.sh
 
-# 3. Configure monitoring integration (NetBox already installed)
+# 3. Setup NetBox with native services
+./install/setup-netbox.sh
+
+# 4. Configure monitoring integration
 ./install/configure-telegraf.sh
 
-# 4. Set up SSL certificates
+# 5. Set up SSL certificates
 ./install/setup-ssl.sh
 
-# 5. Configure AWX templates
-./scripts/configure-awx-templates.sh
+# 6. Start all services
+./install/create-services.sh
 
-# 6. Deploy Grafana dashboards
+# 7. Deploy Grafana dashboards
 cd integration/grafana
 export INFLUXDB_TOKEN="your_token_here"
 ./provision-dashboards.sh
@@ -94,7 +91,7 @@ export INFLUXDB_TOKEN="your_token_here"
 
 ```mermaid
 graph TD
-    A[AWX Container<br/>Job Control<br/>Podman] --> B[Ansible Engine<br/>Playbook Execution<br/>Role-Based]
+    A[AWX Services<br/>Job Control<br/>systemd] --> B[Ansible Engine<br/>Playbook Execution<br/>Role-Based]
     B --> C[Network Devices<br/>1000+ Supported<br/>Multi-Vendor]
     
     D[NetBox<br/>Inventory DB<br/>Pre-existing] --> B
@@ -119,7 +116,7 @@ graph TD
 
 | Component | Function | Integration |
 |-----------|----------|-------------|
-| **AWX Container (Podman)** | Job orchestration and workflow control | → Ansible Engine |
+| **AWX Services (systemd)** | Job orchestration and workflow control | → Ansible Engine |
 | **Ansible Engine** | Playbook execution and device automation | → Network Devices |
 | **NetBox (Pre-existing)** | Device inventory and IPAM management | → Ansible Engine |
 | **Telegraf** | Metrics collection agent | → InfluxDB v2 |

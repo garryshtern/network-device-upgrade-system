@@ -16,7 +16,7 @@ The following critical components were analyzed:
 - **Main Workflow Orchestration** (`main-upgrade-workflow.yml`)  
 - **Vendor-Specific Roles** (Cisco NX-OS, FortiOS upgrade roles)
 - **Network Validation Logic** (BGP validation module)
-- **System Installation** (`install-system.sh`)
+- **System Installation** (`setup-system.sh`)
 - **Dependency Management** (`collections/requirements.yml`)
 
 ## Key Findings by Component

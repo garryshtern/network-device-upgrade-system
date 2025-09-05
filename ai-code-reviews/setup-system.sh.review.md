@@ -1,4 +1,4 @@
-# Code Review: install/install-system.sh
+# Code Review: install/setup-system.sh
 
 ## Overall Quality Rating: **Excellent**
 ## Refactoring Effort: **Low**
@@ -106,7 +106,7 @@ DATA_DIR="${DATA_DIR:-/opt/network-upgrade}"
 ```bash
 #!/bin/bash
 # Network Device Upgrade Management System - Base System Installation
-# Usage: sudo ./install-system.sh [--log-dir /custom/log/path]
+# Usage: sudo ./setup-system.sh [--log-dir /custom/log/path]
 # Requirements: Root privileges, RHEL/CentOS 8+ or Ubuntu 20.04+
 ```
 

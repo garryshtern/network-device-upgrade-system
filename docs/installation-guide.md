@@ -1,6 +1,6 @@
 # Installation Guide
 
-Complete installation guide for the Network Device Upgrade Management System. This guide covers single server deployment with containerized AWX and pre-existing NetBox integration, optimized for 1000+ device management.
+Complete installation guide for the Network Device Upgrade Management System. This guide covers single server deployment with native systemd services for AWX and NetBox, optimized for 1000+ device management.
 
 ## System Requirements
 
@@ -41,9 +41,9 @@ Before beginning installation, ensure:
 ```mermaid
 graph LR
     subgraph "Network Upgrade System Installation - Single Server Deployment"
-        A[Prerequisites<br/>Server Prep<br/>• Fresh OS<br/>• Root User<br/>• Network<br/>• DNS/NTP<br/>• NetBox Pre-existing<br/><br/>⏱️ 5-10 min<br/>Manual] --> B[Base System<br/>System Deps<br/>• Python<br/>• Podman<br/>• Nginx<br/>• Firewall<br/><br/>⏱️ 15-30min<br/>Automated]
+        A[Prerequisites<br/>Server Prep<br/>• Fresh OS<br/>• Root User<br/>• Network<br/>• DNS/NTP<br/><br/>⏱️ 5-10 min<br/>Manual] --> B[Base System<br/>System Deps<br/>• Python<br/>• Redis<br/>• Nginx<br/>• Firewall<br/><br/>⏱️ 15-30min<br/>Automated]
         
-        B --> C[AWX Container<br/>Podman Deploy<br/>• AWX Image<br/>• Volume Mount<br/>• Port Mapping<br/><br/>⏱️ 10-15min<br/>Automated]
+        B --> C[AWX Services<br/>Native Install<br/>• Django Setup<br/>• uWSGI Config<br/>• systemd Services<br/><br/>⏱️ 10-15min<br/>Automated]
         
         C --> D[Integration<br/>Monitoring & Config<br/>• Telegraf<br/>• SSL Certs<br/>• NetBox Connect<br/><br/>⏱️ 15-20min<br/>Automated]
         
@@ -77,7 +77,7 @@ Install the base system components including Python, Redis, and Nginx:
 
 ```bash
 # Run as unprivileged user
-./install/install-system.sh
+./install/setup-system.sh
 ```
 
 This script will:
