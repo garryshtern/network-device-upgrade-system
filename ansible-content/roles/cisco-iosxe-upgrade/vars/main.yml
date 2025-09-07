@@ -1,0 +1,55 @@
+---
+# Cisco IOS-XE Upgrade Variables
+# Default variables for Cisco IOS-XE upgrade procedures
+
+# Version constraints
+supported_iosxe_versions:
+  - "16.12"
+  - "17.3"
+  - "17.6"
+  - "17.9"
+  - "17.12"
+
+# Install mode detection
+install_mode_platforms:
+  - "ASR1000"
+  - "ISR4000"
+  - "C9300"
+  - "C9400"
+  - "C9500"
+  - "C9600"
+
+bundle_mode_platforms:
+  - "C3850"
+  - "C3650"
+  - "ISR900"
+
+# IPSec validation settings
+validate_ipsec_tunnels: true
+ipsec_tunnel_timeout: 300
+max_ipsec_sessions: 1000
+
+# Optics validation settings
+validate_optics_health: true
+optics_power_threshold_dbm: -10
+optics_temperature_threshold_c: 70
+
+# BFD validation settings
+validate_bfd_sessions: true
+bfd_session_timeout: 60
+expected_bfd_state: "Up"
+
+# Timing and stability
+post_upgrade_wait_seconds: 120
+status_check_retries: 8
+status_check_delay: 15
+
+# Storage management
+min_free_bootflash_mb: 4096
+cleanup_old_images: true
+max_stored_images: 2
+
+# Network validation
+validate_interface_states: true
+validate_routing_table: true
+validate_ospf_neighbors: true

@@ -5,7 +5,7 @@
 - name: Pre-upload validation (Legacy)
   block:
     - name: Check available storage space via CLI
-      raw: |
+      ansible.builtin.raw: |
         echo "show disk usage" | /bin/cli
       register: disk_usage_check
       delegate_to: "{{ inventory_hostname }}"
@@ -17,7 +17,7 @@
       when: disk_usage_check.stdout is defined
       
     - name: Validate sufficient storage space
-      assert:
+      ansible.builtin.assert:
         that:
           - available_space_mb | int > required_space_mb | int
         fail_msg: "Insufficient storage space. Available: {{ available_space_mb }}MB, Required: {{ required_space_mb }}MB"
@@ -25,34 +25,34 @@
 - name: Firmware transfer preparation
   block:
     - name: Check if firmware already exists
-      raw: |
+      ansible.builtin.raw: |
         ls /usr/local/upgrade/{{ target_firmware_filename }}
       register: existing_firmware
       delegate_to: "{{ inventory_hostname }}"
       failed_when: false
       
     - name: Remove existing firmware if present
-      raw: |
+      ansible.builtin.raw: |
         rm -f /usr/local/upgrade/{{ target_firmware_filename }}
       delegate_to: "{{ inventory_hostname }}"
       when: existing_firmware.rc == 0
       
     - name: Ensure upgrade directory exists
-      raw: |
+      ansible.builtin.raw: |
         mkdir -p /usr/local/upgrade
       delegate_to: "{{ inventory_hostname }}"
 
 - name: Transfer firmware image via SCP
   block:
     - name: Start firmware transfer
-      copy:
+      ansible.builtin.copy:
         src: "{{ local_firmware_path }}/{{ target_firmware_filename }}"
         dest: "/usr/local/upgrade/{{ target_firmware_filename }}"
       delegate_to: "{{ inventory_hostname }}"
       register: firmware_transfer
       
     - name: Log transfer completion
-      debug:
+      ansible.builtin.debug:
         msg: |
           Firmware transfer completed:
           - Source: {{ local_firmware_path }}/{{ target_firmware_filename }}
@@ -62,7 +62,7 @@
 - name: Verify firmware integrity (Legacy)
   block:
     - name: Calculate firmware checksum on device
-      raw: |
+      ansible.builtin.raw: |
         sha512sum /usr/local/upgrade/{{ target_firmware_filename }} | awk '{print $1}'
       register: device_checksum
       delegate_to: "{{ inventory_hostname }}"
@@ -79,7 +79,7 @@
         device_calculated_checksum: "{{ device_checksum.stdout | trim }}"
         
     - name: Validate checksum match
-      assert:
+      ansible.builtin.assert:
         that:
           - expected_checksum == device_calculated_checksum
         fail_msg: |
@@ -88,7 +88,7 @@
           Calculated: {{ device_calculated_checksum }}
           
     - name: Log successful checksum verification
-      debug:
+      ansible.builtin.debug:
         msg: |
           Firmware integrity verified successfully:
           - Expected SHA512: {{ expected_checksum }}
@@ -98,12 +98,12 @@
 - name: Prepare firmware for installation (Legacy)
   block:
     - name: Set firmware permissions
-      raw: |
+      ansible.builtin.raw: |
         chmod 644 /usr/local/upgrade/{{ target_firmware_filename }}
       delegate_to: "{{ inventory_hostname }}"
       
     - name: Create firmware staging marker
-      raw: |
+      ansible.builtin.raw: |
         echo "Firmware staged: {{ ansible_date_time.iso8601 }}" > /usr/local/upgrade/.{{ target_firmware_filename }}.staged
         echo "Source checksum: {{ expected_checksum }}" >> /usr/local/upgrade/.{{ target_firmware_filename }}.staged
         echo "Device checksum: {{ device_calculated_checksum }}" >> /usr/local/upgrade/.{{ target_firmware_filename }}.staged
@@ -112,13 +112,13 @@
 - name: Legacy device configuration backup
   block:
     - name: Create configuration backup
-      raw: |
+      ansible.builtin.raw: |
         echo "backup config /usr/local/upgrade/config-backup-$(date +%Y%m%d-%H%M%S).txt" | /bin/cli
       register: config_backup_result
       delegate_to: "{{ inventory_hostname }}"
       
     - name: Log backup completion
-      debug:
+      ansible.builtin.debug:
         msg: |
           Configuration backup completed:
           - Backup Location: /usr/local/upgrade/
@@ -126,7 +126,7 @@
           - CLI Result: {{ config_backup_result.stdout | default('Success') }}
 
 - name: Log legacy image loading completion
-  debug:
+  ansible.builtin.debug:
     msg: |
       Legacy Opengear Image Loading Completed:
       - Device: {{ inventory_hostname }}

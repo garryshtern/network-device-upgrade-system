@@ -11,7 +11,7 @@
       register: staged_image_check
       
     - name: Confirm staged image exists
-      assert:
+      ansible.builtin.assert:
         that:
           - target_image_filename in staged_image_check.stdout[0]
         fail_msg: "Target image not found on device storage"
@@ -31,12 +31,12 @@
             commands:
               - "request platform software package install switch all file bootflash:{{ target_image_filename }} activate commit"
             timeout: 3600
-            wait_for:
+            ansible.builtin.wait_for:
               - result[0] contains "SUCCESS"
           register: install_mode_result
           
         - name: Verify install mode completion
-          assert:
+          ansible.builtin.assert:
             that:
               - "'SUCCESS' in install_mode_result.stdout[0]"
             fail_msg: "Install mode installation failed"
@@ -52,7 +52,7 @@
           register: boot_system_check
           
         - name: Confirm boot system is configured
-          assert:
+          ansible.builtin.assert:
             that:
               - target_image_filename in boot_system_check.stdout[0]
             fail_msg: "Boot system not properly configured for bundle mode"
@@ -81,7 +81,7 @@
       when: bundle_mode_reboot_required | default(false)
       
     - name: Wait for device to become unreachable
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 22
         state: stopped
@@ -91,7 +91,7 @@
       when: bundle_mode_reboot_required | default(false)
       
     - name: Wait for device to come back online
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 22
         state: started
@@ -101,7 +101,7 @@
       when: bundle_mode_reboot_required | default(false)
       
     - name: Wait for device initialization
-      pause:
+      ansible.builtin.pause:
         seconds: 120
       when: bundle_mode_reboot_required | default(false)
 
@@ -116,7 +116,7 @@
       delay: 30
       
     - name: Confirm target version is active
-      assert:
+      ansible.builtin.assert:
         that:
           - iosxe_upgrade_state.target_version in post_install_version.stdout[0]
         fail_msg: "Installation completed but target version not active"
@@ -137,7 +137,7 @@
       when: bundle_mode_reboot_required | default(false)
       
     - name: Validate boot configuration
-      assert:
+      ansible.builtin.assert:
         that:
           - target_image_filename in post_boot_check.stdout[0]
         fail_msg: "Boot configuration validation failed"
@@ -166,7 +166,7 @@
       failed_when: false
 
 - name: Log installation completion
-  debug:
+  ansible.builtin.debug:
     msg: |
       IOS-XE Installation Completed:
       - Previous Version: {{ iosxe_upgrade_state.current_version }}

@@ -4,7 +4,7 @@
 # Business hours safe - read-only operations
 
 - name: Configuration Backup
-  hosts: "{{ target_hosts | default(inventory_hostname) }}"
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
   connection: network_cli
   vars:
@@ -23,90 +23,67 @@
       delegate_to: localhost
 
     - name: Platform-specific configuration backup
-      block:
-        # Cisco NX-OS Configuration Backup
-        - name: Backup Cisco NX-OS configuration
-          ansible.builtin.include_role:
-            name: cisco-nxos-upgrade
-            tasks_from: config-backup
-          vars:
-            backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
-          when: ansible_network_os == 'nxos'
+      ansible.builtin.debug:
+        msg: "Starting configuration backup for {{ inventory_hostname }}"
 
-        # Cisco IOS-XE Configuration Backup
-        - name: Backup Cisco IOS-XE configuration
-          ansible.builtin.include_role:
-            name: cisco-iosxe-upgrade
-            tasks_from: config-backup
-          vars:
-            backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
-          when: ansible_network_os == 'ios'
-
-        # Metamako MOS Configuration Backup
-        - name: Backup Metamako MOS configuration
-          ansible.builtin.include_role:
-            name: metamako-mos-upgrade
-            tasks_from: config-backup
-          vars:
-            backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
-          when: ansible_network_os == 'mos'
-
-        # Opengear Configuration Backup
-        - name: Backup Opengear configuration
-          ansible.builtin.include_role:
-            name: opengear-upgrade
-            tasks_from: config-backup
-          vars:
-            backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
-          when: ansible_network_os == 'opengear'
-
-        # FortiOS Configuration Backup
-        - name: Backup FortiOS configuration
-          ansible.builtin.include_role:
-            name: fortios-upgrade
-            tasks_from: config-backup
-          vars:
-            backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
-          when: ansible_network_os == 'fortios'
-
-    - name: Create backup manifest
-      ansible.builtin.template:
-        src: ../templates/backup-manifest.j2
-        dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}/backup-manifest.json"
+    - name: Cisco NX-OS Configuration Backup
+      ansible.builtin.include_role:
+        name: cisco-nxos-upgrade
+        tasks_from: config-backup
       vars:
-        backup_info:
-          device_name: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
-          backup_timestamp: "{{ backup_timestamp }}"
-          backup_type: "{{ backup_type }}"
-          firmware_version_before: "{{ current_firmware_version | default('unknown') }}"
-          target_firmware_version: "{{ firmware_version | default('unknown') }}"
-      delegate_to: localhost
+        backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
+      when: ansible_network_os == 'nxos'
 
-    - name: Verify backup files created
+    - name: Cisco IOS-XE Configuration Backup  
+      ansible.builtin.include_role:
+        name: cisco-iosxe-upgrade
+        tasks_from: config-backup
+      vars:
+        backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
+      when: ansible_network_os == 'ios'
+
+    - name: Metamako MOS Configuration Backup
+      ansible.builtin.include_role:
+        name: metamako-mos-upgrade
+        tasks_from: config-backup
+      vars:
+        backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
+      when: ansible_network_os == 'mos'
+
+    - name: Opengear Configuration Backup
+      ansible.builtin.include_role:
+        name: opengear-upgrade
+        tasks_from: config-backup
+      vars:
+        backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
+      when: ansible_network_os == 'opengear'
+
+    - name: FortiOS Configuration Backup
+      ansible.builtin.include_role:
+        name: fortios-upgrade
+        tasks_from: config-backup
+      vars:
+        backup_destination: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
+      when: ansible_network_os == 'fortios'
+
+    - name: Verify backup files were created
       ansible.builtin.find:
         paths: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
-        patterns: "*.cfg,*.conf,*.json,*.txt"
+        file_type: file
       register: backup_files
       delegate_to: localhost
 
-    - name: Validate backup completion
+    - name: Assert backup files exist
       ansible.builtin.assert:
         that:
           - backup_files.files | length > 0
         fail_msg: "No backup files were created for {{ inventory_hostname }}"
 
-    - name: Compress backup directory
+    - name: Create backup archive
       community.general.archive:
         path: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
         dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ inventory_hostname }}-backup-{{ backup_timestamp }}.tar.gz"
         format: gz
-      delegate_to: localhost
-
-    - name: Set backup file permissions
-      ansible.builtin.file:
-        path: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ inventory_hostname }}-backup-{{ backup_timestamp }}.tar.gz"
-        mode: '0640'
         owner: ansible
         group: network-operators
       delegate_to: localhost
@@ -122,32 +99,3 @@
           backup_type: "{{ backup_type }}"
           file_count: "{{ backup_files.files | length }}"
           backup_size_mb: "{{ (backup_files.files | map(attribute='size') | sum / 1024 / 1024) | round(2) }}"
-
-    - name: Display backup results
-      ansible.builtin.debug:
-        msg:
-          - "=== Configuration Backup Complete ==="
-          - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
-          - "Backup Type: {{ backup_type }}"
-          - "Timestamp: {{ backup_timestamp }}"
-          - "Files Backed Up: {{ backup_files.files | length }}"
-          - "Backup Location: {{ backup_base_path }}/{{ inventory_hostname }}/{{ inventory_hostname }}-backup-{{ backup_timestamp }}.tar.gz"
-          - "Status: SUCCESS"
-          - "====================================="
-
-  rescue:
-    - name: Configuration backup failure handling
-      ansible.builtin.debug:
-        msg: "Configuration backup failed for {{ inventory_hostname }}: {{ ansible_failed_result.msg }}"
-
-    - name: Cleanup failed backup attempt
-      ansible.builtin.file:
-        path: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
-        state: absent
-      delegate_to: localhost
-      ignore_errors: true
-
-    - name: Re-raise backup failure
-      ansible.builtin.fail:
-        msg: "Configuration backup failed for {{ inventory_hostname }}"

@@ -1,0 +1,101 @@
+---
+# NX-OS Scenario Validation Task File
+# Called by cisco-nxos-tests.yml for each ISSU and EPLD test scenario
+
+- name: "Set NX-OS scenario variables for: {{ nxos_scenario.name }}"
+  set_fact:
+    "{{ item.key }}": "{{ item.value }}"
+  loop: "{{ nxos_scenario.device_vars | dict2items }}"
+
+- name: "Test NX-OS scenario: {{ nxos_scenario.name }}"
+  block:
+    - name: Validate ISSU capability detection
+      set_fact:
+        detected_issu_capable: "{{ issu_capable | default(false) | bool }}"
+        detected_epld_required: "{{ epld_upgrade_required | default(false) | bool }}"
+        detected_nxapi_enabled: "{{ nxapi_enabled | default(false) | bool }}"
+        detected_epld_images: "{{ epld_images | default([]) | list }}"
+        
+    - name: Determine upgrade method based on ISSU capability
+      set_fact:
+        selected_upgrade_method: "{{ 'issu' if detected_issu_capable else 'standard' }}"
+        
+    - name: Assert ISSU detection accuracy
+      assert:
+        that:
+          - selected_upgrade_method == nxos_scenario.expected_results.upgrade_method
+        fail_msg: "ISSU detection failed for {{ nxos_scenario.name }}"
+        success_msg: "✓ ISSU detection correct for {{ nxos_scenario.name }}"
+        
+    - name: Assert EPLD requirement detection accuracy
+      assert:
+        that:
+          - detected_epld_required == nxos_scenario.expected_results.epld_required
+        fail_msg: "EPLD requirement detection failed for {{ nxos_scenario.name }}"
+        success_msg: "✓ EPLD requirement detection correct for {{ nxos_scenario.name }}"
+        
+    - name: Assert NXAPI support detection accuracy
+      assert:
+        that:
+          - detected_nxapi_enabled == nxos_scenario.expected_results.nxapi_supported
+        fail_msg: "NXAPI support detection failed for {{ nxos_scenario.name }}"
+        success_msg: "✓ NXAPI support detection correct for {{ nxos_scenario.name }}"
+
+    - name: Validate device model and platform compatibility
+      assert:
+        that:
+          - device_model is defined
+          - device_model != ""
+          - platform_type == "cisco_nxos"
+          - firmware_version is defined
+          - target_version is defined
+          - device_model is match("N[0-9]+K-.*")
+        fail_msg: "Device model or platform validation failed"
+        success_msg: "✓ Device compatibility validated for {{ nxos_scenario.name }}"
+
+    - name: Validate EPLD image consistency when required
+      assert:
+        that:
+          - detected_epld_images | length > 0
+          - detected_epld_images | select('match', '.*epld.*') | list | length > 0
+        fail_msg: "EPLD images missing when EPLD upgrade required"
+        success_msg: "✓ EPLD images validated"
+      when: detected_epld_required
+
+    - name: Validate EPLD version progression
+      assert:
+        that:
+          - current_epld_version is defined
+          - target_epld_version is defined
+          - current_epld_version != target_epld_version
+        fail_msg: "EPLD version progression invalid"
+        success_msg: "✓ EPLD version progression validated"
+      when: detected_epld_required
+
+    - name: Validate NX-OS version compatibility
+      assert:
+        that:
+          - firmware_version is version('7.0.0', '>=')
+          - target_version is version(firmware_version, '>')
+        fail_msg: "NX-OS version compatibility check failed"
+        success_msg: "✓ NX-OS version compatibility validated"
+
+    - name: "✓ {{ nxos_scenario.name }} - PASSED"
+      debug:
+        msg: 
+          - "NX-OS scenario validation successful:"
+          - "  Device: {{ device_model }}"
+          - "  ISSU Capable: {{ detected_issu_capable }}"
+          - "  EPLD Required: {{ detected_epld_required }}"
+          - "  NXAPI Enabled: {{ detected_nxapi_enabled }}"
+          - "  Upgrade Method: {{ selected_upgrade_method }}"
+          - "  EPLD Images: {{ detected_epld_images | length }}"
+        
+  rescue:
+    - name: "✗ {{ nxos_scenario.name }} - FAILED"
+      debug:
+        msg: "NX-OS scenario validation failed for {{ nxos_scenario.name }}"
+      
+    - name: Fail the test
+      fail:
+        msg: "NX-OS scenario {{ nxos_scenario.name }} validation failed"

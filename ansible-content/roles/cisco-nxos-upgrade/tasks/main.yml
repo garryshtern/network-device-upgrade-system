@@ -3,7 +3,7 @@
 # Handles ISSU-capable upgrades with comprehensive validation
 
 - name: Initialize NX-OS upgrade variables
-  set_fact:
+  ansible.builtin.set_fact:
     nxos_upgrade_state:
       device: "{{ inventory_hostname }}"
       current_version: ""
@@ -21,16 +21,16 @@
   register: nxos_facts
   
 - name: Set current firmware version
-  set_fact:
+  ansible.builtin.set_fact:
     nxos_upgrade_state: "{{ nxos_upgrade_state | combine({
       'current_version': nxos_facts.ansible_facts.ansible_net_version
     }) }}"
     
 - name: Check ISSU compatibility
-  include_tasks: check-issu-capability.yml
+  ansible.builtin.include_tasks: check-issu-capability.yml
   
 - name: Display upgrade plan
-  debug:
+  ansible.builtin.debug:
     msg: |
       NX-OS Upgrade Plan for {{ inventory_hostname }}:
       Current Version: {{ nxos_upgrade_state.current_version }}
@@ -39,15 +39,15 @@
       Upgrade Method: {{ nxos_upgrade_state.upgrade_method }}
       
 - name: Validate upgrade path
-  assert:
+  ansible.builtin.assert:
     that:
       - nxos_upgrade_state.current_version != nxos_upgrade_state.target_version
       - nxos_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+\\([0-9]+\\)")
     fail_msg: "Invalid upgrade path or target version format"
     
 - name: Handle EPLD upgrade (if required)
-  include_tasks: epld-upgrade.yml
+  ansible.builtin.include_tasks: epld-upgrade.yml
   when: upgrade_epld | default(false) and target_epld_image is defined
   
 - name: Execute upgrade based on ISSU capability
-  include_tasks: "{{ 'issu-procedures.yml' if nxos_upgrade_state.issu_capable else 'image-installation.yml' }}"
+  ansible.builtin.include_tasks: "{{ 'issu-procedures.yml' if nxos_upgrade_state.issu_capable else 'image-installation.yml' }}"

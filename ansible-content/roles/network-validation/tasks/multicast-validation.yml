@@ -44,7 +44,7 @@
 - name: PIM neighbor validation
   block:
     - name: Check PIM neighbor adjacencies
-      debug:
+      ansible.builtin.debug:
         msg: |
           PIM Neighbor Status:
           Total Neighbors: {{ pim_neighbors | length }}
@@ -56,7 +56,7 @@
       when: pim_neighbors is defined
       
     - name: Validate PIM interface modes
-      debug:
+      ansible.builtin.debug:
         msg: |
           PIM Interface Modes:
           Sparse Mode Interfaces: {{ pim_sparse_mode | length }}
@@ -84,7 +84,7 @@
       when: igmp_info is defined and igmp_info.rc == 0
       
     - name: Validate IGMP groups
-      debug:
+      ansible.builtin.debug:
         msg: |
           IGMP Group Status:
           Total Groups: {{ igmp_groups | length }}
@@ -97,7 +97,7 @@
 - name: Rendezvous Point (RP) validation
   block:
     - name: Validate RP configuration
-      debug:
+      ansible.builtin.debug:
         msg: |
           Rendezvous Point Status:
           Total RPs: {{ pim_rp_info | length }}
@@ -116,7 +116,7 @@
       failed_when: false
       
     - name: Report RP reachability results
-      debug:
+      ansible.builtin.debug:
         msg: |
           RP Reachability Test Results:
           {% for result in rp_reachability.results | default([]) %}
@@ -140,7 +140,7 @@
       when: anycast_rp_info is defined and anycast_rp_info.rc == 0
       
     - name: Validate Anycast RP consistency
-      debug:
+      ansible.builtin.debug:
         msg: |
           Anycast RP Configuration:
           {% if anycast_rp_sets | length > 0 %}
@@ -171,7 +171,7 @@
       when: mroute_info is defined and mroute_info.rc == 0
       
     - name: Validate multicast forwarding
-      debug:
+      ansible.builtin.debug:
         msg: |
           Multicast Routing Status:
           {% if mroute_summary is defined %}
@@ -186,7 +186,7 @@
       when: mroute_info is defined
 
 - name: Store multicast baseline
-  set_fact:
+  ansible.builtin.set_fact:
     multicast_baseline:
       timestamp: "{{ ansible_date_time.iso8601 }}"
       pim_neighbors_total: "{{ pim_neighbors | length if pim_neighbors is defined else 0 }}"
@@ -198,7 +198,7 @@
       mroute_entries: "{{ mroute_entries | length if mroute_entries is defined else 0 }}"
 
 - name: Multicast validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       Multicast Protocol Validation Results:
       - PIM Neighbors: {{ multicast_baseline.pim_neighbors_up }}/{{ multicast_baseline.pim_neighbors_total }}

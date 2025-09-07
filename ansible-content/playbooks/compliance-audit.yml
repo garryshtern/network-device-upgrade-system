@@ -4,7 +4,7 @@
 # Validates security configurations and regulatory requirements
 
 - name: Compliance Audit and Verification
-  hosts: "{{ target_hosts | default(inventory_hostname) }}"
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
   connection: network_cli
   vars:

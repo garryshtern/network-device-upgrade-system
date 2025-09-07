@@ -11,7 +11,7 @@
       register: storage_info
       
     - name: Verify sufficient space
-      assert:
+      ansible.builtin.assert:
         that:
           - storage_info.meta.results.available_mb | int > 1000
         fail_msg: "Insufficient disk space for firmware download"
@@ -37,7 +37,7 @@
       failed_when: download_status.meta.results.status == "failed"
       
     - name: Verify download completion
-      assert:
+      ansible.builtin.assert:
         that:
           - download_status.meta.results.status == "completed"
           - fortios_upgrade_state.target_version in download_status.meta.results.filename
@@ -71,12 +71,12 @@
       register: available_firmware
       
     - name: Verify target firmware is available
-      assert:
+      ansible.builtin.assert:
         that:
           - available_firmware.meta.results | selectattr('version', 'equalto', fortios_upgrade_state.target_version) | list | length > 0
         fail_msg: "Target firmware not found in available images"
         
-    - name: Check firmware integrity
+    - name: Check firmware integritycon
       fortinet.fortios.fortios_monitor:
         vdom: "root"  
         selector: "system_firmware_verify"
@@ -85,13 +85,13 @@
       register: firmware_verification
       
     - name: Confirm firmware integrity
-      assert:
+      ansible.builtin.assert:
         that:
           - firmware_verification.meta.results.status == "valid"
         fail_msg: "Firmware integrity check failed"
 
 - name: Log loading completion
-  debug:
+  ansible.builtin.debug:
     msg: |
       FortiOS Image Loading Completed:
       - Target Version: {{ fortios_upgrade_state.target_version }}

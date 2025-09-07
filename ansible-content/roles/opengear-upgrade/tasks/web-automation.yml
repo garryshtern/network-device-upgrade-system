@@ -5,7 +5,7 @@
 - name: Pre-upgrade web interface preparation
   block:
     - name: Authenticate to web interface
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/auth/login"
         method: POST
         headers:
@@ -24,7 +24,7 @@
         }) }}"
         
     - name: Verify API access
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/status"
         method: GET
         headers:
@@ -35,7 +35,7 @@
 - name: Firmware upload process
   block:
     - name: Check current firmware status
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware"
         method: GET
         headers:
@@ -44,7 +44,7 @@
       register: current_firmware_status
       
     - name: Upload new firmware image
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/upload"
         method: POST
         headers:
@@ -55,7 +55,7 @@
       register: firmware_upload
       
     - name: Verify firmware upload
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/status"
         method: GET
         headers:
@@ -69,7 +69,7 @@
 - name: Firmware installation process
   block:
     - name: Validate uploaded firmware
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/validate"
         method: POST
         headers:
@@ -78,13 +78,13 @@
       register: firmware_validation
       
     - name: Confirm validation success
-      assert:
+      ansible.builtin.assert:
         that:
           - firmware_validation.json.valid == true
         fail_msg: "Firmware validation failed: {{ firmware_validation.json.message | default('Unknown error') }}"
         
     - name: Install firmware
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/install"
         method: POST
         headers:
@@ -97,7 +97,7 @@
       register: firmware_install
       
     - name: Monitor installation progress
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/install/status"
         method: GET
         headers:
@@ -112,14 +112,14 @@
 - name: Post-installation validation
   block:
     - name: Wait for device to come back online
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 443
         delay: 30
         timeout: 600
         
     - name: Re-authenticate after reboot
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/auth/login"
         method: POST
         headers:
@@ -132,7 +132,7 @@
       register: post_reboot_auth
       
     - name: Verify new firmware version
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/info"
         method: GET
         headers:
@@ -141,13 +141,13 @@
       register: post_upgrade_info
       
     - name: Confirm target version is active
-      assert:
+      ansible.builtin.assert:
         that:
           - opengear_upgrade_state.target_version in post_upgrade_info.json.version
         fail_msg: "Web upgrade completed but target version not active"
 
 - name: Log web automation completion
-  debug:
+  ansible.builtin.debug:
     msg: |
       Opengear Web Automation Completed:
       - Device: {{ opengear_upgrade_state.device_model }}

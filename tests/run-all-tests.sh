@@ -63,9 +63,9 @@ run_syntax_checks() {
         fi
     done
     
-    # Check role tasks
+    # Check role tasks using YAML validation (not ansible syntax check)
     find "$ANSIBLE_CONTENT_DIR/roles" -name "*.yml" -path "*/tasks/*" | while read -r task_file; do
-        if ansible-playbook --syntax-check "$task_file" >/dev/null 2>&1; then
+        if python3 -c "import yaml; yaml.safe_load(open('$task_file'))" >/dev/null 2>&1; then
             echo -e "${GREEN}✓ $(basename "$(dirname "$(dirname "$task_file")")/")/$(basename "$task_file")${NC}"
         else
             echo -e "${RED}✗ $(basename "$(dirname "$(dirname "$task_file")")/")/$(basename "$task_file")${NC}"
@@ -181,19 +181,20 @@ main() {
     echo -e "${BLUE}Phase 2: Test Suites${NC}"
     
     # Test suites to run
-    declare -A test_suites=(
-        ["Syntax_Tests"]="../tests/ansible-tests/syntax-tests.yml"
-        ["Workflow_Integration"]="../tests/integration-tests/workflow-tests.yml"
-        ["Multi_Platform_Integration"]="../tests/integration-tests/multi-platform-integration-tests.yml"
-        ["Network_Validation"]="../tests/validation-tests/network-validation-tests.yml"
-        ["Comprehensive_Validation"]="../tests/validation-tests/comprehensive-validation-tests.yml"
-        ["Cisco_NXOS_Tests"]="../tests/vendor-tests/cisco-nxos-tests.yml"
-        ["Opengear_Multi_Arch_Tests"]="../tests/vendor-tests/opengear-tests.yml"
+    test_suites=(
+        "Syntax_Tests:../tests/ansible-tests/syntax-tests.yml"
+        "Workflow_Integration:../tests/integration-tests/workflow-tests.yml"
+        "Multi_Platform_Integration:../tests/integration-tests/multi-platform-integration-tests.yml"
+        "Network_Validation:../tests/validation-tests/network-validation-tests.yml"
+        "Comprehensive_Validation:../tests/validation-tests/comprehensive-validation-tests.yml"
+        "Cisco_NXOS_Tests:../tests/vendor-tests/cisco-nxos-tests.yml"
+        "Opengear_Multi_Arch_Tests:../tests/vendor-tests/opengear-tests.yml"
     )
     
     # Run each test suite
-    for test_name in "${!test_suites[@]}"; do
-        test_file="${test_suites[$test_name]}"
+    for test_suite in "${test_suites[@]}"; do
+        test_name="${test_suite%%:*}"
+        test_file="${test_suite#*:}"
         total_tests=$((total_tests + 1))
         
         if run_test_suite "$test_name" "$test_file"; then

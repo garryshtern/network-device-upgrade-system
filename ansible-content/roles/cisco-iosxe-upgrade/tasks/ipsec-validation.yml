@@ -57,7 +57,7 @@
 - name: Validate IPSec health
   block:
     - name: Verify IPSec tunnels are active
-      assert:
+      ansible.builtin.assert:
         that:
           - active_ipsec_tunnels | length > 0
         fail_msg: "No active IPSec tunnels found. Expected at least one active tunnel."
@@ -67,7 +67,7 @@
         - active_ipsec_tunnels is defined
         
     - name: Verify ISAKMP phase 1 sessions
-      assert:
+      ansible.builtin.assert:
         that:
           - isakmp_sessions | length > 0
         fail_msg: "No active ISAKMP sessions found"
@@ -77,7 +77,7 @@
         - isakmp_sessions is defined
         
     - name: Verify crypto sessions are up
-      assert:
+      ansible.builtin.assert:
         that:
           - total_crypto_sessions | int > 0
         fail_msg: "No crypto sessions in UP state"
@@ -89,7 +89,7 @@
 - name: Check VPN traffic flow
   block:
     - name: Verify IPSec traffic counters
-      assert:
+      ansible.builtin.assert:
         that:
           - item[1] | int > 0 or item[2] | int > 0
         fail_msg: "No traffic on IPSec tunnel {{ item[0] }}"
@@ -100,7 +100,7 @@
         - active_ipsec_tunnels | length > 0
 
 - name: IPSec validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       IPSec Validation Summary:
       ========================
@@ -115,7 +115,7 @@
       {% endif %}
       
 - name: Store IPSec validation baseline
-  copy:
+  ansible.builtin.copy:
     content: |
       # IPSec Validation Baseline - {{ ansible_date_time.iso8601 }}
       # Generated during firmware upgrade validation

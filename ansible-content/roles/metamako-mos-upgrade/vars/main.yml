@@ -1,0 +1,30 @@
+---
+# Metamako MOS Upgrade Variables
+# Default variables for Metamako MOS upgrade procedures
+
+# Version constraints
+supported_mos_versions:
+  - "0.39"
+
+# Application versions  
+default_metawatch_version: "4.2.0"
+default_metamux_version: "3.8.0"
+
+# Latency thresholds (nanoseconds)
+default_latency_thresholds:
+  ultra_low: 25
+  low: 50
+  normal: 100
+  high: 500
+
+# Application mutual exclusivity validation
+validate_app_exclusivity: true
+
+# Post-upgrade application management
+default_app_install_timeout: 1800  # 30 minutes
+default_app_enable_timeout: 300    # 5 minutes
+
+# Timing and stability
+post_upgrade_wait_seconds: 30
+status_check_retries: 3
+status_check_delay: 10

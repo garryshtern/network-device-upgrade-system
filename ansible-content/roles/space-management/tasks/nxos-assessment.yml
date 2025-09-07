@@ -1,0 +1,33 @@
+---
+# Cisco NX-OS Storage Assessment
+
+- name: Get bootflash directory information
+  cisco.nxos.nxos_command:
+    commands:
+      - dir bootflash:
+  register: nxos_bootflash_dir
+
+- name: Get free space information
+  cisco.nxos.nxos_command:
+    commands:
+      - "dir bootflash: | include free"
+  register: nxos_free_space
+
+- name: Parse bootflash directory listing
+  ansible.builtin.set_fact:
+    nxos_files: "{{ nxos_bootflash_dir.stdout[0] | regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+)') }}"
+    nxos_images: "{{ nxos_bootflash_dir.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+\\.bin)') }}"
+
+- name: Parse free space information
+  ansible.builtin.set_fact:
+    nxos_total_bytes: "{{ nxos_free_space.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+    nxos_free_bytes: "{{ nxos_free_space.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
+
+- name: Calculate storage metrics
+  ansible.builtin.set_fact:
+    storage_info: "{{ storage_info | combine({
+      'total_space_gb': (nxos_total_bytes / 1024 / 1024 / 1024) | round(2),
+      'free_space_gb': (nxos_free_bytes / 1024 / 1024 / 1024) | round(2),
+      'images_found': nxos_images,
+      'cleanup_candidates': nxos_images
+    }) }}"

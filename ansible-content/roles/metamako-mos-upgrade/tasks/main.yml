@@ -3,7 +3,7 @@
 # Ultra-low latency switch upgrade procedures
 
 - name: Initialize Metamako upgrade variables
-  set_fact:
+  ansible.builtin.set_fact:
     metamako_upgrade_state:
       device: "{{ inventory_hostname }}"
       current_version: ""
@@ -15,21 +15,21 @@
       
 - name: Gather Metamako device facts
   ansible.netcommon.cli_command:
-    command: show version
+    ansible.builtin.command: show version
   register: metamako_version
   
 - name: Parse device information
-  set_fact:
+  ansible.builtin.set_fact:
     metamako_upgrade_state: "{{ metamako_upgrade_state | combine({
-      'current_version': metamako_version.stdout | regex_search('Version: ([\\d\\.]+)', '\\1') | first,
+      'current_version': metamako_version.stdout | regex_search('Version: ([0-9]+\\.[0-9]+\\.[0-9]+)', '\\1') | first,
       'device_type': metamako_version.stdout | regex_search('Model: ([\\w\\d-]+)', '\\1') | first
     }) }}"
     
 - name: Check Metamako-specific components
-  include_tasks: check-metawatch-metamux.yml
+  ansible.builtin.include_tasks: check-metawatch-metamux.yml
   
 - name: Display upgrade plan
-  debug:
+  ansible.builtin.debug:
     msg: |
       Metamako MOS Upgrade Plan for {{ inventory_hostname }}:
       Device Type: {{ metamako_upgrade_state.device_type }}
@@ -39,11 +39,18 @@
       Metamux: {{ metamako_upgrade_state.metamux_enabled }}
       
 - name: Validate upgrade path
-  assert:
+  ansible.builtin.assert:
     that:
       - metamako_upgrade_state.current_version != metamako_upgrade_state.target_version
-      - metamako_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+")
-    fail_msg: "Invalid upgrade path or target version format"
-    
+      - metamako_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+\\.[0-9]+")
+    fail_msg: "Invalid upgrade path or target version format (expected: x.y.z)"
+
 - name: Execute latency-sensitive upgrade
-  include_tasks: latency-validation.yml
+  ansible.builtin.include_tasks: latency-validation.yml
+  
+- name: Post-upgrade service validation
+  ansible.builtin.include_tasks: post-upgrade-service-validation.yml
+  
+- name: Post-upgrade application management (if requested)
+  ansible.builtin.include_tasks: application-management.yml
+  when: manage_applications | default(false)

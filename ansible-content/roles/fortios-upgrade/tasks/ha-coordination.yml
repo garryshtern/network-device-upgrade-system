@@ -9,7 +9,7 @@
   register: ha_status
   
 - name: Parse HA cluster information
-  set_fact:
+  ansible.builtin.set_fact:
     ha_cluster_info:
       mode: "{{ ha_status.meta.results.mode }}"
       group_id: "{{ ha_status.meta.results.group_id }}"
@@ -19,7 +19,7 @@
       members: "{{ ha_status.meta.results.members | default([]) }}"
       
 - name: Update HA information in upgrade state
-  set_fact:
+  ansible.builtin.set_fact:
     fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
       'ha_mode': ha_cluster_info.mode,
       'ha_role': ha_cluster_info.role,
@@ -29,7 +29,7 @@
 - name: Validate HA cluster health
   block:
     - name: Check cluster synchronization
-      assert:
+      ansible.builtin.assert:
         that:
           - ha_cluster_info.sync_status == "synchronized"
         fail_msg: "HA cluster not synchronized - upgrade cannot proceed safely"
@@ -41,7 +41,7 @@
       register: ha_peers
       
     - name: Check peer connectivity
-      assert:
+      ansible.builtin.assert:
         that:
           - ha_peers.meta.results | selectattr('status', 'equalto', 'up') | list | length == (ha_cluster_info.members | length - 1)
         fail_msg: "Not all HA cluster members are reachable"
@@ -91,7 +91,7 @@
       when: ha_cluster_info.role == "secondary"
 
 - name: Log HA coordination status
-  debug:
+  ansible.builtin.debug:
     msg: |
       HA Cluster Coordination:
       - Mode: {{ ha_cluster_info.mode }}

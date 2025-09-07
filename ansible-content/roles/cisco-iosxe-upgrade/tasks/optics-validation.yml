@@ -66,7 +66,7 @@
 - name: Validate transceiver health
   block:
     - name: Verify transceivers are detected
-      assert:
+      ansible.builtin.assert:
         that:
           - active_transceivers is defined
           - active_transceivers | length > 0
@@ -75,7 +75,7 @@
       when: active_transceivers is defined
       
     - name: Check optical power levels are within acceptable range
-      assert:
+      ansible.builtin.assert:
         that:
           - item[1] | float > -15.0  # Tx Power > -15 dBm
           - item[1] | float < 5.0    # Tx Power < 5 dBm
@@ -92,7 +92,7 @@
         - optical_power_levels | length > 0
         
     - name: Check transceiver temperatures
-      assert:
+      ansible.builtin.assert:
         that:
           - item[1] | float < 75.0   # Temperature < 75°C
           - item[1] | float > 0.0    # Temperature > 0°C
@@ -120,7 +120,7 @@
       when: interface_errors.rc == 0
       
     - name: Verify low error rates on active interfaces
-      assert:
+      ansible.builtin.assert:
         that:
           - item[2] | int < 100  # Input errors < 100
           - item[3] | int < 100  # Output errors < 100
@@ -143,7 +143,7 @@
       failed_when: false
       
     - name: Verify no critical alarms
-      assert:
+      ansible.builtin.assert:
         that:
           - '"ALARM" not in transceiver_alarms.stdout[0]'
         fail_msg: "Transceiver alarms detected: {{ transceiver_alarms.stdout[0] }}"
@@ -153,7 +153,7 @@
         - transceiver_alarms.stdout[0] | length > 0
 
 - name: Optics validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       Optics Validation Summary:
       =========================
@@ -187,7 +187,7 @@
       Health Status: {{ 'PASS' if (active_transceivers is defined and active_transceivers | length > 0) else 'CHECK' }}
 
 - name: Store optics validation baseline
-  copy:
+  ansible.builtin.copy:
     content: |
       # Optics Validation Baseline - {{ ansible_date_time.iso8601 }}
       # Generated during firmware upgrade validation

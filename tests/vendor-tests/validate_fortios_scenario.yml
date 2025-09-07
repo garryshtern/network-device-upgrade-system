@@ -1,0 +1,88 @@
+---
+# FortiOS Scenario Validation Task File
+# Called by fortios-tests.yml for each HA and standalone test scenario
+
+- name: "Set FortiOS scenario variables for: {{ fortios_scenario.name }}"
+  set_fact:
+    "{{ item.key }}": "{{ item.value }}"
+  loop: "{{ fortios_scenario.device_vars | dict2items }}"
+
+- name: "Test FortiOS scenario: {{ fortios_scenario.name }}"
+  block:
+    - name: Validate HA configuration detection
+      set_fact:
+        detected_ha_enabled: "{{ ha_enabled | default(false) | bool }}"
+        detected_ha_role: "{{ ha_role | default('standalone') }}"
+        detected_vdom_enabled: "{{ vdom_enabled | default(false) | bool }}"
+        
+    - name: Determine upgrade method based on HA status
+      set_fact:
+        selected_upgrade_method: "{{ 'ha_upgrade' if detected_ha_enabled else 'standalone_upgrade' }}"
+        ha_coordination_required: "{{ detected_ha_enabled }}"
+        
+    - name: Assert HA detection accuracy
+      assert:
+        that:
+          - detected_ha_enabled == fortios_scenario.expected_results.ha_upgrade_required
+        fail_msg: "HA detection failed for {{ fortios_scenario.name }}"
+        success_msg: "✓ HA detection correct for {{ fortios_scenario.name }}"
+        
+    - name: Assert upgrade method selection accuracy
+      assert:
+        that:
+          - selected_upgrade_method == fortios_scenario.expected_results.upgrade_method
+        fail_msg: "Upgrade method selection failed for {{ fortios_scenario.name }}"
+        success_msg: "✓ Upgrade method selection correct for {{ fortios_scenario.name }}"
+        
+    - name: Assert HA coordination logic
+      assert:
+        that:
+          - ha_coordination_required == fortios_scenario.expected_results.ha_coordination
+        fail_msg: "HA coordination logic failed for {{ fortios_scenario.name }}"
+        success_msg: "✓ HA coordination logic correct for {{ fortios_scenario.name }}"
+
+    - name: Validate device model and platform compatibility
+      assert:
+        that:
+          - device_model is defined
+          - device_model != ""
+          - platform_type == "fortios"
+          - firmware_version is defined
+          - target_version is defined
+        fail_msg: "Device model or platform validation failed"
+        success_msg: "✓ Device compatibility validated for {{ fortios_scenario.name }}"
+
+    - name: Validate HA role logic for HA enabled devices
+      assert:
+        that:
+          - detected_ha_role in ['primary', 'secondary'] 
+        fail_msg: "Invalid HA role for HA enabled device"
+        success_msg: "✓ HA role validation passed"
+      when: detected_ha_enabled
+
+    - name: Validate standalone role for non-HA devices
+      assert:
+        that:
+          - detected_ha_role == 'standalone'
+        fail_msg: "Standalone device should have standalone role"
+        success_msg: "✓ Standalone role validation passed"
+      when: not detected_ha_enabled
+
+    - name: "✓ {{ fortios_scenario.name }} - PASSED"
+      debug:
+        msg: 
+          - "FortiOS scenario validation successful:"
+          - "  Device: {{ device_model }}"
+          - "  HA Enabled: {{ detected_ha_enabled }}"
+          - "  HA Role: {{ detected_ha_role }}"
+          - "  Upgrade Method: {{ selected_upgrade_method }}"
+          - "  VDOM Enabled: {{ detected_vdom_enabled }}"
+        
+  rescue:
+    - name: "✗ {{ fortios_scenario.name }} - FAILED"
+      debug:
+        msg: "FortiOS scenario validation failed for {{ fortios_scenario.name }}"
+      
+    - name: Fail the test
+      fail:
+        msg: "FortiOS scenario {{ fortios_scenario.name }} validation failed"

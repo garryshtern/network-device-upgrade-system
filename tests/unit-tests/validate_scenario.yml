@@ -1,0 +1,51 @@
+---
+# Scenario validation task file
+# Called by variable-validation.yml for each test scenario
+
+- name: "Set scenario variables for: {{ scenario.name }}"
+  set_fact:
+    "{{ item.key }}": "{{ item.value }}"
+  loop: "{{ scenario.vars | dict2items }}"
+  when: scenario.vars is defined
+
+- name: "Test scenario: {{ scenario.name }} (Expected: {{ 'PASS' if scenario.should_pass else 'FAIL' }})"
+  block:
+    - name: Validate platform type
+      assert:
+        that:
+          - platform_type is defined
+          - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
+        fail_msg: "Invalid or missing platform_type: {{ platform_type | default('undefined') }}"
+        
+    - name: Validate firmware versions
+      assert:
+        that:
+          - firmware_version is defined
+          - target_version is defined
+          - firmware_version is match('^[0-9]+\\.[0-9]+\\.[0-9]+')
+          - target_version is match('^[0-9]+\\.[0-9]+\\.[0-9]+')
+        fail_msg: "Invalid or missing firmware versions"
+        
+    - name: Validate upgrade phase
+      assert:
+        that:
+          - upgrade_phase is defined
+          - upgrade_phase in ['loading', 'installation', 'validation', 'rollback']
+        fail_msg: "Invalid upgrade phase: {{ upgrade_phase | default('undefined') }}"
+      when: upgrade_phase is defined
+      
+    - name: "✓ {{ scenario.name }} - PASSED as expected"
+      debug:
+        msg: "Validation passed for scenario that should pass"
+      when: scenario.should_pass
+      
+  rescue:
+    - name: "✓ {{ scenario.name }} - FAILED as expected"
+      debug:
+        msg: "Validation failed for scenario that should fail"
+      when: not scenario.should_pass
+      
+    - name: "✗ {{ scenario.name }} - UNEXPECTED FAILURE"
+      fail:
+        msg: "Scenario that should pass failed validation"
+      when: scenario.should_pass

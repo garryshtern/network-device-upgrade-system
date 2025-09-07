@@ -3,7 +3,7 @@
 # Validate power management capabilities and outlet status
 
 - name: Get power outlet configuration
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ ansible_host }}/api/v1/power/outlets"
     method: GET
     headers:
@@ -12,13 +12,13 @@
   register: power_outlets_info
   
 - name: Parse power outlet information
-  set_fact:
+  ansible.builtin.set_fact:
     opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
       'power_ports': power_outlets_info.json
     }) }}"
     
 - name: Check outlet status and power consumption
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ ansible_host }}/api/v1/power/outlets/{{ item.id }}/status"
     method: GET
     headers:
@@ -37,7 +37,7 @@
       when: outlet_status is defined
       
     - name: Check power capacity
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/power/status"
         method: GET
         headers:
@@ -53,14 +53,14 @@
       when: power_capacity is defined and total_power_usage is defined
       
     - name: Warn about high power utilization
-      debug:
+      ansible.builtin.debug:
         msg: |
           WARNING: Power utilization is {{ power_utilization }}%.
           High utilization may affect upgrade stability.
       when: power_utilization | default(0) | float > 80
       
 - name: Check environmental sensors (if available)
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ ansible_host }}/api/v1/environmental/sensors"
     method: GET
     headers:
@@ -70,7 +70,7 @@
   failed_when: false
 
 - name: Log smart PDU assessment
-  debug:
+  ansible.builtin.debug:
     msg: |
       Smart PDU Assessment:
       - Model: {{ opengear_upgrade_state.device_model }}

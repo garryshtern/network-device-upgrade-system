@@ -11,7 +11,7 @@
       register: pre_install_firmware_check
       
     - name: Confirm target firmware is available
-      assert:
+      ansible.builtin.assert:
         that:
           - pre_install_firmware_check.meta.results | selectattr('version', 'equalto', fortios_upgrade_state.target_version) | list | length > 0
         fail_msg: "Target firmware not found in staged images"
@@ -35,7 +35,7 @@
       register: pre_install_backup
       
     - name: Verify backup completion
-      assert:
+      ansible.builtin.assert:
         that:
           - pre_install_backup.meta.results.status == "success"
         fail_msg: "System backup failed - aborting installation"
@@ -65,7 +65,7 @@
       failed_when: install_progress.meta.results.status == 'failed'
       
     - name: Validate installation initiation
-      assert:
+      ansible.builtin.assert:
         that:
           - install_progress.meta.results.status in ['completed', 'rebooting']
         fail_msg: "Firmware installation failed to complete properly"
@@ -73,11 +73,11 @@
 - name: Handle system reboot and recovery
   block:
     - name: Wait for system reboot to begin
-      pause:
+      ansible.builtin.pause:
         seconds: 60
         
     - name: Wait for device to become unreachable (reboot confirmation)
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 443
         state: stopped
@@ -86,7 +86,7 @@
       delegate_to: localhost
       
     - name: Wait for device to come back online
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 443
         state: started
@@ -95,7 +95,7 @@
       delegate_to: localhost
       
     - name: Wait for FortiOS services to initialize
-      pause:
+      ansible.builtin.pause:
         seconds: 180
 
 - name: Post-installation validation
@@ -109,7 +109,7 @@
       delay: 30
       
     - name: Confirm target firmware version is active
-      assert:
+      ansible.builtin.assert:
         that:
           - fortios_upgrade_state.target_version in post_install_system_status.meta.results.version
         fail_msg: "Installation completed but target version not active: {{ post_install_system_status.meta.results.version }}"
@@ -165,7 +165,7 @@
       when: fortios_upgrade_state.ha_mode != "standalone"
       
     - name: Verify HA cluster health
-      assert:
+      ansible.builtin.assert:
         that:
           - post_install_ha_status.meta.results.sync_status == "synchronized"
         fail_msg: "HA cluster not synchronized after installation"
@@ -188,14 +188,14 @@
       register: post_install_license
       
     - name: Check feature availability
-      assert:
+      ansible.builtin.assert:
         that:
           - post_install_license.meta.results.status in ["valid", "registered"]
         fail_msg: "License validation failed after installation"
       when: post_install_license.meta is defined
 
 - name: Installation completion logging
-  debug:
+  ansible.builtin.debug:
     msg: |
       FortiOS Installation Completed Successfully:
       - Device Type: {{ 'HA Cluster' if fortios_upgrade_state.ha_mode != 'standalone' else 'Standalone' }}

@@ -70,7 +70,7 @@
 - name: Validate BFD session health
   block:
     - name: Verify BFD sessions exist
-      assert:
+      ansible.builtin.assert:
         that:
           - bfd_total_sessions is defined
           - bfd_total_sessions | int > 0
@@ -79,7 +79,7 @@
       when: bfd_total_sessions is defined
       
     - name: Verify BFD neighbors are reachable
-      assert:
+      ansible.builtin.assert:
         that:
           - bfd_active_neighbors is defined
           - bfd_active_neighbors | length > 0
@@ -88,7 +88,7 @@
       when: bfd_active_neighbors is defined
       
     - name: Verify majority of BFD sessions are UP
-      assert:
+      ansible.builtin.assert:
         that:
           - bfd_up_sessions | int > 0
           - (bfd_up_sessions | int) >= ((bfd_active_neighbors | length) * 0.8)
@@ -119,7 +119,7 @@
       failed_when: false
       
     - name: Verify BFD neighbor ping success
-      assert:
+      ansible.builtin.assert:
         that:
           - "'Success rate is 100 percent' in item.stdout[0] or 'Success rate is 66 percent' in item.stdout[0]"
         fail_msg: "BFD neighbor {{ bfd_active_neighbors[item.item_index][0] }} ping failed"
@@ -132,7 +132,7 @@
         index_var: item_index
 
 - name: BFD validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       BFD Validation Summary:
       ======================
@@ -151,7 +151,7 @@
       Health Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions | int > 0) else 'CHECK' }}
       
 - name: Store BFD validation baseline
-  copy:
+  ansible.builtin.copy:
     content: |
       # BFD Validation Baseline - {{ ansible_date_time.iso8601 }}
       # Generated during firmware upgrade validation

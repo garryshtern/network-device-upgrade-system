@@ -5,7 +5,7 @@
 - name: Get current storage information
   cisco.nxos.nxos_command:
     commands:
-      - dir bootflash: | json
+      - "dir bootflash: | json"
   register: nxos_storage_info
 
 - name: Parse storage information
@@ -43,7 +43,7 @@
   block:
     - name: Copy firmware image to NX-OS device
       cisco.nxos.nxos_file_copy:
-        file_system: bootflash:
+        file_system: "bootflash:"
         local_file: "{{ source_file }}"
         remote_file: "{{ target_firmware_version }}"
         file_pull: false

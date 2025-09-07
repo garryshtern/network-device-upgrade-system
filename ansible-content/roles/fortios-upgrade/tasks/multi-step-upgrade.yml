@@ -1,0 +1,113 @@
+---
+# FortiOS Multi-Step Upgrade Tasks
+# Handles sequential upgrades through multiple firmware versions
+# Required for major version jumps (e.g., 6.4.x → 7.2.x)
+
+- name: Display multi-step upgrade warning
+  ansible.builtin.debug:
+    msg: |
+      ⚠️  MULTI-STEP UPGRADE REQUIRED ⚠️
+      FortiOS requires sequential upgrades for major version changes.
+      This process will upgrade through: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}
+      Starting from step {{ fortios_upgrade_state.current_step + 1 }}/{{ fortios_upgrade_state.upgrade_path | length }}
+
+- name: Validate current step is within bounds
+  ansible.builtin.assert:
+    that:
+      - fortios_upgrade_state.current_step >= 0
+      - fortios_upgrade_state.current_step < fortios_upgrade_state.upgrade_path | length
+    fail_msg: "Current step {{ fortios_upgrade_state.current_step }} is out of bounds for upgrade path"
+
+- name: Set current step target version
+  ansible.builtin.set_fact:
+    current_step_target: "{{ fortios_upgrade_state.upgrade_path[fortios_upgrade_state.current_step] }}"
+
+- name: Display current step information
+  ansible.builtin.debug:
+    msg: |
+      Current Step Details:
+      Step: {{ fortios_upgrade_state.current_step + 1 }}/{{ fortios_upgrade_state.upgrade_path | length }}
+      Current Version: {{ fortios_upgrade_state.current_version }}
+      Step Target: {{ current_step_target }}
+      Final Target: {{ fortios_upgrade_state.target_version }}
+
+- name: Check if current step is already completed
+  ansible.builtin.debug:
+    msg: "Step {{ fortios_upgrade_state.current_step + 1 }} already completed (current version: {{ fortios_upgrade_state.current_version }})"
+  when: fortios_upgrade_state.current_version == current_step_target
+
+- name: Execute current upgrade step
+  block:
+    - name: Update upgrade state for current step
+      set_fact:
+        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
+          'step_target_version': current_step_target,
+          'step_number': fortios_upgrade_state.current_step + 1,
+          'total_steps': fortios_upgrade_state.upgrade_path | length
+        }) }}"
+
+    - name: Execute step upgrade based on HA mode
+      include_tasks: "{{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode != 'standalone' else 'standalone-upgrade.yml' }}"
+      vars:
+        # Override target version for this step
+        target_firmware_version: "{{ current_step_target }}"
+
+    - name: Wait for device to stabilize after step upgrade
+      ansible.builtin.pause:
+        seconds: 30
+        prompt: "Waiting for FortiOS to stabilize after step {{ fortios_upgrade_state.step_number }}"
+
+    - name: Verify step upgrade completion
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_status"
+      register: step_verification
+      retries: 3
+      delay: 10
+
+    - name: Validate step upgrade success
+      ansible.builtin.assert:
+        that:
+          - step_verification.meta.results.version == current_step_target
+        fail_msg: "Step {{ fortios_upgrade_state.step_number }} failed: expected {{ current_step_target }}, got {{ step_verification.meta.results.version }}"
+
+    - name: Update current version after successful step
+      set_fact:
+        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
+          'current_version': step_verification.meta.results.version
+        }) }}"
+
+    - name: Display step completion
+      ansible.builtin.debug:
+        msg: |
+          ✅ Step {{ fortios_upgrade_state.step_number }}/{{ fortios_upgrade_state.total_steps }} completed successfully
+          Version: {{ fortios_upgrade_state.current_version }}
+          {% if fortios_upgrade_state.current_step + 1 < fortios_upgrade_state.upgrade_path | length %}
+          Next Step: {{ fortios_upgrade_state.upgrade_path[fortios_upgrade_state.current_step + 1] }}
+          {% else %}
+          🎉 All upgrade steps completed!
+          {% endif %}
+
+  when: fortios_upgrade_state.current_version != current_step_target
+
+- name: Check if more steps are required
+  ansible.builtin.set_fact:
+    next_step: "{{ fortios_upgrade_state.current_step + 1 }}"
+
+- name: Continue to next step if available
+  ansible.builtin.include_tasks: multi-step-upgrade.yml
+  vars:
+    current_step: "{{ next_step }}"
+  when: 
+    - next_step < fortios_upgrade_state.upgrade_path | length
+    - fortios_upgrade_state.current_version != fortios_upgrade_state.target_version
+
+- name: Multi-step upgrade completion summary
+  ansible.builtin.debug:
+    msg: |
+      🎉 MULTI-STEP UPGRADE COMPLETED 🎉
+      Device: {{ inventory_hostname }}
+      Upgrade Path: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}
+      Final Version: {{ fortios_upgrade_state.current_version }}
+      Total Steps Completed: {{ fortios_upgrade_state.upgrade_path | length }}
+  when: fortios_upgrade_state.current_version == fortios_upgrade_state.target_version

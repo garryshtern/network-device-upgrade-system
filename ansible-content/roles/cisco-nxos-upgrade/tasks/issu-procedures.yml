@@ -11,7 +11,7 @@
       register: redundancy_status
       
     - name: Ensure both supervisors are active
-      assert:
+      ansible.builtin.assert:
         that:
           - "'Active' in redundancy_status.stdout[0]"
           - "'Standby' in redundancy_status.stdout[0]"
@@ -30,7 +30,7 @@
       cisco.nxos.nxos_command:
         commands:
           - install all nxos {{ target_image_path }} non-disruptive
-        wait_for:
+        ansible.builtin.wait_for:
           - result[0] contains "Install is successful"
         timeout: 1800
       register: issu_install_result
@@ -45,7 +45,7 @@
       delay: 30
       
     - name: Validate ISSU completion
-      assert:
+      ansible.builtin.assert:
         that:
           - "'Success' in issu_status.stdout[0]"
         fail_msg: "ISSU installation failed: {{ issu_status.stdout[0] }}"
@@ -59,7 +59,7 @@
       register: post_issu_version
       
     - name: Confirm target version is running
-      assert:
+      ansible.builtin.assert:
         that:
           - nxos_upgrade_state.target_version in post_issu_version.stdout[0]
         fail_msg: "ISSU completed but target version not active"
@@ -78,7 +78,7 @@
       register: post_issu_stability
       
 - name: Log ISSU completion
-  debug:
+  ansible.builtin.debug:
     msg: |
       ISSU Upgrade Completed Successfully:
       - Previous Version: {{ nxos_upgrade_state.current_version }}

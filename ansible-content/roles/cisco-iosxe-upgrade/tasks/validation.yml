@@ -11,7 +11,7 @@
       register: version_check
       
     - name: Verify target version is active
-      assert:
+      ansible.builtin.assert:
         that:
           - target_firmware_version in version_check.stdout[0]
         fail_msg: "Target firmware version not active: {{ version_check.stdout[0] }}"
@@ -31,7 +31,7 @@
       register: interface_status
       
     - name: Verify critical interfaces are up
-      assert:
+      ansible.builtin.assert:
         that:
           - "'up' in interface_status.stdout[0]"
         fail_msg: "Critical interfaces may be down"
@@ -67,7 +67,7 @@
       register: arp_table
       
     - name: Verify ARP entries exist
-      assert:
+      ansible.builtin.assert:
         that:
           - arp_table.stdout[0] | length > 100
         fail_msg: "ARP table appears empty or minimal"
@@ -94,7 +94,7 @@
       failed_when: false
       
 - name: IPSec tunnel validation
-  include_tasks: ipsec-validation.yml
+  ansible.builtin.include_tasks: ipsec-validation.yml
   when: 
     - validate_ipsec is defined 
     - validate_ipsec | bool
@@ -103,7 +103,7 @@
     - validation
     
 - name: BFD session validation  
-  include_tasks: bfd-validation.yml
+  ansible.builtin.include_tasks: bfd-validation.yml
   when:
     - validate_bfd is defined
     - validate_bfd | bool
@@ -112,7 +112,7 @@
     - validation
     
 - name: Interface optics validation
-  include_tasks: optics-validation.yml  
+  ansible.builtin.include_tasks: optics-validation.yml  
   when:
     - validate_optics is defined
     - validate_optics | bool
@@ -121,7 +121,7 @@
     - validation
 
 - name: Log validation results
-  debug:
+  ansible.builtin.debug:
     msg: |
       IOS-XE Validation Results:
       ==========================

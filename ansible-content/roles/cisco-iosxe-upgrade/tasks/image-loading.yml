@@ -7,7 +7,7 @@
     - name: Check available space
       cisco.ios.ios_command:
         commands:
-          - dir bootflash: | include bytes
+          - "dir bootflash: | include bytes"
       register: space_check
       
     - name: Parse available space
@@ -15,7 +15,7 @@
         available_bytes: "{{ space_check.stdout[0] | regex_search('(\\d+) bytes free') | regex_replace(' bytes free', '') | int }}"
         
     - name: Verify sufficient space
-      assert:
+      ansible.builtin.assert:
         that:
           - available_bytes | int > (target_image_size | default(1000000000) | int)
         fail_msg: "Insufficient space: {{ available_bytes }} bytes available, {{ target_image_size | default(1000000000) }} required"
@@ -27,7 +27,7 @@
         commands:
           - "copy {{ source_image_url }} bootflash:{{ target_image_filename }}"
         timeout: 3600
-        wait_for:
+        ansible.builtin.wait_for:
           - result[0] contains "bytes copied"
       register: copy_result
       
@@ -38,7 +38,7 @@
       register: file_verification
       
     - name: Confirm file exists and size matches
-      assert:
+      ansible.builtin.assert:
         that:
           - target_image_filename in file_verification.stdout[0]
           - target_image_size | string in file_verification.stdout[0]
@@ -55,14 +55,14 @@
       when: expected_md5_hash is defined
       
     - name: Verify MD5 hash matches expected
-      assert:
+      ansible.builtin.assert:
         that:
           - expected_md5_hash in md5_verification.stdout[0]
         fail_msg: "MD5 hash verification failed"
       when: expected_md5_hash is defined
       
 - name: Log transfer completion
-  debug:
+  ansible.builtin.debug:
     msg: |
       Image Transfer Completed:
       - Source: {{ source_image_url }}

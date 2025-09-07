@@ -1,0 +1,65 @@
+---
+# Template rendering test playbook
+# Tests Jinja2 template rendering without device connections
+
+- name: Template Rendering Tests
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    test_templates:
+      - name: "NX-OS Upgrade Command Template"
+        template_vars:
+          platform_type: "cisco_nxos"
+          firmware_version: "9.3.10"
+          target_version: "10.1.2"
+          device_model: "N9K-C93180YC-EX"
+          issu_capable: true
+        expected_content:
+          - "install all nxos.10.1.2"
+          - "N9K-C93180YC-EX"
+          
+      - name: "IOS-XE Install Mode Template"
+        template_vars:
+          platform_type: "cisco_iosxe"
+          firmware_version: "16.12.07"
+          target_version: "17.06.04"
+          device_model: "ISR4431"
+          install_mode: true
+        expected_content:
+          - "install mode"
+          - "17.06.04"
+          
+      - name: "FortiOS HA Template"
+        template_vars:
+          platform_type: "fortios"
+          firmware_version: "7.0.8"
+          target_version: "7.2.4"
+          ha_enabled: true
+          ha_role: "primary"
+        expected_content:
+          - "execute restore image"
+          - "7.2.4"
+          - "ha"
+
+  tasks:
+    - name: Create temporary template directory
+      file:
+        path: /tmp/ansible-template-test
+        state: directory
+        
+    - name: Test template rendering for each scenario
+      include_tasks: test_template_scenario.yml
+      loop: "{{ test_templates }}"
+      loop_control:
+        loop_var: template_test
+        label: "{{ template_test.name }}"
+        
+    - name: Clean up temporary files
+      file:
+        path: /tmp/ansible-template-test
+        state: absent
+        
+    - name: Template rendering tests completed
+      debug:
+        msg: "All template rendering tests completed successfully"

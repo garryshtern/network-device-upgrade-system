@@ -4,7 +4,7 @@
 # Business hours safe - does not disrupt operations
 
 - name: Firmware Image Loading
-  hosts: "{{ target_hosts | default(inventory_hostname) }}"
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
   connection: network_cli
   vars:

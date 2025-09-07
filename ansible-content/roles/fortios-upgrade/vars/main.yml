@@ -1,0 +1,50 @@
+---
+# FortiOS Upgrade Variables
+# Default variables for FortiOS upgrade procedures
+
+# Version constraints and upgrade paths
+supported_fortios_versions:
+  - "6.4"
+  - "7.0"
+  - "7.2"
+  - "7.4"
+
+# Multi-step upgrade mappings
+multi_step_upgrade_paths:
+  "6.4.x to 7.2.x":
+    - "6.4.14"
+    - "7.0.12"
+    - "7.2.4"
+  "6.4.x to 7.4.x":
+    - "6.4.14"
+    - "7.0.12"
+    - "7.2.4"
+    - "7.4.1"
+  "7.0.x to 7.4.x":
+    - "7.0.12"
+    - "7.2.4"
+    - "7.4.1"
+
+# HA cluster settings
+ha_sync_timeout: 600  # 10 minutes
+ha_failover_timeout: 300  # 5 minutes
+ha_cluster_wait_seconds: 60
+
+# License validation
+forticare_license_required: true
+license_validation_timeout: 120
+
+# Timing and stability
+post_upgrade_wait_seconds: 90
+status_check_retries: 6
+status_check_delay: 15
+multi_step_wait_seconds: 30
+
+# VDOM management
+max_supported_vdoms: 10
+vdom_validation_required: true
+
+# Storage management
+min_free_disk_mb: 1024
+backup_config_before_upgrade: true
+cleanup_old_images: true

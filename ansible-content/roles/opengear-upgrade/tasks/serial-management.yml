@@ -5,7 +5,7 @@
 - name: Pre-upgrade serial port management
   block:
     - name: Get all active serial sessions
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/sessions"
         method: GET
         headers:
@@ -14,7 +14,7 @@
       register: active_sessions
       
     - name: Notify users of impending maintenance
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.port_id }}/send"
         method: POST
         headers:
@@ -30,7 +30,7 @@
 - name: Serial port state preservation
   block:
     - name: Backup serial port configurations
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/config"
         method: GET
         headers:
@@ -44,7 +44,7 @@
         serial_port_backup: "{{ port_configs.results | map(attribute='json') | list }}"
         
     - name: Gracefully close active sessions
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/sessions/{{ item.session_id }}/close"
         method: POST
         headers:
@@ -60,11 +60,11 @@
 - name: Post-upgrade serial port validation
   block:
     - name: Wait for serial ports to initialize
-      pause:
+      ansible.builtin.pause:
         seconds: 30
         
     - name: Verify all serial ports are operational
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
         method: GET
         headers:
@@ -74,7 +74,7 @@
       loop: "{{ opengear_upgrade_state.serial_ports }}"
       
     - name: Check port connectivity
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/test"
         method: POST
         headers:
@@ -85,13 +85,13 @@
       failed_when: false
       
     - name: Validate port configurations restored
-      assert:
+      ansible.builtin.assert:
         that:
           - post_upgrade_port_status.results | length == opengear_upgrade_state.serial_ports | length
         fail_msg: "Not all serial ports are operational after upgrade"
 
 - name: Serial management summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       Serial Port Management Summary:
       - Total Ports: {{ opengear_upgrade_state.serial_ports | length }}

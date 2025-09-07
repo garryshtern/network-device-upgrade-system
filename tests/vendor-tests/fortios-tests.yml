@@ -1,0 +1,173 @@
+---
+# FortiOS Vendor-Specific Tests
+# Tests FortiOS role functionality, HA coordination, and security policy validation
+
+- name: FortiOS Platform Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    role_path: "{{ playbook_dir }}/../../ansible-content/roles/fortios-upgrade"
+    test_scenarios:
+      - name: "HA Primary Firewall"
+        device_vars:
+          platform_type: "fortios"
+          device_model: "FortiGate-600E"
+          firmware_version: "7.0.8"
+          target_version: "7.2.4"
+          ha_enabled: true
+          ha_role: "primary"
+          vdom_enabled: true
+        expected_results:
+          ha_upgrade_required: true
+          upgrade_method: "ha_upgrade"
+          ha_coordination: true
+          
+      - name: "HA Secondary Firewall"
+        device_vars:
+          platform_type: "fortios"
+          device_model: "FortiGate-600E"
+          firmware_version: "7.0.8" 
+          target_version: "7.2.4"
+          ha_enabled: true
+          ha_role: "secondary"
+          vdom_enabled: true
+        expected_results:
+          ha_upgrade_required: true
+          upgrade_method: "ha_upgrade"
+          ha_coordination: true
+          
+      - name: "Standalone Firewall"
+        device_vars:
+          platform_type: "fortios"
+          device_model: "FortiGate-200F"
+          firmware_version: "7.0.12"
+          target_version: "7.2.4"
+          ha_enabled: false
+          ha_role: "standalone"
+          vdom_enabled: false
+        expected_results:
+          ha_upgrade_required: false
+          upgrade_method: "standalone_upgrade"
+          ha_coordination: false
+
+  tasks:
+    - name: Validate FortiOS role structure
+      stat:
+        path: "{{ role_path }}"
+      register: fortios_role_check
+      
+    - name: Assert FortiOS role exists
+      assert:
+        that:
+          - fortios_role_check.stat.exists
+          - fortios_role_check.stat.isdir
+        fail_msg: "FortiOS role directory not found"
+        success_msg: "✓ FortiOS role structure validated"
+
+    - name: Validate required FortiOS role files
+      stat:
+        path: "{{ role_path }}/{{ item }}"
+      register: fortios_file_checks
+      loop:
+        - "tasks/main.yml"
+        - "tasks/image-loading.yml"
+        - "tasks/image-installation.yml"
+        - "tasks/ha-coordination.yml"
+        - "tasks/license-validation.yml"
+        - "tasks/validation.yml"
+        - "vars/main.yml"
+        
+    - name: Assert all required FortiOS files exist
+      assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Required FortiOS file missing: {{ item.item }}"
+        success_msg: "✓ Required FortiOS file found: {{ item.item }}"
+      loop: "{{ fortios_file_checks.results }}"
+
+    - name: Test FortiOS HA detection logic
+      include_tasks: validate_fortios_scenario.yml
+      loop: "{{ test_scenarios }}"
+      loop_control:
+        loop_var: fortios_scenario
+        label: "{{ fortios_scenario.name }}"
+
+    - name: Test FortiOS security validation capabilities
+      block:
+        - name: Validate security policy validation exists
+          stat:
+            path: "{{ role_path }}/tasks/validation.yml"
+          register: security_validation_check
+          
+        - name: Read validation task content
+          slurp:
+            src: "{{ role_path }}/tasks/validation.yml"
+          register: validation_content
+          when: security_validation_check.stat.exists
+          
+        - name: Assert security policy validation exists
+          assert:
+            that:
+              - security_validation_check.stat.exists
+              - "'policy' in validation_content.content | b64decode or 'security' in validation_content.content | b64decode"
+            fail_msg: "Security policy validation missing or insufficient"
+            success_msg: "✓ Security policy validation capability confirmed"
+
+    - name: Test FortiOS license validation
+      block:
+        - name: Validate license validation task exists
+          stat:
+            path: "{{ role_path }}/tasks/license-validation.yml"
+          register: license_validation_check
+          
+        - name: Assert license validation exists
+          assert:
+            that:
+              - license_validation_check.stat.exists
+            fail_msg: "License validation task missing"
+            success_msg: "✓ License validation capability confirmed"
+
+    - name: Test FortiOS VPN and network validation
+      block:
+        - name: Check for VPN validation capability
+          slurp:
+            src: "{{ role_path }}/tasks/validation.yml"
+          register: vpn_validation_content
+          when: fortios_role_check.stat.exists
+          
+        - name: Assert VPN validation capability
+          assert:
+            that:
+              - "'vpn' in vpn_validation_content.content | b64decode or 'tunnel' in vpn_validation_content.content | b64decode"
+            fail_msg: "VPN tunnel validation missing"
+            success_msg: "✓ VPN tunnel validation capability confirmed"
+          when: vpn_validation_content is defined
+
+    - name: Test FortiOS VDOM support
+      block:
+        - name: Validate VDOM handling capability
+          slurp:
+            src: "{{ role_path }}/vars/main.yml"
+          register: vdom_vars_content
+          when: fortios_role_check.stat.exists
+          
+        - name: Assert VDOM support
+          assert:
+            that:
+              - "'vdom' in vdom_vars_content.content | b64decode"
+            fail_msg: "VDOM support not found in role variables"
+            success_msg: "✓ VDOM support capability confirmed"
+          when: vdom_vars_content is defined
+
+    - name: FortiOS platform test summary
+      debug:
+        msg:
+          - "=== FortiOS Platform Test Results ==="
+          - "✓ Role structure validated"
+          - "✓ Required files confirmed"
+          - "✓ HA coordination logic tested"
+          - "✓ Security policy validation confirmed"
+          - "✓ License validation confirmed"
+          - "✓ VPN tunnel validation confirmed"
+          - "✓ VDOM support confirmed"
+          - "✓ FortiOS platform testing: COMPLETE"

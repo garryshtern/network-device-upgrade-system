@@ -11,7 +11,7 @@
     
   tasks:
     - name: Test network validation role structure
-      stat:
+      ansible.builtin.stat:
         path: "{{ validation_role_path }}/tasks/{{ item }}"
       register: validation_structure_check
       loop:
@@ -23,37 +23,32 @@
         - "protocol-convergence.yml"
         
     - name: Verify all validation tasks exist
-      assert:
+      ansible.builtin.assert:
         that:
           - item.stat.exists
         fail_msg: "Missing network validation task: {{ item.item }}"
       loop: "{{ validation_structure_check.results }}"
       
-    - name: Test BGP validation task syntax
+    - name: Test validation task YAML syntax
       ansible.builtin.shell: |
-        ansible-playbook --syntax-check --extra-vars="ansible_network_os=cisco.nxos.nxos inventory_hostname=test-device" {{ validation_role_path }}/tasks/bgp-validation.yml
-      register: bgp_validation_syntax
-      failed_when: bgp_validation_syntax.rc != 0
-      
-    - name: Test interface validation task syntax
-      ansible.builtin.shell: |
-        ansible-playbook --syntax-check --extra-vars="ansible_network_os=cisco.nxos.nxos inventory_hostname=test-device" {{ validation_role_path }}/tasks/interface-validation.yml
-      register: interface_validation_syntax
-      failed_when: interface_validation_syntax.rc != 0
-      
-    - name: Test multicast validation task syntax
-      ansible.builtin.shell: |
-        ansible-playbook --syntax-check --extra-vars="ansible_network_os=cisco.nxos.nxos inventory_hostname=test-device" {{ validation_role_path }}/tasks/multicast-validation.yml
-      register: multicast_validation_syntax  
-      failed_when: multicast_validation_syntax.rc != 0
+        python -c "import yaml; yaml.safe_load(open('{{ validation_role_path }}/tasks/{{ item }}'))"
+      register: validation_task_syntax
+      loop:
+        - "bgp-validation.yml"
+        - "interface-validation.yml"
+        - "multicast-validation.yml"
+        - "routing-validation.yml"
+        - "arp-validation.yml"
+        - "protocol-convergence.yml"
+      failed_when: validation_task_syntax.rc != 0
       
     - name: Check validation template directory
-      stat:
+      ansible.builtin.stat:
         path: "{{ playbook_dir }}/../../ansible-content/validation-templates"
       register: validation_templates_dir
       
     - name: Find validation templates
-      find:
+      ansible.builtin.find:
         paths: "{{ playbook_dir }}/../../ansible-content/validation-templates"
         patterns: "*.j2"
       register: validation_templates
@@ -74,7 +69,7 @@
       when: validation_templates is defined
       
     - name: Test BGP validation logic
-      set_fact:
+      ansible.builtin.set_fact:
         mock_bgp_data:
           neighbors:
             - neighbor: "192.168.1.1"
@@ -87,14 +82,14 @@
           established_count: 2
           
     - name: Validate BGP test data processing
-      assert:
+      ansible.builtin.assert:
         that:
           - mock_bgp_data.neighbors | length == 2
           - mock_bgp_data.neighbors | selectattr('state', 'equalto', 'Established') | list | length == 2
         fail_msg: "BGP validation logic test failed"
         
     - name: Test interface validation logic
-      set_fact:
+      ansible.builtin.set_fact:
         mock_interface_data:
           interfaces:
             - name: "Ethernet1/1"
@@ -110,14 +105,14 @@
           up_count: 3
           
     - name: Validate interface test data processing
-      assert:
+      ansible.builtin.assert:
         that:
           - mock_interface_data.interfaces | length == 3
           - mock_interface_data.interfaces | selectattr('status', 'equalto', 'up') | list | length == 3
         fail_msg: "Interface validation logic test failed"
         
     - name: Test multicast validation logic
-      set_fact:
+      ansible.builtin.set_fact:
         mock_multicast_data:
           pim_neighbors:
             - neighbor: "192.168.1.10"
@@ -132,7 +127,7 @@
               groups: "224.0.0.0/4"
               
     - name: Validate multicast test data processing
-      assert:
+      ansible.builtin.assert:
         that:
           - mock_multicast_data.pim_neighbors | length >= 0
           - mock_multicast_data.igmp_groups | length >= 0
@@ -140,7 +135,7 @@
         fail_msg: "Multicast validation logic test failed"
         
     - name: Test ARP validation logic
-      set_fact:
+      ansible.builtin.set_fact:
         mock_arp_data:
           arp_entries:
             - ip: "192.168.1.1"
@@ -154,14 +149,14 @@
           total_entries: 2
           
     - name: Validate ARP test data processing
-      assert:
+      ansible.builtin.assert:
         that:
           - mock_arp_data.arp_entries | length == 2
           - mock_arp_data.arp_entries | selectattr('type', 'equalto', 'dynamic') | list | length == 1
         fail_msg: "ARP validation logic test failed"
         
     - name: Test protocol convergence logic
-      set_fact:
+      ansible.builtin.set_fact:
         mock_convergence_data:
           bgp_convergence_time: 45
           ospf_convergence_time: 30
@@ -169,7 +164,7 @@
           total_convergence_time: 60
           
     - name: Validate convergence timing logic
-      assert:
+      ansible.builtin.assert:
         that:
           - mock_convergence_data.bgp_convergence_time | int > 0
           - mock_convergence_data.ospf_convergence_time | int > 0
@@ -177,7 +172,7 @@
         fail_msg: "Protocol convergence logic test failed"
         
     - name: Test baseline comparison functionality
-      set_fact:
+      ansible.builtin.set_fact:
         baseline_data:
           timestamp: "2024-01-01T12:00:00Z"
           bgp_neighbors: 5
@@ -190,14 +185,14 @@
           arp_entries: 98
           
     - name: Validate baseline comparison logic
-      set_fact:
+      ansible.builtin.set_fact:
         comparison_result:
           bgp_match: "{{ baseline_data.bgp_neighbors == current_data.bgp_neighbors }}"
           interface_match: "{{ baseline_data.interface_count == current_data.interface_count }}"
           arp_variance: "{{ ((current_data.arp_entries - baseline_data.arp_entries) | abs / baseline_data.arp_entries * 100) | round(1) }}"
           
     - name: Test validation reporting format
-      debug:
+      ansible.builtin.debug:
         msg: |
           Sample Validation Report:
           ========================
@@ -206,7 +201,7 @@
           ARP Variance: {{ comparison_result.arp_variance }}%
           
     - name: Generate network validation test report
-      debug:
+      ansible.builtin.debug:
         msg: |
           Network Validation Test Results:
           ===============================
@@ -216,9 +211,7 @@
           - Template files: {{ validation_templates.files | length if validation_templates is defined else 0 }}
           
           Syntax Tests:
-          - BGP validation: {{ 'PASS' if bgp_validation_syntax.rc == 0 else 'FAIL' }}
-          - Interface validation: {{ 'PASS' if interface_validation_syntax.rc == 0 else 'FAIL' }}
-          - Multicast validation: {{ 'PASS' if multicast_validation_syntax.rc == 0 else 'FAIL' }}
+          - Validation task YAML syntax: {{ validation_task_syntax.results | selectattr('rc', 'equalto', 0) | list | length }}/{{ validation_task_syntax.results | length }}
           - Template syntax: {{ template_syntax_test.results | selectattr('rc', 'equalto', 0) | list | length if template_syntax_test.results is defined else 0 }}/{{ template_syntax_test.results | length if template_syntax_test.results is defined else 0 }}
           
           Logic Tests:
@@ -229,12 +222,9 @@
           - Convergence timing: {{ 'PASS' if mock_convergence_data.total_convergence_time > 0 else 'FAIL' }}
           - Baseline comparison: {{ 'PASS' if comparison_result.arp_variance is defined else 'FAIL' }}
           
-          Overall Status: {{ 'PASS' if (bgp_validation_syntax.rc == 0 and interface_validation_syntax.rc == 0 and multicast_validation_syntax.rc == 0) else 'ISSUES FOUND' }}
+          Overall Status: {{ 'PASS' if (validation_task_syntax.results | selectattr('rc', 'ne', 0) | list | length == 0) else 'ISSUES FOUND' }}
 
     - name: Fail if critical validation tests fail
-      fail:
+      ansible.builtin.fail:
         msg: "Critical network validation test failures detected"
-      when: >
-        bgp_validation_syntax.rc != 0 or
-        interface_validation_syntax.rc != 0 or
-        multicast_validation_syntax.rc != 0
+      when: validation_task_syntax.results | selectattr('rc', 'ne', 0) | list | length > 0

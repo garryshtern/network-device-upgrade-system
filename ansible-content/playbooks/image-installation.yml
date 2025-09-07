@@ -4,7 +4,7 @@
 # Includes reboot and service disruption
 
 - name: Phase 2 - Firmware Installation
-  hosts: "{{ target_hosts | default(inventory_hostname) }}"
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
   connection: network_cli
   vars:
@@ -48,7 +48,7 @@
           ansible.builtin.include_tasks: ../roles/network-validation/tasks/protocol-convergence.yml
 
         - name: Final device health check
-          ansible.builtin.include: health-check.yml
+          ansible.builtin.include_tasks: health-check.yml
           vars:
             check_type: "pre_installation"
 
@@ -126,12 +126,12 @@
           ansible.builtin.include_tasks: ../roles/image-validation/tasks/version-verification.yml
 
         - name: Run post-installation health check
-          ansible.builtin.include: health-check.yml
+          ansible.builtin.include_tasks: health-check.yml
           vars:
             check_type: "post_installation"
 
         - name: Validate network services
-          ansible.builtin.include: network-validation.yml
+          ansible.builtin.include_tasks: network-validation.yml
           vars:
             validation_type: "post_installation"
 
@@ -168,24 +168,8 @@
     - name: Display installation summary
       ansible.builtin.debug:
         msg:
-          - "=== Phase 2 Installation Complete ==="
+          - "=== Installation Complete ==="
           - "Device: {{ inventory_hostname }}"
           - "Platform: {{ ansible_network_os }}"
-          - "Firmware: {{ firmware_version }}"
-          - "Duration: {{ installation_duration }}s"
-          - "Reboot Required: {{ reboot_required }}"
-          - "Status: SUCCESS"
-          - "===================================="
-
-  rescue:
-    - name: Installation failure handling
-      ansible.builtin.include: emergency-rollback.yml
-      when: rollback_on_failure | default(true) | bool
-
-    - name: Log installation failure
-      ansible.builtin.debug:
-        msg: "Phase 2 installation failed for {{ inventory_hostname }}"
-
-    - name: Re-raise installation failure
-      ansible.builtin.fail:
-        msg: "Phase 2 (Installation) failed for {{ inventory_hostname }}"
+          - "Duration: {{ installation_duration }} seconds"
+          - "Status: {{ installation_state.current_step }}"

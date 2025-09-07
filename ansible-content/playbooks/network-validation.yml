@@ -4,7 +4,7 @@
 # Validates BGP, interfaces, routing, multicast, and ARP states
 
 - name: Network State Validation
-  hosts: "{{ target_hosts | default(inventory_hostname) }}"
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
   connection: network_cli
   vars:

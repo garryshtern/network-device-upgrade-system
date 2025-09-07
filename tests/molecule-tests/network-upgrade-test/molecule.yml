@@ -1,0 +1,79 @@
+---
+# Molecule configuration for network upgrade role testing
+dependency:
+  name: galaxy
+  options:
+    requirements-file: ../../../ansible-content/collections/requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: network-test-instance
+    image: quay.io/ansible/molecule-runner:latest
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+    capabilities:
+      - NET_ADMIN
+    privileged: true
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      host_key_checking: false
+      stdout_callback: yaml
+      callbacks_enabled: profile_tasks
+  inventory:
+    links:
+      group_vars: ../../../tests/mock-inventories/
+      host_vars: ../../../tests/mock-inventories/
+  playbooks:
+    converge: ../../../tests/molecule-tests/converge.yml
+    verify: ../../../tests/molecule-tests/verify.yml
+  env:
+    ANSIBLE_COLLECTIONS_PATH: ~/.ansible/collections:/usr/share/ansible/collections
+    ANSIBLE_ROLES_PATH: ../../../ansible-content/roles
+
+verifier:
+  name: ansible
+
+scenario:
+  create_sequence:
+    - dependency
+    - create
+    - prepare
+  check_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - create
+    - prepare
+    - converge
+    - check
+    - destroy
+  converge_sequence:
+    - dependency
+    - create
+    - prepare
+    - converge
+  destroy_sequence:
+    - dependency
+    - cleanup
+    - destroy
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

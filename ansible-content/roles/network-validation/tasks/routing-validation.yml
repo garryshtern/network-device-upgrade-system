@@ -24,7 +24,7 @@
       
     - name: Get routing table (Generic)
       ansible.netcommon.cli_command:
-        command: "{{ item }}"
+        ansible.builtin.command: "{{ item }}"
       register: generic_routing_info
       loop:
         - "show ip route summary"
@@ -51,7 +51,7 @@
 - name: Static route validation
   block:
     - name: Verify static routes presence
-      debug:
+      ansible.builtin.debug:
         msg: |
           Static Routes Found: {{ static_routes | length }}
           {% for route in static_routes %}
@@ -69,7 +69,7 @@
       failed_when: false
       
     - name: Validate static route reachability
-      debug:
+      ansible.builtin.debug:
         msg: |
           Static Route Reachability:
           {% for result in static_route_ping.results | default([]) %}
@@ -103,14 +103,14 @@
 - name: Route table health validation
   block:
     - name: Check route table size
-      assert:
+      ansible.builtin.assert:
         that:
           - total_routes | int > 0
         fail_msg: "Routing table appears to be empty"
       when: total_routes is defined
       
     - name: Validate connected routes
-      debug:
+      ansible.builtin.debug:
         msg: |
           Connected Routes: {{ connected_routes | length }}
           {% for route in connected_routes[:10] %}
@@ -137,7 +137,7 @@
       failed_when: false
       
     - name: Validate OSPF adjacencies
-      debug:
+      ansible.builtin.debug:
         msg: |
           OSPF Neighbor Status:
           {% for neighbor in ospf_neighbors.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | default([]) %}
@@ -156,7 +156,7 @@
       failed_when: false
       
     - name: Validate EIGRP adjacencies
-      debug:
+      ansible.builtin.debug:
         msg: |
           EIGRP Neighbor Status:
           {% for neighbor in eigrp_neighbors.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | default([]) %}
@@ -165,7 +165,7 @@
       when: eigrp_neighbors is defined and eigrp_neighbors.rc == 0
 
 - name: Store routing baseline
-  set_fact:
+  ansible.builtin.set_fact:
     routing_baseline:
       timestamp: "{{ ansible_date_time.iso8601 }}"
       total_routes: "{{ total_routes | default(0) }}"
@@ -177,7 +177,7 @@
       eigrp_neighbors: "{{ eigrp_neighbors.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length if eigrp_neighbors is defined and eigrp_neighbors.rc == 0 else 0 }}"
 
 - name: Routing validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       Routing Validation Results:
       - Total Routes: {{ routing_baseline.total_routes }}

@@ -5,20 +5,20 @@
 - name: Pre-installation validation (Legacy)
   block:
     - name: Verify firmware staging marker exists
-      raw: |
+      ansible.builtin.raw: |
         test -f /usr/local/upgrade/.{{ target_firmware_filename }}.staged
       register: staging_marker_check
       delegate_to: "{{ inventory_hostname }}"
       failed_when: staging_marker_check.rc != 0
       
     - name: Display staging information
-      raw: |
+      ansible.builtin.raw: |
         cat /usr/local/upgrade/.{{ target_firmware_filename }}.staged
       register: staging_info
       delegate_to: "{{ inventory_hostname }}"
       
     - name: Log pre-installation status
-      debug:
+      ansible.builtin.debug:
         msg: |
           Pre-Installation Status:
           {{ staging_info.stdout }}
@@ -27,27 +27,27 @@
 - name: Legacy console server preparation
   block:
     - name: Check for active console sessions
-      raw: |
+      ansible.builtin.raw: |
         echo "show serial" | /bin/cli | grep -c "Connected"
       register: active_sessions_check
       delegate_to: "{{ inventory_hostname }}"
       failed_when: false
       
     - name: Warn about active sessions
-      debug:
+      ansible.builtin.debug:
         msg: |
           WARNING: {{ active_sessions_check.stdout | default('0') }} active console sessions detected.
           These sessions will be disconnected during the upgrade.
       when: active_sessions_check.stdout | default('0') | int > 0
       
     - name: Send maintenance message to active sessions
-      raw: |
+      ansible.builtin.raw: |
         echo "send message all 'MAINTENANCE: Firmware upgrade starting in 60 seconds. Console sessions will be disconnected.'" | /bin/cli
       delegate_to: "{{ inventory_hostname }}"
       when: active_sessions_check.stdout | default('0') | int > 0
       
     - name: Wait for users to disconnect gracefully
-      pause:
+      ansible.builtin.pause:
         seconds: 60
         prompt: "Waiting 60 seconds for users to disconnect console sessions"
       when: active_sessions_check.stdout | default('0') | int > 0
@@ -55,19 +55,19 @@
 - name: Execute firmware installation (Legacy CLI)
   block:
     - name: Final pre-installation checksum verification
-      raw: |
+      ansible.builtin.raw: |
         sha512sum /usr/local/upgrade/{{ target_firmware_filename }} | awk '{print $1}'
       register: final_checksum_check
       delegate_to: "{{ inventory_hostname }}"
       
     - name: Validate final checksum
-      assert:
+      ansible.builtin.assert:
         that:
           - final_checksum_check.stdout | trim == device_calculated_checksum
         fail_msg: "Final checksum validation failed before installation"
       
     - name: Initiate firmware installation via CLI
-      raw: |
+      ansible.builtin.raw: |
         echo "upgrade firmware /usr/local/upgrade/{{ target_firmware_filename }}" | /bin/cli
       register: upgrade_initiation
       delegate_to: "{{ inventory_hostname }}"
@@ -75,7 +75,7 @@
       poll: 0
       
     - name: Monitor installation progress
-      raw: |
+      ansible.builtin.raw: |
         echo "show upgrade status" | /bin/cli
       register: upgrade_status
       delegate_to: "{{ inventory_hostname }}"
@@ -87,14 +87,14 @@
 - name: Handle legacy device reboot
   block:
     - name: Initiate system reboot
-      raw: |
+      ansible.builtin.raw: |
         echo "reboot" | /bin/cli
       delegate_to: "{{ inventory_hostname }}"
       async: 60
       poll: 0
       
     - name: Wait for device to become unreachable (reboot confirmation)
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 22
         state: stopped
@@ -103,7 +103,7 @@
       delegate_to: localhost
       
     - name: Wait for device to come back online
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 22
         state: started
@@ -112,7 +112,7 @@
       delegate_to: localhost
       
     - name: Wait for system services to initialize
-      pause:
+      ansible.builtin.pause:
         seconds: 120  # Legacy devices need more time
         prompt: "Waiting for legacy device services to fully initialize"
 
@@ -125,7 +125,7 @@
       delegate_to: "{{ inventory_hostname }}"
       
     - name: Verify new firmware version is active
-      raw: |
+      ansible.builtin.raw: |
         echo "show system info" | /bin/cli | grep "Version:"
       register: post_install_version
       delegate_to: "{{ inventory_hostname }}"
@@ -137,7 +137,7 @@
         installed_version: "{{ post_install_version.stdout | regex_search('Version:\\s+([\\d\\.]+)', '\\1') | first }}"
       
     - name: Confirm target firmware version is active
-      assert:
+      ansible.builtin.assert:
         that:
           - opengear_upgrade_state.target_version in installed_version
         fail_msg: "Installation completed but target version not active: {{ installed_version }}"
@@ -145,13 +145,13 @@
     - name: Verify system functionality
       block:
         - name: Check system status
-          raw: |
+          ansible.builtin.raw: |
             echo "show system status" | /bin/cli
           register: system_status_check
           delegate_to: "{{ inventory_hostname }}"
           
         - name: Validate system is operational
-          assert:
+          ansible.builtin.assert:
             that:
               - not (system_status_check.stdout is search("Error|Failed|Critical"))
             fail_msg: "System status check indicates problems after installation"
@@ -161,7 +161,7 @@
     - name: Validate console server functionality
       block:
         - name: Check serial port status
-          raw: |
+          ansible.builtin.raw: |
             echo "show serial" | /bin/cli
           register: post_serial_status
           delegate_to: "{{ inventory_hostname }}"
@@ -171,7 +171,7 @@
             active_serial_ports: "{{ post_serial_status.stdout | regex_findall('Serial\\d+') | length }}"
             
         - name: Validate serial port functionality
-          assert:
+          ansible.builtin.assert:
             that:
               - active_serial_ports | int > 0
             fail_msg: "Serial ports not operational after upgrade"
@@ -179,20 +179,20 @@
 - name: Cleanup post-installation
   block:
     - name: Remove staging marker
-      raw: |
+      ansible.builtin.raw: |
         rm -f /usr/local/upgrade/.{{ target_firmware_filename }}.staged
       delegate_to: "{{ inventory_hostname }}"
       failed_when: false
       
     - name: Optional firmware file cleanup
-      raw: |
+      ansible.builtin.raw: |
         rm -f /usr/local/upgrade/{{ target_firmware_filename }}
       delegate_to: "{{ inventory_hostname }}"
       when: cleanup_firmware_after_install | default(true)
       failed_when: false
 
 - name: Log legacy installation completion
-  debug:
+  ansible.builtin.debug:
     msg: |
       Legacy Opengear Installation Completed Successfully:
       - Device Model: {{ opengear_upgrade_state.device_model }}

@@ -4,7 +4,7 @@
 # Restores device to previous working state
 
 - name: Emergency Rollback Procedure
-  hosts: "{{ target_hosts | default(inventory_hostname) }}"
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
   connection: network_cli
   vars:
@@ -196,12 +196,12 @@
           ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
 
         - name: Run health check after rollback
-          ansible.builtin.include: health-check.yml
+          ansible.builtin.include_tasks: health-check.yml
           vars:
             check_type: "post_rollback"
 
         - name: Verify network services
-          ansible.builtin.include: network-validation.yml
+          ansible.builtin.include_tasks: network-validation.yml
           vars:
             validation_type: "post_rollback"
             compare_with_baseline: false

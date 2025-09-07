@@ -24,7 +24,7 @@
       
     - name: Get interface status (Generic)
       ansible.netcommon.cli_command:
-        command: "{{ item }}"
+        ansible.builtin.command: "{{ item }}"
       register: generic_interface_info
       loop:
         - "show interface brief"
@@ -51,13 +51,13 @@
 - name: Interface operational validation
   block:
     - name: Check critical interface states
-      assert:
+      ansible.builtin.assert:
         that:
           - up_interfaces | length > 0
         fail_msg: "No interfaces are in 'up' state"
         
     - name: Validate management interface is up
-      assert:
+      ansible.builtin.assert:
         that:
           - interface_brief.TABLE_interface.ROW_interface | selectattr('interface', 'match', 'mgmt.*') | selectattr('state', 'equalto', 'up') | list | length > 0
         fail_msg: "Management interface is not operational"
@@ -65,7 +65,7 @@
       failed_when: false
       
     - name: Check for interface errors
-      debug:
+      ansible.builtin.debug:
         msg: |
           Interface Error Summary:
           {% for intf in interface_errors.TABLE_interface.ROW_interface | default([]) %}
@@ -85,7 +85,7 @@
       when: ansible_network_os == "cisco.nxos.nxos"
       
     - name: Validate VLAN assignments
-      debug:
+      ansible.builtin.debug:
         msg: |
           VLAN Summary:
           Active VLANs: {{ vlan_info.stdout[0] | from_json | json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief[?vlanshowbr_vlanstate==`active`]') | length }}
@@ -103,7 +103,7 @@
       failed_when: false
       
     - name: Validate port-channel states
-      debug:
+      ansible.builtin.debug:
         msg: |
           Port-Channel Summary:
           {% for pc in portchannel_info.stdout[0] | from_json | json_query('TABLE_channel.ROW_channel') | default([]) %}
@@ -122,7 +122,7 @@
       failed_when: false
       
     - name: Check SFP/QSFP status
-      debug:
+      ansible.builtin.debug:
         msg: |
           Transceiver Status:
           {% for intf in transceiver_info.stdout[0] | from_json | json_query('TABLE_interface.ROW_interface') | default([]) %}
@@ -133,7 +133,7 @@
       when: ansible_network_os == "cisco.nxos.nxos" and transceiver_info is defined and transceiver_info.rc == 0
 
 - name: Store interface baseline (for comparison)
-  set_fact:
+  ansible.builtin.set_fact:
     interface_baseline:
       timestamp: "{{ ansible_date_time.iso8601 }}"
       total_interfaces: "{{ interface_brief.TABLE_interface.ROW_interface | length if interface_brief.TABLE_interface is defined else 0 }}"
@@ -143,7 +143,7 @@
       interface_list: "{{ up_interfaces | map(attribute='interface') | list if up_interfaces is defined else [] }}"
       
 - name: Interface validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       Interface Validation Results:
       - Total Interfaces: {{ interface_baseline.total_interfaces }}

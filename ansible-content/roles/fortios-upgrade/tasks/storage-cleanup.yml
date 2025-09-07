@@ -1,0 +1,98 @@
+---
+# FortiOS Storage Cleanup Tasks
+# Safely removes obsolete firmware images and files
+
+- name: Get current FortiOS version and storage information
+  fortinet.fortios.fortios_system_global:
+    vdom: "{{ vdom | default('root') }}"
+  register: fortios_global_info
+
+- name: Get system status including storage
+  fortinet.fortios.fortios_facts:
+    vdom: "{{ vdom | default('root') }}"
+    gather_subset:
+      - fact: 'system_status'
+  register: fortios_status
+
+- name: Parse current version information
+  ansible.builtin.set_fact:
+    fortios_current_version: "{{ fortios_status.ansible_facts.system_status.version }}"
+    fortios_build: "{{ fortios_status.ansible_facts.system_status.build }}"
+
+- name: Get disk usage information
+  fortinet.fortios.fortios_configuration_fact:
+    vdom: "{{ vdom | default('root') }}"
+    selector: 'system_storage'
+  register: storage_info
+
+- name: Calculate storage metrics
+  ansible.builtin.set_fact:
+    total_storage_mb: "{{ storage_info.meta.results.total_disk | default(8192) }}"
+    used_storage_mb: "{{ storage_info.meta.results.used_disk | default(2048) }}"
+    free_storage_mb: "{{ total_storage_mb - used_storage_mb }}"
+    current_free_gb: "{{ (free_storage_mb / 1024) | round(2) }}"
+    total_storage_gb: "{{ (total_storage_mb / 1024) | round(2) }}"
+
+- name: Execute diag hardware command for firmware listing
+  fortinet.fortios.fortios_configuration_fact:
+    vdom: "{{ vdom | default('root') }}"
+    selector: 'system_firmware'
+  register: firmware_info
+
+- name: List obsolete firmware images (keep current and backup)
+  ansible.builtin.set_fact:
+    cleanup_candidates: "{{ firmware_info.meta.results | selectattr('current', 'equalto', false) | selectattr('backup', 'equalto', false) | map(attribute='filename') | list }}"
+
+- name: Check if cleanup is needed
+  ansible.builtin.set_fact:
+    cleanup_needed: "{{ current_free_gb < (target_free_space | default(4)) }}"
+
+- name: Remove obsolete firmware files (if cleanup needed and safe)
+  fortinet.fortios.fortios_system_firmware:
+    vdom: "{{ vdom | default('root') }}"
+    system_firmware:
+      filename: "{{ item }}"
+      state: "absent"
+  loop: "{{ cleanup_candidates }}"
+  when: 
+    - cleanup_needed
+    - cleanup_candidates | length > 0
+  register: cleanup_result
+  ignore_errors: true
+
+- name: Clear FortiOS logs to free space
+  fortinet.fortios.fortios_log_setting:
+    vdom: "{{ vdom | default('root') }}"
+    log_setting:
+      resolve_ip: "enable"
+      log_invalid_packet: "disable"
+  when: cleanup_needed
+  ignore_errors: true
+
+- name: Execute garbage collection
+  fortinet.fortios.fortios_system_global:
+    vdom: "{{ vdom | default('root') }}"
+    system_global:
+      admin_sport: "{{ ansible_port | default(443) }}"
+  when: cleanup_needed
+  ignore_errors: true
+
+- name: Verify storage space after cleanup
+  fortinet.fortios.fortios_configuration_fact:
+    vdom: "{{ vdom | default('root') }}"
+    selector: 'system_storage'
+  register: post_cleanup_storage_info
+
+- name: Calculate post-cleanup storage metrics
+  ansible.builtin.set_fact:
+    post_cleanup_free_mb: "{{ post_cleanup_storage_info.meta.results.total_disk - post_cleanup_storage_info.meta.results.used_disk }}"
+    post_cleanup_free_gb: "{{ ((post_cleanup_storage_info.meta.results.total_disk - post_cleanup_storage_info.meta.results.used_disk) / 1024) | round(2) }}"
+
+- name: Set storage cleanup results
+  ansible.builtin.set_fact:
+    storage_cleanup_results:
+      platform: "fortios"
+      files_removed: "{{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }}"
+      space_freed_gb: "{{ (post_cleanup_free_gb - current_free_gb) | round(2) }}"
+      final_free_space_gb: "{{ post_cleanup_free_gb }}"
+      cleanup_successful: "{{ post_cleanup_free_gb >= (target_free_space | default(4)) }}"

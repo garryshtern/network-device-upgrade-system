@@ -42,7 +42,7 @@
       when: bfd_feature_status.rc == 0
       
     - name: Check BFD feature status
-      assert:
+      ansible.builtin.assert:
         that:
           - bfd_feature_enabled is defined
           - bfd_feature_enabled | bool
@@ -119,7 +119,7 @@
 - name: Validate BFD session health
   block:
     - name: Verify BFD sessions exist
-      assert:
+      ansible.builtin.assert:
         that:
           - bfd_total_sessions is defined  
           - bfd_total_sessions | int > 0
@@ -128,7 +128,7 @@
       when: bfd_neighbor_sessions is defined
       
     - name: Verify majority of BFD sessions are UP
-      assert:
+      ansible.builtin.assert:
         that:
           - bfd_up_sessions | int > 0
           - (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8
@@ -146,7 +146,7 @@
         - bfd_total_sessions | int > 0
         
     - name: Warn about DOWN BFD sessions
-      debug:
+      ansible.builtin.debug:
         msg: |
           Warning: {{ bfd_down_sessions }} BFD session(s) are DOWN:
           {% for session in bfd_neighbor_sessions %}
@@ -161,7 +161,7 @@
 - name: BFD session diagnostics
   block:
     - name: Check BFD session timing consistency
-      assert:
+      ansible.builtin.assert:
         that:
           - item.tx_interval | int <= 1000  # Less than 1 second
           - item.rx_interval | int <= 1000  # Less than 1 second
@@ -175,7 +175,7 @@
       failed_when: false  # Don't fail upgrade for timing warnings
       
     - name: Verify BFD echo function status
-      debug:
+      ansible.builtin.debug:
         msg: |
           BFD Echo Function Status:
           {% for session in bfd_session_metrics %}
@@ -202,7 +202,7 @@
         - previous_bfd_baseline.content is defined
         
     - name: Compare with previous baseline
-      debug:
+      ansible.builtin.debug:
         msg: |
           BFD Baseline Comparison:
           Previous Total Sessions: {{ prev_bfd_baseline.total_sessions | default('N/A') }}
@@ -215,7 +215,7 @@
       when: prev_bfd_baseline is defined
 
 - name: BFD validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       BFD Validation Summary:
       ======================
@@ -236,7 +236,7 @@
       Health Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
 
 - name: Store BFD validation baseline
-  copy:
+  ansible.builtin.copy:
     content: |
       {
         "timestamp": "{{ ansible_date_time.iso8601 }}",
@@ -256,7 +256,7 @@
   delegate_to: localhost
   
 - name: Store detailed BFD validation report
-  copy:
+  ansible.builtin.copy:
     content: |
       # BFD Validation Report - {{ ansible_date_time.iso8601 }}
       # Generated during NX-OS firmware upgrade validation

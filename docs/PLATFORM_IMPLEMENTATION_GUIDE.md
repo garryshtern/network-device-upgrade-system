@@ -9,7 +9,7 @@ This document provides detailed implementation diagrams and specifications for e
 | **Cisco NX-OS** | `cisco.nxos` | 95% ████████░░ | 85% ████████░░ | ✅ READY |
 | **Cisco IOS-XE** | `cisco.ios` | 70% ███████░░░ | 50% █████░░░░░ | ⚠️ GAPS |
 | **FortiOS** | `fortinet.fortios` | 90% █████████░ | 90% █████████░ | ✅ READY |
-| **Metamako MOS** | `ansible.netcommon` | 85% ████████░░ | 85% ████████░░ | ✅ READY |
+| **Metamako MOS** | `ansible.netcommon` | 95% █████████░ | 90% █████████░ | ✅ READY |
 | **Opengear** | `ansible.netcommon` | 80% ████████░░ | 80% ████████░░ | ✅ READY |
 
 **Legend**: █ Complete  ░ Missing/Incomplete
@@ -172,31 +172,53 @@ graph LR
 
 ## Metamako MOS Implementation Details
 
-### Ultra-Low Latency Considerations
+### Ultra-Low Latency Considerations & Application Management
 
 ```mermaid
 graph TD
-    A[Current Latency Baseline<br/>• Port-to-Port<br/>• Service Paths<br/>• Clock Sync<br/>• PTP Status] --> B[Active Services<br/>• MetaWatch<br/>• MetaMux<br/>• Packet Tap<br/>• Time Sync<br/>• Custom Apps]
+    A[Current Latency Baseline<br/>• Port-to-Port<br/>• Service Paths<br/>• Clock Sync<br/>• PTP Status] --> B[Active Services & Apps<br/>• MetaWatch<br/>• MetaMux<br/>• MOS Applications<br/>• EOS Extensions<br/>• Time Sync]
     
     A --> C[Performance Critical Check<br/>• Latency SLA<br/>• Jitter Limits<br/>• Packet Loss<br/>• Clock Drift]
     
-    B --> D[Service Impact Assessment<br/>• Traffic Flows<br/>• Mirror Ports<br/>• Timing Distribution<br/>• Sync Sources]
+    B --> D[Service Impact Assessment<br/>• Traffic Flows<br/>• Mirror Ports<br/>• Timing Distribution<br/>• App Dependencies<br/>• Sync Sources]
     
     C --> E[Upgrade Window Optimization<br/>• Market Hours<br/>• Traffic Low<br/>• Sync Windows<br/>• Minimal Risk]
     
     D --> F{Upgrade Strategy}
-    F -->|Ultra-Low Latency| G[PRECISION TIMING<br/>• Pre-Load<br/>• Quick Switch<br/>• Validate Fast<br/>• Resume Service]
-    F -->|Standard| H[STANDARD FLOW<br/>• Full Reboot<br/>• Service Stop<br/>• Standard Time<br/>• Normal Validation]
+    F -->|Ultra-Low Latency| G[PRECISION TIMING<br/>• Pre-Load Images/Apps<br/>• Quick Switch<br/>• App State Preserve<br/>• Validate Fast<br/>• Resume Service]
+    F -->|Standard| H[STANDARD FLOW<br/>• Full Reboot<br/>• Service Stop<br/>• App Reinstall<br/>• Standard Time<br/>• Normal Validation]
     
     E --> G
     E --> H
     
-    G --> I[Post-Upgrade Latency Validation<br/>• Baseline Compare<br/>• SLA Compliance<br/>• Service Recovery<br/>• Performance Test]
+    G --> I[Post-Upgrade Validation<br/>• Baseline Compare<br/>• SLA Compliance<br/>• App Functionality<br/>• Service Recovery<br/>• Performance Test]
     H --> I
     
     style G fill:#e8f5e8
     style H fill:#ffeb3b
     style I fill:#f3e5f5
+```
+
+### MOS Application Management Flow
+
+```mermaid
+graph TD
+    A[Application Management Request<br/>• Install/Remove<br/>• Enable/Disable<br/>• EOS Extensions<br/>• Source URL/Path] --> B[Storage Check<br/>• Available Space<br/>• Flash Capacity<br/>• Cleanup Old Apps<br/>• Verification]
+    
+    B --> C[File Transfer<br/>• HTTP/HTTPS Download<br/>• FTP/SFTP Transfer<br/>• Local Copy<br/>• Integrity Check]
+    
+    C --> D[Application Operations<br/>• install application<br/>• remove application<br/>• no shutdown/shutdown<br/>• default app state]
+    
+    D --> E[EOS Extension Handling<br/>• install eos-extension<br/>• remove eos-extension<br/>• Extension Validation<br/>• Integration Check]
+    
+    E --> F[State Management<br/>• Enable Services<br/>• Disable Services<br/>• Force Shutdown<br/>• Health Monitoring]
+    
+    F --> G[Validation & Status<br/>• show application<br/>• Service Status<br/>• Performance Impact<br/>• Latency Check]
+    
+    style C fill:#e3f2fd
+    style D fill:#e8f5e8
+    style E fill:#fff3e0
+    style G fill:#f3e5f5
 ```
 
 ## Opengear Implementation Details

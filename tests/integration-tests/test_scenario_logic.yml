@@ -1,0 +1,65 @@
+---
+# Scenario logic testing task file
+# Tests workflow logic for different operational scenarios
+
+- name: "Set scenario variables: {{ test_scenario.name }}"
+  set_fact:
+    "{{ item.key }}": "{{ item.value }}"
+  loop: "{{ test_scenario.extra_vars | dict2items }}"
+
+- name: "Test scenario logic: {{ test_scenario.name }}"
+  block:
+    # Test skip validation logic
+    - name: "Test skip validation workflow"
+      set_fact:
+        validation_tasks: "{{ [] if skip_validation else ['pre_validation', 'post_validation'] }}"
+      when: skip_validation is defined
+      
+    # Test emergency rollback logic
+    - name: "Test emergency rollback workflow"
+      set_fact:
+        rollback_actions: ["stop_upgrade", "restore_backup", "reboot_device"]
+        rollback_triggered: true
+      when: emergency_rollback is defined and emergency_rollback
+      
+    # Test upgrade phase workflow
+    - name: "Test upgrade phase workflow"
+      set_fact:
+        current_workflow_step: "{{ phase_workflow_map[upgrade_phase] | default('unknown') }}"
+      vars:
+        phase_workflow_map:
+          loading: "image_transfer"
+          installation: "firmware_install"
+          validation: "state_check"
+      when: upgrade_phase is defined
+      
+    # Validate scenario outcomes
+    - name: "Validate scenario outcomes for {{ test_scenario.name }}"
+      assert:
+        that:
+          - (skip_validation is defined and validation_tasks is defined) or
+            (emergency_rollback is defined and rollback_actions is defined) or
+            (upgrade_phase is defined and current_workflow_step is defined)
+        fail_msg: "Scenario logic validation failed"
+        success_msg: "Scenario logic validation passed"
+        
+    # Display scenario results
+    - name: "Display scenario results: {{ test_scenario.name }}"
+      debug:
+        msg:
+          - "Scenario: {{ test_scenario.name }}"
+          - "Skip Validation: {{ skip_validation | default('not set') }}"
+          - "Validation Tasks: {{ validation_tasks | default('not applicable') }}"
+          - "Emergency Rollback: {{ emergency_rollback | default('not set') }}"
+          - "Rollback Actions: {{ rollback_actions | default('not applicable') }}"
+          - "Upgrade Phase: {{ upgrade_phase | default('not set') }}"
+          - "Workflow Step: {{ current_workflow_step | default('not applicable') }}"
+          
+    - name: "✓ Scenario logic test passed: {{ test_scenario.name }}"
+      debug:
+        msg: "Scenario {{ test_scenario.name }} logic validation successful"
+        
+  rescue:
+    - name: "✗ Scenario logic test failed: {{ test_scenario.name }}"
+      debug:
+        msg: "Scenario {{ test_scenario.name }} logic validation failed"

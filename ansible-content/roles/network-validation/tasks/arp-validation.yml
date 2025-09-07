@@ -23,7 +23,7 @@
       
     - name: Get ARP table (Generic)
       ansible.netcommon.cli_command:
-        command: "show ip arp"
+        ansible.builtin.command: "show ip arp"
       register: generic_arp_info
       when: ansible_network_os not in ["cisco.nxos.nxos", "cisco.ios.ios"]
       failed_when: false
@@ -47,14 +47,14 @@
 - name: ARP table validation
   block:
     - name: Check ARP table completeness
-      assert:
+      ansible.builtin.assert:
         that:
           - arp_entries | length > 0
         fail_msg: "ARP table appears to be empty"
       when: arp_entries is defined
       
     - name: Validate ARP table size
-      debug:
+      ansible.builtin.debug:
         msg: |
           ARP Table Status:
           Total Entries: {{ arp_entries | length }}
@@ -68,7 +68,7 @@
       when: arp_entries is defined
       
     - name: Check for excessive incomplete entries
-      debug:
+      ansible.builtin.debug:
         msg: "WARNING: {{ incomplete_arp_entries | length }} incomplete ARP entries found"
       when: incomplete_arp_entries is defined and incomplete_arp_entries | length > 10
 
@@ -88,7 +88,7 @@
       when: default_route_info is defined and default_route_info.rc == 0 and default_route_info.stdout[0] != ""
       
     - name: Verify default gateway in ARP table
-      debug:
+      ansible.builtin.debug:
         msg: |
           Default Gateway Validation:
           Gateway IP: {{ default_gateway | default('Not Found') }}
@@ -118,7 +118,7 @@
       when: dhcp_snooping_info is defined and dhcp_snooping_info.rc == 0
       
     - name: Validate DHCP snooping bindings
-      debug:
+      ansible.builtin.debug:
         msg: |
           DHCP Snooping Binding Table:
           {% if dhcp_bindings is defined and dhcp_bindings | length > 0 %}
@@ -147,7 +147,7 @@
       when: ipv6_neighbor_info is defined and ipv6_neighbor_info.rc == 0
       
     - name: Validate IPv6 neighbor discovery
-      debug:
+      ansible.builtin.debug:
         msg: |
           IPv6 Neighbor Discovery:
           {% if ipv6_neighbors is defined and ipv6_neighbors | length > 0 %}
@@ -176,7 +176,7 @@
       when: mac_table_info is defined and mac_table_info.rc == 0
       
     - name: Validate ARP-MAC correlation
-      debug:
+      ansible.builtin.debug:
         msg: |
           MAC Address Table Status:
           Total MAC Entries: {{ mac_entries | length if mac_entries is defined else 0 }}
@@ -194,7 +194,7 @@
       when: mac_table_info is defined
 
 - name: Store ARP baseline
-  set_fact:
+  ansible.builtin.set_fact:
     arp_baseline:
       timestamp: "{{ ansible_date_time.iso8601 }}"
       total_arp_entries: "{{ arp_entries | length if arp_entries is defined else 0 }}"
@@ -207,7 +207,7 @@
       mac_entries: "{{ mac_entries | length if mac_entries is defined else 0 }}"
 
 - name: ARP validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       ARP and Neighbor Discovery Validation Results:
       - Total ARP Entries: {{ arp_baseline.total_arp_entries }}

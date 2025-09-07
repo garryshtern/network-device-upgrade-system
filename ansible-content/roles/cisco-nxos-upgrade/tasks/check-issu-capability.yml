@@ -22,11 +22,11 @@
   failed_when: false
   
 - name: Analyze dual supervisor setup
-  set_fact:
+  ansible.builtin.set_fact:
     has_dual_sup: "{{ 'Supervisor' in module_output.stdout[0] and module_output.stdout[0].count('Supervisor') >= 2 }}"
     
 - name: Check platform ISSU support
-  set_fact:
+  ansible.builtin.set_fact:
     platform_supports_issu: >-
       {{
         'N9K' in ansible_net_platform or
@@ -35,14 +35,14 @@
       }}
       
 - name: Determine ISSU compatibility
-  set_fact:
+  ansible.builtin.set_fact:
     nxos_upgrade_state: "{{ nxos_upgrade_state | combine({
       'issu_capable': (has_dual_sup and platform_supports_issu and 'impact' in issu_impact.stdout[0] | default('')),
       'upgrade_method': 'issu' if (has_dual_sup and platform_supports_issu) else 'disruptive'
     }) }}"
     
 - name: Display ISSU capability assessment
-  debug:
+  ansible.builtin.debug:
     msg: |
       ISSU Capability Assessment:
       - Platform: {{ ansible_net_platform }}

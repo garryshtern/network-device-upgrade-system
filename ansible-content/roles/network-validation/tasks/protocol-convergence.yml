@@ -3,7 +3,7 @@
 # Measures and validates protocol convergence times after network changes
 
 - name: Initialize convergence monitoring
-  set_fact:
+  ansible.builtin.set_fact:
     convergence_start_time: "{{ ansible_date_time.epoch }}"
     convergence_tests: []
     convergence_results: {}
@@ -207,7 +207,7 @@
           }}
 
 - name: Protocol convergence summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       Protocol Convergence Validation Results:
       
@@ -232,7 +232,7 @@
       {% endif %}
 
 - name: Store convergence baseline for comparison
-  set_fact:
+  ansible.builtin.set_fact:
     convergence_baseline:
       timestamp: "{{ ansible_date_time.iso8601 }}"
       total_time: "{{ total_convergence_time }}"

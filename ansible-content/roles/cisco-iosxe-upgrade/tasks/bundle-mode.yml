@@ -40,7 +40,7 @@
       register: new_boot_config
       
     - name: Validate boot system entry
-      assert:
+      ansible.builtin.assert:
         that:
           - target_image_filename in new_boot_config.stdout[0]
         fail_msg: "Boot system configuration failed"
@@ -59,7 +59,7 @@
 - name: Post-configuration validation
   block:
     - name: Display new boot configuration
-      debug:
+      ansible.builtin.debug:
         msg: |
           Bundle Mode Configuration Complete:
           - Target Image: {{ target_image_filename }}
@@ -73,7 +73,7 @@
       register: image_verification
       
     - name: Confirm image presence
-      assert:
+      ansible.builtin.assert:
         that:
           - target_image_filename in image_verification.stdout[0]
         fail_msg: "Target image file not found on device"

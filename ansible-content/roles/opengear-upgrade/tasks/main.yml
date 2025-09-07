@@ -3,7 +3,7 @@
 # Handles console servers and smart PDU upgrades via web interface
 
 - name: Initialize Opengear upgrade variables
-  set_fact:
+  ansible.builtin.set_fact:
     opengear_upgrade_state:
       device: "{{ inventory_hostname }}"
       device_model: ""
@@ -17,7 +17,7 @@
 - name: Detect device architecture (API vs CLI)
   block:
     - name: Test for modern API support
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/info"
         method: GET
         headers:
@@ -40,7 +40,7 @@
 - name: Detect device information (Modern API)
   block:
     - name: Get device info via API
-      uri:
+      ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/info"
         method: GET
         headers:
@@ -62,7 +62,7 @@
 - name: Detect device information (Legacy CLI)
   block:
     - name: Get device info via SSH
-      raw: |
+      ansible.builtin.raw: |
         echo "show system info" | /bin/cli
       register: device_info_cli
       when: not api_available
@@ -87,10 +87,10 @@
   when: not api_available
     
 - name: Check device-specific capabilities
-  include_tasks: "{{ 'smart-pdu-check.yml' if opengear_upgrade_state.device_type == 'smart_pdu' else 'console-server-check.yml' }}"
+  ansible.builtin.include_tasks: "{{ 'smart-pdu-check.yml' if opengear_upgrade_state.device_type == 'smart_pdu' else 'console-server-check.yml' }}"
   
 - name: Display upgrade plan
-  debug:
+  ansible.builtin.debug:
     msg: |
       Opengear Upgrade Plan for {{ inventory_hostname }}:
       Model: {{ opengear_upgrade_state.device_model }}
@@ -104,24 +104,24 @@
       Power Outlets: {{ opengear_upgrade_state.power_ports | length }}
       
 - name: Validate upgrade path
-  assert:
+  ansible.builtin.assert:
     that:
       - opengear_upgrade_state.current_version != opengear_upgrade_state.target_version
       - opengear_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+")
     fail_msg: "Invalid upgrade path or target version format"
     
 - name: Execute image loading (Modern API)
-  include_tasks: image-loading.yml
+  ansible.builtin.include_tasks: image-loading.yml
   when: opengear_upgrade_state.upgrade_method == 'api'
   
 - name: Execute image loading (Legacy CLI)
-  include_tasks: image-loading-legacy.yml
+  ansible.builtin.include_tasks: image-loading-legacy.yml
   when: opengear_upgrade_state.upgrade_method == 'cli'
   
 - name: Execute image installation (Modern API)
-  include_tasks: image-installation.yml
+  ansible.builtin.include_tasks: image-installation.yml
   when: opengear_upgrade_state.upgrade_method == 'api'
   
 - name: Execute image installation (Legacy CLI)
-  include_tasks: image-installation-legacy.yml
+  ansible.builtin.include_tasks: image-installation-legacy.yml
   when: opengear_upgrade_state.upgrade_method == 'cli'

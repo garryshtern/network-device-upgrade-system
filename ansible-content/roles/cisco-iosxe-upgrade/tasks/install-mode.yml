@@ -11,7 +11,7 @@
       register: current_install_state
       
     - name: Verify sufficient space for install mode
-      assert:
+      ansible.builtin.assert:
         that:
           - iosxe_upgrade_state.available_space | int > 2000000000  # 2GB minimum
         fail_msg: "Insufficient space for install mode upgrade"
@@ -22,7 +22,7 @@
       cisco.ios.ios_command:
         commands:
           - request platform software package install switch all file {{ target_image_path }} new clean
-        wait_for:
+        ansible.builtin.wait_for:
           - result[0] contains "SUCCESS"
         timeout: 3600
       register: install_add_result
@@ -31,7 +31,7 @@
       cisco.ios.ios_command:
         commands:
           - request platform software package install switch all file {{ target_image_path }} activate
-        wait_for:
+        ansible.builtin.wait_for:
           - result[0] contains "SUCCESS"
         timeout: 1800
       register: install_activate_result
@@ -51,7 +51,7 @@
       register: post_install_version
       
     - name: Confirm target version is running
-      assert:
+      ansible.builtin.assert:
         that:
           - iosxe_upgrade_state.target_version in post_install_version.stdout[0]
         fail_msg: "Install mode upgrade completed but target version not active"
@@ -63,7 +63,7 @@
       register: final_install_summary
       
 - name: Log install mode completion
-  debug:
+  ansible.builtin.debug:
     msg: |
       Install Mode Upgrade Completed:
       - Previous Version: {{ iosxe_upgrade_state.current_version }}

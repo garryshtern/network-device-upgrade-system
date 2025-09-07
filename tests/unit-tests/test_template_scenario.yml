@@ -1,0 +1,73 @@
+---
+# Template scenario test task file
+# Tests individual template rendering scenarios
+
+- name: "Set variables for: {{ template_test.name }}"
+  set_fact:
+    "{{ item.key }}": "{{ item.value }}"
+  loop: "{{ template_test.template_vars | dict2items }}"
+
+- name: "Create test template for: {{ template_test.name }}"
+  copy:
+    content: |
+      # Generated template for {{ platform_type }}
+      Platform: {{ platform_type }}
+      Current Version: {{ firmware_version | default('unknown') }}
+      Target Version: {{ target_version | default('unknown') }}
+      Device Model: {{ device_model | default('unknown') }}
+      
+      {% if platform_type == 'cisco_nxos' %}
+      # NX-OS Upgrade Commands
+      {% if issu_capable %}
+      install all nxos.{{ target_version }} issu
+      {% else %}
+      install all nxos.{{ target_version }}
+      {% endif %}
+      show install all status
+      {% elif platform_type == 'cisco_iosxe' %}
+      # IOS-XE Upgrade Commands
+      {% if install_mode %}
+      request platform software package install switch all file flash:cat9k_lite_iosxe.{{ target_version }}.SPA.bin
+      {% else %}
+      software install file flash:cat9k_lite_iosxe.{{ target_version }}.SPA.bin switch all
+      {% endif %}
+      show version
+      {% elif platform_type == 'fortios' %}
+      # FortiOS Upgrade Commands
+      {% if ha_enabled %}
+      execute restore image tftp fortios_{{ target_version }}.out {{ ansible_host }}
+      execute ha manage 0 1
+      {% else %}
+      execute restore image tftp fortios_{{ target_version }}.out {{ ansible_host }}
+      {% endif %}
+      get system status
+      {% endif %}
+      
+      # Common validation commands
+      show clock
+      show running-config | include hostname
+    dest: "/tmp/ansible-template-test/{{ template_test.name | regex_replace(' ', '_') }}.j2"
+
+- name: "Render template: {{ template_test.name }}"
+  template:
+    src: "/tmp/ansible-template-test/{{ template_test.name | regex_replace(' ', '_') }}.j2"
+    dest: "/tmp/ansible-template-test/{{ template_test.name | regex_replace(' ', '_') }}_rendered.txt"
+    
+- name: "Read rendered template: {{ template_test.name }}"
+  slurp:
+    src: "/tmp/ansible-template-test/{{ template_test.name | regex_replace(' ', '_') }}_rendered.txt"
+  register: rendered_content
+  
+- name: "Verify template content: {{ template_test.name }}"
+  assert:
+    that: "rendered_content.content | b64decode | regex_search(expected_item)"
+    fail_msg: "Expected content '{{ expected_item }}' not found in rendered template"
+    success_msg: "✓ Found expected content: {{ expected_item }}"
+  loop: "{{ template_test.expected_content }}"
+  loop_control:
+    loop_var: expected_item
+    label: "{{ expected_item }}"
+    
+- name: "✓ Template test passed: {{ template_test.name }}"
+  debug:
+    msg: "Template rendering successful for {{ template_test.name }}"

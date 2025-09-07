@@ -3,7 +3,7 @@
 # Validate serial port configurations and connectivity
 
 - name: Get serial port configuration (Modern API)
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ ansible_host }}/api/v1/serialports"
     method: GET
     headers:
@@ -13,28 +13,28 @@
   when: api_available
 
 - name: Get serial port configuration (Legacy CLI)
-  raw: |
+  ansible.builtin.raw: |
     echo "show serial" | /bin/cli
   register: serial_ports_info_cli
   delegate_to: "{{ inventory_hostname }}"
   when: not api_available
 
 - name: Parse serial port information (API)
-  set_fact:
+  ansible.builtin.set_fact:
     opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
       'serial_ports': serial_ports_info_api.json
     }) }}"
   when: api_available and serial_ports_info_api.json is defined
 
 - name: Parse serial port information (CLI)
-  set_fact:
+  ansible.builtin.set_fact:
     opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
       'serial_ports': serial_ports_info_cli.stdout | regex_findall('Serial\\d+') | list
     }) }}"
   when: not api_available and serial_ports_info_cli.stdout is defined
     
 - name: Check active serial connections (Modern API)
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
     method: GET
     headers:
@@ -45,7 +45,7 @@
   when: api_available and opengear_upgrade_state.serial_ports | length > 0
 
 - name: Check active serial connections (Legacy CLI)
-  raw: |
+  ansible.builtin.raw: |
     echo "show serial" | /bin/cli | grep -c "Connected"
   register: port_status_cli
   delegate_to: "{{ inventory_hostname }}"
@@ -65,14 +65,14 @@
       when: not api_available and port_status_cli is defined
       
     - name: Warn about active sessions
-      debug:
+      ansible.builtin.debug:
         msg: |
           WARNING: {{ active_sessions | default(0) }} active console sessions detected.
           These may be disconnected during the upgrade process.
       when: active_sessions | default(0) | int > 0
       
 - name: Check network connectivity to managed devices
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ ansible_host }}/api/v1/ping/{{ item.target_ip }}"
     method: POST
     headers:
@@ -87,7 +87,7 @@
   when: console_targets is defined
 
 - name: Log console server assessment
-  debug:
+  ansible.builtin.debug:
     msg: |
       Console Server Assessment:
       - Model: {{ opengear_upgrade_state.device_model }}

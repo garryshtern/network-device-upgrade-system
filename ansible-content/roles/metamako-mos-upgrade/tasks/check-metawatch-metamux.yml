@@ -2,48 +2,80 @@
 # Check Metawatch and Metamux Components
 # Validate specialized Metamako hardware components
 
-- name: Check for Metawatch components
+- name: Check for installed applications
   ansible.netcommon.cli_command:
-    command: show metawatch status
-  register: metawatch_status
+    ansible.builtin.command: show application
+  register: installed_applications
+  failed_when: false
+
+- name: Check MetaWatch application status (if installed)
+  ansible.netcommon.cli_command:
+    ansible.builtin.command: show application metawatch
+  register: metawatch_app_status
   failed_when: false
   
-- name: Check for Metamux components  
+- name: Get MetaWatch sync and telemetry status (if running)
   ansible.netcommon.cli_command:
-    command: show metamux status
-  register: metamux_status
+    ansible.builtin.command: app metawatch show status
+  register: metawatch_detailed_status
+  failed_when: false
+  when: metawatch_app_status.rc == 0 and 'running' in metawatch_app_status.stdout | lower
+  
+- name: Check MetaMux application status (if installed)
+  ansible.netcommon.cli_command:
+    ansible.builtin.command: show application metamux
+  register: metamux_app_status
   failed_when: false
   
-- name: Parse component status
-  set_fact:
+- name: Parse application and telemetry status
+  ansible.builtin.set_fact:
     metamako_upgrade_state: "{{ metamako_upgrade_state | combine({
-      'metawatch_enabled': metawatch_status.rc == 0 and 'enabled' in metawatch_status.stdout | lower,
-      'metamux_enabled': metamux_status.rc == 0 and 'enabled' in metamux_status.stdout | lower
+      'metawatch_installed': metawatch_app_status.rc == 0,
+      'metawatch_running': metawatch_app_status.rc == 0 and 'running' in metawatch_app_status.stdout | lower,
+      'metawatch_sync_status': metawatch_detailed_status.stdout | regex_search('Sync Status : (\\w+)', '\\1') | first | default('Unknown') if metawatch_detailed_status.rc == 0 else 'N/A',
+      'metawatch_telemetry_status': metawatch_detailed_status.stdout | regex_search('Telemetry Status : (\\w+)', '\\1') | first | default('Unknown') if metawatch_detailed_status.rc == 0 else 'N/A',
+      'metamux_installed': metamux_app_status.rc == 0,
+      'metamux_running': metamux_app_status.rc == 0 and 'running' in metamux_app_status.stdout | lower
     }) }}"
+
+- name: Validate MetaWatch/MetaMux exclusivity
+  ansible.builtin.assert:
+    that:
+      - not (metamako_upgrade_state.metawatch_running and metamako_upgrade_state.metamux_running)
+    fail_msg: "MetaWatch and MetaMux cannot be running simultaneously on the same device"
+    success_msg: "✓ Application configuration valid - only one specialized application active"
     
-- name: Get detailed metawatch info (if equipped)
-  ansible.netcommon.cli_command:
-    command: show metawatch detail
-  register: metawatch_detail
-  failed_when: false
-  when: metamako_upgrade_state.metawatch_enabled
-  
-- name: Get detailed metamux info (if equipped)
-  ansible.netcommon.cli_command:
-    command: show metamux detail
-  register: metamux_detail
-  failed_when: false
-  when: metamako_upgrade_state.metamux_enabled
-  
-- name: Display component status
-  debug:
+- name: Store pre-upgrade application baseline
+  ansible.builtin.set_fact:
+    pre_upgrade_baseline:
+      metawatch_installed: "{{ metamako_upgrade_state.metawatch_installed | default(false) }}"
+      metawatch_running: "{{ metamako_upgrade_state.metawatch_running | default(false) }}"
+      metawatch_sync_status: "{{ metamako_upgrade_state.metawatch_sync_status | default('N/A') }}"
+      metawatch_telemetry_status: "{{ metamako_upgrade_state.metawatch_telemetry_status | default('N/A') }}"
+      metamux_installed: "{{ metamako_upgrade_state.metamux_installed | default(false) }}"
+      metamux_running: "{{ metamako_upgrade_state.metamux_running | default(false) }}"
+
+- name: Display application status
+  ansible.builtin.debug:
     msg: |
-      Metamako Component Status:
-      - Metawatch: {{ 'Enabled' if metamako_upgrade_state.metawatch_enabled else 'Not Available' }}
-      - Metamux: {{ 'Enabled' if metamako_upgrade_state.metamux_enabled else 'Not Available' }}
-      {% if metamako_upgrade_state.metawatch_enabled %}
-      - Metawatch Detail: {{ metawatch_detail.stdout | default('N/A') }}
+      Metamako Application Status (Pre-Upgrade Baseline):
+      
+      📱 Applications Installed:
+      {{ installed_applications.stdout }}
+      
+      🔬 MetaWatch Status:
+      - Installed: {{ 'Yes' if metamako_upgrade_state.metawatch_installed else 'No' }}
+      - Running: {{ 'Yes' if metamako_upgrade_state.metawatch_running else 'No' }}
+      {% if metamako_upgrade_state.metawatch_running %}
+      - Sync Status: {{ metamako_upgrade_state.metawatch_sync_status }}
+      - Telemetry Status: {{ metamako_upgrade_state.metawatch_telemetry_status }}
       {% endif %}
-      {% if metamako_upgrade_state.metamux_enabled %}
-      - Metamux Detail: {{ metamux_detail.stdout | default('N/A') }}
+      
+      🔀 MetaMux Status:
+      - Installed: {{ 'Yes' if metamako_upgrade_state.metamux_installed else 'No' }}
+      - Running: {{ 'Yes' if metamako_upgrade_state.metamux_running else 'No' }}
+      
+      {% if metamako_upgrade_state.metawatch_running %}
+      📊 MetaWatch Detailed Status:
+      {{ metawatch_detailed_status.stdout }}
       {% endif %}

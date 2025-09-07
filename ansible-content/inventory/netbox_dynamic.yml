@@ -106,14 +106,12 @@ compose:
 
 # Group creation based on device attributes
 group_by:
-  - device_role
-  - device_type.manufacturer.name
-  - platform.slug
-  - site.name
-  - site.region.name
-  - status.value
-  - custom_fields.criticality
-  - custom_fields.upgrade_status
+  - role
+  - device_type
+  - platform
+  - site
+  - region
+  - status
 
 # Keyed groups for dynamic grouping  
 keyed_groups:
@@ -199,7 +197,6 @@ cache_timeout: 3600  # 1 hour cache
 # Advanced options
 strict: false
 timeout: 30
-validate_certs: false
 
 # URI configuration for advanced NetBox queries  
 uri_query:

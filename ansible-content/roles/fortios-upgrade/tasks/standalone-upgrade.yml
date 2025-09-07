@@ -11,7 +11,7 @@
       register: resource_usage
       
     - name: Verify system is not under high load
-      assert:
+      ansible.builtin.assert:
         that:
           - resource_usage.meta.results.cpu_usage | int < 80
           - resource_usage.meta.results.memory_usage | int < 90
@@ -36,7 +36,7 @@
       register: system_backup
       
     - name: Verify backup creation
-      assert:
+      ansible.builtin.assert:
         that:
           - system_backup.meta.results.status == "success"
         fail_msg: "Configuration backup failed"
@@ -71,7 +71,7 @@
       register: firmware_install
       
     - name: Wait for system reboot
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 443
         delay: 90
@@ -88,7 +88,7 @@
 - name: Post-upgrade validation
   block:
     - name: Confirm target version is active
-      assert:
+      ansible.builtin.assert:
         that:
           - fortios_upgrade_state.target_version in post_reboot_status.meta.results.version
         fail_msg: "Standalone upgrade failed - target version not active"
@@ -119,7 +119,7 @@
       failed_when: false
 
 - name: Log standalone upgrade completion
-  debug:
+  ansible.builtin.debug:
     msg: |
       FortiOS Standalone Upgrade Completed:
       - Previous Version: {{ fortios_upgrade_state.current_version }}

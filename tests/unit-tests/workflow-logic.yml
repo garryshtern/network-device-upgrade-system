@@ -1,0 +1,79 @@
+---
+# Workflow logic test playbook
+# Tests upgrade workflow decision paths and conditional logic
+
+- name: Workflow Logic Tests
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    workflow_scenarios:
+      - name: "NX-OS ISSU Capable Path"
+        device_vars:
+          platform_type: "cisco_nxos"
+          issu_capable: true
+          firmware_version: "9.3.10"
+          target_version: "10.1.2"
+        expected_path: "issu_upgrade"
+        
+      - name: "NX-OS Non-ISSU Path"
+        device_vars:
+          platform_type: "cisco_nxos"
+          issu_capable: false
+          firmware_version: "9.2.4"
+          target_version: "10.1.2"
+        expected_path: "standard_upgrade"
+        
+      - name: "IOS-XE Install Mode Path"
+        device_vars:
+          platform_type: "cisco_iosxe"
+          install_mode: true
+          firmware_version: "16.12.07"
+          target_version: "17.06.04"
+        expected_path: "install_mode"
+        
+      - name: "IOS-XE Bundle Mode Path"
+        device_vars:
+          platform_type: "cisco_iosxe"
+          install_mode: false
+          firmware_version: "16.12.07"
+          target_version: "17.06.04"
+        expected_path: "bundle_mode"
+        
+      - name: "FortiOS HA Primary Path"
+        device_vars:
+          platform_type: "fortios"
+          ha_enabled: true
+          ha_role: "primary"
+          firmware_version: "7.0.8"
+          target_version: "7.2.4"
+        expected_path: "ha_primary_upgrade"
+        
+      - name: "FortiOS HA Secondary Path"
+        device_vars:
+          platform_type: "fortios"
+          ha_enabled: true
+          ha_role: "secondary"
+          firmware_version: "7.0.8"
+          target_version: "7.2.4"
+        expected_path: "ha_secondary_upgrade"
+        
+      - name: "Skip Validation Path"
+        device_vars:
+          platform_type: "cisco_nxos"
+          skip_validation: true
+          firmware_version: "9.3.10"
+          target_version: "10.1.2"
+        expected_path: "skip_validation"
+
+  tasks:
+    - name: Test workflow decision logic
+      include_tasks: test_workflow_scenario.yml
+      loop: "{{ workflow_scenarios }}"
+      loop_control:
+        loop_var: workflow_test
+        label: "{{ workflow_test.name }}"
+        
+    - name: Workflow logic tests completed
+      debug:
+        msg: "All workflow logic tests completed successfully"

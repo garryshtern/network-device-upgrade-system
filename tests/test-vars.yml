@@ -1,0 +1,55 @@
+---
+# Test variables for various scenarios
+# Used across different test playbooks
+
+# NX-OS Test Variables
+nxos_test_vars:
+  platform_type: "cisco_nxos"
+  firmware_version: "9.3.10"
+  target_version: "10.1.2"
+  device_model: "N9K-C93180YC-EX"
+  issu_capable: true
+  upgrade_phase: "loading"
+
+# IOS-XE Test Variables
+iosxe_test_vars:
+  platform_type: "cisco_iosxe"
+  firmware_version: "16.12.07"
+  target_version: "17.06.04"
+  device_model: "ISR4431"
+  install_mode: true
+  upgrade_phase: "loading"
+
+# FortiOS Test Variables
+fortios_test_vars:
+  platform_type: "fortios"
+  firmware_version: "7.0.8"
+  target_version: "7.2.4"
+  device_model: "FortiGate-600E"
+  ha_enabled: true
+  upgrade_phase: "loading"
+
+# Common Test Variables
+common_test_vars:
+  skip_validation: false
+  firmware_base_path: "/opt/firmware"
+  backup_location: "/opt/backups"
+  influxdb_token: "test_token"
+  influxdb_bucket: "network_upgrades_test"
+  test_mode: true
+  
+# Error Scenario Variables
+error_scenarios:
+  invalid_platform:
+    platform_type: "invalid_platform"
+    firmware_version: "1.0.0"
+  
+  missing_versions:
+    platform_type: "cisco_nxos"
+    # Missing firmware versions intentionally
+    
+  invalid_phase:
+    platform_type: "fortios"
+    firmware_version: "7.0.8"
+    target_version: "7.2.4"
+    upgrade_phase: "invalid_phase"

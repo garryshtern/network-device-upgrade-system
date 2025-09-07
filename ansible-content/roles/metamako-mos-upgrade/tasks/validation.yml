@@ -6,30 +6,30 @@
   block:
     - name: Verify system responsiveness
       ansible.netcommon.cli_command:
-        command: show version
+        ansible.builtin.command: show version
       register: mos_version_check
       
     - name: Verify target version is active
-      assert:
+      ansible.builtin.assert:
         that:
           - metamako_upgrade_state.target_version in mos_version_check.stdout
         fail_msg: "Target firmware version not active: {{ mos_version_check.stdout }}"
         
     - name: Check system uptime
       ansible.netcommon.cli_command:
-        command: show uptime
+        ansible.builtin.command: show uptime
       register: mos_uptime_check
 
 - name: Latency performance validation
   block:
     - name: Measure post-upgrade latency
       ansible.netcommon.cli_command:
-        command: show latency statistics
+        ansible.builtin.command: show latency statistics
       register: post_upgrade_latency_stats
       
     - name: Get current latency measurements
       ansible.netcommon.cli_command:
-        command: show latency current
+        ansible.builtin.command: show latency current
       register: current_latency_measurements
       
     - name: Parse latency performance
@@ -40,7 +40,7 @@
           min_latency: "{{ post_upgrade_latency_stats.stdout | regex_search('Minimum: ([\\d\\.]+)', '\\1') | first | default('0') }}"
           
     - name: Validate latency performance meets requirements
-      assert:
+      ansible.builtin.assert:
         that:
           - post_upgrade_latency.avg_latency | float < (max_allowed_latency_ns | default(100) | float)
         fail_msg: "Average latency {{ post_upgrade_latency.avg_latency }}ns exceeds maximum allowed {{ max_allowed_latency_ns | default(100) }}ns"
@@ -49,22 +49,22 @@
   block:
     - name: Check interface operational status
       ansible.netcommon.cli_command:
-        command: show interface status
+        ansible.builtin.command: show interface status
       register: mos_interface_status
       
     - name: Validate critical interfaces are operational
-      assert:
+      ansible.builtin.assert:
         that:
           - "'up' in mos_interface_status.stdout"
         fail_msg: "Critical interfaces may not be operational"
         
     - name: Check interface error counters
       ansible.netcommon.cli_command:
-        command: show interface errors
+        ansible.builtin.command: show interface errors
       register: mos_interface_errors
       
     - name: Verify minimal interface errors
-      debug:
+      ansible.builtin.debug:
         msg: |
           Interface Error Summary:
           {{ mos_interface_errors.stdout }}
@@ -74,20 +74,20 @@
   block:
     - name: Re-validate Metawatch status (if equipped)
       ansible.netcommon.cli_command:
-        command: show metawatch status
+        ansible.builtin.command: show metawatch status
       register: post_upgrade_metawatch
       failed_when: false
       when: metamako_upgrade_state.metawatch_enabled
       
     - name: Re-validate Metamux status (if equipped)
       ansible.netcommon.cli_command:
-        command: show metamux status
+        ansible.builtin.command: show metamux status
       register: post_upgrade_metamux
       failed_when: false
       when: metamako_upgrade_state.metamux_enabled
       
     - name: Verify specialized components are functional
-      debug:
+      ansible.builtin.debug:
         msg: |
           Metamako Component Status:
           {% if metamako_upgrade_state.metawatch_enabled %}
@@ -101,19 +101,19 @@
   block:
     - name: Run performance benchmark
       ansible.netcommon.cli_command:
-        command: benchmark run quick
+        ansible.builtin.command: benchmark run quick
       register: performance_benchmark
       failed_when: false
       timeout: 300
       
     - name: Check benchmark results
       ansible.netcommon.cli_command:
-        command: benchmark results
+        ansible.builtin.command: benchmark results
       register: benchmark_results
       when: performance_benchmark is defined and performance_benchmark.rc == 0
       
     - name: Validate benchmark performance
-      debug:
+      ansible.builtin.debug:
         msg: |
           Performance Benchmark Results:
           {{ benchmark_results.stdout if benchmark_results is defined else 'Benchmark not available' }}
@@ -123,12 +123,12 @@
   block:
     - name: Test basic network connectivity
       ansible.netcommon.cli_command:
-        command: "ping {{ management_gateway | default('192.168.1.1') }} count 3"
+        ansible.builtin.command: "ping {{ management_gateway | default('192.168.1.1') }} count 3"
       register: connectivity_test
       failed_when: false
       
     - name: Validate network reachability
-      assert:
+      ansible.builtin.assert:
         that:
           - "'3 packets transmitted, 3 received' in connectivity_test.stdout or 'Success rate is 100' in connectivity_test.stdout"
         fail_msg: "Network connectivity test failed"
@@ -139,24 +139,24 @@
   block:
     - name: Check system temperature
       ansible.netcommon.cli_command:
-        command: show environment temperature
+        ansible.builtin.command: show environment temperature
       register: system_temperature
       failed_when: false
       
     - name: Check power status
       ansible.netcommon.cli_command:
-        command: show environment power
+        ansible.builtin.command: show environment power
       register: power_status
       failed_when: false
       
     - name: Check fan status
       ansible.netcommon.cli_command:
-        command: show environment fans
+        ansible.builtin.command: show environment fans
       register: fan_status
       failed_when: false
       
     - name: Validate environmental conditions
-      debug:
+      ansible.builtin.debug:
         msg: |
           Environmental Status:
           - Temperature: {{ 'OK' if system_temperature is defined and 'alarm' not in system_temperature.stdout | lower else 'CHECK' }}
@@ -164,7 +164,7 @@
           - Fans: {{ 'OK' if fan_status is defined and 'ok' in fan_status.stdout | lower else 'CHECK' }}
 
 - name: Validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       Metamako MOS Validation Results:
       - Version: {{ 'PASS' if metamako_upgrade_state.target_version in mos_version_check.stdout else 'FAIL' }}

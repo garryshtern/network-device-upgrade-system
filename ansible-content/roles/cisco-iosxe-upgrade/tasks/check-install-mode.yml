@@ -23,7 +23,7 @@
   failed_when: false
   
 - name: Determine install mode support
-  set_fact:
+  ansible.builtin.set_fact:
     platform_supports_install: >-
       {{
         install_mode_check.rc == 0 and
@@ -34,11 +34,11 @@
 - name: Check available storage space
   cisco.ios.ios_command:
     commands:
-      - dir bootflash: | include bytes
+      - "dir bootflash: | include bytes"
   register: bootflash_space
   
 - name: Parse storage information
-  set_fact:
+  ansible.builtin.set_fact:
     iosxe_upgrade_state: "{{ iosxe_upgrade_state | combine({
       'install_mode': platform_supports_install,
       'boot_mode': 'install' if platform_supports_install else 'bundle',
@@ -46,7 +46,7 @@
     }) }}"
     
 - name: Display install mode assessment
-  debug:
+  ansible.builtin.debug:
     msg: |
       Install Mode Assessment:
       - Platform: {{ ansible_net_platform }}

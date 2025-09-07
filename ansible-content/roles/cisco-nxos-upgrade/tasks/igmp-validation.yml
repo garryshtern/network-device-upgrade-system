@@ -97,7 +97,7 @@
 - name: Validate IGMP health and functionality
   block:
     - name: Verify IGMP snooping is active on VLANs
-      assert:
+      ansible.builtin.assert:
         that:
           - igmp_enabled_vlans is defined
           - igmp_enabled_vlans | int > 0
@@ -106,7 +106,7 @@
       when: igmp_snooping_vlans is defined
       
     - name: Verify IGMP is configured on interfaces
-      assert:
+      ansible.builtin.assert:
         that:
           - igmp_active_interfaces is defined
           - igmp_active_interfaces | int > 0
@@ -115,7 +115,7 @@
       when: igmp_interfaces is defined
       
     - name: Verify IGMP groups are present (if expected)
-      assert:
+      ansible.builtin.assert:
         that:
           - total_igmp_groups is defined
           - total_igmp_groups | int >= 0
@@ -133,7 +133,7 @@
       when: igmp_interfaces is defined
       
     - name: Validate querier presence
-      assert:
+      ansible.builtin.assert:
         that:
           - igmp_queriers is defined
           - igmp_queriers | length > 0
@@ -169,7 +169,7 @@
         - igmp_logs.stdout[0] | length > 0
         
     - name: Check for IGMP errors
-      assert:
+      ansible.builtin.assert:
         that:
           - igmp_errors | length == 0
         fail_msg: "IGMP errors found in logs: {{ igmp_errors[:3] }}"  # Show first 3 errors
@@ -177,7 +177,7 @@
       when: igmp_errors is defined
 
 - name: IGMP validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       IGMP Validation Summary:
       ========================
@@ -210,7 +210,7 @@
       Health Status: {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans | int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
 
 - name: Store IGMP validation baseline
-  copy:
+  ansible.builtin.copy:
     content: |
       # IGMP Validation Baseline - {{ ansible_date_time.iso8601 }}
       # Generated during firmware upgrade validation

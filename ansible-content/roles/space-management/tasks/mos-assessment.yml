@@ -1,0 +1,34 @@
+---
+# Metamako MOS Storage Assessment
+
+- name: Get MOS storage information
+  ansible.builtin.raw: "df -h /flash"
+  register: mos_storage_info
+
+- name: Get MOS firmware files
+  ansible.builtin.raw: "ls -la /flash/*.mos 2>/dev/null || echo 'No MOS files found'"
+  register: mos_firmware_files
+
+- name: Get MOS application files
+  ansible.builtin.raw: "ls -la /flash/*.tgz /flash/*.tar.gz 2>/dev/null || echo 'No application files found'"
+  register: mos_app_files
+
+- name: Parse storage information
+  ansible.builtin.set_fact:
+    mos_total_size: "{{ mos_storage_info.stdout | regex_search('/flash\\s+(\\S+)', '\\1') | first }}"
+    mos_available_size: "{{ mos_storage_info.stdout | regex_search('/flash\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
+    mos_usage_percent: "{{ mos_storage_info.stdout | regex_search('/flash\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}"
+
+- name: Parse firmware file listings
+  ansible.builtin.set_fact:
+    mos_firmware_images: "{{ mos_firmware_files.stdout_lines | select('match', '.*\\.mos$') | map('regex_replace', '.* ([^/]+\\.mos)$', '\\1') | list }}"
+    mos_application_images: "{{ mos_app_files.stdout_lines | select('match', '.*(tgz|tar\\.gz)$') | map('regex_replace', '.* ([^/]+\\.(tgz|tar\\.gz))$', '\\1') | list }}"
+
+- name: Convert storage sizes to GB
+  ansible.builtin.set_fact:
+    storage_info: "{{ storage_info | combine({
+      'total_space_gb': (mos_total_size | regex_replace('[GM]', '') | float * (1 if 'G' in mos_total_size else 0.001)) | round(2),
+      'free_space_gb': (mos_available_size | regex_replace('[GM]', '') | float * (1 if 'G' in mos_available_size else 0.001)) | round(2),
+      'images_found': mos_firmware_images + mos_application_images,
+      'cleanup_candidates': mos_firmware_images + mos_application_images
+    }) }}"

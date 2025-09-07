@@ -94,3 +94,19 @@ validate_ptp_sync: true
 validate_fpga_status: true
 check_ddr_memory: true
 validate_pcie_links: true
+
+# Application management
+manage_applications: false  # Enable application management during upgrades
+application_action: ""  # install, remove, enable, disable
+application_name: ""
+application_source: ""  # URL or local path to application file
+application_filename: ""  # Optional: specify filename on device (defaults to basename of source)
+applications_to_enable: []
+applications_to_disable: []
+applications_to_force_shutdown: []
+
+# EOS extension management
+eos_extension_action: ""  # install, remove
+eos_extension_name: ""
+eos_extension_source: ""  # URL or local path to EOS extension file
+eos_extension_filename: ""  # Optional: specify filename on device (defaults to basename of source)

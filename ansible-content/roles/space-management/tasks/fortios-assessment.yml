@@ -1,0 +1,37 @@
+---
+# FortiOS Storage Assessment
+
+- name: Get FortiOS system status
+  fortinet.fortios.fortios_facts:
+    vdom: "{{ vdom | default('root') }}"
+    gather_subset:
+      - fact: 'system_status'
+  register: fortios_status
+
+- name: Get disk usage information
+  fortinet.fortios.fortios_configuration_fact:
+    vdom: "{{ vdom | default('root') }}"
+    selector: 'system_storage'
+  register: fortios_storage_info
+
+- name: Get firmware information
+  fortinet.fortios.fortios_configuration_fact:
+    vdom: "{{ vdom | default('root') }}"
+    selector: 'system_firmware'
+  register: fortios_firmware_info
+
+- name: Parse storage and firmware information
+  ansible.builtin.set_fact:
+    fortios_total_mb: "{{ fortios_storage_info.meta.results.total_disk | default(8192) }}"
+    fortios_used_mb: "{{ fortios_storage_info.meta.results.used_disk | default(2048) }}"
+    fortios_free_mb: "{{ fortios_total_mb - fortios_used_mb }}"
+    fortios_firmware_list: "{{ fortios_firmware_info.meta.results | map(attribute='filename') | list }}"
+
+- name: Calculate storage metrics
+  ansible.builtin.set_fact:
+    storage_info: "{{ storage_info | combine({
+      'total_space_gb': (fortios_total_mb / 1024) | round(2),
+      'free_space_gb': (fortios_free_mb / 1024) | round(2),
+      'images_found': fortios_firmware_list,
+      'cleanup_candidates': fortios_firmware_list
+    }) }}"

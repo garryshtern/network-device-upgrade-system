@@ -1,147 +1,211 @@
-# Network Device Upgrade System - Test Framework Guide
+# Network Device Upgrade System - Testing Framework Guide
 
-## 🧪 Comprehensive Test Suite Overview
+## 🧪 Comprehensive Testing Without Physical Devices
 
-This test framework provides comprehensive validation for the Network Device Upgrade Management System, covering all platforms, architectures, and real-world deployment scenarios.
+This testing framework provides complete validation capabilities for the Network Device Upgrade Management System without requiring physical network devices. Perfect for Mac/Linux development environments.
 
-### **Test Coverage: 97% Complete - Production Ready**
+### **Framework Coverage: Complete - Ready for Development**
 
 ---
 
-## 📊 Test Suite Structure
+## 📊 Testing Framework Structure
 
 ```
 tests/
 ├── TEST_FRAMEWORK_GUIDE.md           # This comprehensive guide
-├── run-all-tests.sh                  # Main test runner with reporting
-├── ansible-tests/                    # Ansible-specific validation
-│   └── syntax-tests.yml              # YAML and playbook syntax validation
-├── integration-tests/                # End-to-end workflow testing
-│   ├── workflow-tests.yml            # Basic workflow integration
-│   └── multi-platform-integration-tests.yml  # Cross-platform coordination
-├── validation-tests/                 # Network validation testing
-│   ├── network-validation-tests.yml  # Basic network state validation
-│   └── comprehensive-validation-tests.yml    # Complete platform validation
-├── vendor-tests/                     # Platform-specific testing
-│   ├── cisco-nxos-tests.yml         # NX-OS specific validation
-│   └── opengear-tests.yml           # Multi-architecture Opengear testing
-└── scenario-tests/                   # Real-world scenario testing
-    └── upgrade-scenario-tests.yml    # Production deployment scenarios
+├── run-all-tests.sh                  # Main test runner (fixed for Mac bash 3.2)
+├── mock-inventories/                 # Mock device inventories
+│   ├── all-platforms.yml            # All 5 supported platforms
+│   └── single-platform.yml          # Single platform testing
+├── unit-tests/                       # Unit testing playbooks
+│   ├── variable-validation.yml      # Variable requirements testing
+│   ├── template-rendering.yml       # Jinja2 template testing
+│   ├── workflow-logic.yml           # Decision path testing
+│   └── error-handling.yml           # Error scenario validation
+├── integration-tests/                # Integration testing scenarios
+│   ├── check-mode-tests.yml         # Complete workflow testing
+│   ├── test_phase_logic.yml         # Phase-based testing
+│   └── test_scenario_logic.yml      # Scenario validation
+├── validation-scripts/               # YAML/JSON validation tools
+│   ├── yaml-validator.py            # Python validation script
+│   └── run-yaml-tests.sh            # Comprehensive validation
+├── performance-tests/                # Performance measurement tools
+│   ├── run-performance-tests.sh     # Performance test suite
+│   └── memory-profiler.py           # Memory usage profiler
+├── molecule-tests/                   # Molecule advanced testing
+│   ├── molecule/default/            # Molecule scenario configuration
+│   │   ├── molecule.yml            # Docker-based test configuration
+│   │   ├── converge.yml            # Upgrade workflow simulation
+│   │   └── verify.yml              # Post-test verification
+└── results/                          # Test execution results
 ```
 
 ---
 
-## 🎯 Test Categories
+## 🎯 Testing Categories
 
-### **1. Syntax and Configuration Tests**
-**File**: `ansible-tests/syntax-tests.yml`
-- ✅ Ansible playbook syntax validation
-- ✅ YAML file structure validation  
-- ✅ Variable and template validation
-- ✅ Role dependency validation
+### **1. Mock Inventory Testing**
+**Files**: `mock-inventories/all-platforms.yml`, `single-platform.yml`
+- ✅ **All 5 Platforms**: Cisco NX-OS, IOS-XE, FortiOS, Opengear, Metamako MOS
+- ✅ **Device Simulation**: Mock inventories with realistic device attributes
+- ✅ **Platform Variables**: Firmware versions, device models, capabilities
+- ✅ **Check Mode Testing**: Dry-run validation without device connections
+- ✅ **Multi-Platform Coordination**: Test cross-platform upgrade scenarios
 
-### **2. Multi-Platform Integration Tests**
-**File**: `integration-tests/multi-platform-integration-tests.yml`
-- ✅ Phase-separated workflow validation
-- ✅ Cross-platform coordination testing
-- ✅ Architecture detection integration
-- ✅ Error handling and rollback procedures
-- ✅ AWX integration validation
-- ✅ Monitoring system integration
-- ✅ Performance and scalability testing
-- ✅ Security integration validation
+### **2. Variable Validation Testing**
+**Files**: `unit-tests/variable-validation.yml`, `validate_scenario.yml`
+- ✅ **Platform Type Validation**: Ensure valid platform types
+- ✅ **Version Format Checking**: Semantic version validation
+- ✅ **Required Variable Testing**: Missing variable detection
+- ✅ **Constraint Validation**: Upgrade phase, device capability checks
+- ✅ **Error Scenario Testing**: Invalid configurations and edge cases
 
-### **3. Comprehensive Validation Tests**
-**File**: `validation-tests/comprehensive-validation-tests.yml`
-- ✅ **Cisco NX-OS**: IGMP validation, Enhanced BFD validation
-- ✅ **Cisco IOS-XE**: IPSec validation, BFD validation, Optics validation
-- ✅ **Opengear**: Multi-architecture detection and routing
-- ✅ **FortiOS**: HA coordination, License validation
-- ✅ **Metamako MOS**: Ultra-low latency procedures
-- ✅ Validation framework integration
-- ✅ Role defaults and configuration testing
+### **3. Template Rendering Testing**
+**Files**: `unit-tests/template-rendering.yml`, `test_template_scenario.yml`
+- ✅ **Jinja2 Template Testing**: Template rendering without connections
+- ✅ **Platform-Specific Commands**: NX-OS, IOS-XE, FortiOS command generation
+- ✅ **Variable Substitution**: Dynamic content generation validation
+- ✅ **Content Verification**: Expected output validation
+- ✅ **Error Handling**: Template error detection and reporting
 
-### **4. Platform-Specific Tests**
+### **4. Workflow Logic Testing**
+**Files**: `unit-tests/workflow-logic.yml`, `test_workflow_scenario.yml`
+- ✅ **Decision Path Testing**: ISSU vs standard upgrade paths
+- ✅ **Conditional Logic**: Install vs bundle mode (IOS-XE)
+- ✅ **HA Coordination**: FortiOS primary/secondary logic
+- ✅ **Platform Routing**: Automatic platform-specific workflow selection
+- ✅ **Validation Skip Logic**: Emergency scenario handling
 
-#### **Opengear Multi-Architecture Tests**
-**File**: `vendor-tests/opengear-tests.yml`
-- ✅ **Architecture Detection**: API vs CLI automatic detection
-- ✅ **Legacy Device Support**: OM2200, CM7100 CLI automation
-- ✅ **Modern Device Support**: CM8100, IM7200 API automation
-- ✅ **Task File Validation**: Dual upgrade path verification
-- ✅ **Configuration Validation**: Multi-architecture settings
-- ✅ **Error Handling**: Graceful fallback testing
+### **5. Error Handling Testing**
+**Files**: `unit-tests/error-handling.yml`, `test_error_scenario.yml`
+- ✅ **Missing Variables**: Required parameter validation
+- ✅ **Invalid Platforms**: Unsupported platform detection
+- ✅ **Version Conflicts**: Downgrade attempt prevention
+- ✅ **Recovery Scenarios**: Error condition handling
+- ✅ **Edge Case Testing**: Boundary condition validation
 
-#### **Cisco NX-OS Tests**
-**File**: `vendor-tests/cisco-nxos-tests.yml`
-- ✅ ISSU support validation
-- ✅ EPLD upgrade procedures
-- ✅ Enhanced BFD validation with baseline comparison
-- ✅ IGMP snooping validation
+### **6. Integration Testing**
+**Files**: `integration-tests/check-mode-tests.yml`, `test_phase_logic.yml`
+- ✅ **Phase-Separated Workflow**: Loading, installation, validation phases
+- ✅ **Multi-Device Coordination**: Batch processing simulation
+- ✅ **Scenario-Based Testing**: Emergency, planned, rolling upgrades
+- ✅ **Cross-Platform Integration**: Mixed environment testing
+- ✅ **End-to-End Validation**: Complete workflow verification
 
-### **5. Real-World Scenario Tests**
-**File**: `scenario-tests/upgrade-scenario-tests.yml`
+### **7. YAML/JSON Validation**
+**Files**: `validation-scripts/yaml-validator.py`, `run-yaml-tests.sh`
+- ✅ **Syntax Validation**: YAML and JSON structure verification
+- ✅ **Ansible Structure**: Playbook and role validation
+- ✅ **Inventory Validation**: Mock inventory file verification
+- ✅ **Collection Integration**: yamllint and ansible-lint integration
+- ✅ **Automated Reporting**: Comprehensive validation results
 
-#### **Emergency Security Patch Scenario**
-- **Target**: 50 devices across 3 platforms
-- **Duration**: 2 hours
-- **Features**: Fast-track deployment, immediate rollback
+### **8. Performance Testing**
+**Files**: `performance-tests/run-performance-tests.sh`, `memory-profiler.py`
+- ✅ **Execution Time**: Playbook performance measurement
+- ✅ **Memory Usage**: Resource consumption monitoring
+- ✅ **Scalability Testing**: Inventory size performance impact
+- ✅ **Template Performance**: Rendering speed measurement
+- ✅ **Profiling Tools**: Detailed performance analysis
 
-#### **Planned Maintenance Window Scenario**  
-- **Target**: 200 devices across 5 platforms
-- **Duration**: 4 hours
-- **Features**: Full validation, comprehensive testing
-
-#### **Rolling Upgrade Deployment Scenario**
-- **Target**: 1000 devices in 4 phases
-- **Duration**: 24 hours  
-- **Features**: Gradual deployment, batch processing
-
-#### **Mixed Architecture Upgrade Scenario**
-- **Target**: 100 devices (20 legacy + 30 modern Opengear)
-- **Features**: API/CLI coordination, architecture-aware batching
+### **9. Molecule Advanced Testing**
+**Files**: `molecule-tests/converge.yml`, `verify.yml`
+- ✅ **Container-Based Testing**: Docker environment isolation
+- ✅ **Full Lifecycle Testing**: Create, converge, verify, destroy
+- ✅ **Idempotence Testing**: Multiple run consistency
+- ✅ **Side Effect Validation**: Unintended change detection
+- ✅ **Advanced Scenarios**: Complex testing environments
 
 ---
 
-## 🚀 Running the Test Suite
+## 🚀 Quick Start Guide
 
-### **Complete Test Suite Execution**
+### **Prerequisites**
 ```bash
-# Run all tests with comprehensive reporting
+# Install Ansible with compatible version
+pip install 'ansible>=8.0.0,<10.0.0'
+
+# Install Ansible collections
+ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force --ignore-certs
+
+# Optional: Install testing dependencies
+pip install molecule 'molecule-plugins[docker]' pytest-testinfra yamllint ansible-lint
+```
+
+### **Basic Testing**
+```bash
+# 1. Quick syntax validation
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
+
+# 2. Mock device testing (all platforms)
+ansible-playbook -i tests/mock-inventories/all-platforms.yml --check \
+  ansible-content/playbooks/main-upgrade-workflow.yml
+
+# 3. Single platform testing
+ansible-playbook -i tests/mock-inventories/single-platform.yml --check \
+  ansible-content/playbooks/main-upgrade-workflow.yml
+
+# 4. Complete test suite (fixed for Mac bash 3.2)
 ./tests/run-all-tests.sh
-
-# Expected output:
-# - Dependency checking
-# - Syntax validation for all files
-# - 7 comprehensive test suites
-# - Detailed reporting and logging
 ```
 
-### **Individual Test Suite Execution**
+### **Unit Testing Suite**
 ```bash
-# Run specific test categories
-cd ansible-content
-
-# Multi-architecture Opengear tests
-ansible-playbook ../tests/vendor-tests/opengear-tests.yml
-
-# Comprehensive validation tests
-ansible-playbook ../tests/validation-tests/comprehensive-validation-tests.yml
-
-# Real-world scenario tests
-ansible-playbook ../tests/scenario-tests/upgrade-scenario-tests.yml
-
-# Multi-platform integration tests
-ansible-playbook ../tests/integration-tests/multi-platform-integration-tests.yml
+# Run individual unit tests
+ansible-playbook tests/unit-tests/variable-validation.yml
+ansible-playbook tests/unit-tests/template-rendering.yml
+ansible-playbook tests/unit-tests/workflow-logic.yml
+ansible-playbook tests/unit-tests/error-handling.yml
 ```
 
-### **Syntax-Only Validation**
+### **Molecule Testing (Advanced)**
 ```bash
-# Quick syntax check for development
-find ansible-content -name "*.yml" -exec ansible-playbook --syntax-check {} \;
+# Container-based testing (requires Docker)
+cd tests/molecule-tests
+molecule list                    # List available scenarios
+molecule test                    # Full test lifecycle
+molecule converge               # Run upgrade simulation
+molecule verify                 # Run verification tests
 
-# Check specific roles
-ansible-playbook --syntax-check ansible-content/roles/opengear-upgrade/tasks/main.yml
+# Test sequence: dependency → create → converge → verify → destroy
+# Tests variable validation, upgrade logic, file operations, and idempotence
+```
+
+### **Integration Testing**
+```bash
+# Check mode integration tests
+ansible-playbook -i tests/mock-inventories/all-platforms.yml --check \
+  tests/integration-tests/check-mode-tests.yml
+
+# Test specific platforms
+ansible-playbook -i tests/mock-inventories/all-platforms.yml \
+  --limit cisco_nxos --check tests/integration-tests/check-mode-tests.yml
+```
+
+### **Performance and Validation**
+```bash
+# YAML validation
+./tests/validation-scripts/run-yaml-tests.sh
+
+# Performance testing
+./tests/performance-tests/run-performance-tests.sh
+
+# Memory profiling
+python3 tests/performance-tests/memory-profiler.py \
+  ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
+```
+
+### **Molecule Advanced Testing**
+```bash
+# Container-based testing (requires Docker)
+cd tests/molecule-tests
+molecule test
+
+# Individual molecule commands
+molecule create    # Create test environment
+molecule converge  # Run test scenario
+molecule verify    # Verify results
+molecule destroy   # Clean up
 ```
 
 ---

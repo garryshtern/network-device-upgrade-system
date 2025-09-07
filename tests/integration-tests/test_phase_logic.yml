@@ -1,0 +1,70 @@
+---
+# Phase logic testing task file
+# Tests workflow logic for different upgrade phases
+
+- name: "Set phase variables: {{ test_phase.phase }}"
+  set_fact:
+    current_test_phase: "{{ test_phase.phase }}"
+    
+- name: "Test {{ test_phase.phase }} phase logic"
+  block:
+    # Simulate phase-specific logic
+    - name: "Determine phase actions for {{ test_phase.phase }}"
+      set_fact:
+        phase_actions: "{{ phase_action_map[current_test_phase] | default([]) }}"
+      vars:
+        phase_action_map:
+          loading:
+            - "validate_firmware_file"
+            - "check_storage_space"
+            - "transfer_image"
+          installation:
+            - "backup_configuration"
+            - "install_firmware"
+            - "reboot_device"
+          validation:
+            - "check_device_status"
+            - "validate_network_state"
+            - "generate_report"
+            
+    - name: "Validate phase actions for {{ test_phase.phase }}"
+      assert:
+        that:
+          - phase_actions is defined
+          - phase_actions | length > 0
+        fail_msg: "No actions defined for phase: {{ test_phase.phase }}"
+        success_msg: "Phase {{ test_phase.phase }} has {{ phase_actions | length }} actions"
+        
+    - name: "Test platform-specific phase logic"
+      set_fact:
+        platform_specific_actions: "{{ platform_phase_map[platform_type][current_test_phase] | default([]) }}"
+      vars:
+        platform_phase_map:
+          cisco_nxos:
+            loading: ["check_issu_capability", "validate_nxos_image"]
+            installation: ["{{ 'perform_issu' if issu_capable | default(false) else 'standard_upgrade' }}"]
+            validation: ["check_nxos_status", "validate_bfd"]
+          cisco_iosxe:
+            loading: ["check_install_mode", "validate_iosxe_image"] 
+            installation: ["{{ 'install_mode_upgrade' if install_mode | default(false) else 'bundle_mode_upgrade' }}"]
+            validation: ["check_iosxe_status", "validate_ipsec"]
+          fortios:
+            loading: ["check_ha_status", "validate_fortios_image"]
+            installation: ["{{ 'ha_upgrade' if ha_enabled | default(false) else 'standalone_upgrade' }}"]
+            validation: ["check_fortios_status", "validate_ha_sync"]
+            
+    - name: "Display phase test results for {{ test_phase.phase }}"
+      debug:
+        msg:
+          - "Phase: {{ test_phase.phase }}"
+          - "General Actions: {{ phase_actions }}"
+          - "Platform Actions: {{ platform_specific_actions }}"
+          
+    - name: "✓ Phase logic test passed: {{ test_phase.phase }}"
+      debug:
+        msg: "Phase {{ test_phase.phase }} logic validation successful"
+        
+  rescue:
+    - name: "✗ Phase logic test failed: {{ test_phase.phase }}"
+      debug:
+        msg: "Phase {{ test_phase.phase }} logic validation failed"

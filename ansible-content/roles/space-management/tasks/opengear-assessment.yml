@@ -1,0 +1,34 @@
+---
+# Opengear Storage Assessment
+
+- name: Get Opengear storage information
+  ansible.builtin.raw: "df -h /tmp"
+  register: opengear_storage_info
+
+- name: Get firmware files
+  ansible.builtin.raw: "ls -la /tmp/*.img /tmp/*.bin 2>/dev/null || echo 'No firmware files found'"
+  register: opengear_firmware_files
+
+- name: Get temporary files
+  ansible.builtin.raw: "ls -la /tmp/upgrade_* /tmp/opengear_* 2>/dev/null || echo 'No temporary files found'"
+  register: opengear_temp_files
+
+- name: Parse storage information
+  ansible.builtin.set_fact:
+    opengear_total_size: "{{ opengear_storage_info.stdout | regex_search('/tmp\\s+(\\S+)', '\\1') | first }}"
+    opengear_available_size: "{{ opengear_storage_info.stdout | regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
+    opengear_usage_percent: "{{ opengear_storage_info.stdout | regex_search('/tmp\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}"
+
+- name: Parse file listings
+  ansible.builtin.set_fact:
+    opengear_firmware_images: "{{ opengear_firmware_files.stdout_lines | select('match', '.*(img|bin)$') | map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}"
+    opengear_temp_file_list: "{{ opengear_temp_files.stdout_lines | select('match', '.*(upgrade_|opengear_).*') | map('regex_replace', '.* ([^/]+)$', '\\1') | list }}"
+
+- name: Convert storage sizes to GB
+  ansible.builtin.set_fact:
+    storage_info: "{{ storage_info | combine({
+      'total_space_gb': (opengear_total_size | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in opengear_total_size else (0.001 if 'M' in opengear_total_size else 1))) | round(2),
+      'free_space_gb': (opengear_available_size | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in opengear_available_size else (0.001 if 'M' in opengear_available_size else 1))) | round(2),
+      'images_found': opengear_firmware_images + opengear_temp_file_list,
+      'cleanup_candidates': opengear_firmware_images + opengear_temp_file_list
+    }) }}"

@@ -3,7 +3,7 @@
 # Handles Fortinet firewall upgrades with HA cluster support
 
 - name: Initialize FortiOS upgrade variables
-  set_fact:
+  ansible.builtin.set_fact:
     fortios_upgrade_state:
       device: "{{ inventory_hostname }}"
       current_version: ""
@@ -13,6 +13,9 @@
       cluster_member: ""
       license_status: "unknown"
       vdom_mode: false
+      multi_step_required: "{{ multi_step_upgrade_required | default(false) }}"
+      upgrade_path: "{{ upgrade_path | default([target_firmware_version]) }}"
+      current_step: "{{ current_step | default(0) }}"
       
 - name: Gather FortiOS device facts
   fortinet.fortios.fortios_monitor_fact:
@@ -21,7 +24,7 @@
   register: fortios_facts
   
 - name: Parse device information
-  set_fact:
+  ansible.builtin.set_fact:
     fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
       'current_version': fortios_facts.meta.results.version,
       'ha_mode': fortios_facts.meta.results.ha_mode,
@@ -30,30 +33,40 @@
     }) }}"
     
 - name: Check HA cluster configuration
-  include_tasks: ha-coordination.yml
+  ansible.builtin.include_tasks: ha-coordination.yml
   when: fortios_upgrade_state.ha_mode != "standalone"
   
 - name: Validate FortiCare license
-  include_tasks: license-validation.yml
+  ansible.builtin.include_tasks: license-validation.yml
   
 - name: Display upgrade plan
-  debug:
+  ansible.builtin.debug:
     msg: |
       FortiOS Upgrade Plan for {{ inventory_hostname }}:
       Current Version: {{ fortios_upgrade_state.current_version }}
       Target Version: {{ fortios_upgrade_state.target_version }}
+      Multi-Step Required: {{ fortios_upgrade_state.multi_step_required }}
+      Upgrade Path: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}
+      Current Step: {{ fortios_upgrade_state.current_step }}/{{ fortios_upgrade_state.upgrade_path | length }}
       HA Mode: {{ fortios_upgrade_state.ha_mode }}
       HA Role: {{ fortios_upgrade_state.ha_role }}
       VDOM Mode: {{ fortios_upgrade_state.vdom_mode }}
       License: {{ fortios_upgrade_state.license_status }}
       
 - name: Validate upgrade path
-  assert:
+  ansible.builtin.assert:
     that:
       - fortios_upgrade_state.current_version != fortios_upgrade_state.target_version
       - fortios_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+\\.[0-9]+")
       - fortios_upgrade_state.license_status == "valid"
-    fail_msg: "Invalid upgrade path, version format, or license issue"
+      - fortios_upgrade_state.upgrade_path | length > 0
+      - fortios_upgrade_state.current_step < fortios_upgrade_state.upgrade_path | length
+    fail_msg: "Invalid upgrade path, version format, license issue, or step configuration"
+
+- name: Execute multi-step upgrade process
+  ansible.builtin.include_tasks: multi-step-upgrade.yml
+  when: fortios_upgrade_state.multi_step_required | bool
     
-- name: Execute upgrade based on HA mode
-  include_tasks: "{{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode != 'standalone' else 'standalone-upgrade.yml' }}"
+- name: Execute single-step upgrade based on HA mode
+  ansible.builtin.include_tasks: "{{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode != 'standalone' else 'standalone-upgrade.yml' }}"
+  when: not (fortios_upgrade_state.multi_step_required | bool)

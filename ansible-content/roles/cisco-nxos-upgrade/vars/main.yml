@@ -1,0 +1,40 @@
+---
+# Cisco NX-OS Upgrade Variables
+# Default variables for Cisco NX-OS upgrade procedures
+
+# Version constraints
+supported_nxos_versions:
+  - "9.2"
+  - "9.3"
+  - "10.0"
+  - "10.1"
+  - "10.2"
+
+# ISSU capabilities
+issu_capable_platforms:
+  - "N9K-C93180YC-EX"
+  - "N9K-C9336C-FX2"
+  - "N9K-C93240YC-FX2"
+  - "N9K-C9364C"
+  - "N9K-C9500"
+
+# EPLD upgrade settings
+epld_upgrade_required_threshold: "1.0.0"
+epld_max_images_per_upgrade: 3
+
+# Timing and stability
+post_upgrade_wait_seconds: 60
+issu_completion_timeout: 1800  # 30 minutes
+status_check_retries: 5
+status_check_delay: 30
+
+# Network validation
+validate_bgp_sessions: true
+validate_bfd_sessions: true
+validate_interface_states: true
+validate_igmp_groups: true
+
+# Storage management
+min_free_bootflash_mb: 2048
+cleanup_old_images: true
+max_stored_images: 3

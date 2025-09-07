@@ -34,6 +34,43 @@ Before beginning installation, ensure:
 - [ ] Sufficient disk space available
 - [ ] Network connectivity to target devices tested
 
+## Development and Testing Setup
+
+For development and testing without physical devices:
+
+### Testing Framework Installation
+
+```bash
+# Install Ansible with compatible version
+pip install 'ansible>=8.0.0,<10.0.0'
+
+# Install Ansible collections
+ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force --ignore-certs
+
+# Install testing dependencies (optional)
+pip install molecule 'molecule-plugins[docker]' pytest-testinfra yamllint ansible-lint
+
+# Verify installation
+ansible --version
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
+```
+
+### Quick Testing Validation
+
+```bash
+# Test syntax
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
+
+# Test with mock devices
+ansible-playbook -i tests/mock-inventories/all-platforms.yml --check \
+  ansible-content/playbooks/main-upgrade-workflow.yml
+
+# Run comprehensive tests
+./tests/run-all-tests.sh
+```
+
+**For complete testing guide, see**: `tests/TEST_FRAMEWORK_GUIDE.md`
+
 ## Installation Process Overview
 
 ### Installation Flow Diagram
@@ -348,6 +385,32 @@ telegraf --test --config $HOME/.config/telegraf/telegraf.conf --input-filter inf
 ```
 
 ## Troubleshooting Common Issues
+
+### Ansible Compatibility Issues
+
+**Problem**: `ModuleNotFoundError: No module named 'ansible.module_utils.six.moves'`
+**Solution**: This occurs with Ansible version incompatibility. Fix with:
+
+```bash
+# Clean install compatible Ansible version
+pip uninstall ansible ansible-core ansible-base -y
+pip install 'ansible>=8.0.0,<10.0.0'
+
+# Install collections with SSL workaround if needed
+ansible-galaxy collection install cisco.nxos:8.1.0 cisco.ios:8.0.0 fortinet.fortios:2.3.0 \
+  ansible.netcommon:6.1.0 community.network:5.0.0 community.general:8.0.0 --force --ignore-certs
+
+# Verify installation
+ansible --version
+ansible-galaxy collection list
+```
+
+**Problem**: SSL certificate errors during collection installation
+**Solution**:
+```bash
+# Use specific versions with --ignore-certs flag
+ansible-galaxy collection install -r ansible-content/collections/requirements.yml --ignore-certs --force
+```
 
 ### Installation Failures
 

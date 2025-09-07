@@ -1,0 +1,33 @@
+---
+# Cisco IOS-XE Storage Assessment
+
+- name: Get bootflash directory information
+  cisco.ios.ios_command:
+    commands:
+      - dir bootflash:
+  register: ios_bootflash_dir
+
+- name: Get free space information
+  cisco.ios.ios_command:
+    commands:
+      - "dir bootflash: | include bytes free"
+  register: ios_free_space
+
+- name: Parse bootflash directory listing
+  ansible.builtin.set_fact:
+    ios_files: "{{ ios_bootflash_dir.stdout[0] | regex_findall('\\s+(\\d+)\\s+.+\\s+(.+)') }}"
+    ios_images: "{{ ios_bootflash_dir.stdout[0] | regex_findall('\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}"
+
+- name: Parse free space information
+  ansible.builtin.set_fact:
+    ios_total_bytes: "{{ ios_free_space.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+    ios_free_bytes: "{{ ios_free_space.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
+
+- name: Calculate storage metrics
+  ansible.builtin.set_fact:
+    storage_info: "{{ storage_info | combine({
+      'total_space_gb': (ios_total_bytes / 1024 / 1024 / 1024) | round(2),
+      'free_space_gb': (ios_free_bytes / 1024 / 1024 / 1024) | round(2),
+      'images_found': ios_images,
+      'cleanup_candidates': ios_images
+    }) }}"

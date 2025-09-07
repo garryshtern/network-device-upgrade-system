@@ -15,7 +15,7 @@
         epld_modules: "{{ current_epld_versions.stdout[0] | regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
         
     - name: Display current EPLD status
-      debug:
+      ansible.builtin.debug:
         msg: |
           Current EPLD Versions:
           {% for module_info in epld_modules %}
@@ -45,7 +45,7 @@
         has_dual_sup_for_epld: "{{ 'Supervisor' in system_compatibility.stdout[0] and system_compatibility.stdout[0].count('Supervisor') >= 2 }}"
         
     - name: Validate EPLD upgrade feasibility
-      assert:
+      ansible.builtin.assert:
         that:
           - has_dual_sup_for_epld or allow_disruptive_epld | default(false)
         fail_msg: "EPLD upgrade requires dual supervisors or explicit approval for disruptive upgrade"
@@ -89,7 +89,7 @@
       when: epld_upgrade_result is defined
       
     - name: Validate EPLD upgrade completion
-      assert:
+      ansible.builtin.assert:
         that:
           - "'Success' in epld_upgrade_status.stdout[0]"
         fail_msg: "EPLD upgrade failed: {{ epld_upgrade_status.stdout[0] }}"
@@ -108,7 +108,7 @@
         updated_epld_modules: "{{ updated_epld_versions.stdout[0] | regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
         
     - name: Verify EPLD version updates
-      debug:
+      ansible.builtin.debug:
         msg: |
           EPLD Upgrade Results:
           {% for module_info in updated_epld_modules %}
@@ -142,7 +142,7 @@
           success: "{{ epld_upgrade_status is defined and 'Success' in epld_upgrade_status.stdout[0] }}"
 
 - name: EPLD upgrade completion log
-  debug:
+  ansible.builtin.debug:
     msg: |
       EPLD Upgrade Completion Summary:
       - Modules Processed: {{ epld_upgrade_summary.modules_upgraded | join(', ') }}

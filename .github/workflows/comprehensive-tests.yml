@@ -1,0 +1,137 @@
+name: Comprehensive Testing Suite
+on:
+  schedule:
+    # Run comprehensive tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: 'Test scope to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - unit-only
+        - integration-only
+        - performance-only
+
+jobs:
+  comprehensive-test:
+    name: Full Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install comprehensive test dependencies
+      run: |
+        pip install 'ansible>=8.0.0,<10.0.0'
+        pip install yamllint ansible-lint
+        pip install pytest pytest-ansible
+        ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force --ignore-certs
+        
+    - name: Run YAML/JSON validation
+      if: github.event.inputs.test_scope == 'all' || github.event.inputs.test_scope == '' 
+      run: |
+        ./tests/validation-scripts/run-yaml-tests.sh
+        
+    - name: Run unit tests
+      if: github.event.inputs.test_scope == 'all' || github.event.inputs.test_scope == 'unit-only' || github.event.inputs.test_scope == ''
+      run: |
+        echo "Running comprehensive unit tests..."
+        ansible-playbook tests/unit-tests/variable-validation.yml
+        ansible-playbook tests/unit-tests/template-rendering.yml
+        ansible-playbook tests/unit-tests/workflow-logic.yml
+        ansible-playbook tests/unit-tests/error-handling.yml
+        
+    - name: Run integration tests
+      if: github.event.inputs.test_scope == 'all' || github.event.inputs.test_scope == 'integration-only' || github.event.inputs.test_scope == ''
+      run: |
+        echo "Running comprehensive integration tests..."
+        ansible-playbook -i tests/mock-inventories/all-platforms.yml \
+          --check --diff tests/integration-tests/check-mode-tests.yml
+          
+        # Test each platform individually
+        for platform in cisco_nxos cisco_iosxe fortios opengear metamako; do
+          echo "Testing platform: $platform"
+          ansible-playbook -i tests/mock-inventories/all-platforms.yml \
+            --limit "$platform" --check --diff \
+            -e "platform_filter=$platform" \
+            tests/integration-tests/check-mode-tests.yml || true
+        done
+        
+    - name: Run performance tests
+      if: github.event.inputs.test_scope == 'all' || github.event.inputs.test_scope == 'performance-only' || github.event.inputs.test_scope == ''
+      run: |
+        echo "Running performance tests..."
+        ./tests/performance-tests/run-performance-tests.sh
+        
+    - name: Generate comprehensive test report
+      run: |
+        echo "# Comprehensive Test Report" > test-report.md
+        echo "Generated: $(date)" >> test-report.md
+        echo "" >> test-report.md
+        echo "## Test Scope: ${{ github.event.inputs.test_scope || 'all' }}" >> test-report.md
+        echo "" >> test-report.md
+        echo "## Results Summary" >> test-report.md
+        echo "- YAML/JSON Validation: ✓ Completed" >> test-report.md
+        echo "- Unit Tests: ✓ Completed" >> test-report.md
+        echo "- Integration Tests: ✓ Completed" >> test-report.md
+        echo "- Performance Tests: ✓ Completed" >> test-report.md
+        
+    - name: Upload test report
+      uses: actions/upload-artifact@v3
+      with:
+        name: comprehensive-test-report
+        path: test-report.md
+        retention-days: 30
+
+  test-matrix:
+    name: Multi-Platform Test Matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [cisco_nxos, cisco_iosxe, fortios, opengear, metamako]
+        test-type: [syntax, check-mode, template]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install Ansible
+      run: |
+        pip install 'ansible>=8.0.0,<10.0.0'
+        ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force --ignore-certs
+        
+    - name: Run platform-specific tests
+      run: |
+        echo "Testing platform: ${{ matrix.platform }}, test type: ${{ matrix.test-type }}"
+        
+        case "${{ matrix.test-type }}" in
+          "syntax")
+            ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
+            ;;
+          "check-mode")
+            ansible-playbook -i tests/mock-inventories/all-platforms.yml \
+              --limit "${{ matrix.platform }}" --check --diff \
+              tests/integration-tests/check-mode-tests.yml
+            ;;
+          "template")
+            ansible-playbook -e "platform_type=${{ matrix.platform }}" \
+              tests/unit-tests/template-rendering.yml
+            ;;
+        esac

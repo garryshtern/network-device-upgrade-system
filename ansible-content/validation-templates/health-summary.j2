@@ -34,7 +34,7 @@
       "boot_image": "{{ boot_image | default('unknown') }}",
       "system_image": "{{ system_image | default('unknown') }}"
     },
-    "baseline_files": {{ baseline_files | to_json }},
+    "baseline_files": {{ baseline_files | default([]) | tojson }},
     "validation_results": {
       "overall_status": "{{ 'healthy' if connectivity_status == 'success' else 'unhealthy' }}",
       "critical_issues": {{ critical_issues | default([]) | length }},

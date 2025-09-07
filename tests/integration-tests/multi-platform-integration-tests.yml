@@ -18,11 +18,11 @@
         name: "Multi-Platform Deployment"
         description: "Test simultaneous upgrades across platforms"
         platforms:
-          - "cisco_nxos"
-          - "cisco_iosxe"
+          - "cisco-nxos"
+          - "cisco-iosxe"
           - "opengear"
           - "fortios"
-          - "metamako"
+          - "metamako-mos"
       architecture_detection_test:
         name: "Architecture Detection"
         description: "Test automatic platform and architecture detection"
@@ -51,7 +51,7 @@
 
   tasks:
     - name: Multi-Platform Integration Test Suite Information
-      debug:
+      ansible.builtin.debug:
         msg: |
           Starting Multi-Platform Integration Test Suite
           
@@ -74,8 +74,8 @@
     - name: Phase-Separated Workflow Integration Tests
       block:
         - name: Test Main Upgrade Workflow Structure
-          slurp:
-            src: "../ansible-content/playbooks/main-upgrade-workflow.yml"
+          ansible.builtin.slurp:
+            src: "{{ playbook_dir }}/../../ansible-content/playbooks/main-upgrade-workflow.yml"
           register: main_workflow
           
         - name: Validate Phase Separation in Main Workflow
@@ -91,8 +91,8 @@
             fail_msg: "Phase separation not properly implemented"
             
         - name: Test Individual Phase Playbooks
-          stat:
-            path: "../ansible-content/playbooks/{{ item }}"
+          ansible.builtin.stat:
+            path: "{{ playbook_dir }}/../../ansible-content/playbooks/{{ item }}"
           register: phase_playbooks
           loop:
             - "image-loading.yml"
@@ -101,7 +101,7 @@
             - "emergency-rollback.yml"
             
         - name: Validate Phase Playbooks Exist
-          assert:
+          ansible.builtin.assert:
             that:
               - item.stat.exists
             success_msg: "✓ {{ item.item }} phase playbook exists"
@@ -115,8 +115,8 @@
     - name: Multi-Platform Coordination Tests
       block:
         - name: Test Platform-Specific Role Integration
-          stat:
-            path: "../ansible-content/roles/{{ item }}-upgrade"
+          ansible.builtin.stat:
+            path: "{{ playbook_dir }}/../../ansible-content/roles/{{ item }}-upgrade"
           register: platform_roles
           loop: "{{ integration_test_scenarios.multi_platform_test.platforms }}"
           
@@ -130,20 +130,19 @@
           loop: "{{ platform_roles.results }}"
           
         - name: Test Cross-Platform Variable Consistency
-          include_vars:
-            file: "../ansible-content/inventory/group_vars/{{ item }}.yml"
-          register: platform_vars
+          ansible.builtin.stat:
+            path: "{{ playbook_dir }}/../../ansible-content/inventory/group_vars/{{ item | replace('-', '_') }}.yml"
+          register: platform_var_files
           loop: "{{ integration_test_scenarios.multi_platform_test.platforms }}"
-          failed_when: false
           
         - name: Validate Common Configuration Structure
-          assert:
+          ansible.builtin.assert:
             that:
-              - "'platform_type' in vars"
-              - "'vendor' in vars"
-            success_msg: "✓ Common configuration structure present"
-            fail_msg: "Common configuration structure missing"
-          vars: "{{ ansible_facts }}"
+              - item.stat.exists
+              - item.stat.size > 0
+            success_msg: "✓ {{ item.item }} group vars file exists"
+            fail_msg: "{{ item.item }} group vars file missing"
+          loop: "{{ platform_var_files.results }}"
 
     # ==========================================
     # Architecture Detection Integration Tests
@@ -154,7 +153,7 @@
         - name: Test Opengear Architecture Detection Logic
           block:
             - name: Simulate API Detection Test
-              uri:
+              ansible.builtin.uri:
                 url: "https://mock-modern-device.local/api/v1/system/info"
                 method: GET
                 timeout: 5
@@ -183,7 +182,7 @@
       block:
         - name: Test Rollback Playbook Structure
           slurp:
-            src: "../ansible-content/playbooks/emergency-rollback.yml"
+            src: "{{ playbook_dir }}/../../ansible-content/playbooks/emergency-rollback.yml"
           register: rollback_playbook
           
         - name: Validate Rollback Components
@@ -197,18 +196,18 @@
             
         - name: Test Error Handling in Platform Roles
           find:
-            paths: "../ansible-content/roles"
+            paths: "{{ playbook_dir }}/../../ansible-content/roles"
             patterns: "*.yml"
             recurse: yes
-            contains: "rescue:|failed_when:|ignore_errors:"
+            contains: "failed_when"
           register: error_handling_files
           
         - name: Validate Error Handling Implementation
           assert:
             that:
-              - error_handling_files.files | length > 0
-            success_msg: "✓ Error handling implemented across roles"
-            fail_msg: "Insufficient error handling implementation"
+              - error_handling_files.files | length > 10  # Should find many files with error handling
+            success_msg: "✓ Error handling implemented across roles ({{ error_handling_files.files | length }} files)"
+            fail_msg: "Insufficient error handling implementation - only {{ error_handling_files.files | length }} files found"
 
     # ==========================================
     # AWX Integration Tests
@@ -250,7 +249,7 @@
     - name: Monitoring Integration Tests
       block:
         - name: Check Telegraf Configuration
-          stat:
+          ansible.builtin.stat:
             path: "../integration/telegraf"
           register: telegraf_integration
           
@@ -343,7 +342,7 @@
     # ==========================================
     
     - name: Complete Integration Test Results Summary
-      debug:
+      ansible.builtin.debug:
         msg: |
           🎉 Multi-Platform Integration Test Suite Completed
           

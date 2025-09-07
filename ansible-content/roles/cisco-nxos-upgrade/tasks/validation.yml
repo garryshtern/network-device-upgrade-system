@@ -101,7 +101,7 @@
   when: critical_logs | length > 0
 
 - name: IGMP validation
-  include_tasks: igmp-validation.yml
+  ansible.builtin.include_tasks: igmp-validation.yml
   when:
     - validate_igmp is defined
     - validate_igmp | bool
@@ -111,7 +111,7 @@
     - validation
     
 - name: Enhanced BFD validation
-  include_tasks: bfd-validation.yml
+  ansible.builtin.include_tasks: bfd-validation.yml
   when:
     - validate_bfd is defined
     - validate_bfd | bool
@@ -131,7 +131,7 @@
       validation_timestamp: "{{ ansible_date_time.iso8601 }}"
       
 - name: Display comprehensive validation summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       NX-OS Validation Summary:
       ========================

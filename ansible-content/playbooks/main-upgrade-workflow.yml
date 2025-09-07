@@ -72,7 +72,7 @@
           ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
 
         - name: Device health check and baseline capture
-          ansible.builtin.include: health-check.yml
+          ansible.builtin.include_tasks: health-check.yml
           when: not skip_validation
 
         - name: Verify firmware file availability
@@ -92,15 +92,15 @@
     - name: Phase 1 - Image Loading
       block:
         - name: Storage cleanup and preparation
-          ansible.builtin.include: storage-cleanup.yml
+          ansible.builtin.include_tasks: storage-cleanup.yml
           when: upgrade_phase in ['full', 'loading']
 
         - name: Backup current configuration
-          ansible.builtin.include: config-backup.yml
+          ansible.builtin.include_tasks: config-backup.yml
           when: upgrade_phase in ['full', 'loading']
 
         - name: Load firmware image
-          ansible.builtin.include: image-loading.yml
+          ansible.builtin.include_tasks: image-loading.yml
           when: upgrade_phase in ['full', 'loading']
 
         - name: Verify loaded image integrity
@@ -129,12 +129,12 @@
           when: upgrade_phase in ['full', 'installation'] and not skip_validation
 
         - name: Install firmware image
-          ansible.builtin.include: image-installation.yml
+          ansible.builtin.include_tasks: image-installation.yml
           when: upgrade_phase in ['full', 'installation']
 
       rescue:
         - name: Installation failure - trigger rollback
-          ansible.builtin.include: emergency-rollback.yml
+          ansible.builtin.include_tasks: emergency-rollback.yml
           when: rollback_on_failure | bool
 
     # Phase 3: Post-Installation Validation
@@ -147,7 +147,7 @@
           when: upgrade_phase in ['full', 'installation', 'validation']
 
         - name: Post-upgrade network validation  
-          ansible.builtin.include: network-validation.yml
+          ansible.builtin.include_tasks: network-validation.yml
           when: upgrade_phase in ['full', 'installation', 'validation'] and not skip_validation
 
         - name: Update device inventory
@@ -157,19 +157,19 @@
             upgrade_status: "success"
 
         - name: Compliance audit update
-          ansible.builtin.include: compliance-audit.yml
+          ansible.builtin.include_tasks: compliance-audit.yml
           when: upgrade_phase in ['full', 'validation']
 
       rescue:
         - name: Post-validation failure - trigger rollback
-          ansible.builtin.include: emergency-rollback.yml
+          ansible.builtin.include_tasks: emergency-rollback.yml
           when: rollback_on_failure | bool and upgrade_phase != 'validation'
 
     # Rollback workflow (when explicitly requested)
     - name: Rollback Workflow
       block:
         - name: Execute emergency rollback
-          ansible.builtin.include: emergency-rollback.yml
+          ansible.builtin.include_tasks: emergency-rollback.yml
           when: upgrade_phase == 'rollback'
 
       rescue:

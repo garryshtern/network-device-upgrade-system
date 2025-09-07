@@ -1,0 +1,66 @@
+---
+# Opengear Upgrade Variables
+# Default variables for Opengear upgrade procedures
+
+# Version constraints and architecture support
+supported_opengear_versions:
+  - "22.04"
+  - "22.10"
+  - "23.04"
+  - "23.10"
+
+# Architecture differentiation
+modern_opengear_models:
+  - "IM7200"
+  - "IM7248"
+  - "OM7000"
+  - "OM7300"
+  - "CM7100"
+  - "CM7148"
+
+legacy_opengear_models:
+  - "IM4200"
+  - "IM4248"
+  - "CM4100"
+  - "CM4148"
+  - "IM3200"
+
+# API vs SSH differentiation
+api_capable_models:
+  - "IM7200"
+  - "IM7248"
+  - "OM7000"
+  - "OM7300"
+  - "CM7100"
+  - "CM7148"
+
+# Console server validation
+max_serial_ports: 48
+console_port_timeout: 30
+serial_baud_rates:
+  - 9600
+  - 19200
+  - 38400
+  - 115200
+
+# Smart PDU integration
+smart_pdu_support: true
+pdu_outlet_timeout: 60
+max_pdu_outlets: 24
+
+# Timing and stability
+post_upgrade_wait_seconds: 90
+api_timeout_seconds: 120
+ssh_timeout_seconds: 60
+status_check_retries: 5
+status_check_delay: 20
+
+# Web automation settings
+web_login_timeout: 30
+web_upload_timeout: 1800  # 30 minutes for large images
+web_reboot_timeout: 600   # 10 minutes
+
+# Storage management
+min_free_space_mb: 512
+backup_config_before_upgrade: true
+cleanup_old_images: true
