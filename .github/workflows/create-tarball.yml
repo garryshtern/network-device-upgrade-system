@@ -1,0 +1,25 @@
+name: create-tarball.yml
+on:
+  push:
+    branches:
+      - main  # or your default branch, e.g., master
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create tar.gz archive
+        run: |
+          REPO_NAME=$(basename ${{ github.repository }})
+          TARBALL_NAME="${REPO_NAME}-${{ github.sha }}.tar.gz"
+          git archive --format=tar.gz --output "$TARBALL_NAME" HEAD
+
+      - name: Upload tar.gz archive (Optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.repository }}-tarball
+          path: "*.tar.gz"
