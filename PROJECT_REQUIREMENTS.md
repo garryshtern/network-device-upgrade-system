@@ -1,7 +1,8 @@
 # Network Device Upgrade Management System - Project Requirements
 
-> **📊 Implementation Status: 100% Complete - Production Ready**  
-> All requirements have been fully implemented including comprehensive Grafana dashboard automation. System is deployed as unprivileged user services with rootless containers, not the multi-container architecture originally specified below. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for current completion analysis.
+> **📋 Project Requirements Document**  
+> Last Updated: September 7, 2025  
+> This document defines the complete requirements for the network device upgrade management system. For implementation status and completion analysis, see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [TESTING_COMPLIANCE_ANALYSIS.md](TESTING_COMPLIANCE_ANALYSIS.md).
 
 ## Project Overview
 
@@ -32,28 +33,31 @@ Build a complete AWX-based network device upgrade management system for 1000+ he
 
 Build support for the following network device platforms:
 
-### 1. Cisco NX-OS (Nexus Switches) - ✅ 100% Complete
+### 1. Cisco NX-OS (Nexus Switches)
 - **Collection**: `cisco.nxos`
 - **Features**: image staging validation, EPLD upgrades, ISSU support
 - **Validation**: interface & optics states, BGP, PIM, routing tables, ARP, IGMP, enhanced BFD
 
-### 2. Cisco IOS-XE (Enterprise Routers/Switches) - ✅ 100% Complete
+### 2. Cisco IOS-XE (Enterprise Routers/Switches)
 - **Collection**: `cisco.ios`
 - **Features**: Install mode vs. bundle mode handling, boot system management
 - **Validation**: interface & optics states, BGP, routing tables, ARP, IPSec tunnels, BFD sessions
 
-### 3. Metamako MOS (Ultra-Low Latency Switches) - ✅ 100% Complete
+### 3. Metamako MOS (Ultra-Low Latency Switches)
 - **Collection**: `ansible.netcommon` with custom CLI modules
-- **Features**: Custom MOS command handling, latency-sensitive operations
+- **Features**: Custom MOS command handling, latency-sensitive operations, post-upgrade application management
+- **Version Support**: MOS firmware versions 0.39.x (current production: 0.39.11)
+- **Applications**: MetaWatch 4.2.0, MetaMux 3.8.0 (mutually exclusive - only one can be enabled)
+- **Post-Upgrade Requirements**: Applications must be installed after MOS upgrade completion
 - **Validation**: Interface states, metawatch status, metamux status (if equipped)
 
-### 4. Opengear (Console Servers/Smart PDUs) - ✅ 100% Complete
+### 4. Opengear (Console Servers/Smart PDUs)
 - **Collection**: `ansible.netcommon`
 - **Features**: Web interface automation, serial port management
 - **Models**: OM2200, CM8100, CM7100, IM7200
 - **Validation**: Port status, connectivity, power management
 
-### 5. FortiOS (Fortinet Firewalls) - ✅ 100% Complete
+### 5. FortiOS (Fortinet Firewalls)
 - **Collection**: `fortinet.fortios`
 - **Features**: HA cluster coordination, license validation, VDOM handling
 - **Validation**: Security policies, routing, interface states, VPN tunnel management
@@ -202,12 +206,12 @@ Capture baseline network state before any upgrade operations:
 - **Data Retention**: Configure appropriate retention policies
 - **Tagging Strategy**: Consistent tagging for device type, site, vendor, etc.
 
-#### Grafana Integration ✅ 100% Complete
-- **Dashboard Provisioning**: ✅ Automated dashboard deployment with environment-specific customization
-- **Alert Rules**: ✅ Comprehensive alerting configuration for failures and compliance issues  
-- **Data Sources**: ✅ Automatic InfluxDB v2 data source configuration with Flux queries
-- **Multi-Environment Support**: ✅ Development, staging, and production deployment automation
-- **Validation Framework**: ✅ Comprehensive deployment validation and health monitoring
+#### Grafana Integration
+- **Dashboard Provisioning**: Automated dashboard deployment with environment-specific customization
+- **Alert Rules**: Comprehensive alerting configuration for failures and compliance issues  
+- **Data Sources**: Automatic InfluxDB v2 data source configuration with Flux queries
+- **Multi-Environment Support**: Development, staging, and production deployment automation
+- **Validation Framework**: Comprehensive deployment validation and health monitoring
 
 ### Required Metrics and Measurements
 
@@ -307,9 +311,11 @@ collections:
 
 #### Metamako MOS Role
 - **Ultra-Low Latency**: Latency-sensitive upgrade procedures
-- **Custom Commands**: MOS-specific command handling
+- **Custom Commands**: MOS-specific command handling for 0.39.x firmware
+- **Application Management**: Post-upgrade installation of MetaWatch 4.2.0 or MetaMux 3.8.0
+- **Mutual Exclusivity**: Ensure only one application (MetaWatch/MetaMux) is active at a time
 - **Timing Validation**: Latency measurement and validation
-- **Metawatch/Metamux**: Validate status if equipped
+- **Application State Management**: Enable/disable applications safely during transitions
 
 #### Opengear Role
 - **Console Server**: Serial port and console management during upgrades
@@ -565,19 +571,80 @@ network-upgrade-system/
 │       ├── sample-credentials.yml    # Sample credential configuration
 │       └── sample-workflow.yml       # Sample workflow configuration
 │
-├── tests/                            # Testing framework
-│   ├── ansible-tests/                # Ansible playbook tests
-│   │   ├── syntax-tests.yml          # YAML syntax validation
-│   │   ├── playbook-tests.yml        # Playbook execution tests
-│   │   └── role-tests/               # Individual role tests
-│   ├── integration-tests/            # End-to-end tests
-│   │   ├── service-tests.sh          # Service deployment tests
-│   │   ├── workflow-tests.yml        # Full workflow tests
-│   │   └── validation-tests.yml      # Network validation tests
-│   └── vendor-tests/                 # Vendor-specific test cases
-│       ├── cisco-tests.yml           # Cisco platform tests
-│       ├── metamako-tests.yml        # Metamako platform tests
-│       └── opengear-tests.yml        # Opengear platform tests
+├── tests/                            # **MANDATORY COMPREHENSIVE TESTING**
+│   ├── run-all-tests.sh              # **MASTER TEST RUNNER** - Executes all test categories
+│   ├── unit-tests/                   # Unit testing framework
+│   │   ├── variable-validation.yml   # Variable constraint and type testing
+│   │   ├── template-rendering.yml    # Jinja2 template validation
+│   │   ├── workflow-logic.yml        # Decision path and conditional testing
+│   │   ├── error-handling.yml        # Error condition and recovery testing
+│   │   └── validate_scenario.yml     # Shared validation task file
+│   ├── vendor-tests/                 # **PLATFORM-SPECIFIC COMPREHENSIVE TESTING**
+│   │   ├── cisco-nxos-tests.yml      # NX-OS: ISSU, EPLD, Enhanced BFD, IGMP testing
+│   │   ├── cisco-iosxe-tests.yml     # IOS-XE: Install/Bundle mode, IPSec, Optics testing
+│   │   ├── fortios-tests.yml         # FortiOS: Multi-step upgrades, HA, VDOM testing
+│   │   ├── opengear-tests.yml        # Opengear: API vs SSH, Console vs PDU testing
+│   │   ├── metamako-tests.yml        # Metamako: MetaWatch/MetaMux, Ultra-low latency testing
+│   │   ├── validate_nxos_scenario.yml     # NX-OS scenario validation tasks
+│   │   ├── validate_iosxe_scenario.yml    # IOS-XE scenario validation tasks
+│   │   ├── validate_fortios_scenario.yml  # FortiOS scenario validation tasks
+│   │   ├── validate_opengear_scenario.yml # Opengear scenario validation tasks
+│   │   └── validate_metamako_scenario.yml # Metamako scenario validation tasks
+│   ├── integration-tests/            # End-to-end integration testing
+│   │   ├── check-mode-tests.yml      # Check mode workflow validation
+│   │   ├── cross-platform-tests.yml # All 5 platform validation
+│   │   ├── workflow-orchestration.yml # End-to-end workflow testing
+│   │   ├── state-validation-tests.yml # Network state comparison testing
+│   │   └── rollback-scenario-tests.yml # Emergency rollback testing
+│   ├── performance-tests/            # Performance and load testing
+│   │   ├── run-performance-tests.sh  # Performance test execution
+│   │   ├── memory-profiler.py        # Memory usage validation
+│   │   ├── execution-timing.yml      # Performance benchmarking
+│   │   ├── concurrent-operations.yml # Multi-device testing
+│   │   └── scalability-tests.yml     # 1000+ device simulation
+│   ├── security-tests/               # Security and compliance testing
+│   │   ├── hash-verification-tests.yml # Cryptographic integrity testing
+│   │   ├── vault-security-tests.yml  # Ansible Vault testing
+│   │   ├── access-control-tests.yml  # Role-based permission testing
+│   │   └── audit-trail-tests.yml     # Logging and audit validation
+│   ├── mock-inventories/             # **REALISTIC** Mock device inventories for testing
+│   │   ├── all-platforms.yml         # Complete mock inventory (all 5 platforms with realistic configs)
+│   │   │                             # - NX-OS: 3 devices (ISSU/non-ISSU, EPLD scenarios)
+│   │   │                             # - IOS-XE: 3 devices (install/bundle mode scenarios)  
+│   │   │                             # - FortiOS: 4 devices (HA, standalone, multi-step upgrades)
+│   │   │                             # - Opengear: 4 devices (API vs SSH, console vs PDU)
+│   │   │                             # - Metamako: 4 devices (all metawatch/metamux combinations)
+│   │   ├── single-platform.yml       # Single platform testing
+│   │   ├── cisco-nxos-mock.yml       # NX-OS realistic mock devices with EPLD
+│   │   ├── cisco-iosxe-mock.yml      # IOS-XE realistic mock devices with install/bundle
+│   │   ├── fortios-mock.yml          # FortiOS realistic mock devices with multi-step
+│   │   ├── opengear-mock.yml         # Opengear realistic mock devices with API/SSH
+│   │   └── metamako-mock.yml         # Metamako realistic mock devices with 2.x versions
+│   ├── validation-scripts/           # Validation and syntax checking
+│   │   ├── yaml-validator.py         # YAML/JSON structure validation
+│   │   ├── run-yaml-tests.sh         # YAML validation test runner
+│   │   ├── ansible-syntax-check.sh   # Ansible syntax validation
+│   │   └── lint-validation.sh        # Code quality validation
+│   ├── ci-cd/                        # CI/CD pipeline testing
+│   │   ├── github-actions/           # GitHub Actions workflows
+│   │   │   ├── test-pipeline.yml     # Comprehensive test pipeline
+│   │   │   ├── syntax-validation.yml # Syntax validation workflow
+│   │   │   └── security-testing.yml  # Security validation workflow
+│   │   ├── gitlab-ci/                # GitLab CI configurations
+│   │   └── jenkins/                  # Jenkins pipeline configurations
+│   ├── molecule-tests/               # Molecule container-based testing
+│   │   ├── molecule.yml              # Molecule configuration
+│   │   ├── requirements.yml          # Container testing requirements
+│   │   └── scenarios/                # Test scenarios for containers
+│   ├── test-data/                    # Sample data for validation testing
+│   │   ├── sample-configurations/    # Mock device configurations
+│   │   ├── firmware-samples/         # Sample firmware metadata
+│   │   └── network-states/           # Sample network state data
+│   ├── TEST_FRAMEWORK_GUIDE.md       # **COMPREHENSIVE TESTING DOCUMENTATION**
+│   └── test-reports/                 # Automated test reporting
+│       ├── coverage-reports/         # Test coverage analysis
+│       ├── performance-reports/      # Performance benchmarking results
+│       └── security-reports/         # Security validation results
 │
 ├── docs/                             # Documentation
 │   ├── installation-guide.md         # Container installation guide
@@ -600,6 +667,267 @@ network-upgrade-system/
     ├── demo-workflows/               # Demonstration workflows
     └── test-data/                    # Sample test data for validation
 ```
+
+## Comprehensive Testing Requirements
+
+### **MANDATORY TESTING FRAMEWORK**
+The project **MUST** include comprehensive tests that validate ALL functionality and complete without warnings and/or errors. Testing is not optional - it is a core requirement for production deployment.
+
+#### **Test Coverage Requirements**
+- **100% Functionality Coverage**: Every playbook, role, task, and template must be tested
+- **Zero Error Tolerance**: All tests must complete successfully with no errors or warnings
+- **Comprehensive Validation**: Tests must validate syntax, logic, variable scoping, and integration points
+- **Mock Environment Testing**: Full testing capability without requiring physical devices
+- **Platform-Specific Testing**: All 5 supported platforms must have dedicated comprehensive test suites
+- **Realistic Mock Inventories**: Platform-specific mock devices with accurate configurations and scenarios
+- **Automated Execution**: All tests must be executable through automated CI/CD pipelines
+
+#### **Required Test Categories**
+
+##### **1. Syntax and Structure Validation**
+```bash
+# All YAML files must pass syntax validation
+find . -name "*.yml" -exec python -c "import yaml; yaml.safe_load(open('{}').read())" \;
+
+# All Ansible playbooks must pass syntax check
+ansible-playbook --syntax-check playbooks/*.yml
+
+# All YAML files must pass yamllint validation  
+yamllint ansible-content/ awx-config/ tests/
+```
+
+##### **2. Unit Testing Framework**
+- **Variable Validation**: Test all variable constraints and type checking
+- **Template Rendering**: Validate all Jinja2 templates render correctly
+- **Workflow Logic**: Test decision paths and conditional logic
+- **Error Handling**: Validate error conditions and recovery procedures
+- **Mock Inventory Testing**: Complete testing with simulated device inventories
+
+##### **3. Integration Testing Framework**
+- **Check Mode Testing**: Full workflow validation using `--check --diff` modes
+- **Cross-Platform Testing**: Validate all 5 supported device platforms
+- **Workflow Orchestration**: End-to-end workflow testing with mock devices
+- **State Validation**: Network state comparison and validation testing
+- **Rollback Procedures**: Emergency rollback scenario testing
+
+##### **3a. Platform-Specific Testing Framework - MANDATORY**
+**All 5 supported platforms MUST have comprehensive, realistic test coverage:**
+
+###### **Cisco NX-OS Testing Requirements**
+- **ISSU Support Testing**: In-Service Software Upgrade validation for capable devices
+- **EPLD Upgrade Testing**: Embedded Programmable Logic Device upgrade scenarios
+- **Multiple EPLD Images**: Support for n9000-epld.img and n9000-module-epld.img
+- **EPLD Version Tracking**: current_epld_version → target_epld_version progression
+- **Enhanced BFD Validation**: BFD session state and statistics validation
+- **IGMP Group Testing**: IGMP group membership and version validation
+- **NXAPI Support**: API-enabled vs CLI-only device differentiation
+- **Mock Devices Required**: Minimum 3 NX-OS devices covering ISSU/non-ISSU and EPLD scenarios
+
+###### **Cisco IOS-XE Testing Requirements**
+- **Install Mode Detection**: Automatic detection of install mode vs bundle mode capability
+- **Boot System Management**: Proper boot system configuration validation
+- **IPSec Tunnel Validation**: IPSec tunnel state and connectivity testing
+- **Optics Validation**: SFP/QSFP diagnostics and status checking
+- **Install vs Bundle Scenarios**: Test both upgrade methods comprehensively
+- **Mock Devices Required**: Minimum 3 IOS-XE devices covering install/bundle mode scenarios
+
+###### **FortiOS Testing Requirements**
+- **Multi-Step Upgrade Validation**: MANDATORY testing of multi-version upgrade paths
+- **HA Cluster Coordination**: Primary/Secondary firewall upgrade coordination
+- **VDOM Handling**: Virtual Domain management during upgrades
+- **Security Policy Preservation**: Validate security policies maintain during upgrade
+- **VPN Tunnel Management**: VPN connectivity preservation testing
+- **License Validation**: FortiCare license verification and activation
+- **Upgrade Path Testing**: Test complex paths like 6.4.8 → 6.4.14 → 7.0.12 → 7.2.4
+- **Mock Devices Required**: Minimum 4 FortiOS devices covering HA, standalone, multi-step scenarios
+
+###### **Opengear Testing Requirements**
+- **API vs SSH Differentiation**: MANDATORY testing of both modern API and legacy SSH methods
+- **Web Interface Automation**: Modern devices (IM7200, CM8100) with HTTPS API
+- **Legacy CLI Support**: Older devices (OM2200, CM7100) with SSH CLI automation
+- **Console Server vs PDU**: Different device types with appropriate upgrade methods
+- **Connection Method Validation**: ansible_connection: local vs ssh differentiation
+- **Version-Specific Methods**: API-capable (4.8+) vs Legacy (3.x) firmware handling
+- **Mock Devices Required**: Minimum 4 Opengear devices covering API/SSH and console/PDU types
+
+###### **Metamako MOS Testing Requirements**
+- **Ultra-Low Latency Handling**: Latency-sensitive upgrade procedures for critical devices
+- **Version Testing**: MOS upgrade scenarios from 0.39.1/0.39.3/0.39.5 to 0.39.11
+- **MetaWatch Support Testing**: MetaWatch 4.2.0 installation and management post-upgrade
+- **MetaMux Support Testing**: MetaMux 3.8.0 installation and management post-upgrade
+- **Application Mutual Exclusivity**: Validate only one application (MetaWatch/MetaMux) can be active
+- **Post-Upgrade Application Management**: Test application installation after MOS upgrade completion
+- **Application Switching**: Test transitioning between MetaWatch and MetaMux applications
+- **Latency Threshold Validation**: Test various thresholds (25ns, 50ns, 100ns, 500ns)
+- **Performance Impact**: Validate upgrade procedures don't affect latency-critical operations
+- **Mock Devices Required**: Minimum 4 Metamako devices covering all application combinations
+
+##### **4. Performance and Load Testing**
+- **Memory Profiling**: Memory usage validation during large-scale operations
+- **Execution Timing**: Performance benchmarking and optimization validation
+- **Concurrent Operations**: Multi-device operation testing and resource management
+- **Scalability Testing**: 1000+ device simulation and performance validation
+
+##### **5. Security and Compliance Testing**
+- **Hash Verification**: Cryptographic integrity testing
+- **Vault Security**: Ansible Vault encryption/decryption testing
+- **Access Control**: Role-based permission validation
+- **Audit Trail**: Logging and audit trail validation
+
+#### **CI/CD Pipeline Requirements**
+
+##### **Mandatory Pipeline Components**
+The CI/CD pipeline **MUST** include execution of ALL tests and cannot proceed with deployment unless all tests pass:
+
+```yaml
+# Required CI/CD Pipeline Stages
+stages:
+  - syntax-validation      # YAML/Ansible syntax checks
+  - unit-testing          # Variable validation, template testing
+  - integration-testing   # Check mode and workflow testing  
+  - performance-testing   # Memory and execution profiling
+  - security-testing      # Hash verification and vault testing
+  - comprehensive-validation # Full test suite execution
+  - deployment-approval   # Manual approval gate (production only)
+  - deployment           # Automated deployment (only after all tests pass)
+```
+
+##### **Test Execution Standards**
+- **Pre-Commit Hooks**: Syntax validation before code commits
+- **Automated Testing**: Full test suite execution on every pull request
+- **Quality Gates**: No code merges without 100% test pass rate
+- **Performance Regression**: Automated performance regression detection
+- **Documentation Updates**: Tests must validate documentation accuracy
+
+##### **Test Environment Requirements**
+- **Mock Device Inventories**: Comprehensive mock inventories for all platforms
+- **Container-Based Testing**: Isolated test environments using containers
+- **Parallel Execution**: Tests must support parallel execution for efficiency
+- **Cross-Platform Support**: Tests must run on Linux, macOS, and Windows
+- **Resource Monitoring**: Memory and CPU usage monitoring during tests
+
+##### **Mock Inventory Specifications - MANDATORY REALISTIC CONFIGURATIONS**
+
+**All mock inventories MUST include realistic, platform-specific configurations:**
+
+```yaml
+# REQUIRED Mock Device Specifications
+
+cisco_nxos: # Minimum 3 devices
+  nxos-switch-01: # ISSU + EPLD Required
+    platform_type: cisco_nxos
+    device_model: "N9K-C93180YC-EX"
+    firmware_version: "9.3.10" → target_version: "10.1.2"
+    issu_capable: true
+    epld_upgrade_required: true
+    current_epld_version: "1.2.3" → target_epld_version: "1.3.1"
+    epld_images: ["n9000-epld.10.1.2.img"]
+    nxapi_enabled: true
+
+  nxos-switch-02: # Non-ISSU, No EPLD
+    device_model: "N9K-C9336C-FX2"
+    issu_capable: false
+    epld_upgrade_required: false
+    nxapi_enabled: false
+
+  nxos-switch-03: # ISSU + Multiple EPLD Images
+    device_model: "N9K-C93240YC-FX2"
+    issu_capable: true
+    epld_upgrade_required: true
+    epld_images: ["n9000-epld.10.2.3.img", "n9000-module-epld.10.2.3.img"]
+
+cisco_iosxe: # Minimum 3 devices  
+  iosxe-router-01: # Install Mode Capable
+    device_model: "ISR4431"
+    install_mode: true
+    boot_mode: "install"
+    
+  iosxe-switch-01: # Bundle Mode Only
+    device_model: "C9300-48U"  
+    install_mode: false
+    boot_mode: "bundle"
+
+fortios: # Minimum 4 devices
+  fortigate-fw-01: # HA Primary with Multi-Step
+    firmware_version: "6.4.8" → target_version: "7.2.4"
+    ha_enabled: true, ha_role: "primary"
+    multi_step_upgrade_required: true
+    upgrade_path: ["6.4.14", "7.0.12", "7.2.4"]
+    vdom_enabled: true, vdom_count: 3
+
+  fortigate-fw-02: # HA Secondary with Multi-Step
+    ha_role: "secondary"
+    # Same multi-step path as primary
+
+  fortigate-fw-standalone: # Standalone Multi-Step
+    ha_enabled: false
+    upgrade_path: ["7.0.12", "7.2.4"]
+
+  fortigate-fw-direct: # Direct Upgrade (Single Step)
+    firmware_version: "7.2.1" → target_version: "7.2.4"
+    multi_step_upgrade_required: false
+    upgrade_path: ["7.2.4"]
+
+opengear: # Minimum 4 devices
+  opengear-im7200-api: # Modern API Device
+    device_model: "IM7200-2-DAC"
+    ansible_connection: local
+    api_capable: true
+    upgrade_method: "web_api"
+    firmware_version: "4.8.2" # API-capable version
+
+  opengear-cm8100-api: # Modern API Console Server
+    device_model: "CM8100"
+    api_capable: true, cli_legacy_support: true
+
+  opengear-om2200-legacy: # Legacy SSH PDU
+    device_model: "OM2200"
+    ansible_connection: ssh
+    api_capable: false
+    upgrade_method: "ssh_cli"
+    firmware_version: "3.14.2" # Legacy version
+
+  opengear-cm7100-legacy: # Legacy SSH Console Server
+    device_model: "CM7100"
+    api_capable: false
+
+metamako: # Minimum 4 devices
+  metamako-mc48-full: # MetaWatch + MetaMux
+    device_model: "MetaConnect-48"
+    firmware_version: "2.14.3" # Realistic 2.x version
+    metawatch_enabled: true, metawatch_version: "1.2.1"
+    metamux_enabled: true, metamux_version: "2.1.4"
+    latency_threshold_ns: 50, ultra_low_latency: true
+
+  metamako-mc24-watch-only: # MetaWatch Only
+    device_model: "MetaConnect-24"
+    metawatch_enabled: true, metawatch_version: "1.1.8"
+    metamux_enabled: false, metamux_version: null
+    latency_threshold_ns: 100
+
+  metamako-mc12-basic: # Neither MetaWatch nor MetaMux
+    device_model: "MetaConnect-12"
+    metawatch_enabled: false, metamux_enabled: false
+    latency_threshold_ns: 500, ultra_low_latency: false
+
+  metamako-mc64-enterprise: # Both + Ultra Low Latency
+    device_model: "MetaConnect-64"
+    metawatch_enabled: true, metamux_enabled: true
+    latency_threshold_ns: 25, ultra_low_latency: true
+```
+
+#### **Test Documentation Standards**
+- **Test Framework Guide**: Complete documentation of testing procedures
+- **Test Execution Instructions**: Step-by-step test execution guidelines
+- **Troubleshooting Guide**: Common test failure resolution procedures
+- **Performance Benchmarks**: Documented performance expectations and limits
+
+#### **Quality Assurance Standards**
+- **Zero-Warning Policy**: No warnings allowed in test output
+- **Error-Free Execution**: All tests must complete without errors
+- **Consistent Results**: Tests must produce consistent, repeatable results
+- **Clear Failure Messages**: Test failures must provide actionable error messages
+- **Automated Reporting**: Test results must be automatically collected and reported
 
 ## Implementation Standards
 
@@ -658,14 +986,14 @@ network-upgrade-system/
 ## Success Criteria
 
 ### Functional Requirements
-- **Complete Installation**: ✅ System deployable in under 4 hours on fresh server
-- **Vendor Support**: ✅ Full support for all 5 specified device platforms (NX-OS 100%, IOS-XE 100%, FortiOS 100%, Metamako 100%, Opengear 100%)
-- **Phase Separation**: ✅ Clear separation between image loading and installation
-- **Security Validation**: ✅ Cryptographic verification of all firmware images
-- **State Validation**: ✅ Comprehensive network state validation and comparison
-- **Integration Success**: ✅ Seamless integration with existing InfluxDB v2 and Grafana
-- **Dashboard Automation**: ✅ Complete Grafana dashboard provisioning with multi-environment support
-- **Monitoring Visualization**: ✅ Real-time operational dashboards with comprehensive metrics
+- **Complete Installation**: System deployable in under 4 hours on fresh server
+- **Vendor Support**: Full support for all 5 specified device platforms
+- **Phase Separation**: Clear separation between image loading and installation
+- **Security Validation**: Cryptographic verification of all firmware images
+- **State Validation**: Comprehensive network state validation and comparison
+- **Integration Success**: Seamless integration with existing InfluxDB v2 and Grafana
+- **Dashboard Automation**: Complete Grafana dashboard provisioning with multi-environment support
+- **Monitoring Visualization**: Real-time operational dashboards with comprehensive metrics
 
 ### Performance Requirements
 - **Device Capacity**: Support 1000+ devices with single server
@@ -678,8 +1006,25 @@ network-upgrade-system/
 - **Zero Development**: Implementation requires only configuration, no custom coding
 - **Standard Skills**: Maintainable by staff with basic Linux and Ansible knowledge
 - **Comprehensive Documentation**: Complete user and administrator documentation
-- **Testing Suite**: Comprehensive test suite for validation
+- **Comprehensive Testing Suite**: **MANDATORY** - All tests must pass without errors or warnings
+- **CI/CD Integration**: Automated testing pipeline with quality gates
 - **Backup/Recovery**: Complete backup and disaster recovery procedures
+
+### Testing and Quality Assurance Requirements
+- **100% Test Coverage**: Every component must be tested and validated
+- **Zero-Error Policy**: All tests must complete successfully without any errors
+- **Zero-Warning Policy**: All tests must complete without generating warnings
+- **Mock Environment Testing**: Full functionality testing without physical devices
+- **Platform-Specific Testing**: MANDATORY comprehensive testing for all 5 supported platforms
+- **Realistic Mock Inventories**: Platform-accurate mock devices with proper configurations
+- **EPLD Testing**: NX-OS EPLD upgrade scenarios with multiple image support
+- **Multi-Step Upgrades**: FortiOS multi-version upgrade path testing
+- **API/SSH Differentiation**: Opengear modern API vs legacy SSH testing
+- **MetaWatch/MetaMux**: Metamako application testing with MetaWatch 4.2.0 and MetaMux 3.8.0 versions
+- **Automated CI/CD Testing**: All tests must be integrated into continuous integration pipeline
+- **Performance Validation**: Memory usage and execution time validation
+- **Security Testing**: Cryptographic verification and access control testing
+- **Cross-Platform Validation**: Complete validation across all 5 supported device platforms
 
 ## Deliverable Quality Standards
 
@@ -689,6 +1034,18 @@ network-upgrade-system/
 - **Shell Check**: All shell scripts must pass shellcheck validation
 - **Documentation**: Every component must include comprehensive documentation
 - **Examples**: Working examples for all major use cases
+
+### **MANDATORY TESTING STANDARDS**
+- **Comprehensive Test Suite**: **REQUIRED** - Complete testing framework covering all functionality
+- **Zero-Error Requirement**: All tests must execute successfully without any errors
+- **Zero-Warning Requirement**: All tests must complete without generating any warnings
+- **CI/CD Integration**: All tests must be integrated into automated CI/CD pipelines
+- **Mock Environment Testing**: Complete testing capability without physical devices
+- **Test Documentation**: Comprehensive testing documentation and execution guides
+- **Automated Test Execution**: Tests must be executable through automated scripts
+- **Performance Benchmarking**: Memory usage and execution time validation
+- **Cross-Platform Validation**: Testing across all 5 supported device platforms
+- **Security Testing**: Hash verification, vault security, and access control testing
 
 ### Security Requirements
 - **No Hardcoded Secrets**: All secrets managed through Ansible Vault or external systems

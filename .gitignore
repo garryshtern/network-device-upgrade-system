@@ -175,6 +175,8 @@ firmware/
 # IDE and editor files
 .vscode/
 .idea/
+.claude/
+.ansible/
 *.swp
 *.swo
 *~
@@ -197,6 +199,16 @@ temp/
 logs/
 *.log.*
 
+# Test results and temporary files
+tests/results/*
+!tests/results/.gitkeep
+**/performance_*/
+install/*.txt
+
+# Ansible temporary files
+**/.ansible/
+*.retry
+
 # Secret files
 secrets/
 vault/
@@ -206,3 +218,6 @@ keys/
 local_config.yaml
 dev_config.yaml
 test_config.yaml
+
+# Documentation artifacts  
+*.pdf
