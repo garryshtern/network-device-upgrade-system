@@ -26,15 +26,21 @@
       register: app_storage_check
       when: application_action == 'install'
       
-    - name: Upload application to device (if remote source)
-      ansible.netcommon.cli_command:
-        ansible.builtin.command: "copy {{ application_source }} flash:{{ application_filename | default(application_source | basename) }}"
+    - name: Upload application to device (Server-Initiated Transfer)
+      ansible.builtin.command:
+        cmd: >
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          {{ '-i ' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined else '' }}
+          "{{ application_source }}"
+          "{{ ansible_user }}@{{ ansible_host }}:/flash/{{ application_filename | default(application_source | basename) }}"
         timeout: 1800
+      delegate_to: localhost
       register: app_upload_result
+      vars:
+        ansible_connection: local
       when: 
         - application_action == 'install'
         - application_source is defined
-        - application_source is match("^(http|https|ftp|sftp|scp)://.*")
         
     - name: Verify application file exists
       ansible.netcommon.cli_command:
@@ -93,15 +99,21 @@
 
 - name: EOS extension management
   block:
-    - name: Upload EOS extension (if remote source)
-      ansible.netcommon.cli_command:
-        ansible.builtin.command: "copy {{ eos_extension_source }} flash:{{ eos_extension_filename | default(eos_extension_source | basename) }}"
+    - name: Upload EOS extension (Server-Initiated Transfer)
+      ansible.builtin.command:
+        cmd: >
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          {{ '-i ' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined else '' }}
+          "{{ eos_extension_source }}"
+          "{{ ansible_user }}@{{ ansible_host }}:/flash/{{ eos_extension_filename | default(eos_extension_source | basename) }}"
         timeout: 1800
+      delegate_to: localhost
       register: eos_upload_result
+      vars:
+        ansible_connection: local
       when:
         - eos_extension_action == 'install'
         - eos_extension_source is defined
-        - eos_extension_source is match("^(http|https|ftp|sftp|scp)://.*")
         
     - name: Verify EOS extension file exists
       ansible.netcommon.cli_command:

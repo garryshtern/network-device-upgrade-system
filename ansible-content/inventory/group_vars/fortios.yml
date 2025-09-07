@@ -34,9 +34,8 @@ validate_forticare_license: true
 check_support_contract: true
 license_grace_period_days: 30
 
-# Firmware management
-firmware_download_method: "fortiguard"  # fortiguard, local_upload
-fortiguard_timeout: 3600
+# Firmware management - Server-initiated PUSH only
+firmware_upload_method: "server_push"  # Only server-initiated uploads supported
 local_firmware_path: "{{ firmware_base_path }}/fortios"
 verify_firmware_signature: true
 

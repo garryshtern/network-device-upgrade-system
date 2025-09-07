@@ -52,13 +52,19 @@
 
 - name: EPLD upgrade execution
   block:
-    - name: Stage EPLD image
-      cisco.nxos.nxos_command:
-        commands:
-          - "copy {{ epld_image_source }} bootflash:{{ target_epld_image }}"
-        timeout: 1800
+    - name: Stage EPLD image (Server-Initiated Transfer)
+      cisco.nxos.nxos_file_copy:
+        file_system: "bootflash:"
+        local_file: "{{ epld_image_source }}"
+        remote_file: "{{ target_epld_image }}"
+        file_pull: false  # Server pushes to device
+        connect_ssh_port: "{{ ansible_ssh_port | default(22) }}"
+        vrf: "{{ management_vrf | default('management') }}"
       register: epld_stage_result
+      delegate_to: localhost
       when: target_epld_image is defined
+      vars:
+        ansible_connection: local
       
     - name: Verify EPLD image staging
       cisco.nxos.nxos_command:

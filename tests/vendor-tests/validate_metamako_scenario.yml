@@ -111,8 +111,8 @@
         - name: Validate application source format (if installing)
           assert:
             that:
-              - application_source is match("^(http|https|ftp|sftp|scp)://.*") or application_source is match("^flash:/.*") or application_source == ""
-            fail_msg: "Application source format invalid - must be URL or flash: path"
+              - application_source is match("^/.*") or application_source is match("^flash:/.*") or application_source == ""
+            fail_msg: "Application source format invalid - must be local file path or flash: path"
             success_msg: "✓ Application source format validated"
           when: 
             - manage_applications is defined and manage_applications
@@ -122,8 +122,8 @@
         - name: Validate EOS extension source format (if installing)
           assert:
             that:
-              - eos_extension_source is match("^(http|https|ftp|sftp|scp)://.*") or eos_extension_source is match("^flash:/.*") or eos_extension_source == ""
-            fail_msg: "EOS extension source format invalid - must be URL or flash: path"
+              - eos_extension_source is match("^/.*") or eos_extension_source is match("^flash:/.*") or eos_extension_source == ""
+            fail_msg: "EOS extension source format invalid - must be local file path or flash: path"
             success_msg: "✓ EOS extension source format validated"
           when: 
             - manage_applications is defined and manage_applications

@@ -1,6 +1,7 @@
 ---
 # Image Loading for Opengear Devices
-# Handles firmware image upload via web API
+# Secure server-initiated firmware image transfer via web API
+# SECURITY: Uses server-initiated PUSH transfers (API upload from server)
 
 - name: Pre-loading validation
   block:
@@ -77,7 +78,7 @@
         validate_certs: false
       register: upload_session
       
-    - name: Upload firmware file in chunks
+    - name: Push firmware file from server via API (Server-Initiated PUSH)
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{ upload_session.json.session_id }}/chunk"
         method: POST
@@ -87,8 +88,11 @@
         body: "{{ lookup('file', local_firmware_path, rstrip=False) | b64decode }}"
         timeout: 3600
         validate_certs: false
-      register: chunk_upload
+      register: secure_chunk_upload
+      delegate_to: localhost
       when: local_firmware_path is defined
+      vars:
+        ansible_connection: local
       
     - name: Complete firmware upload
       ansible.builtin.uri:
@@ -100,36 +104,6 @@
       register: upload_complete
   when: local_firmware_path is defined
 
-- name: Alternative - Download firmware from URL
-  block:
-    - name: Download firmware from remote URL
-      ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/firmware/download"
-        method: POST
-        headers:
-          Authorization: "Token {{ opengear_api_token }}"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          url: "{{ remote_firmware_url }}"
-          filename: "{{ target_firmware_filename }}"
-        validate_certs: false
-      register: remote_download
-      when: remote_firmware_url is defined and local_firmware_path is not defined
-      
-    - name: Monitor remote download progress
-      ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/firmware/download/{{ remote_download.json.download_id }}/status"
-        method: GET
-        headers:
-          Authorization: "Token {{ opengear_api_token }}"
-        validate_certs: false
-      register: download_status
-      until: download_status.json.status in ['completed', 'failed']
-      retries: 60
-      delay: 30
-      when: remote_download is defined
-  when: remote_firmware_url is defined and local_firmware_path is not defined
 
 - name: Verify firmware upload/download
   block:
@@ -162,10 +136,11 @@
 - name: Log image loading completion
   ansible.builtin.debug:
     msg: |
-      Opengear Image Loading Completed:
+      Secure Opengear Image Loading Completed:
       - Device: {{ opengear_upgrade_state.device_model }}
       - Firmware File: {{ target_firmware_filename }}
       - Size: {{ uploaded_firmware_info.size_mb }}MB
       - Checksum: {{ uploaded_firmware_info.checksum }}
-      - Upload Method: {{ 'Local File' if local_firmware_path is defined else 'Remote Download' }}
+      - Transfer Method: Server-Initiated PUSH (API Upload)
+      - Security Level: HIGH (server pushes file)
       - Status: Ready for Installation

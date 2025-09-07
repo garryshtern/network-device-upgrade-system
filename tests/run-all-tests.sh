@@ -183,8 +183,10 @@ main() {
     # Test suites to run
     test_suites=(
         "Syntax_Tests:../tests/ansible-tests/syntax-tests.yml"
+        "Secure_Transfer_Validation:../tests/unit-tests/secure-image-transfer-validation.yml"
         "Workflow_Integration:../tests/integration-tests/workflow-tests.yml"
         "Multi_Platform_Integration:../tests/integration-tests/multi-platform-integration-tests.yml"
+        "Secure_Transfer_Integration:../tests/integration-tests/secure-transfer-integration-tests.yml"
         "Network_Validation:../tests/validation-tests/network-validation-tests.yml"
         "Comprehensive_Validation:../tests/validation-tests/comprehensive-validation-tests.yml"
         "Cisco_NXOS_Tests:../tests/vendor-tests/cisco-nxos-tests.yml"

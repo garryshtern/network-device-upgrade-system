@@ -29,11 +29,9 @@ nxos_install_timeout: 3600
 nxos_reboot_timeout: 900
 nxos_copy_timeout: 1800
 
-# Image management
-image_protocol: "scp"  # scp, sftp, http, https
-image_server: "{{ firmware_server | default('192.168.1.100') }}"
-image_server_username: "{{ vault_image_server_username }}"
-image_server_password: "{{ vault_image_server_password }}"
+# Image management - Server-initiated PUSH only
+# All images are pushed from the upgrade server to devices
+# No device-initiated connections to image servers
 
 # Storage management
 min_free_space_mb: 2000

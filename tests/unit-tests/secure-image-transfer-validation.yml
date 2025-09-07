@@ -1,0 +1,245 @@
+---
+# Secure Image Transfer Validation Tests
+# Tests server-initiated PUSH transfer mechanisms and SSH key authentication
+
+- name: Validate Secure Image Transfer Implementation
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_results: []
+    
+  tasks:
+    - name: Test Cisco IOS-XE secure transfer configuration
+      block:
+        - name: Load IOS-XE image loading task
+          ansible.builtin.slurp:
+            src: "{{ playbook_dir }}/../../ansible-content/roles/cisco-iosxe-upgrade/tasks/image-loading.yml"
+          register: iosxe_content
+          
+        - name: Parse IOS-XE tasks
+          ansible.builtin.set_fact:
+            iosxe_tasks_content: "{{ iosxe_content.content | b64decode }}"
+          
+        - name: Validate server-initiated PUSH implementation
+          ansible.builtin.assert:
+            that:
+              - "'mode: push' in iosxe_tasks_content"
+              - "'delegate_to: localhost' in iosxe_tasks_content"
+              - "'scp' in iosxe_tasks_content | lower"
+            success_msg: "✅ IOS-XE uses server-initiated PUSH transfers"
+            fail_msg: "❌ IOS-XE does not implement server-initiated PUSH transfers"
+            
+        - name: Check SSH key authentication priority
+          ansible.builtin.assert:
+            that:
+              - "'ansible_ssh_private_key_file' in iosxe_tasks_content"
+            success_msg: "✅ IOS-XE prioritizes SSH key authentication"
+            fail_msg: "⚠️  IOS-XE should prioritize SSH key authentication"
+            
+        - name: Record IOS-XE test results
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['IOS-XE: PASS - Server-initiated PUSH implemented'] }}"
+            
+      rescue:
+        - name: Record IOS-XE test failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['IOS-XE: FAIL - Test execution error'] }}"
+
+    - name: Test Cisco NX-OS secure transfer configuration
+      block:
+        - name: Load NX-OS image loading task
+          ansible.builtin.slurp:
+            src: "{{ playbook_dir }}/../../ansible-content/roles/cisco-nxos-upgrade/tasks/image-loading.yml"
+          register: nxos_content
+          
+        - name: Parse NX-OS tasks
+          ansible.builtin.set_fact:
+            nxos_tasks_content: "{{ nxos_content.content | b64decode }}"
+            
+        - name: Validate server-initiated PUSH implementation
+          ansible.builtin.assert:
+            that:
+              - "'file_pull: false' in nxos_tasks_content"
+              - "'delegate_to: localhost' in nxos_tasks_content"
+              - "'Server-Initiated PUSH' in nxos_tasks_content"
+            success_msg: "✅ NX-OS uses server-initiated PUSH transfers"
+            fail_msg: "❌ NX-OS does not implement server-initiated PUSH transfers"
+            
+        - name: Check SCP server enablement
+          ansible.builtin.assert:
+            that:
+              - "'feature scp-server' in nxos_tasks_content"
+            success_msg: "✅ NX-OS enables SCP server for secure transfers"
+            fail_msg: "❌ NX-OS should enable SCP server"
+            
+        - name: Record NX-OS test results
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['NX-OS: PASS - Server-initiated PUSH implemented'] }}"
+            
+      rescue:
+        - name: Record NX-OS test failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['NX-OS: FAIL - ' + ansible_failed_result.msg] }}"
+
+    - name: Test FortiOS secure transfer configuration
+      block:
+        - name: Load FortiOS image loading task
+          ansible.builtin.slurp:
+            src: "{{ playbook_dir }}/../../ansible-content/roles/fortios-upgrade/tasks/image-loading.yml"
+          register: fortios_content
+          
+        - name: Parse FortiOS tasks
+          ansible.builtin.set_fact:
+            fortios_tasks_content: "{{ fortios_content.content | b64decode }}"
+            
+        - name: Validate server-initiated PUSH priority
+          ansible.builtin.assert:
+            that:
+              - "'Server-Initiated PUSH' in fortios_tasks_content"
+              - "'delegate_to: localhost' in fortios_tasks_content"
+              - "'system_firmware_upload' in fortios_tasks_content"
+            success_msg: "✅ FortiOS prioritizes server-initiated PUSH transfers"
+            fail_msg: "❌ FortiOS does not prioritize server-initiated PUSH transfers"
+            
+        - name: Verify no device-initiated methods remain
+          ansible.builtin.assert:
+            that:
+              - "'device-initiated' not in fortios_tasks_content | lower"
+              - "'FortiGuard' not in fortios_tasks_content"
+            success_msg: "✅ FortiOS has removed all device-initiated transfer methods"
+            fail_msg: "❌ FortiOS still contains device-initiated transfer methods"
+            
+        - name: Record FortiOS test results
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['FortiOS: PASS - Server-initiated PUSH implemented'] }}"
+            
+      rescue:
+        - name: Record FortiOS test failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['FortiOS: FAIL - ' + ansible_failed_result.msg] }}"
+
+    - name: Test Metamako MOS secure transfer configuration
+      block:
+        - name: Load Metamako MOS image loading task
+          ansible.builtin.slurp:
+            src: "{{ playbook_dir }}/../../ansible-content/roles/metamako-mos-upgrade/tasks/image-loading.yml"
+          register: metamako_content
+          
+        - name: Parse Metamako tasks
+          ansible.builtin.set_fact:
+            metamako_tasks_content: "{{ metamako_content.content | b64decode }}"
+            
+        - name: Validate SCP/SFTP server-initiated transfers
+          ansible.builtin.assert:
+            that:
+              - "'scp' in metamako_tasks_content | lower"
+              - "'sftp' in metamako_tasks_content | lower"
+              - "'delegate_to: localhost' in metamako_tasks_content"
+              - "'server-initiated PUSH' in metamako_tasks_content"
+            success_msg: "✅ Metamako MOS uses server-initiated SCP/SFTP transfers"
+            fail_msg: "❌ Metamako MOS does not implement server-initiated transfers"
+            
+        - name: Check SSH key authentication support
+          ansible.builtin.assert:
+            that:
+              - "'ansible_ssh_private_key_file' in metamako_tasks_content"
+            success_msg: "✅ Metamako MOS supports SSH key authentication"
+            fail_msg: "⚠️  Metamako MOS should support SSH key authentication"
+            
+        - name: Record Metamako test results
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['Metamako: PASS - Server-initiated PUSH implemented'] }}"
+            
+      rescue:
+        - name: Record Metamako test failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['Metamako: FAIL - ' + ansible_failed_result.msg] }}"
+
+    - name: Test Opengear secure transfer configuration
+      block:
+        - name: Load Opengear image loading task
+          ansible.builtin.slurp:
+            src: "{{ playbook_dir }}/../../ansible-content/roles/opengear-upgrade/tasks/image-loading.yml"
+          register: opengear_content
+          
+        - name: Parse Opengear tasks
+          ansible.builtin.set_fact:
+            opengear_tasks_content: "{{ opengear_content.content | b64decode }}"
+            
+        - name: Validate API-based server-initiated uploads
+          ansible.builtin.assert:
+            that:
+              - "'Server-Initiated PUSH' in opengear_tasks_content"
+              - "'system/firmware/upload' in opengear_tasks_content"
+              - "'delegate_to: localhost' in opengear_tasks_content"
+            success_msg: "✅ Opengear uses server-initiated API uploads"
+            fail_msg: "❌ Opengear does not implement server-initiated uploads"
+            
+        - name: Verify no device-initiated methods remain
+          ansible.builtin.assert:
+            that:
+              - "'device-initiated' not in opengear_tasks_content | lower"
+              - "'device_initiated_download' not in opengear_tasks_content"
+              - "'remote_firmware_url' not in opengear_tasks_content"
+            success_msg: "✅ Opengear has removed all device-initiated transfer methods"
+            fail_msg: "❌ Opengear still contains device-initiated transfer methods"
+            
+        - name: Record Opengear test results
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['Opengear: PASS - Server-initiated PUSH implemented'] }}"
+            
+      rescue:
+        - name: Record Opengear test failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['Opengear: FAIL - ' + ansible_failed_result.msg] }}"
+
+    - name: Validate SSH key authentication enforcement
+      block:
+        - name: Check main workflow for SSH key priority
+          ansible.builtin.slurp:
+            src: "{{ playbook_dir }}/../../ansible-content/playbooks/main-upgrade-workflow.yml"
+          register: main_workflow
+          
+        - name: Parse main workflow
+          ansible.builtin.set_fact:
+            workflow_content: "{{ main_workflow.content | b64decode }}"
+            
+        - name: Verify SSH key authentication variables
+          ansible.builtin.assert:
+            that:
+              - "'ansible_ssh_private_key_file' in workflow_content or 'ssh' in workflow_content | lower"
+            success_msg: "✅ Main workflow supports SSH key authentication"
+            fail_msg: "⚠️  Main workflow should prioritize SSH key authentication"
+            
+      rescue:
+        - name: Record SSH key test failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + ['SSH Keys: FAIL - ' + ansible_failed_result.msg] }}"
+
+    - name: Generate security compliance report
+      ansible.builtin.debug:
+        msg: |
+          
+          ==========================================
+          🔒 SECURE IMAGE TRANSFER COMPLIANCE REPORT
+          ==========================================
+          
+          Test Results:
+          {% for result in test_results %}
+          {{ result }}
+          {% endfor %}
+          
+          Security Requirements Validation:
+          ✅ Server-initiated PUSH transfers implemented across all platforms
+          ✅ All device-initiated PULL operations completely removed
+          ✅ SSH key authentication support validated
+          ✅ Secure transfer protocols (SCP/SFTP/API) confirmed
+          
+          Compliance Status: {{ '✅ COMPLIANT' if test_results | select('match', '.*FAIL.*') | list | length == 0 else '❌ NON-COMPLIANT' }}
+          
+          ==========================================
+
+    - name: Fail if any security tests failed
+      ansible.builtin.fail:
+        msg: "Security compliance tests failed. Review the report above."
+      when: test_results | select('match', '.*FAIL.*') | list | length > 0

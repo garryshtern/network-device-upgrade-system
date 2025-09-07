@@ -32,8 +32,7 @@
     vault_fortios_username: "test_user"
     vault_metamako_password: "test_password"
     vault_metamako_username: "test_user"
-    vault_image_server_password: "test_password"
-    vault_image_server_username: "test_user"
+# No image server credentials needed - using server-initiated PUSH only
     vault_snmp_community: "test_community"
     
   tasks:

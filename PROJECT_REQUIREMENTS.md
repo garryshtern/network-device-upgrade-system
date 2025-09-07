@@ -77,6 +77,18 @@ Build support for the following network device platforms:
 - **Rollback Safety**: Maintain minimum 2 firmware images for emergency recovery
 - **Storage Monitoring**: Track available space and alert on low storage conditions
 
+### Secure Image Transfer Requirements
+- **Server-Initiated Transfers**: All firmware images MUST be pushed from the upgrade server to network devices (server-initiated PUSH operations)
+- **No Device-Initiated Pulls**: Network devices MUST NOT initiate copy/download operations from external servers
+- **Secure Transfer Protocols**: Use SCP, SFTP, or other encrypted protocols for all file transfers
+- **Transfer Verification**: Validate successful file transfer completion and integrity before proceeding
+
+### Authentication and Access Security
+- **SSH Key Authentication**: SSH public key authentication MUST be used wherever possible instead of passwords
+- **Password Fallback**: Passwords should only be used when SSH key authentication is not supported by the device
+- **Credential Management**: All credentials must be stored in Ansible Vault with appropriate encryption
+- **Session Security**: Use secure connection parameters and disable legacy authentication methods
+
 ## Comprehensive Network State Validation
 
 ### Pre-Upgrade State Capture

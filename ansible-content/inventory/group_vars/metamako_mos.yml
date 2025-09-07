@@ -24,9 +24,8 @@ check_metawatch: true
 check_metamux: true
 validate_latency_performance: true
 
-# Image management
-image_protocol: "http"  # Metamako typically uses HTTP/HTTPS
-image_server: "{{ firmware_server | default('192.168.1.100') }}"
+# Image management - Server-initiated PUSH only
+# All images are pushed from the upgrade server to devices via SCP/SFTP
 image_verification_required: true
 
 # Performance settings
