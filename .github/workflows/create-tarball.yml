@@ -1,6 +1,6 @@
 ---
 name: Create Release Tarball
-on:
+'on':
   push:
     branches:
       - main
@@ -23,11 +23,13 @@ jobs:
 
       - name: Create tarball with git archive
         run: |
-          TARBALL_NAME="${{ env.REPO_NAME }}-${{ env.SHORT_SHA }}-${{ env.TIMESTAMP }}.tar.gz"
+          TARBALL_NAME="${{ env.REPO_NAME }}-${{ env.SHORT_SHA }}"
+          TARBALL_NAME="${TARBALL_NAME}-${{ env.TIMESTAMP }}.tar.gz"
           echo "Creating tarball: $TARBALL_NAME"
           git archive --format=tar.gz \
             --prefix="${{ env.REPO_NAME }}/" \
-            --output "$TARBALL_NAME" HEAD
+            --output "$TARBALL_NAME" \
+            HEAD
           echo "TARBALL_NAME=$TARBALL_NAME" >> $GITHUB_ENV
 
       - name: Validate tarball creation
@@ -88,32 +90,34 @@ jobs:
         run: |
           RELEASE_TAG="release-${{ env.SHORT_SHA }}"
           RELEASE_TITLE="Network Upgrade System - ${{ env.SHORT_SHA }}"
-          
+
           # Create release notes
           cat > release-notes.md << EOF
           # Network Device Upgrade System - Release ${{ env.SHORT_SHA }}
-          
-          **Commit**: ${{ github.sha }}  
-          **Branch**: ${{ github.ref_name }}  
-          **Author**: ${{ github.actor }}  
+
+          **Commit**: ${{ github.sha }}
+          **Branch**: ${{ github.ref_name }}
+          **Author**: ${{ github.actor }}
           **Created**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          
+
           ## 🚀 Direct Download
           \`\`\`bash
           # Download and extract
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${RELEASE_TAG}/${{ env.TARBALL_NAME }}"
+          REPO_URL="https://github.com/${{ github.repository }}"
+          BASE_DL="${REPO_URL}/releases/download"
+          DOWNLOAD_URL="${BASE_DL}/${RELEASE_TAG}/${{ env.TARBALL_NAME }}"
           wget "\$DOWNLOAD_URL"
           tar -xzf ${{ env.TARBALL_NAME }}
           cd network-device-upgrade-system/
           ./install/setup-system.sh
           \`\`\`
-          
+
           ## 🔒 Security Features
           - ✅ Server-initiated PUSH transfers only
-          - ✅ Zero device-initiated operations  
+          - ✅ Zero device-initiated operations
           - ✅ SSH key authentication priority
           - ✅ 100% security compliance validated
-          
+
           ## 📊 What's Included
           - Complete Ansible automation framework
           - 5 vendor platform support (Cisco, FortiOS, Metamako, Opengear)
@@ -121,15 +125,16 @@ jobs:
           - Native systemd service deployment
           - Grafana dashboard automation
           EOF
-          
+
           # Create release and upload tarball
           gh release create "$RELEASE_TAG" \
             --title "$RELEASE_TITLE" \
             --notes-file release-notes.md \
             "${{ env.TARBALL_NAME }}"
-          
+
           # Output direct URL
-          BASE_URL="https://github.com/${{ github.repository }}/releases/download"
+          BASE_URL="https://github.com/${{ github.repository }}"
+          BASE_URL="${BASE_URL}/releases/download"
           DIRECT_URL="${BASE_URL}/${RELEASE_TAG}/${{ env.TARBALL_NAME }}"
           echo "DIRECT_URL=$DIRECT_URL" >> $GITHUB_ENV
           echo "✅ Direct download URL: $DIRECT_URL"
@@ -140,12 +145,18 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Tarball Name** | \`${{ env.TARBALL_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
+          NAME_ENTRY="| **Tarball Name** | \`${{ env.TARBALL_NAME }}\` |"
+          echo "$NAME_ENTRY" >> $GITHUB_STEP_SUMMARY
           SIZE=$(ls -lh ${{ env.TARBALL_NAME }} | awk '{print $5}')
           echo "| **Size** | $SIZE |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Commit SHA** | \`${{ env.SHORT_SHA }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Timestamp** | ${{ env.TIMESTAMP }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Direct URL** | [${{ env.TARBALL_NAME }}](${{ env.DIRECT_URL }}) |" >> $GITHUB_STEP_SUMMARY
+          SHA_ENTRY="| **Commit SHA** | \`${{ env.SHORT_SHA }}\` |"
+          echo "$SHA_ENTRY" >> $GITHUB_STEP_SUMMARY
+          TIME_ENTRY="| **Timestamp** | ${{ env.TIMESTAMP }} |"
+          echo "$TIME_ENTRY" >> $GITHUB_STEP_SUMMARY
+          URL_ENTRY="| **Direct URL** |"
+          URL_LINK=" [${{ env.TARBALL_NAME }}](${{ env.DIRECT_URL }}) |"
+          URL_ENTRY="${URL_ENTRY}${URL_LINK}"
+          echo "$URL_ENTRY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📥 Quick Download" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
@@ -155,4 +166,6 @@ jobs:
           echo "./install/setup-system.sh" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Ready for deployment** - Complete network upgrade system" >> $GITHUB_STEP_SUMMARY
+          READY_MSG="✅ **Ready for deployment**"
+          READY_MSG="${READY_MSG} - Complete network upgrade system"
+          echo "$READY_MSG" >> $GITHUB_STEP_SUMMARY
