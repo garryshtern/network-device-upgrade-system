@@ -206,3 +206,4 @@ The system implements a **phase-separated upgrade approach** for safe firmware u
 - Integration testing with comprehensive scenarios
 - Performance testing and YAML/JSON validation
 - Container-based molecule testing framework
+- Update CLAUDE.md
