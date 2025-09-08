@@ -20,13 +20,13 @@ This is a native service-based network device upgrade management system for 1000
 
 ## Development Commands
 
-This project uses Ansible for automation. **Requires Ansible 8.x-9.x with ansible-core 2.15-2.17 for compatibility**.
+This project uses Ansible for automation. **Requires Ansible 6.x-7.x with ansible-core 2.13-2.15 for compatibility**.
 
 ### Initial Setup
 
 ```bash
 # Ensure compatible Ansible version (required for six.moves compatibility)
-pip install 'ansible>=8.0.0,<10.0.0'
+pip install 'ansible>=6.0.0,<8.0.0'
 
 # Install Ansible collections
 ansible-galaxy install -r ansible-content/collections/requirements.yml --force
@@ -58,7 +58,7 @@ This error occurs with Ansible version incompatibility. Fix with:
 ```bash
 # Clean install compatible Ansible version
 pip uninstall ansible ansible-core -y
-pip install 'ansible>=8.0.0,<10.0.0'
+pip install 'ansible>=6.0.0,<8.0.0'
 
 # Remove conflicting ansible-base if present
 pip uninstall ansible-base -y
