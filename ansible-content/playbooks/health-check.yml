@@ -1,153 +1,151 @@
 ---
-# Device Health Check Playbook
+# Device Health Check Tasks
 # Pre-upgrade validation and baseline network state capture
 # Supports all vendor platforms with comprehensive state validation
+# Note: This is a task file, not a standalone playbook
 
-- hosts: "{{ target_hosts | default('all') }}"
-  name: Device Health Check and Baseline Capture
-  gather_facts: false
-  vars:
+- name: Set health check timestamp
+  ansible.builtin.set_fact:
     health_check_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
     baseline_data_path: "/var/lib/network-upgrade/baselines"
     validation_timeout: 300
 
-  tasks:
-    - name: Ensure baseline directory exists
-      ansible.builtin.file:
-        path: "{{ baseline_data_path }}/{{ inventory_hostname }}"
-        state: directory
-        mode: '0755'
-      delegate_to: localhost
-      run_once: true
+- name: Ensure baseline directory exists
+  ansible.builtin.file:
+    path: "{{ baseline_data_path }}/{{ inventory_hostname }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  run_once: true
 
-    - name: Device reachability test
-      ansible.builtin.wait_for_connection:
-        timeout: 60
-        delay: 5
-      register: connectivity_result
+- name: Device reachability test
+  ansible.builtin.wait_for_connection:
+    timeout: 60
+    delay: 5
+  register: connectivity_result
 
-    - name: Platform-specific health checks
-      block:
-        # Cisco NX-OS Health Checks
-        - name: Cisco NX-OS health validation
-          ansible.builtin.include_role:
-            name: cisco-nxos-upgrade
-            tasks_from: validation
-          when: ansible_network_os == 'nxos'
-
-        # Cisco IOS-XE Health Checks
-        - name: Cisco IOS-XE health validation
-          ansible.builtin.include_role:
-            name: cisco-iosxe-upgrade
-            tasks_from: validation
-          when: ansible_network_os == 'ios'
-
-        # Metamako MOS Health Checks
-        - name: Metamako MOS health validation
-          ansible.builtin.include_role:
-            name: metamako-mos-upgrade
-            tasks_from: validation
-          when: ansible_network_os == 'mos'
-
-        # Opengear Health Checks
-        - name: Opengear health validation
-          ansible.builtin.include_role:
-            name: opengear-upgrade
-            tasks_from: validation
-          when: ansible_network_os == 'opengear'
-
-        # FortiOS Health Checks
-        - name: FortiOS health validation
-          ansible.builtin.include_role:
-            name: fortios-upgrade
-            tasks_from: validation
-          when: ansible_network_os == 'fortios'
-
-      rescue:
-        - name: Health check failure
-          ansible.builtin.fail:
-            msg: "Health check failed for {{ inventory_hostname }} ({{ ansible_network_os }})"
-
-    - name: Capture network state baseline
+- name: Platform-specific health checks
+  block:
+    # Cisco NX-OS Health Checks
+    - name: Cisco NX-OS health validation
       ansible.builtin.include_role:
-        name: network-validation
-        tasks_from: bgp-validation
-      vars:
-        capture_mode: "baseline"
-        output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/bgp_baseline_{{ health_check_timestamp }}.json"
+        name: cisco-nxos-upgrade
+        tasks_from: validation
+      when: ansible_network_os == 'nxos'
 
-    - name: Capture interface states
+    # Cisco IOS-XE Health Checks
+    - name: Cisco IOS-XE health validation
       ansible.builtin.include_role:
-        name: network-validation
-        tasks_from: interface-validation
-      vars:
-        capture_mode: "baseline"
-        output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/interfaces_baseline_{{ health_check_timestamp }}.json"
+        name: cisco-iosxe-upgrade
+        tasks_from: validation
+      when: ansible_network_os == 'ios'
 
-    - name: Capture routing information
+    # Metamako MOS Health Checks
+    - name: Metamako MOS health validation
       ansible.builtin.include_role:
-        name: network-validation
-        tasks_from: routing-validation
-      vars:
-        capture_mode: "baseline"
-        output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/routing_baseline_{{ health_check_timestamp }}.json"
+        name: metamako-mos-upgrade
+        tasks_from: validation
+      when: ansible_network_os == 'mos'
 
-    - name: Capture multicast state (if applicable)
+    # Opengear Health Checks
+    - name: Opengear health validation
       ansible.builtin.include_role:
-        name: network-validation
-        tasks_from: multicast-validation
-      vars:
-        capture_mode: "baseline"
-        output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/multicast_baseline_{{ health_check_timestamp }}.json"
-      when:
-        - ansible_network_os in ['nxos', 'ios']
-        - multicast_enabled | default(true) | bool
+        name: opengear-upgrade
+        tasks_from: validation
+      when: ansible_network_os == 'opengear'
 
-    - name: Capture ARP tables
+    # FortiOS Health Checks
+    - name: FortiOS health validation
       ansible.builtin.include_role:
-        name: network-validation
-        tasks_from: arp-validation
-      vars:
-        capture_mode: "baseline"
-        output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/arp_baseline_{{ health_check_timestamp }}.json"
+        name: fortios-upgrade
+        tasks_from: validation
+      when: ansible_network_os == 'fortios'
 
-    - name: Create health check summary
-      ansible.builtin.template:
-        src: ../validation-templates/health-summary.j2
-        dest: "{{ baseline_data_path }}/{{ inventory_hostname }}/health_summary_{{ health_check_timestamp }}.json"
-      vars:
-        check_timestamp: "{{ health_check_timestamp }}"
-        device_name: "{{ inventory_hostname }}"
-        platform: "{{ ansible_network_os }}"
-        connectivity_status: "{{ 'success' if connectivity_result is succeeded else 'failed' }}"
-        baseline_files:
-          - "bgp_baseline_{{ health_check_timestamp }}.json"
-          - "interfaces_baseline_{{ health_check_timestamp }}.json"
-          - "routing_baseline_{{ health_check_timestamp }}.json"
-          - "multicast_baseline_{{ health_check_timestamp }}.json"
-          - "arp_baseline_{{ health_check_timestamp }}.json"
-      delegate_to: localhost
+  rescue:
+    - name: Health check failure
+      ansible.builtin.fail:
+        msg: "Health check failed for {{ inventory_hostname }} ({{ ansible_network_os }})"
 
-    - name: Export health check metrics
-      ansible.builtin.include_role:
-        name: common
-        tasks_from: metrics-export
-      vars:
-        metric_type: "health_check"
-        metric_data:
-          device_id: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
-          check_timestamp: "{{ health_check_timestamp }}"
-          status: "success"
-          baseline_captured: true
+- name: Capture network state baseline
+  ansible.builtin.include_role:
+    name: network-validation
+    tasks_from: bgp-validation
+  vars:
+    capture_mode: "baseline"
+    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/bgp_baseline_{{ health_check_timestamp }}.json"
 
-    - name: Display health check results
-      ansible.builtin.debug:
-        msg:
-          - "=== Health Check Complete ==="
-          - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
-          - "Timestamp: {{ health_check_timestamp }}"
-          - "Baseline Data: {{ baseline_data_path }}/{{ inventory_hostname }}/"
-          - "Status: HEALTHY"
-          - "============================"
+- name: Capture interface states
+  ansible.builtin.include_role:
+    name: network-validation
+    tasks_from: interface-validation
+  vars:
+    capture_mode: "baseline"
+    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/interfaces_baseline_{{ health_check_timestamp }}.json"
+
+- name: Capture routing information
+  ansible.builtin.include_role:
+    name: network-validation
+    tasks_from: routing-validation
+  vars:
+    capture_mode: "baseline"
+    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/routing_baseline_{{ health_check_timestamp }}.json"
+
+- name: Capture multicast state (if applicable)
+  ansible.builtin.include_role:
+    name: network-validation
+    tasks_from: multicast-validation
+  vars:
+    capture_mode: "baseline"
+    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/multicast_baseline_{{ health_check_timestamp }}.json"
+  when:
+    - ansible_network_os in ['nxos', 'ios']
+    - multicast_enabled | default(true) | bool
+
+- name: Capture ARP tables
+  ansible.builtin.include_role:
+    name: network-validation
+    tasks_from: arp-validation
+  vars:
+    capture_mode: "baseline"
+    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/arp_baseline_{{ health_check_timestamp }}.json"
+
+- name: Create health check summary
+  ansible.builtin.template:
+    src: ../validation-templates/health-summary.j2
+    dest: "{{ baseline_data_path }}/{{ inventory_hostname }}/health_summary_{{ health_check_timestamp }}.json"
+  vars:
+    check_timestamp: "{{ health_check_timestamp }}"
+    device_name: "{{ inventory_hostname }}"
+    platform: "{{ ansible_network_os }}"
+    connectivity_status: "{{ 'success' if connectivity_result is succeeded else 'failed' }}"
+    baseline_files:
+      - "bgp_baseline_{{ health_check_timestamp }}.json"
+      - "interfaces_baseline_{{ health_check_timestamp }}.json"
+      - "routing_baseline_{{ health_check_timestamp }}.json"
+      - "multicast_baseline_{{ health_check_timestamp }}.json"
+      - "arp_baseline_{{ health_check_timestamp }}.json"
+  delegate_to: localhost
+
+- name: Export health check metrics
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: metrics-export
+  vars:
+    metric_type: "health_check"
+    metric_data:
+      device_id: "{{ inventory_hostname }}"
+      platform: "{{ ansible_network_os }}"
+      check_timestamp: "{{ health_check_timestamp }}"
+      status: "success"
+      baseline_captured: true
+
+- name: Display health check results
+  ansible.builtin.debug:
+    msg:
+      - "=== Health Check Complete ==="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ ansible_network_os }}"
+      - "Timestamp: {{ health_check_timestamp }}"
+      - "Baseline Data: {{ baseline_data_path }}/{{ inventory_hostname }}/"
+      - "Status: HEALTHY"
+      - "============================"

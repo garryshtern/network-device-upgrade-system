@@ -130,7 +130,8 @@ jobs:
         run: |
           ansible-playbook -i tests/mock-inventories/single-platform.yml \
             --check --diff \
-            --extra-vars "target_firmware=test-firmware.bin target_hosts=test-nxos-01 upgrade_phase=loading" \
+            --extra-vars "target_firmware=test-firmware.bin" \
+            --extra-vars "target_hosts=test-nxos-01 upgrade_phase=loading" \
             --limit test-nxos-01 \
             ansible-content/playbooks/main-upgrade-workflow.yml
 
@@ -156,3 +157,107 @@ jobs:
             --include="*.yml" --include="*.yaml" | \
             grep -v "127.0.0" || true
           echo "IP address scan completed"
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from latest tag
+        id: get_version
+        run: |
+          # Get the latest tag, or use v1.0.0 if no tags exist
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+
+          # Generate new version (increment patch version)
+          if [[ $latest_tag =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+            major=${BASH_REMATCH[1]}
+            minor=${BASH_REMATCH[2]}
+            patch=${BASH_REMATCH[3]}
+            new_patch=$((patch + 1))
+            new_version="v$major.$minor.$new_patch"
+          else
+            new_version="v1.0.0"
+          fi
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # Get commits since last tag for release notes
+          latest_tag="${{ steps.get_version.outputs.latest_tag }}"
+          if git rev-parse "$latest_tag" >/dev/null 2>&1; then
+            commits=$(git log --pretty=format:"- %s (%h)" $latest_tag..HEAD)
+          else
+            commits=$(git log --pretty=format:"- %s (%h)" --max-count=10)
+          fi
+
+          # Create release notes
+          cat > release_notes.md << 'EOF'
+          ## Network Device Upgrade System Release ${{ steps.get_version.outputs.new_version }}
+
+          ### What's Changed
+          $commits
+
+          ### Test Status
+          ✅ All automated tests passed:
+          - Lint and syntax validation
+          - Unit tests across multiple Python versions
+          - Integration tests with mock devices
+          - Security scanning
+
+          ### Installation
+          This release includes the complete Ansible-based network device upgrade system supporting:
+          - Cisco NX-OS and IOS-XE platforms
+          - FortiOS firewall upgrades
+          - Metamako MOS switches
+          - Opengear console servers
+
+          For installation instructions, see the [Installation Guide](docs/installation-guide.md).
+          EOF
+
+      - name: Create release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.new_version }}
+          release_name: Network Device Upgrade System ${{ steps.get_version.outputs.new_version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+
+      - name: Create deployment artifact
+        run: |
+          # Create a deployment-ready tar.gz archive
+          version="${{ steps.get_version.outputs.new_version }}"
+          tar -czf "network-upgrade-system-${version}.tar.gz" \
+            --exclude='.git*' \
+            --exclude='.idea' \
+            --exclude='tests/results' \
+            --exclude='*.pyc' \
+            --exclude='__pycache__' \
+            ansible-content/ \
+            awx-config/ \
+            install/ \
+            integration/ \
+            docs/ \
+            *.md
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ./network-upgrade-system-${{ steps.get_version.outputs.new_version }}.tar.gz
+          asset_name: network-upgrade-system-${{ steps.get_version.outputs.new_version }}.tar.gz
+          asset_content_type: application/gzip
