@@ -111,7 +111,7 @@
       file_size_bytes: "{{ firmware_file_info.file_list[0].size }}"
       loading_successful: true
       hash_verified: "{{ firmware_md5_hash is defined }}"
-      loading_timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
+      loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display image loading results
   ansible.builtin.debug:

@@ -4,7 +4,7 @@
 
 - name: Set default metric timestamp
   ansible.builtin.set_fact:
-    metric_timestamp: "{{ ansible_play_batch | hash("md5") }}000000000"  # InfluxDB nanosecond format
+    metric_timestamp: "{{ ansible_play_batch | hash('md5') }}000000000"  # InfluxDB nanosecond format
 
 - name: Prepare InfluxDB line protocol data
   ansible.builtin.set_fact:
@@ -52,7 +52,7 @@
 - name: Export metrics to local file (backup/debugging)
   ansible.builtin.lineinfile:
     path: "/var/log/network-upgrade/metrics.log"
-    line: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }} | {{ inventory_hostname }} | {{ metric_type | default('unknown') }} | {{ metric_data | to_json }}"
+    line: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }} | {{ inventory_hostname }} | {{ metric_type | default('unknown') }} | {{ metric_data | to_json }}"
     create: true
     mode: '0644'
   delegate_to: localhost
@@ -68,7 +68,7 @@
       Authorization: "Bearer {{ metrics_webhook_token | default('') }}"
     body_format: json
     body:
-      timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       device_id: "{{ inventory_hostname }}"
       metric_type: "{{ metric_type | default('unknown') }}"
       platform: "{{ ansible_network_os | default('unknown') }}"
@@ -105,7 +105,7 @@
       influxdb_export: "{{ 'success' if influx_export_result is succeeded else 'failed' if influx_export_result is defined else 'skipped' }}"
       webhook_export: "{{ 'success' if webhook_export_result is succeeded else 'failed' if webhook_export_result is defined else 'skipped' }}"
       local_log: "{{ log_metrics_locally | default(false) }}"
-      timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display metrics export summary
   ansible.builtin.debug:

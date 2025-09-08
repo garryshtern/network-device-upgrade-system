@@ -196,7 +196,7 @@
 - name: Store ARP baseline
   ansible.builtin.set_fact:
     arp_baseline:
-      timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       total_arp_entries: "{{ arp_entries | length if arp_entries is defined else 0 }}"
       static_entries: "{{ static_arp_entries | length if static_arp_entries is defined else 0 }}"
       dynamic_entries: "{{ dynamic_arp_entries | length if dynamic_arp_entries is defined else 0 }}"

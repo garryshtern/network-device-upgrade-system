@@ -8,6 +8,29 @@
       <change beforePath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.github/workflows/comprehensive-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/comprehensive-tests.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/health-check.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/health-check.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/main-upgrade-workflow.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/main-upgrade-workflow.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/bfd-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/bfd-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/ipsec-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/ipsec-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/optics-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/optics-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/bfd-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/bfd-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/epld-upgrade.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/epld-upgrade.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/igmp-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/igmp-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-installation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-installation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-loading.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-loading.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/reboot.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/reboot.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/common/tasks/connectivity-check.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/common/tasks/connectivity-check.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/common/tasks/metrics-export.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/common/tasks/metrics-export.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/arp-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/arp-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/bgp-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/bgp-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/interface-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/interface-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/multicast-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/multicast-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/protocol-convergence.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/protocol-convergence.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/routing-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/routing-validation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation-legacy.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation-legacy.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-loading-legacy.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-loading-legacy.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/awx-config/inventories.yml" beforeDir="false" afterPath="$PROJECT_DIR$/awx-config/inventories.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/awx-config/job-templates.yml" beforeDir="false" afterPath="$PROJECT_DIR$/awx-config/job-templates.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/awx-config/job-templates/device-health-check.yml" beforeDir="false" afterPath="$PROJECT_DIR$/awx-config/job-templates/device-health-check.yml" afterDir="false" />
@@ -130,7 +153,7 @@
       <workItem from="1756861021857" duration="170000" />
       <workItem from="1756895195040" duration="5130000" />
       <workItem from="1756951775422" duration="9763000" />
-      <workItem from="1757115228585" duration="47580000" />
+      <workItem from="1757115228585" duration="47949000" />
     </task>
     <task id="LOCAL-00001" summary="Added implementations">
       <option name="closed" value="true" />

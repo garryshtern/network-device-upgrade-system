@@ -117,7 +117,7 @@
       boot_variables_updated: "{{ boot_update_successful | default(false) }}"
       issu_performed: "{{ installation_method == 'issu' }}"
       reboot_required: "{{ installation_method == 'disruptive' }}"
-      installation_timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
+      installation_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display installation results
   ansible.builtin.debug:

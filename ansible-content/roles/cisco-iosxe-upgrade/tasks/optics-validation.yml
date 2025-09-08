@@ -189,7 +189,7 @@
 - name: Store optics validation baseline
   ansible.builtin.copy:
     content: |
-      # Optics Validation Baseline - {{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}
+      # Optics Validation Baseline - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
       # Generated during firmware upgrade validation
       
       Active_Transceivers: {{ active_transceivers | length if active_transceivers is defined else 0 }}
@@ -234,7 +234,7 @@
       {% endif %}
       
       Validation_Status: {{ 'PASS' if (active_transceivers is defined and active_transceivers | length > 0) else 'CHECK' }}
-      Timestamp: {{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}
-    dest: "/tmp/optics_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash("md5") }}.txt"
+      Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
+    dest: "/tmp/optics_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}.txt"
     mode: '0644'
   delegate_to: localhost

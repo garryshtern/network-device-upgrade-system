@@ -135,7 +135,7 @@
 - name: Store interface baseline (for comparison)
   ansible.builtin.set_fact:
     interface_baseline:
-      timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       total_interfaces: "{{ interface_brief.TABLE_interface.ROW_interface | length if interface_brief.TABLE_interface is defined else 0 }}"
       up_interfaces: "{{ up_interfaces | length if up_interfaces is defined else 0 }}"
       down_interfaces: "{{ down_interfaces | length if down_interfaces is defined else 0 }}"

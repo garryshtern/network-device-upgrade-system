@@ -4,7 +4,7 @@
 
 - name: Initialize convergence monitoring
   ansible.builtin.set_fact:
-    convergence_start_time: "{{ ansible_play_batch | hash("md5") }}"
+    convergence_start_time: "{{ ansible_play_batch | hash('md5') }}"
     convergence_tests: []
     convergence_results: {}
 
@@ -33,7 +33,7 @@
       
     - name: Calculate BGP convergence time
       set_fact:
-        bgp_convergence_time: "{{ ansible_play_batch | hash("md5") | int - convergence_start_time | int }}"
+        bgp_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
       when: bgp_convergence_check is defined
       
     - name: Store BGP convergence results
@@ -70,7 +70,7 @@
       
     - name: Calculate OSPF convergence time
       set_fact:
-        ospf_convergence_time: "{{ ansible_play_batch | hash("md5") | int - convergence_start_time | int }}"
+        ospf_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
       when: ospf_convergence_check is defined
       
     - name: Store OSPF convergence results
@@ -107,7 +107,7 @@
       
     - name: Calculate EIGRP convergence time
       set_fact:
-        eigrp_convergence_time: "{{ ansible_play_batch | hash("md5") | int - convergence_start_time | int }}"
+        eigrp_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
       when: eigrp_convergence_check is defined
       
     - name: Store EIGRP convergence results
@@ -142,7 +142,7 @@
       
     - name: Calculate interface convergence time
       set_fact:
-        interface_convergence_time: "{{ ansible_play_batch | hash("md5") | int - convergence_start_time | int }}"
+        interface_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
       when: interface_stability_check is defined
       
     - name: Store interface convergence results
@@ -177,7 +177,7 @@
       
     - name: Calculate routing convergence time
       set_fact:
-        routing_convergence_time: "{{ ansible_play_batch | hash("md5") | int - convergence_start_time | int }}"
+        routing_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
       when: route_stability_check is defined
       
     - name: Store routing convergence results
@@ -193,7 +193,7 @@
   block:
     - name: Calculate total convergence time
       set_fact:
-        total_convergence_time: "{{ ansible_play_batch | hash("md5") | int - convergence_start_time | int }}"
+        total_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
         
     - name: Determine convergence success
       set_fact:
@@ -234,7 +234,7 @@
 - name: Store convergence baseline for comparison
   ansible.builtin.set_fact:
     convergence_baseline:
-      timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       total_time: "{{ total_convergence_time }}"
       success: "{{ overall_convergence_success }}"
       protocols: "{{ convergence_results }}"

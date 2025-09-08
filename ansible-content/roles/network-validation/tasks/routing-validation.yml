@@ -167,7 +167,7 @@
 - name: Store routing baseline
   ansible.builtin.set_fact:
     routing_baseline:
-      timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       total_routes: "{{ total_routes | default(0) }}"
       static_routes_count: "{{ static_routes | length if static_routes is defined else 0 }}"
       connected_routes_count: "{{ connected_routes | length if connected_routes is defined else 0 }}"

@@ -239,7 +239,7 @@
   ansible.builtin.copy:
     content: |
       {
-        "timestamp": "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}",
+        "timestamp": "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}",
         "device": "{{ inventory_hostname }}",
         "bfd_feature_enabled": {{ bfd_feature_enabled | default(false) | to_json }},
         "total_sessions": {{ bfd_total_sessions | default(0) }},
@@ -258,7 +258,7 @@
 - name: Store detailed BFD validation report
   ansible.builtin.copy:
     content: |
-      # BFD Validation Report - {{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}
+      # BFD Validation Report - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
       # Generated during NX-OS firmware upgrade validation
       
       BFD_Feature_Enabled: {{ bfd_feature_enabled if bfd_feature_enabled is defined else false }}
@@ -305,7 +305,7 @@
       {% endif %}
       
       Validation_Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
-      Timestamp: {{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}
-    dest: "/tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash("md5") }}.txt"
+      Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
+    dest: "/tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}.txt"
     mode: '0644'
   delegate_to: localhost
