@@ -27,8 +27,10 @@
       {% elif platform_type == 'cisco_iosxe' %}
       # IOS-XE Upgrade Commands
       {% if install_mode %}
+      # Using install mode for IOS-XE upgrade
       request platform software package install switch all file flash:cat9k_lite_iosxe.{{ target_version }}.SPA.bin
       {% else %}
+      # Using bundle mode for IOS-XE upgrade
       software install file flash:cat9k_lite_iosxe.{{ target_version }}.SPA.bin switch all
       {% endif %}
       show version
