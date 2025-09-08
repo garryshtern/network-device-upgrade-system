@@ -12,7 +12,6 @@
     audit_results_path: "/var/lib/network-upgrade/compliance"
     compliance_standards: "{{ compliance_standards | default(['security_baseline', 'network_hardening']) }}"
     generate_report: "{{ generate_report | default(true) }}"
-    
   pre_tasks:
     - name: Create compliance audit directory
       ansible.builtin.file:

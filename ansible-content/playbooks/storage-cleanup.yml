@@ -1,133 +1,129 @@
 ---
-# Storage Cleanup Playbook
+# Storage Cleanup Tasks
 # Manages device storage and prepares space for firmware images
 # Business hours safe - only removes obsolete files
 
-- name: Storage Management and Cleanup
-  hosts: "{{ target_hosts | default('all') }}"
-  gather_facts: false
-  connection: network_cli
-  vars:
+- name: Set storage cleanup variables
+  ansible.builtin.set_fact:
     minimum_free_space_gb: "{{ required_space_gb | default(4) }}"
     cleanup_old_images: "{{ cleanup_old_images | default(true) }}"
     preserve_current_image: true
     preserve_backup_image: true
-    
-  tasks:
-    - name: Storage Management and Cleanup Tasks
+
+- name: Storage Management and Cleanup Tasks
+  block:
+    - name: Gather current storage information
+      ansible.builtin.include_role:
+        name: space-management
+        tasks_from: storage-assessment
+      register: storage_info
+
+    - name: Display current storage status
+      ansible.builtin.debug:
+        msg:
+          - "=== Storage Assessment ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Total Space: {{ storage_info.total_space_gb }}GB"
+          - "Available: {{ storage_info.free_space_gb }}GB"
+          - "Required: {{ minimum_free_space_gb }}GB"
+          - "=========================="
+
+    - name: Check if cleanup is needed
+      ansible.builtin.set_fact:
+        cleanup_required: "{{ storage_info.free_space_gb < minimum_free_space_gb }}"
+
+    - name: Platform-specific storage cleanup
       block:
-        - name: Gather current storage information
+        # Cisco NX-OS Storage Cleanup
+        - name: Cisco NX-OS storage cleanup
           ansible.builtin.include_role:
-            name: space-management
-            tasks_from: storage-assessment
-          register: storage_info
-
-        - name: Display current storage status
-          ansible.builtin.debug:
-            msg:
-              - "=== Storage Assessment ==="
-              - "Device: {{ inventory_hostname }}"
-              - "Total Space: {{ storage_info.total_space_gb }}GB"
-              - "Available: {{ storage_info.free_space_gb }}GB"
-              - "Required: {{ minimum_free_space_gb }}GB"
-              - "=========================="
-
-        - name: Check if cleanup is needed
-          ansible.builtin.set_fact:
-            cleanup_required: "{{ storage_info.free_space_gb < minimum_free_space_gb }}"
-
-        - name: Platform-specific storage cleanup
-          block:
-            # Cisco NX-OS Storage Cleanup
-            - name: Cisco NX-OS storage cleanup
-              ansible.builtin.include_role:
-                name: cisco-nxos-upgrade
-                tasks_from: storage-cleanup
-              vars:
-                target_free_space: "{{ minimum_free_space_gb }}"
-                preserve_running_image: "{{ preserve_current_image }}"
-              when: ansible_network_os == 'nxos' and cleanup_required
-
-            # Cisco IOS-XE Storage Cleanup
-            - name: Cisco IOS-XE storage cleanup
-              ansible.builtin.include_role:
-                name: cisco-iosxe-upgrade
-                tasks_from: storage-cleanup
-              vars:
-                target_free_space: "{{ minimum_free_space_gb }}"
-                preserve_running_image: "{{ preserve_current_image }}"
-              when: ansible_network_os == 'ios' and cleanup_required
-
-            # Metamako MOS Storage Cleanup
-            - name: Metamako MOS storage cleanup
-              ansible.builtin.include_role:
-                name: metamako-mos-upgrade
-                tasks_from: storage-cleanup
-              vars:
-                target_free_space: "{{ minimum_free_space_gb }}"
-              when: ansible_network_os == 'mos' and cleanup_required
-
-            # Opengear Storage Cleanup
-            - name: Opengear storage cleanup
-              ansible.builtin.include_role:
-                name: opengear-upgrade
-                tasks_from: storage-cleanup
-              vars:
-                target_free_space: "{{ minimum_free_space_gb }}"
-              when: ansible_network_os == 'opengear' and cleanup_required
-
-            # FortiOS Storage Cleanup
-            - name: FortiOS storage cleanup
-              ansible.builtin.include_role:
-                name: fortios-upgrade
-                tasks_from: storage-cleanup
-              vars:
-                target_free_space: "{{ minimum_free_space_gb }}"
-              when: ansible_network_os == 'fortios' and cleanup_required
-
-        - name: Verify storage space after cleanup
-          ansible.builtin.include_role:
-            name: space-management
-            tasks_from: storage-assessment
-          register: post_cleanup_storage
-
-        - name: Validate sufficient space is available
-          ansible.builtin.assert:
-            that:
-              - post_cleanup_storage.free_space_gb >= minimum_free_space_gb
-            fail_msg: |
-              Insufficient storage space after cleanup:
-              Available: {{ post_cleanup_storage.free_space_gb }}GB
-              Required: {{ minimum_free_space_gb }}GB
-
-        - name: Log storage cleanup results
-          ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+            name: cisco-nxos-upgrade
+            tasks_from: storage-cleanup
           vars:
-            metric_type: "storage_cleanup"
-            metric_data:
-              device_id: "{{ inventory_hostname }}"
-              platform: "{{ ansible_network_os }}"
-              cleanup_performed: "{{ cleanup_required }}"
-              space_before_gb: "{{ storage_info.free_space_gb }}"
-              space_after_gb: "{{ post_cleanup_storage.free_space_gb }}"
-              space_freed_gb: "{{ post_cleanup_storage.free_space_gb - storage_info.free_space_gb }}"
+            target_free_space: "{{ minimum_free_space_gb }}"
+            preserve_running_image: "{{ preserve_current_image }}"
+          when: ansible_network_os == 'nxos' and cleanup_required
 
-        - name: Display storage cleanup results
-          ansible.builtin.debug:
-            msg:
-              - "=== Storage Cleanup Complete ==="
-              - "Device: {{ inventory_hostname }}"
-              - "Cleanup Performed: {{ 'Yes' if cleanup_required else 'No' }}"
-              - "Space Before: {{ storage_info.free_space_gb }}GB"
-              - "Space After: {{ post_cleanup_storage.free_space_gb }}GB"
-              - "Space Freed: {{ post_cleanup_storage.free_space_gb - storage_info.free_space_gb }}GB"
-              - "Status: {{ 'SUFFICIENT' if post_cleanup_storage.free_space_gb >= minimum_free_space_gb else 'INSUFFICIENT' }}"
-              - "==============================="
-      rescue:
-        - name: Storage cleanup failure handling
-          ansible.builtin.debug:
-            msg: "Storage cleanup failed for {{ inventory_hostname }}: {{ ansible_failed_result.msg | default('Unknown error') }}"
+        # Cisco IOS-XE Storage Cleanup
+        - name: Cisco IOS-XE storage cleanup
+          ansible.builtin.include_role:
+            name: cisco-iosxe-upgrade
+            tasks_from: storage-cleanup
+          vars:
+            target_free_space: "{{ minimum_free_space_gb }}"
+            preserve_running_image: "{{ preserve_current_image }}"
+          when: ansible_network_os == 'ios' and cleanup_required
 
-        - name: Re-raise storage cleanup failure
-          ansible.builtin.fail:
-            msg: "Storage cleanup failed for {{ inventory_hostname }}"
+        # Metamako MOS Storage Cleanup
+        - name: Metamako MOS storage cleanup
+          ansible.builtin.include_role:
+            name: metamako-mos-upgrade
+            tasks_from: storage-cleanup
+          vars:
+            target_free_space: "{{ minimum_free_space_gb }}"
+          when: ansible_network_os == 'mos' and cleanup_required
+
+        # Opengear Storage Cleanup
+        - name: Opengear storage cleanup
+          ansible.builtin.include_role:
+            name: opengear-upgrade
+            tasks_from: storage-cleanup
+          vars:
+            target_free_space: "{{ minimum_free_space_gb }}"
+          when: ansible_network_os == 'opengear' and cleanup_required
+
+        # FortiOS Storage Cleanup
+        - name: FortiOS storage cleanup
+          ansible.builtin.include_role:
+            name: fortios-upgrade
+            tasks_from: storage-cleanup
+          vars:
+            target_free_space: "{{ minimum_free_space_gb }}"
+          when: ansible_network_os == 'fortios' and cleanup_required
+
+    - name: Verify storage space after cleanup
+      ansible.builtin.include_role:
+        name: space-management
+        tasks_from: storage-assessment
+      register: post_cleanup_storage
+
+    - name: Validate sufficient space is available
+      ansible.builtin.assert:
+        that:
+          - post_cleanup_storage.free_space_gb >= minimum_free_space_gb
+        fail_msg: |
+          Insufficient storage space after cleanup:
+          Available: {{ post_cleanup_storage.free_space_gb }}GB
+          Required: {{ minimum_free_space_gb }}GB
+
+    - name: Log storage cleanup results
+      ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+      vars:
+        metric_type: "storage_cleanup"
+        metric_data:
+          device_id: "{{ inventory_hostname }}"
+          platform: "{{ ansible_network_os }}"
+          cleanup_performed: "{{ cleanup_required }}"
+          space_before_gb: "{{ storage_info.free_space_gb }}"
+          space_after_gb: "{{ post_cleanup_storage.free_space_gb }}"
+          space_freed_gb: "{{ post_cleanup_storage.free_space_gb - storage_info.free_space_gb }}"
+
+    - name: Display storage cleanup results
+      ansible.builtin.debug:
+        msg:
+          - "=== Storage Cleanup Complete ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Cleanup Performed: {{ 'Yes' if cleanup_required else 'No' }}"
+          - "Space Before: {{ storage_info.free_space_gb }}GB"
+          - "Space After: {{ post_cleanup_storage.free_space_gb }}GB"
+          - "Space Freed: {{ post_cleanup_storage.free_space_gb - storage_info.free_space_gb }}GB"
+          - "Status: {{ 'SUFFICIENT' if post_cleanup_storage.free_space_gb >= minimum_free_space_gb else 'INSUFFICIENT' }}"
+          - "==============================="
+  rescue:
+    - name: Storage cleanup failure handling
+      ansible.builtin.debug:
+        msg: "Storage cleanup failed for {{ inventory_hostname }}: {{ ansible_failed_result.msg | default('Unknown error') }}"
+
+    - name: Re-raise storage cleanup failure
+      ansible.builtin.fail:
+        msg: "Storage cleanup failed for {{ inventory_hostname }}"

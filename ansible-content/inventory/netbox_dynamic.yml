@@ -5,7 +5,8 @@
 plugin: netbox.netbox.nb_inventory
 
 # NetBox instance configuration
-api_endpoint: "{{ lookup('env', 'NETBOX_URL') | default('http://netbox:8000') }}"
+api_endpoint: >
+  {{ lookup('env', 'NETBOX_URL') | default('http://netbox:8000') }}
 token: "{{ lookup('env', 'NETBOX_TOKEN') }}"
 validate_certs: false
 config_context: true
@@ -16,45 +17,57 @@ flatten_local_context_data: true
 # Device filtering
 query_filters:
   - status: active
-  - role__name__in: 
-    - switch
-    - router 
-    - firewall
-    - load-balancer
-    - network-device
-    - console-server
-    - pdu
+  - role__name__in:
+      - switch
+      - router
+      - firewall
+      - load-balancer
+      - network-device
+      - console-server
+      - pdu
   - platform__name__in:
-    - cisco-nxos
-    - cisco-iosxe  
-    - fortios
-    - opengear
-    - metamako-mos
+      - cisco-nxos
+      - cisco-iosxe
+      - fortios
+      - opengear
+      - metamako-mos
 
 # Device composition - how inventory variables are built
 compose:
   # Primary connection variables
-  ansible_host: primary_ip4.address | default(primary_ip6.address) | default(name)
-  ansible_user: "{{ config_context.ansible_user | default(lookup('env', 'ANSIBLE_USER')) | default('admin') }}"
-  ansible_password: "{{ config_context.ansible_password | default(lookup('env', 'ANSIBLE_PASSWORD')) }}"
-  ansible_ssh_private_key_file: "{{ config_context.ssh_key_file | default('/var/lib/awx/.ssh/network_devices') }}"
-  
+  ansible_host: >
+    primary_ip4.address | default(primary_ip6.address) | default(name)
+  ansible_user: >
+    {{ config_context.ansible_user |
+       default(lookup('env', 'ANSIBLE_USER')) | default('admin') }}
+  ansible_password: >
+    {{ config_context.ansible_password |
+       default(lookup('env', 'ANSIBLE_PASSWORD')) }}
+  ansible_ssh_private_key_file: >
+    {{ config_context.ssh_key_file |
+       default('/var/lib/awx/.ssh/network_devices') }}
+
   # Network OS detection and connection settings
-  ansible_network_os: "{{ platform.slug | regex_replace('-', '.') if platform else 'unknown' }}"
+  ansible_network_os: >
+    {{ platform.slug | regex_replace('-', '.') if platform else 'unknown' }}
   ansible_connection: network_cli
   ansible_become: true
   ansible_become_method: enable
-  
-  # Connection timeout settings  
-  ansible_command_timeout: "{{ config_context.command_timeout | default(60) }}"
-  ansible_connect_timeout: "{{ config_context.connect_timeout | default(30) }}"
-  ansible_persistent_connect_timeout: "{{ config_context.persistent_timeout | default(300) }}"
-  ansible_persistent_command_timeout: "{{ config_context.persistent_command_timeout | default(300) }}"
-  
+
+  # Connection timeout settings
+  ansible_command_timeout: >
+    {{ config_context.command_timeout | default(60) }}
+  ansible_connect_timeout: >
+    {{ config_context.connect_timeout | default(30) }}
+  ansible_persistent_connect_timeout: >
+    {{ config_context.persistent_timeout | default(300) }}
+  ansible_persistent_command_timeout: >
+    {{ config_context.persistent_command_timeout | default(300) }}
+
   # Device metadata for upgrade operations
   device_id: name
   device_role: role.name
-  device_type: device_type.slug  
+  device_type: device_type.slug
   device_model: device_type.model
   site_name: site.name
   site_slug: site.slug
@@ -64,45 +77,73 @@ compose:
   vendor_slug: device_type.manufacturer.slug
   platform: "{{ platform.slug if platform else 'unknown' }}"
   serial_number: "{{ serial if serial else 'unknown' }}"
-  
+
   # Hardware specifications
-  memory_mb: "{{ config_context.memory_mb | default(device_type.memory_mb) | default(0) }}"
-  cpu_cores: "{{ config_context.cpu_cores | default(device_type.cpu_cores) | default(1) }}"
-  
+  memory_mb: >
+    {{ config_context.memory_mb |
+       default(device_type.memory_mb) | default(0) }}
+  cpu_cores: >
+    {{ config_context.cpu_cores |
+       default(device_type.cpu_cores) | default(1) }}
+
   # Network upgrade specific variables
-  firmware_directory: "{{ config_context.firmware_directory | default('bootflash:') }}"
-  minimum_free_space_mb: "{{ config_context.min_storage_mb | default(4096) }}"
-  backup_directory: "{{ config_context.backup_directory | default('bootflash:backup/') }}"
-  
+  firmware_directory: >
+    {{ config_context.firmware_directory | default('bootflash:') }}
+  minimum_free_space_mb: >
+    {{ config_context.min_storage_mb | default(4096) }}
+  backup_directory: >
+    {{ config_context.backup_directory | default('bootflash:backup/') }}
+
   # Feature flags from custom fields
-  multicast_enabled: "{{ custom_fields.multicast_enabled | default(true) | bool }}"
-  bfd_enabled: "{{ custom_fields.bfd_enabled | default(false) | bool }}"
-  vpc_enabled: "{{ custom_fields.vpc_enabled | default(false) | bool }}"
-  bgp_enabled: "{{ custom_fields.bgp_enabled | default(true) | bool }}"
-  ospf_enabled: "{{ custom_fields.ospf_enabled | default(false) | bool }}"
-  
+  multicast_enabled: >
+    {{ custom_fields.multicast_enabled | default(true) | bool }}
+  bfd_enabled: >
+    {{ custom_fields.bfd_enabled | default(false) | bool }}
+  vpc_enabled: >
+    {{ custom_fields.vpc_enabled | default(false) | bool }}
+  bgp_enabled: >
+    {{ custom_fields.bgp_enabled | default(true) | bool }}
+  ospf_enabled: >
+    {{ custom_fields.ospf_enabled | default(false) | bool }}
+
   # Upgrade and maintenance metadata
-  current_firmware_version: "{{ custom_fields.current_firmware | default('unknown') }}"
-  target_firmware_version: "{{ custom_fields.target_firmware | default('') }}"
-  last_upgrade_date: "{{ custom_fields.last_upgrade_date | default('never') }}"
-  upgrade_status: "{{ custom_fields.upgrade_status | default('unknown') }}"
-  maintenance_window: "{{ config_context.maintenance_window | default('TBD') }}"
-  change_window: "{{ config_context.change_window | default('standard') }}"
-  
+  current_firmware_version: >
+    {{ custom_fields.current_firmware | default('unknown') }}
+  target_firmware_version: >
+    {{ custom_fields.target_firmware | default('') }}
+  last_upgrade_date: >
+    {{ custom_fields.last_upgrade_date | default('never') }}
+  upgrade_status: >
+    {{ custom_fields.upgrade_status | default('unknown') }}
+  maintenance_window: >
+    {{ config_context.maintenance_window | default('TBD') }}
+  change_window: >
+    {{ config_context.change_window | default('standard') }}
+
   # Compliance and security settings
-  compliance_profile: "{{ config_context.compliance_profile | default('standard') }}"
-  security_zone: "{{ config_context.security_zone | default('internal') }}"
-  criticality: "{{ custom_fields.criticality | default('medium') }}"
-  
+  compliance_profile: >
+    {{ config_context.compliance_profile | default('standard') }}
+  security_zone: >
+    {{ config_context.security_zone | default('internal') }}
+  criticality: >
+    {{ custom_fields.criticality | default('medium') }}
+
   # Monitoring and alerting
-  snmp_community: "{{ config_context.snmp_community | default(lookup('env', 'SNMP_COMMUNITY')) }}"
-  snmp_version: "{{ config_context.snmp_version | default('2c') }}"
-  monitoring_enabled: "{{ config_context.monitoring_enabled | default(true) | bool }}"
-  
+  snmp_community: >
+    {{ config_context.snmp_community |
+       default(lookup('env', 'SNMP_COMMUNITY')) }}
+  snmp_version: >
+    {{ config_context.snmp_version | default('2c') }}
+  monitoring_enabled: >
+    {{ config_context.monitoring_enabled | default(true) | bool }}
+
   # Geographic and organizational data
   region: site.region.name
-  country: "{{ site.physical_address.split(',')[-1].strip() if site.physical_address else 'unknown' }}"
-  timezone: "{{ site.time_zone | default('UTC') }}"
+  country: >
+    {{ site.physical_address.split(',')[-1].strip()
+       if site.physical_address else 'unknown' }}
+  timezone: >
+    {{ site.time_zone | default('UTC') }}
 
 # Group creation based on device attributes
 group_by:
@@ -113,74 +154,93 @@ group_by:
   - region
   - status
 
-# Keyed groups for dynamic grouping  
+# Keyed groups for dynamic grouping
 keyed_groups:
   # Vendor groupings
-  - key: device_type.manufacturer.name | lower | regex_replace('[^a-z0-9]', '_')
+  - key: >
+      device_type.manufacturer.name | lower |
+      regex_replace('[^a-z0-9]', '_')
     prefix: vendor
     separator: _
-    
+
   # Platform/OS groupings
-  - key: platform.slug | default('unknown') | regex_replace('[^a-z0-9]', '_')
+  - key: >
+      platform.slug | default('unknown') |
+      regex_replace('[^a-z0-9]', '_')
     prefix: platform
     separator: _
-    
+
   # Site groupings
-  - key: site.slug | regex_replace('[^a-z0-9]', '_')
+  - key: >
+      site.slug | regex_replace('[^a-z0-9]', '_')
     prefix: site
     separator: _
-    
+
   # Region groupings
-  - key: site.region.slug | regex_replace('[^a-z0-9]', '_')
+  - key: >
+      site.region.slug | regex_replace('[^a-z0-9]', '_')
     prefix: region
     separator: _
-    
+
   # Device role groupings
-  - key: role.slug | regex_replace('[^a-z0-9]', '_')
+  - key: >
+      role.slug | regex_replace('[^a-z0-9]', '_')
     prefix: role
     separator: _
-    
-  # Device type groupings  
-  - key: device_type.slug | regex_replace('[^a-z0-9]', '_')
+
+  # Device type groupings
+  - key: >
+      device_type.slug | regex_replace('[^a-z0-9]', '_')
     prefix: model
     separator: _
-    
+
   # Upgrade status groupings
-  - key: custom_fields.upgrade_status | default('unknown') | regex_replace('[^a-z0-9]', '_')
+  - key: >
+      custom_fields.upgrade_status | default('unknown') |
+      regex_replace('[^a-z0-9]', '_')
     prefix: upgrade_status
     separator: _
-    
+
   # Criticality groupings
-  - key: custom_fields.criticality | default('medium') | regex_replace('[^a-z0-9]', '_')  
+  - key: >
+      custom_fields.criticality | default('medium') |
+      regex_replace('[^a-z0-9]', '_')
     prefix: criticality
     separator: _
-    
+
   # Maintenance window groupings
-  - key: config_context.maintenance_window | default('tbd') | regex_replace('[^a-z0-9]', '_')
+  - key: >
+      config_context.maintenance_window | default('tbd') |
+      regex_replace('[^a-z0-9]', '_')
     prefix: maintenance
     separator: _
-    
+
   # Environment groupings (based on site name patterns)
   - key: >-
       'production' if 'prod' in site.name | lower
-      else 'staging' if 'stage' in site.name | lower or 'stg' in site.name | lower
+      else 'staging' if ('stage' in site.name | lower or
+                         'stg' in site.name | lower)
       else 'development' if 'dev' in site.name | lower
-      else 'test' if 'test' in site.name | lower or 'lab' in site.name | lower
+      else 'test' if ('test' in site.name | lower or
+                      'lab' in site.name | lower)
       else 'unknown'
     prefix: env
     separator: _
-    
+
   # Network function groupings
   - key: >-
       'core' if 'core' in role.name | lower
-      else 'distribution' if 'distribution' in role.name | lower or 'dist' in role.name | lower  
+      else 'distribution' if ('distribution' in role.name | lower or
+                              'dist' in role.name | lower)
       else 'access' if 'access' in role.name | lower
-      else 'edge' if 'edge' in role.name | lower or 'border' in role.name | lower
-      else 'management' if 'mgmt' in role.name | lower or 'oob' in role.name | lower
+      else 'edge' if ('edge' in role.name | lower or
+                      'border' in role.name | lower)
+      else 'management' if ('mgmt' in role.name | lower or
+                            'oob' in role.name | lower)
       else 'other'
     prefix: network_tier
     separator: _
-    
+
   # Protocol groupings based on enabled features
   - key: >-
       'bgp' if custom_fields.bgp_enabled | default(true)
@@ -198,7 +258,7 @@ cache_timeout: 3600  # 1 hour cache
 strict: false
 timeout: 30
 
-# URI configuration for advanced NetBox queries  
+# URI configuration for advanced NetBox queries
 uri_query:
   limit: 0  # Get all devices
   offset: 0

@@ -11,7 +11,7 @@ collections:
     version: ">=8.0.0"
     source: https://galaxy.ansible.com
 
-  # Fortinet Collection  
+  # Fortinet Collection
   - name: fortinet.fortios
     version: ">=2.3.0"
     source: https://galaxy.ansible.com
@@ -26,7 +26,7 @@ collections:
 
   # Utility Collections
   - name: community.general
-    version: ">=8.0.0" 
+    version: ">=8.0.0"
     source: https://galaxy.ansible.com
   - name: ansible.posix
     version: ">=1.5.0"
@@ -47,5 +47,5 @@ collections:
     version: ">=3.18.0"
     source: https://galaxy.ansible.com
 
-# Installation command:
-# ansible-galaxy collection install -r collections/requirements.yml --force
+  # Installation command:
+  # ansible-galaxy collection install -r collections/requirements.yml --force

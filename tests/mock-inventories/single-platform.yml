@@ -9,6 +9,7 @@ all:
         test-nxos-01:
           ansible_host: localhost
           ansible_connection: local
+          ansible_network_os: nxos
           platform_type: cisco_nxos
           firmware_version: "9.3.10"
           target_version: "10.1.2"
@@ -24,6 +25,7 @@ all:
         test-metamako-01:
           ansible_host: localhost
           ansible_connection: local
+          ansible_network_os: mos
           platform_type: metamako_mos
           firmware_version: "0.39.1"
           target_version: "0.39.11"
