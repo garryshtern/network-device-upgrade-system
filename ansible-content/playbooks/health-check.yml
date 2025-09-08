@@ -3,14 +3,14 @@
 # Pre-upgrade validation and baseline network state capture
 # Supports all vendor platforms with comprehensive state validation
 
-- name: Device Health Check and Baseline Capture
-  hosts: "{{ target_hosts | default('all') }}"
+- hosts: "{{ target_hosts | default('all') }}"
+  name: Device Health Check and Baseline Capture
   gather_facts: false
   vars:
     health_check_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
     baseline_data_path: "/var/lib/network-upgrade/baselines"
     validation_timeout: 300
-    
+
   tasks:
     - name: Ensure baseline directory exists
       ansible.builtin.file:
@@ -26,11 +26,6 @@
         delay: 5
       register: connectivity_result
 
-    - name: Gather device facts
-      ansible.builtin.include_tasks: "../roles/{{ ansible_network_os }}-upgrade/tasks/validation.yml"
-      vars:
-        validation_mode: "baseline_capture"
-        
     - name: Platform-specific health checks
       block:
         # Cisco NX-OS Health Checks
@@ -40,7 +35,7 @@
             tasks_from: validation
           when: ansible_network_os == 'nxos'
 
-        # Cisco IOS-XE Health Checks  
+        # Cisco IOS-XE Health Checks
         - name: Cisco IOS-XE health validation
           ansible.builtin.include_role:
             name: cisco-iosxe-upgrade
@@ -83,7 +78,7 @@
 
     - name: Capture interface states
       ansible.builtin.include_role:
-        name: network-validation  
+        name: network-validation
         tasks_from: interface-validation
       vars:
         capture_mode: "baseline"
@@ -102,9 +97,9 @@
         name: network-validation
         tasks_from: multicast-validation
       vars:
-        capture_mode: "baseline" 
+        capture_mode: "baseline"
         output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/multicast_baseline_{{ health_check_timestamp }}.json"
-      when: 
+      when:
         - ansible_network_os in ['nxos', 'ios']
         - multicast_enabled | default(true) | bool
 
