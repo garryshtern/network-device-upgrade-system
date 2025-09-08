@@ -50,7 +50,7 @@ export_metrics: true
 metrics_batch_size: 100
 metrics_export_interval: 30
 
-# Notification settings  
+# Notification settings
 send_notifications: true
 notification_on_failure: true
 notification_on_success: false

@@ -205,7 +205,7 @@
           Authorization: "Token {{ influxdb_token }}"
         body: |
           compliance_audit,device_id={{ inventory_hostname }},device_type={{ ansible_network_os }},site_location={{ site_name | default('unknown') }},vendor={{ vendor | default('unknown') }},platform={{ ansible_network_os }} compliance_score={{ compliance_percentage }},checks_passed={{ compliance_results.compliance_checks.passed | length }},checks_failed={{ compliance_results.compliance_checks.failed | length }},checks_total={{ total_checks }},warnings={{ compliance_results.compliance_checks.warnings | length }} {{ ansible_date_time.epoch }}000000000
-      when: 
+      when:
         - influxdb_url is defined
         - send_metrics | default(true)
       ignore_errors: true
@@ -224,7 +224,7 @@
             compliance_score: "{{ compliance_percentage }}"
             last_compliance_audit: "{{ audit_timestamp }}"
             compliance_status: "{{ 'compliant' if compliance_percentage >= 90 else 'non_compliant' }}"
-      when: 
+      when:
         - netbox_url is defined
         - netbox_token is defined
       ignore_errors: true

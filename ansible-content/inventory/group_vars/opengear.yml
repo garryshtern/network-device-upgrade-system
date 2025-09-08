@@ -13,7 +13,7 @@ opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
 
 # Platform specific settings
 platform_type: "opengear"
-vendor: "opengear" 
+vendor: "opengear"
 device_family: "console_server"  # or smart_pdu
 
 # API settings
@@ -32,7 +32,7 @@ supported_models:
   modern_api:
     console_servers:
       - "CM8100"    # Modern console server - Full API + CLI
-      - "IM7200"    # Modern infrastructure manager - Full API + CLI  
+      - "IM7200"    # Modern infrastructure manager - Full API + CLI
     smart_pdus:
       - "CM8100"    # Can be both console server and PDU
 
@@ -95,7 +95,7 @@ restore_config_on_failure: true
 # Environmental monitoring (if available)
 environmental_sensors:
   temperature: true
-  humidity: true  
+  humidity: true
   validate_thresholds: true
 
 # Upgrade process settings
@@ -104,7 +104,7 @@ post_upgrade_validation: true
 
 # Architecture-specific boot times
 boot_times:
-  modern_api: 
+  modern_api:
     reboot_wait_time: 120
     service_initialization_wait: 60
   legacy_cli:
