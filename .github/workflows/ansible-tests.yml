@@ -129,7 +129,9 @@ jobs:
       - name: Test main workflow with mock inventory
         run: |
           ansible-playbook -i tests/mock-inventories/single-platform.yml \
-            --check --diff -e "upgrade_phase=loading" \
+            --check --diff \
+            --extra-vars "target_firmware=test-firmware.bin target_hosts=test-nxos-01 upgrade_phase=loading" \
+            --limit test-nxos-01 \
             ansible-content/playbooks/main-upgrade-workflow.yml
 
   security-scan:
