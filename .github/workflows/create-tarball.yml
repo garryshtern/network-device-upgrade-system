@@ -6,6 +6,10 @@ name: Create Release Tarball
       - main
   workflow_dispatch:  # Allows manual triggering
 
+permissions:
+  contents: write  # Required for creating releases and uploading assets
+  actions: read    # Required for workflow access
+
 jobs:
   create-tarball:
     runs-on: ubuntu-latest
@@ -85,11 +89,16 @@ jobs:
           retention-days: 90
 
       - name: Create GitHub Release with tarball (for direct URLs)
+        continue-on-error: true  # Don't fail workflow if release creation fails
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASE_TAG="release-${{ env.SHORT_SHA }}"
           RELEASE_TITLE="Network Upgrade System - ${{ env.SHORT_SHA }}"
+
+          echo "🚀 Attempting to create GitHub release: $RELEASE_TAG"
+          echo "📋 Checking GitHub CLI and permissions..."
+          gh auth status || echo "⚠️ GitHub CLI auth may have issues"
 
           # Create release notes
           cat > release-notes.md << EOF
@@ -127,17 +136,23 @@ jobs:
           EOF
 
           # Create release and upload tarball
-          gh release create "$RELEASE_TAG" \
+          echo "📦 Creating release and uploading tarball..."
+          if gh release create "$RELEASE_TAG" \
             --title "$RELEASE_TITLE" \
             --notes-file release-notes.md \
-            "${{ env.TARBALL_NAME }}"
+            "${{ env.TARBALL_NAME }}"; then
 
-          # Output direct URL
-          BASE_URL="https://github.com/${{ github.repository }}"
-          BASE_URL="${BASE_URL}/releases/download"
-          DIRECT_URL="${BASE_URL}/${RELEASE_TAG}/${{ env.TARBALL_NAME }}"
-          echo "DIRECT_URL=$DIRECT_URL" >> $GITHUB_ENV
-          echo "✅ Direct download URL: $DIRECT_URL"
+            # Output direct URL
+            BASE_URL="https://github.com/${{ github.repository }}"
+            BASE_URL="${BASE_URL}/releases/download"
+            DIRECT_URL="${BASE_URL}/${RELEASE_TAG}/${{ env.TARBALL_NAME }}"
+            echo "DIRECT_URL=$DIRECT_URL" >> $GITHUB_ENV
+            echo "✅ Direct download URL: $DIRECT_URL"
+          else
+            echo "⚠️ Release creation failed - artifacts still available"
+            ACTIONS_URL="https://github.com/${{ github.repository }}/actions"
+            echo "DIRECT_URL=$ACTIONS_URL" >> $GITHUB_ENV
+          fi
 
       - name: Summary
         run: |
@@ -154,7 +169,11 @@ jobs:
           TIME_ENTRY="| **Timestamp** | ${{ env.TIMESTAMP }} |"
           echo "$TIME_ENTRY" >> $GITHUB_STEP_SUMMARY
           URL_ENTRY="| **Direct URL** |"
-          URL_LINK=" [${{ env.TARBALL_NAME }}](${{ env.DIRECT_URL }}) |"
+          if [[ "${{ env.DIRECT_URL }}" == *"actions"* ]]; then
+            URL_LINK=" [Artifacts Page](${{ env.DIRECT_URL }}) |"
+          else
+            URL_LINK=" [${{ env.TARBALL_NAME }}](${{ env.DIRECT_URL }}) |"
+          fi
           URL_ENTRY="${URL_ENTRY}${URL_LINK}"
           echo "$URL_ENTRY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
