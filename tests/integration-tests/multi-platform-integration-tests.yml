@@ -12,7 +12,7 @@
         description: "Test complete 3-phase upgrade workflow"
         phases:
           - "Phase 1: Image Loading"
-          - "Phase 2: Image Installation" 
+          - "Phase 2: Image Installation"
           - "Phase 3: Validation and Rollback"
       multi_platform_test:
         name: "Multi-Platform Deployment"
@@ -31,14 +31,14 @@
           - "SSH connectivity testing"
           - "CLI command validation"
           - "Model-based routing"
-    
+
     test_devices:
       cisco_nxos:
         - hostname: "nxos-switch-01"
           model: "N9K-C93180YC-EX"
           expected_features: ["ISSU", "EPLD"]
       cisco_iosxe:
-        - hostname: "iosxe-router-01" 
+        - hostname: "iosxe-router-01"
           model: "ISR4431"
           expected_features: ["Install Mode", "IPSec", "BFD"]
       opengear:
@@ -54,12 +54,12 @@
       ansible.builtin.debug:
         msg: |
           Starting Multi-Platform Integration Test Suite
-          
+
           Test Scenarios:
           - {{ integration_test_scenarios.phase_separation_test.name }}
           - {{ integration_test_scenarios.multi_platform_test.name }}
           - {{ integration_test_scenarios.architecture_detection_test.name }}
-          
+
           Test Coverage:
           - End-to-end workflow validation
           - Multi-platform coordination
@@ -70,14 +70,14 @@
     # ==========================================
     # Phase-Separated Workflow Integration Tests
     # ==========================================
-    
+
     - name: Phase-Separated Workflow Integration Tests
       block:
         - name: Test Main Upgrade Workflow Structure
           ansible.builtin.slurp:
             src: "{{ playbook_dir }}/../../ansible-content/playbooks/main-upgrade-workflow.yml"
           register: main_workflow
-          
+
         - name: Validate Phase Separation in Main Workflow
           assert:
             that:
@@ -89,7 +89,7 @@
               - "'network-validation.yml' in (main_workflow.content | b64decode)"
             success_msg: "✓ Phase separation properly implemented in main workflow"
             fail_msg: "Phase separation not properly implemented"
-            
+
         - name: Test Individual Phase Playbooks
           ansible.builtin.stat:
             path: "{{ playbook_dir }}/../../ansible-content/playbooks/{{ item }}"
@@ -99,7 +99,7 @@
             - "image-installation.yml"
             - "network-validation.yml"
             - "emergency-rollback.yml"
-            
+
         - name: Validate Phase Playbooks Exist
           ansible.builtin.assert:
             that:
@@ -111,7 +111,7 @@
     # ==========================================
     # Multi-Platform Coordination Tests
     # ==========================================
-    
+
     - name: Multi-Platform Coordination Tests
       block:
         - name: Test Platform-Specific Role Integration
@@ -119,7 +119,7 @@
             path: "{{ playbook_dir }}/../../ansible-content/roles/{{ item }}-upgrade"
           register: platform_roles
           loop: "{{ integration_test_scenarios.multi_platform_test.platforms }}"
-          
+
         - name: Validate Platform Roles Exist
           assert:
             that:
@@ -128,13 +128,13 @@
             success_msg: "✓ {{ item.item }}-upgrade role exists"
             fail_msg: "Missing platform role: {{ item.item }}-upgrade"
           loop: "{{ platform_roles.results }}"
-          
+
         - name: Test Cross-Platform Variable Consistency
           ansible.builtin.stat:
             path: "{{ playbook_dir }}/../../ansible-content/inventory/group_vars/{{ item | replace('-', '_') }}.yml"
           register: platform_var_files
           loop: "{{ integration_test_scenarios.multi_platform_test.platforms }}"
-          
+
         - name: Validate Common Configuration Structure
           ansible.builtin.assert:
             that:
@@ -147,7 +147,7 @@
     # ==========================================
     # Architecture Detection Integration Tests
     # ==========================================
-    
+
     - name: Architecture Detection Integration Tests
       block:
         - name: Test Opengear Architecture Detection Logic
@@ -160,12 +160,12 @@
                 validate_certs: false
               register: mock_api_test
               failed_when: false
-              
+
             - name: Test Architecture Determination Logic
               set_fact:
                 detected_architecture: "{{ 'modern' if (mock_api_test.status | default(0)) == 200 else 'legacy' }}"
                 upgrade_method: "{{ 'api' if (mock_api_test.status | default(0)) == 200 else 'cli' }}"
-                
+
             - name: Validate Detection Logic
               assert:
                 that:
@@ -177,14 +177,14 @@
     # ==========================================
     # Error Handling and Rollback Tests
     # ==========================================
-    
+
     - name: Error Handling and Rollback Integration Tests
       block:
         - name: Test Rollback Playbook Structure
           slurp:
             src: "{{ playbook_dir }}/../../ansible-content/playbooks/emergency-rollback.yml"
           register: rollback_playbook
-          
+
         - name: Validate Rollback Components
           assert:
             that:
@@ -193,7 +193,7 @@
               - "'validation' in (rollback_playbook.content | b64decode)"
             success_msg: "✓ Emergency rollback components present"
             fail_msg: "Emergency rollback components missing"
-            
+
         - name: Test Error Handling in Platform Roles
           find:
             paths: "{{ playbook_dir }}/../../ansible-content/roles"
@@ -201,7 +201,7 @@
             recurse: yes
             contains: "failed_when"
           register: error_handling_files
-          
+
         - name: Validate Error Handling Implementation
           assert:
             that:
@@ -212,7 +212,7 @@
     # ==========================================
     # AWX Integration Tests
     # ==========================================
-    
+
     - name: AWX Integration Tests
       block:
         - name: Check AWX Configuration Templates
@@ -221,20 +221,20 @@
             patterns: "*.yml"
             recurse: yes
           register: awx_config_files
-          
+
         - name: Validate AWX Configuration Structure
           assert:
             that:
               - awx_config_files.files | length > 0
             success_msg: "✓ AWX configuration templates present"
             fail_msg: "AWX configuration templates missing"
-            
+
         - name: Test Job Template Configurations
           find:
             paths: "../awx-config/job-templates"
             patterns: "*.yml"
           register: job_templates
-          
+
         - name: Validate Job Templates
           assert:
             that:
@@ -245,28 +245,28 @@
     # ==========================================
     # Monitoring Integration Tests
     # ==========================================
-    
+
     - name: Monitoring Integration Tests
       block:
         - name: Check Telegraf Configuration
           ansible.builtin.stat:
             path: "../integration/telegraf"
           register: telegraf_integration
-          
+
         - name: Validate Monitoring Integration
           assert:
             that:
               - telegraf_integration.stat.exists
             success_msg: "✓ Monitoring integration configured"
             fail_msg: "Monitoring integration not configured"
-            
+
         - name: Test Grafana Dashboard Integration
           find:
             paths: "../integration/grafana/dashboards"
             patterns: "*.json"
           register: grafana_dashboards
           failed_when: false
-          
+
         - name: Validate Dashboard Availability
           debug:
             msg: "Found {{ grafana_dashboards.files | default([]) | length }} Grafana dashboards"
@@ -274,14 +274,14 @@
     # ==========================================
     # Performance and Scalability Tests
     # ==========================================
-    
+
     - name: Performance and Scalability Tests
       block:
         - name: Test Ansible Configuration for Scale
           slurp:
             src: "../ansible-content/ansible.cfg"
           register: ansible_config
-          
+
         - name: Validate Scalability Settings
           assert:
             that:
@@ -289,13 +289,13 @@
               - "'host_key_checking' in (ansible_config.content | b64decode)"
             success_msg: "✓ Scalability settings configured"
             fail_msg: "Scalability settings missing"
-            
+
         - name: Test Inventory Structure for Large Scale
           find:
             paths: "../ansible-content/inventory/group_vars"
             patterns: "*.yml"
           register: inventory_groups
-          
+
         - name: Validate Multi-Group Support
           assert:
             that:
@@ -306,7 +306,7 @@
     # ==========================================
     # Security Integration Tests
     # ==========================================
-    
+
     - name: Security Integration Tests
       block:
         - name: Test Vault Integration
@@ -316,20 +316,20 @@
             recurse: yes
             contains: "vault_"
           register: vault_integration
-          
+
         - name: Validate Vault Usage
           assert:
             that:
               - vault_integration.files | length > 0
             success_msg: "✓ Ansible Vault integration implemented"
             fail_msg: "Ansible Vault integration missing"
-            
+
         - name: Test SSL Configuration
           find:
             paths: "../install"
             patterns: "*ssl*"
           register: ssl_config
-          
+
         - name: Validate SSL Setup
           assert:
             that:
@@ -340,55 +340,55 @@
     # ==========================================
     # Complete Integration Test Results
     # ==========================================
-    
+
     - name: Complete Integration Test Results Summary
       ansible.builtin.debug:
         msg: |
           🎉 Multi-Platform Integration Test Suite Completed
-          
+
           Integration Test Results:
           ================================
-          
+
           ✅ Phase-Separated Workflow Integration
           - Main upgrade workflow structure validated
           - Individual phase playbooks verified
           - Proper phase separation implemented
-          
+
           ✅ Multi-Platform Coordination
           - All {{ integration_test_scenarios.multi_platform_test.platforms | length }} platform roles verified
           - Cross-platform variable consistency validated
           - Common configuration structure present
-          
-          ✅ Architecture Detection Integration  
+
+          ✅ Architecture Detection Integration
           - Opengear multi-architecture detection working
           - Automatic routing logic validated
           - Fallback mechanisms implemented
-          
+
           ✅ Error Handling and Rollback
           - Emergency rollback components verified
           - Error handling implemented across roles
           - Comprehensive failure recovery
-          
+
           ✅ AWX Integration
           - AWX configuration templates present
           - Job templates configured ({{ job_templates.files | default([]) | length }} templates)
           - Workflow templates ready
-          
+
           ✅ Monitoring Integration
           - Telegraf integration configured
           - Grafana dashboard framework ready
           - InfluxDB v2 connectivity prepared
-          
+
           ✅ Performance and Scalability
           - Ansible configuration optimized for scale
           - Multi-group inventory structure ready
           - 1000+ device capacity verified
-          
+
           ✅ Security Integration
           - Ansible Vault integration implemented
           - SSL configuration present
           - Secure credential management ready
-          
+
           Platform Integration Status:
           ============================
           • Cisco NX-OS: 100% - Full ISSU and EPLD support
@@ -396,13 +396,13 @@
           • Opengear: 95% - Multi-architecture support
           • FortiOS: 90% - HA coordination ready
           • Metamako MOS: 85% - Ultra-low latency support
-          
+
           Overall System Integration: 97% COMPLETE
           Status: PRODUCTION READY FOR ENTERPRISE DEPLOYMENT
-          
+
           Ready for:
           - Large-scale network upgrades (1000+ devices)
-          - Multi-vendor heterogeneous environments  
+          - Multi-vendor heterogeneous environments
           - Enterprise security requirements
           - High-availability operations
           - Comprehensive monitoring and reporting

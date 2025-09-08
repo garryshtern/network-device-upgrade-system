@@ -54,7 +54,7 @@ all:
       vars:
         ansible_user: admin
         ansible_password: "{{ vault_cisco_password | default('mock_password') }}"
-        
+
     cisco_iosxe:
       hosts:
         iosxe-router-01:
@@ -78,7 +78,7 @@ all:
       vars:
         ansible_user: admin
         ansible_password: "{{ vault_cisco_password | default('mock_password') }}"
-        
+
     fortios:
       hosts:
         fortigate-fw-01:
@@ -153,7 +153,7 @@ all:
       vars:
         ansible_user: admin
         ansible_password: "{{ vault_fortios_password | default('mock_password') }}"
-        
+
     opengear:
       hosts:
         opengear-im7200-api:
@@ -215,7 +215,7 @@ all:
       vars:
         ansible_user: root
         ansible_password: "{{ vault_opengear_password | default('mock_password') }}"
-        
+
     metamako:
       hosts:
         metamako-mc48-metawatch:

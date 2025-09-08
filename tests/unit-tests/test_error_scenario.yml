@@ -18,7 +18,7 @@
           - target_version is defined
         fail_msg: "Required variables missing"
       when: error_test.error_type != 'missing_variables'
-      
+
     # Test platform type validation
     - name: "Validate platform type"
       assert:
@@ -26,49 +26,49 @@
           - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
         fail_msg: "Invalid platform type: {{ platform_type }}"
       when: error_test.error_type != 'invalid_platform'
-      
+
     # Test version comparison logic
     - name: "Compare versions"
       set_fact:
         version_comparison: "{{ firmware_version is version(target_version, '<') }}"
-      when: 
-        - firmware_version is defined 
+      when:
+        - firmware_version is defined
         - target_version is defined
         - error_test.error_type in ['version_downgrade', 'same_version']
-        
+
     - name: "Validate version upgrade"
       assert:
         that:
           - version_comparison
         fail_msg: "Target version must be higher than current version"
-      when: 
+      when:
         - version_comparison is defined
         - error_test.error_type == 'version_downgrade'
-        
+
     - name: "Validate version difference"
       assert:
         that:
           - firmware_version != target_version
         fail_msg: "Target version must be different from current version"
       when: error_test.error_type == 'same_version'
-      
+
     # If we reach here and scenario should fail, that's unexpected
     - name: "✗ {{ error_test.name }} - UNEXPECTED SUCCESS"
       fail:
         msg: "Scenario that should fail passed validation"
       when: error_test.should_fail
-      
+
     - name: "✓ {{ error_test.name }} - PASSED as expected"
       debug:
         msg: "Validation passed for scenario that should pass"
       when: not error_test.should_fail
-      
+
   rescue:
     - name: "✓ {{ error_test.name }} - FAILED as expected ({{ error_test.error_type }})"
       debug:
         msg: "Validation failed as expected for error type: {{ error_test.error_type }}"
       when: error_test.should_fail
-      
+
     - name: "✗ {{ error_test.name }} - UNEXPECTED FAILURE"
       fail:
         msg: "Scenario that should pass failed validation"

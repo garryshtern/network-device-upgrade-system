@@ -20,12 +20,12 @@
     rollback_on_failure: "{{ auto_rollback | default(true) | bool }}"
     
     # Security configuration - prioritize SSH keys over passwords
-    ansible_ssh_private_key_file: "{{ ssh_key_file | default(ansible_ssh_private_key_file | default(omit)) }}"
-    ansible_ssh_pass: "{{ ansible_ssh_pass | default(omit) }}"
+    ansible_ssh_private_key_file: "{{ ssh_key_file | default(omit) }}"
+    ansible_ssh_pass: "{{ ssh_password | default(omit) }}"
     
     # Device grouping and concurrency
-    batch_id: "{{ ansible_date_time.epoch }}"
-    operator_id: "{{ ansible_user_id }}"
+    batch_id: "{{ ansible_play_batch | hash('md5') }}"
+    operator_id: "{{ lookup('env', 'USER') | default('ansible') }}"
     
     # Timing and retry settings
     max_retry_attempts: 3
@@ -52,8 +52,8 @@
 
     - name: Set upgrade start timestamp
       ansible.builtin.set_fact:
-        upgrade_start_time: "{{ ansible_date_time.iso8601 }}"
-        upgrade_job_id: "{{ inventory_hostname }}_{{ ansible_date_time.epoch }}"
+        upgrade_start_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+        upgrade_job_id: "{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}"
 
     - name: Display upgrade parameters
       ansible.builtin.debug:
@@ -186,7 +186,7 @@
   post_tasks:
     - name: Set upgrade completion timestamp
       ansible.builtin.set_fact:
-        upgrade_end_time: "{{ ansible_date_time.iso8601 }}"
+        upgrade_end_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
     - name: Calculate upgrade duration
       ansible.builtin.set_fact:

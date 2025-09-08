@@ -15,7 +15,7 @@
       Current Version: {{ firmware_version | default('unknown') }}
       Target Version: {{ target_version | default('unknown') }}
       Device Model: {{ device_model | default('unknown') }}
-      
+
       {% if platform_type == 'cisco_nxos' %}
       # NX-OS Upgrade Commands
       {% if issu_capable %}
@@ -44,7 +44,7 @@
       {% endif %}
       get system status
       {% endif %}
-      
+
       # Common validation commands
       show clock
       show running-config | include hostname
@@ -54,12 +54,12 @@
   template:
     src: "/tmp/ansible-template-test/{{ template_test.name | regex_replace(' ', '_') }}.j2"
     dest: "/tmp/ansible-template-test/{{ template_test.name | regex_replace(' ', '_') }}_rendered.txt"
-    
+
 - name: "Read rendered template: {{ template_test.name }}"
   slurp:
     src: "/tmp/ansible-template-test/{{ template_test.name | regex_replace(' ', '_') }}_rendered.txt"
   register: rendered_content
-  
+
 - name: "Verify template content: {{ template_test.name }}"
   assert:
     that: "rendered_content.content | b64decode | regex_search(expected_item)"
@@ -69,7 +69,7 @@
   loop_control:
     loop_var: expected_item
     label: "{{ expected_item }}"
-    
+
 - name: "✓ Template test passed: {{ template_test.name }}"
   debug:
     msg: "Template rendering successful for {{ template_test.name }}"

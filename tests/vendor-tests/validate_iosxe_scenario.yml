@@ -12,25 +12,37 @@
     - name: Validate install mode detection logic
       set_fact:
         detected_install_mode: "{{ install_mode | default(false) | bool }}"
-        detected_boot_mode: "{{ 'install' if install_mode | default(false) | bool else 'bundle' }}"
-        
+        detected_boot_mode: >-
+          {{
+            'install' if install_mode | default(false) | bool
+            else 'bundle'
+          }}
+
     - name: Validate upgrade method selection
       set_fact:
-        selected_upgrade_method: "{{ 'install_mode_upgrade' if detected_install_mode else 'bundle_mode_upgrade' }}"
-        
+        selected_upgrade_method: >-
+          {{
+            'install_mode_upgrade' if detected_install_mode
+            else 'bundle_mode_upgrade'
+          }}
+
     - name: Assert install mode detection accuracy
       assert:
         that:
-          - detected_install_mode == iosxe_scenario.expected_results.install_mode_supported
+          - >-
+            detected_install_mode ==
+            iosxe_scenario.expected_results.install_mode_supported
         fail_msg: "Install mode detection failed for {{ iosxe_scenario.name }}"
-        success_msg: "✓ Install mode detection correct for {{ iosxe_scenario.name }}"
-        
-    - name: Assert upgrade method selection accuracy  
+        success_msg: >-
+          ✓ Install mode detection correct for {{ iosxe_scenario.name }}
+
+    - name: Assert upgrade method selection accuracy
       assert:
         that:
           - selected_upgrade_method == iosxe_scenario.expected_results.upgrade_method
         fail_msg: "Upgrade method selection failed for {{ iosxe_scenario.name }}"
-        success_msg: "✓ Upgrade method selection correct for {{ iosxe_scenario.name }}"
+        success_msg: >-
+          ✓ Upgrade method selection correct for {{ iosxe_scenario.name }}
 
     - name: Validate device model compatibility
       assert:
@@ -39,17 +51,18 @@
           - device_model != ""
           - platform_type == "cisco_iosxe"
         fail_msg: "Device model or platform validation failed"
-        success_msg: "✓ Device compatibility validated for {{ iosxe_scenario.name }}"
+        success_msg: >-
+          ✓ Device compatibility validated for {{ iosxe_scenario.name }}
 
     - name: "✓ {{ iosxe_scenario.name }} - PASSED"
       debug:
         msg: "IOS-XE scenario validation successful for {{ device_model }}"
-        
+
   rescue:
-    - name: "✗ {{ iosxe_scenario.name }} - FAILED"  
+    - name: "✗ {{ iosxe_scenario.name }} - FAILED"
       debug:
         msg: "IOS-XE scenario validation failed for {{ iosxe_scenario.name }}"
-      
+
     - name: Fail the test
       fail:
         msg: "IOS-XE scenario {{ iosxe_scenario.name }} validation failed"

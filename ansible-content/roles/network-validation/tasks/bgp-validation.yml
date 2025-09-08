@@ -6,7 +6,7 @@
   ansible.builtin.set_fact:
     bgp_validation:
       device: "{{ inventory_hostname }}"
-      timestamp: "{{ ansible_date_time.iso8601 }}"
+      timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
       validation_type: "bgp"
       baseline: {}
       current: {}
@@ -113,7 +113,7 @@
       'current': {
         'neighbors': bgp_neighbors | default([]),
         'analysis': bgp_analysis | default({}),
-        'collection_time': ansible_date_time.iso8601
+        'collection_time': lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ")
       }
     }) }}"
 
@@ -243,7 +243,7 @@
     headers:
       Authorization: "Token {{ influxdb_token }}"
     body: |
-      network_validation,device_id={{ inventory_hostname }},validation_type=bgp,protocol=bgp baseline_count={{ bgp_validation.baseline.analysis.total_neighbors | default(0) }},current_count={{ bgp_validation.current.analysis.established_neighbors | default(0) }},validation_success={{ bgp_validation.passed | lower }},convergence_time=0 {{ ansible_date_time.epoch }}000000000
+      network_validation,device_id={{ inventory_hostname }},validation_type=bgp,protocol=bgp baseline_count={{ bgp_validation.baseline.analysis.total_neighbors | default(0) }},current_count={{ bgp_validation.current.analysis.established_neighbors | default(0) }},validation_success={{ bgp_validation.passed | lower }},convergence_time=0 {{ ansible_play_batch | hash("md5") }}000000000
   when: 
     - influxdb_url is defined
     - send_metrics | default(true)

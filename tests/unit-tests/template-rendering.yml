@@ -18,7 +18,7 @@
         expected_content:
           - "install all nxos.10.1.2"
           - "N9K-C93180YC-EX"
-          
+
       - name: "IOS-XE Install Mode Template"
         template_vars:
           platform_type: "cisco_iosxe"
@@ -29,7 +29,7 @@
         expected_content:
           - "install mode"
           - "17.06.04"
-          
+
       - name: "FortiOS HA Template"
         template_vars:
           platform_type: "fortios"
@@ -47,19 +47,19 @@
       file:
         path: /tmp/ansible-template-test
         state: directory
-        
+
     - name: Test template rendering for each scenario
       include_tasks: test_template_scenario.yml
       loop: "{{ test_templates }}"
       loop_control:
         loop_var: template_test
         label: "{{ template_test.name }}"
-        
+
     - name: Clean up temporary files
       file:
         path: /tmp/ansible-template-test
         state: absent
-        
+
     - name: Template rendering tests completed
       debug:
         msg: "All template rendering tests completed successfully"

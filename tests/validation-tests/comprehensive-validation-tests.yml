@@ -14,7 +14,7 @@
           - "bfd-validation.yml"
         common_validation_tasks:
           - "bgp-validation.yml"
-          - "interface-validation.yml" 
+          - "interface-validation.yml"
           - "routing-validation.yml"
           - "arp-validation.yml"
         expected_features:
@@ -75,20 +75,20 @@
       debug:
         msg: |
           Starting Comprehensive Platform Validation Test Suite
-          
+
           Testing validation components for all platforms:
           - Cisco NX-OS: {{ (validation_test_matrix.cisco_nxos.platform_validation_tasks | length) + (validation_test_matrix.cisco_nxos.common_validation_tasks | length) }} validation tasks
           - Cisco IOS-XE: Platform-specific validation tasks
           - Opengear: Multi-architecture support validation
           - FortiOS: HA and license validation
           - Metamako MOS: Latency and timing validation
-          
+
           Testing comprehensive platform validation coverage
 
     # ==========================================
     # Cisco NX-OS Validation Tests
     # ==========================================
-    
+
     - name: Cisco NX-OS Validation Tests
       block:
         - name: Check NX-OS Platform-Specific Validation Task Files
@@ -96,7 +96,7 @@
             path: "{{ playbook_dir }}/../../ansible-content/roles/cisco-nxos-upgrade/tasks/{{ item }}"
           register: nxos_platform_task_files
           loop: "{{ validation_test_matrix.cisco_nxos.platform_validation_tasks }}"
-          
+
         - name: Validate NX-OS Platform Task Files Exist
           ansible.builtin.assert:
             that:
@@ -104,13 +104,13 @@
             success_msg: "✓ NX-OS {{ item.item }} exists"
             fail_msg: "Missing NX-OS validation task: {{ item.item }}"
           loop: "{{ nxos_platform_task_files.results }}"
-          
+
         - name: Check Common Network Validation Task Files
           ansible.builtin.stat:
             path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/tasks/{{ item }}"
           register: nxos_common_task_files
           loop: "{{ validation_test_matrix.cisco_nxos.common_validation_tasks }}"
-          
+
         - name: Validate Common Network Task Files Exist
           ansible.builtin.assert:
             that:
@@ -118,12 +118,12 @@
             success_msg: "✓ Common {{ item.item }} exists"
             fail_msg: "Missing common validation task: {{ item.item }}"
           loop: "{{ nxos_common_task_files.results }}"
-          
+
         - name: Test NX-OS IGMP Validation Content
           ansible.builtin.slurp:
             src: "{{ playbook_dir }}/../../ansible-content/roles/cisco-nxos-upgrade/tasks/igmp-validation.yml"
           register: nxos_igmp_content
-          
+
         - name: Validate NX-OS IGMP Implementation
           ansible.builtin.assert:
             that:
@@ -131,12 +131,12 @@
               - "'IGMP snooping status' in (nxos_igmp_content.content | b64decode)"
             success_msg: "✓ NX-OS IGMP validation implementation complete"
             fail_msg: "NX-OS IGMP validation implementation incomplete"
-            
+
         - name: Test NX-OS Enhanced BFD Validation Content
           ansible.builtin.slurp:
             src: "{{ playbook_dir }}/../../ansible-content/roles/cisco-nxos-upgrade/tasks/bfd-validation.yml"
           register: nxos_bfd_content
-          
+
         - name: Validate NX-OS Enhanced BFD Implementation
           ansible.builtin.assert:
             that:
@@ -146,9 +146,9 @@
             fail_msg: "NX-OS enhanced BFD validation implementation incomplete"
 
     # ==========================================
-    # Cisco IOS-XE Validation Tests  
+    # Cisco IOS-XE Validation Tests
     # ==========================================
-    
+
     - name: Cisco IOS-XE Validation Tests
       block:
         - name: Check IOS-XE Platform-Specific Validation Task Files
@@ -156,7 +156,7 @@
             path: "{{ playbook_dir }}/../../ansible-content/roles/cisco-iosxe-upgrade/tasks/{{ item }}"
           register: iosxe_platform_task_files
           loop: "{{ validation_test_matrix.cisco_iosxe.platform_validation_tasks }}"
-          
+
         - name: Validate IOS-XE Platform Task Files Exist
           ansible.builtin.assert:
             that:
@@ -164,13 +164,13 @@
             success_msg: "✓ IOS-XE {{ item.item }} exists"
             fail_msg: "Missing IOS-XE validation task: {{ item.item }}"
           loop: "{{ iosxe_platform_task_files.results }}"
-          
+
         - name: Check Common Network Validation Task Files for IOS-XE
           ansible.builtin.stat:
             path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/tasks/{{ item }}"
           register: iosxe_common_task_files
           loop: "{{ validation_test_matrix.cisco_iosxe.common_validation_tasks }}"
-          
+
         - name: Validate Common Network Task Files Exist for IOS-XE
           ansible.builtin.assert:
             that:
@@ -178,12 +178,12 @@
             success_msg: "✓ Common {{ item.item }} exists"
             fail_msg: "Missing common validation task: {{ item.item }}"
           loop: "{{ iosxe_common_task_files.results }}"
-          
+
         - name: Test IOS-XE IPSec Validation Content
           ansible.builtin.slurp:
             src: "{{ playbook_dir }}/../../ansible-content/roles/cisco-iosxe-upgrade/tasks/ipsec-validation.yml"
           register: iosxe_ipsec_content
-          
+
         - name: Validate IOS-XE IPSec Implementation
           ansible.builtin.assert:
             that:
@@ -192,12 +192,12 @@
               - "'Check IPSec session status' in (iosxe_ipsec_content.content | b64decode)"
             success_msg: "✓ IOS-XE IPSec validation implementation complete"
             fail_msg: "IOS-XE IPSec validation implementation incomplete"
-            
+
         - name: Test IOS-XE BFD Validation Content
           ansible.builtin.slurp:
             src: "{{ playbook_dir }}/../../ansible-content/roles/cisco-iosxe-upgrade/tasks/bfd-validation.yml"
           register: iosxe_bfd_content
-          
+
         - name: Validate IOS-XE BFD Implementation
           ansible.builtin.assert:
             that:
@@ -206,12 +206,12 @@
               - "'BFD session validation' in (iosxe_bfd_content.content | b64decode)"
             success_msg: "✓ IOS-XE BFD validation implementation complete"
             fail_msg: "IOS-XE BFD validation implementation incomplete"
-            
+
         - name: Test IOS-XE Optics Validation Content
           ansible.builtin.slurp:
             src: "{{ playbook_dir }}/../../ansible-content/roles/cisco-iosxe-upgrade/tasks/optics-validation.yml"
           register: iosxe_optics_content
-          
+
         - name: Validate IOS-XE Optics Implementation
           ansible.builtin.assert:
             that:
@@ -224,7 +224,7 @@
     # ==========================================
     # Opengear Multi-Architecture Validation Tests
     # ==========================================
-    
+
     - name: Opengear Multi-Architecture Validation Tests
       block:
         - name: Check Opengear Task Files
@@ -239,7 +239,7 @@
             - "image-installation-legacy.yml"
             - "console-server-check.yml"
             - "smart-pdu-check.yml"
-            
+
         - name: Validate Opengear Task Files Exist
           ansible.builtin.assert:
             that:
@@ -247,12 +247,12 @@
             success_msg: "✓ Opengear {{ item.item }} exists"
             fail_msg: "Missing Opengear task: {{ item.item }}"
           loop: "{{ opengear_task_files.results }}"
-          
+
         - name: Test Opengear Architecture Detection Content
           ansible.builtin.slurp:
             src: "{{ playbook_dir }}/../../ansible-content/roles/opengear-upgrade/tasks/main.yml"
           register: opengear_main_content
-          
+
         - name: Validate Opengear Architecture Detection
           ansible.builtin.assert:
             that:
@@ -262,12 +262,12 @@
               - "'API vs CLI' in (opengear_main_content.content | b64decode)"
             success_msg: "✓ Opengear architecture detection implementation complete"
             fail_msg: "Opengear architecture detection implementation incomplete"
-            
+
         - name: Test Opengear Legacy Support Content
           ansible.builtin.slurp:
             src: "{{ playbook_dir }}/../../ansible-content/roles/opengear-upgrade/tasks/image-loading-legacy.yml"
           register: opengear_legacy_content
-          
+
         - name: Validate Opengear Legacy Implementation
           ansible.builtin.assert:
             that:
@@ -281,14 +281,14 @@
     # ==========================================
     # Validation Framework Integration Tests
     # ==========================================
-    
+
     - name: Validation Framework Integration Tests
       block:
         - name: Check Main Validation Workflow Integration
           ansible.builtin.slurp:
             src: "{{ playbook_dir }}/../../ansible-content/playbooks/main-upgrade-workflow.yml"
           register: main_workflow_content
-          
+
         - name: Validate Platform Validation Integration
           ansible.builtin.assert:
             that:
@@ -296,12 +296,12 @@
               - "'validation' in (main_workflow_content.content | b64decode)"
             success_msg: "✓ Main workflow validation integration complete"
             fail_msg: "Main workflow validation integration missing"
-            
+
         - name: Check Network Validation Playbook
           ansible.builtin.stat:
             path: "{{ playbook_dir }}/../../ansible-content/playbooks/network-validation.yml"
           register: network_validation_playbook
-          
+
         - name: Validate Network Validation Playbook Exists
           ansible.builtin.assert:
             that:
@@ -312,7 +312,7 @@
     # ==========================================
     # Role Defaults and Configuration Tests
     # ==========================================
-    
+
     - name: Role Defaults and Configuration Tests
       block:
         - name: Check Platform Role Defaults
@@ -325,7 +325,7 @@
             - "opengear-upgrade"
             - "fortios-upgrade"
             - "metamako-mos-upgrade"
-            
+
         - name: Validate Role Defaults Exist
           ansible.builtin.assert:
             that:
@@ -333,7 +333,7 @@
             success_msg: "✓ {{ item.item }} defaults exist"
             fail_msg: "Missing defaults for {{ item.item }}"
           loop: "{{ role_defaults.results }}"
-          
+
         - name: Check Group Variables
           ansible.builtin.stat:
             path: "{{ playbook_dir }}/../../ansible-content/inventory/group_vars/{{ item }}.yml"
@@ -344,7 +344,7 @@
             - "opengear"
             - "fortios"
             - "metamako_mos"
-            
+
         - name: Validate Group Variables Exist
           ansible.builtin.assert:
             that:
@@ -356,7 +356,7 @@
     # ==========================================
     # Validation Template Tests
     # ==========================================
-    
+
     - name: Validation Template Tests
       block:
         - name: Check Validation Templates
@@ -370,7 +370,7 @@
             - "routing-validation.j2"
             - "multicast-validation.j2"
             - "arp-validation.j2"
-            
+
         - name: Validate Templates Exist
           ansible.builtin.assert:
             that:
@@ -382,41 +382,41 @@
     # ==========================================
     # Comprehensive Test Results Summary
     # ==========================================
-    
+
     - name: Comprehensive Validation Test Results Summary
       debug:
         msg: |
           🎉 Comprehensive Platform Validation Test Suite Completed
-          
+
           Platform Validation Status:
           ✓ Cisco NX-OS: {{ (validation_test_matrix.cisco_nxos.platform_validation_tasks | length) + (validation_test_matrix.cisco_nxos.common_validation_tasks | length) }} validation tasks - 100% COMPLETE
             Features: {{ validation_test_matrix.cisco_nxos.expected_features | join(', ') }}
-            
-          ✓ Cisco IOS-XE: {{ validation_test_matrix.cisco_iosxe.validation_tasks | length }} validation tasks - 95% COMPLETE  
+
+          ✓ Cisco IOS-XE: {{ validation_test_matrix.cisco_iosxe.validation_tasks | length }} validation tasks - 95% COMPLETE
             Features: {{ validation_test_matrix.cisco_iosxe.expected_features | join(', ') }}
-            
+
           ✓ Opengear: Multi-architecture support - 95% COMPLETE
             Features: {{ validation_test_matrix.opengear.expected_features | join(', ') }}
-            
+
           ✓ FortiOS: HA coordination features - 90% COMPLETE
             Features: {{ validation_test_matrix.fortios.expected_features | join(', ') }}
-            
+
           ✓ Metamako MOS: Ultra-low latency features - 85% COMPLETE
             Features: {{ validation_test_matrix.metamako.expected_features | join(', ') }}
-          
+
           Critical Validation Components:
           ✓ IPSec tunnel validation (IOS-XE)
           ✓ BFD session validation (NX-OS, IOS-XE)
           ✓ IGMP snooping validation (NX-OS)
           ✓ Interface optics validation (IOS-XE)
           ✓ Multi-architecture detection (Opengear)
-          
+
           Integration Status:
           ✓ Main workflow validation integration
           ✓ Role defaults and configuration
           ✓ Group variables configuration
           ✓ Validation templates
           ✓ Platform-specific task files
-          
+
           Overall System Status: 97% COMPLETE - PRODUCTION READY
           All critical validation requirements fulfilled

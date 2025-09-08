@@ -14,7 +14,7 @@
           expected_method: "cli"
         - hostname: "opengear-cm7100-01"
           model: "CM7100"
-          expected_architecture: "legacy" 
+          expected_architecture: "legacy"
           expected_method: "cli"
       modern_devices:
         - hostname: "opengear-cm8100-01"
@@ -26,7 +26,7 @@
           expected_architecture: "modern"
           expected_method: "api"
     test_results: []
-    
+
   tasks:
     - name: Test Suite Information
       ansible.builtin.debug:
@@ -38,11 +38,11 @@
           - Model-Specific Behavior Tests
           - Upgrade Path Validation Tests
           - Multi-Method Integration Tests
-          
+
     # ==========================================
-    # Architecture Detection Tests  
+    # Architecture Detection Tests
     # ==========================================
-    
+
     - name: Architecture Detection Tests
       block:
         - name: Mock API Detection for Modern Devices
@@ -61,7 +61,7 @@
                     model: "IM7200"
                     expected_architecture: "modern"
                     expected_method: "api"
-          
+
         - name: Validate Modern API Detection
           ansible.builtin.assert:
             that:
@@ -69,7 +69,7 @@
             fail_msg: "Modern device {{ item.item.hostname }} should support API"
             success_msg: "✓ {{ item.item.hostname }} correctly detected as API-capable"
           loop: "{{ api_test_results.results }}"
-          
+
         - name: Mock API Failure for Legacy Devices
           ansible.builtin.set_fact:
             legacy_api_test_results:
@@ -86,7 +86,7 @@
                     model: "CM7100"
                     expected_architecture: "legacy"
                     expected_method: "cli"
-          
+
         - name: Validate Legacy CLI Detection
           ansible.builtin.assert:
             that:
@@ -94,11 +94,11 @@
             fail_msg: "Legacy device {{ item.item.hostname }} should not support API"
             success_msg: "✓ {{ item.item.hostname }} correctly detected as CLI-only"
           loop: "{{ legacy_api_test_results.results }}"
-          
+
     # ==========================================
-    # Model-Specific Configuration Tests  
+    # Model-Specific Configuration Tests
     # ==========================================
-    
+
     - name: Model Configuration Tests
       block:
         - name: Mock Legacy Device SSH Access
@@ -113,7 +113,7 @@
                   item:
                     hostname: "opengear-cm7100-01"
                     port: 22
-          
+
         - name: Validate SSH Accessibility
           ansible.builtin.assert:
             that:
@@ -121,7 +121,7 @@
               - ssh_access_results.results | selectattr('state', 'equalto', 'started') | list | length > 0
             success_msg: "✓ All legacy devices accessible via SSH"
             fail_msg: "SSH access failed for legacy devices"
-            
+
         - name: Mock Modern Device HTTPS Access
           ansible.builtin.set_fact:
             https_access_results:
@@ -134,7 +134,7 @@
                   item:
                     hostname: "opengear-im7200-01"
                     port: 443
-          
+
         - name: Validate HTTPS Accessibility
           ansible.builtin.assert:
             that:
@@ -146,7 +146,7 @@
     # ==========================================
     # Opengear Role Detection Tests
     # ==========================================
-    
+
     - name: Role Architecture Detection Tests
       block:
         - name: Test Opengear Role Detection Logic - Legacy
@@ -158,11 +158,11 @@
                 expected_connection: "ssh"
               - device_type: "modern"
                 api_available: true
-                expected_method: "api" 
+                expected_method: "api"
                 expected_connection: "local"
-                
+
         - name: Validate Architecture Routing Logic
-          block:              
+          block:
             - name: Test Legacy Architecture Routing
               assert:
                 that:
@@ -175,7 +175,7 @@
     # ==========================================
     # Task File Validation Tests
     # ==========================================
-    
+
     - name: Task File Validation Tests
       block:
         - name: Check Required Task Files Exist
@@ -190,7 +190,7 @@
             - "image-installation-legacy.yml"
             - "console-server-check.yml"
             - "smart-pdu-check.yml"
-            
+
         - name: Validate Task Files Present
           ansible.builtin.assert:
             that:
@@ -202,21 +202,21 @@
     # ==========================================
     # Configuration Validation Tests
     # ==========================================
-    
+
     - name: Configuration Validation Tests
       block:
         - name: Check Opengear Group Variables File
           ansible.builtin.stat:
             path: "{{ playbook_dir }}/../../ansible-content/inventory/group_vars/opengear.yml"
           register: opengear_group_vars_stat
-          
+
         - name: Validate Group Variables File Exists
           ansible.builtin.assert:
             that:
               - opengear_group_vars_stat.stat.exists
             success_msg: "✓ Opengear group variables file exists and is readable"
             fail_msg: "Opengear group variables file missing"
-            
+
         # NOTE: Architecture detection validation skipped due to vault variable dependencies
         # in the actual group variables file. In production, these would be properly configured.
         - name: Skip Architecture Detection Settings (vault variables)
@@ -226,7 +226,7 @@
     # ==========================================
     # Multi-Method Upgrade Path Tests
     # ==========================================
-    
+
     - name: Upgrade Path Validation Tests
       block:
         - name: Test Legacy CLI Upgrade Path
@@ -237,7 +237,7 @@
             modern_upgrade_tasks:
               - "image-loading.yml"
               - "image-installation.yml"
-              
+
         - name: Validate Task Path Selection Logic
           block:
             - name: Test Legacy Path Selection
@@ -246,7 +246,7 @@
                 selected_installation_task: "{{ 'image-installation-legacy.yml' if not api_available else 'image-installation.yml' }}"
               vars:
                 api_available: false
-                
+
             - name: Assert Legacy Path Correct
               assert:
                 that:
@@ -254,14 +254,14 @@
                   - selected_installation_task == "image-installation-legacy.yml"
                 success_msg: "✓ Legacy upgrade path selection correct"
                 fail_msg: "Legacy upgrade path selection failed"
-                
-            - name: Test Modern Path Selection  
+
+            - name: Test Modern Path Selection
               set_fact:
                 selected_loading_task: "{{ 'image-loading-legacy.yml' if not api_available else 'image-loading.yml' }}"
                 selected_installation_task: "{{ 'image-installation-legacy.yml' if not api_available else 'image-installation.yml' }}"
               vars:
                 api_available: true
-                
+
             - name: Assert Modern Path Correct
               assert:
                 that:
@@ -273,7 +273,7 @@
     # ==========================================
     # Device Type Detection Tests
     # ==========================================
-    
+
     - name: Device Type Detection Tests
       block:
         - name: Test Console Server vs Smart PDU Detection
@@ -287,7 +287,7 @@
                 expected_type: "console_server"  # Can also be smart_pdu
               - model: "IM7200"
                 expected_type: "console_server"
-                
+
         - name: Validate Device Type Logic
           ansible.builtin.assert:
             that:
@@ -299,7 +299,7 @@
     # ==========================================
     # Error Handling Tests
     # ==========================================
-    
+
     - name: Error Handling Tests
       block:
         - name: Mock API Timeout Handling
@@ -307,18 +307,18 @@
             timeout_test:
               status: -1
               msg: "Connection timeout"
-          
+
         - name: Validate Timeout Graceful Handling
           ansible.builtin.assert:
             that:
               - timeout_test.status is not defined or timeout_test.status != 200
             success_msg: "✓ API timeout handled gracefully"
             fail_msg: "API timeout not handled properly"
-            
+
         - name: Test Connection Failure Fallback
           ansible.builtin.set_fact:
             fallback_architecture: "{{ 'modern' if (timeout_test.status | default(0)) == 200 else 'legacy' }}"
-            
+
         - name: Validate Fallback to Legacy
           ansible.builtin.assert:
             that:
@@ -329,12 +329,12 @@
     # ==========================================
     # Integration Test Summary
     # ==========================================
-    
+
     - name: Test Results Summary
       ansible.builtin.debug:
         msg: |
           🎉 Opengear Multi-Architecture Test Suite Completed
-          
+
           Tests Executed:
           ✓ Architecture Detection Tests
           ✓ Model-Specific Configuration Tests
@@ -344,12 +344,12 @@
           ✓ Multi-Method Upgrade Path Tests
           ✓ Device Type Detection Tests
           ✓ Error Handling Tests
-          
+
           Multi-Architecture Support:
           ✓ Legacy CLI devices (OM2200, CM7100) - SSH automation
           ✓ Modern API devices (CM8100, IM7200) - REST automation
           ✓ Automatic architecture detection and routing
           ✓ Graceful fallback and error handling
-          
+
           Status: ALL TESTS PASSED
           Implementation: Production Ready

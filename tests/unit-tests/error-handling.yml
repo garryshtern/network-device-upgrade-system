@@ -14,7 +14,7 @@
           # Missing firmware_version intentionally
         should_fail: true
         error_type: "missing_variables"
-        
+
       - name: "Invalid Platform Type"
         test_vars:
           platform_type: "invalid_platform"
@@ -22,7 +22,7 @@
           target_version: "2.0.0"
         should_fail: true
         error_type: "invalid_platform"
-        
+
       - name: "Version Downgrade Attempt"
         test_vars:
           platform_type: "cisco_nxos"
@@ -30,7 +30,7 @@
           target_version: "9.3.10"  # Downgrade
         should_fail: true
         error_type: "version_downgrade"
-        
+
       - name: "Same Version Upgrade"
         test_vars:
           platform_type: "cisco_iosxe"
@@ -38,7 +38,7 @@
           target_version: "17.06.04"  # Same version
         should_fail: true
         error_type: "same_version"
-        
+
       - name: "Valid Configuration"
         test_vars:
           platform_type: "fortios"
@@ -54,7 +54,7 @@
       loop_control:
         loop_var: error_test
         label: "{{ error_test.name }}"
-        
+
     - name: Error handling tests completed
       debug:
         msg: "All error handling tests completed successfully"

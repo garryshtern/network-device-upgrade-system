@@ -15,7 +15,7 @@
         - "/tmp/backups"
       delegate_to: localhost
       run_once: true
-      
+
     - name: Assert directories were created
       assert:
         that:
@@ -26,14 +26,14 @@
       loop: "{{ test_dirs.results }}"
       loop_control:
         label: "{{ item.item }}"
-      
+
     - name: Verify mock firmware file exists
       stat:
         path: "/tmp/firmware/cisco_nxos_10.1.2.bin"
       register: firmware_file
       delegate_to: localhost
       run_once: true
-      
+
     - name: Assert firmware file was created
       assert:
         that:
@@ -41,14 +41,14 @@
           - firmware_file.stat.size > 0
         fail_msg: "Mock firmware file not found or empty"
         success_msg: "✓ Mock firmware file exists and has content"
-        
+
     - name: Test variable consistency
       set_fact:
         test_vars:
           platform_type: "cisco_nxos"
-          firmware_version: "9.3.10" 
+          firmware_version: "9.3.10"
           target_version: "10.1.2"
-          
+
     - name: Verify variable types
       assert:
         that:
@@ -57,7 +57,7 @@
           - test_vars.target_version is match('^\d+\.\d+\.\d+$')
         fail_msg: "Variable type validation failed"
         success_msg: "✓ All variables have correct types and formats"
-        
+
     - name: Test error handling
       block:
         - name: Attempt invalid operation
@@ -67,35 +67,35 @@
         - name: Verify error was caught
           debug:
             msg: "✓ Error handling works correctly"
-            
+
     - name: Verify cleanup capability
       file:
         path: "/tmp/firmware/test_cleanup.tmp"
         state: touch
       delegate_to: localhost
       run_once: true
-      
+
     - name: Test cleanup
       file:
         path: "/tmp/firmware/test_cleanup.tmp"
         state: absent
       delegate_to: localhost
       run_once: true
-      
+
     - name: Verify file was removed
       stat:
         path: "/tmp/firmware/test_cleanup.tmp"
       register: cleanup_test
       delegate_to: localhost
       run_once: true
-      
+
     - name: Assert cleanup worked
       assert:
         that:
           - not cleanup_test.stat.exists
         fail_msg: "Cleanup test failed - file still exists"
         success_msg: "✓ Cleanup functionality works correctly"
-        
+
     - name: Final verification summary
       debug:
         msg:

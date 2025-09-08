@@ -188,7 +188,7 @@
 - name: Store multicast baseline
   ansible.builtin.set_fact:
     multicast_baseline:
-      timestamp: "{{ ansible_date_time.iso8601 }}"
+      timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
       pim_neighbors_total: "{{ pim_neighbors | length if pim_neighbors is defined else 0 }}"
       pim_neighbors_up: "{{ pim_neighbors_up | length if pim_neighbors_up is defined else 0 }}"
       pim_sparse_interfaces: "{{ pim_sparse_mode | length if pim_sparse_mode is defined else 0 }}"

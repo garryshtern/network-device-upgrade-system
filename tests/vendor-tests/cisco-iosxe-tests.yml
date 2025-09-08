@@ -1,12 +1,14 @@
 ---
 # Cisco IOS-XE Vendor-Specific Tests
-# Tests IOS-XE role functionality, install mode vs bundle mode, and validation capabilities
+# Tests IOS-XE role functionality, install mode vs bundle mode,
+# and validation capabilities
 
 - name: Cisco IOS-XE Platform Tests
   hosts: localhost
   gather_facts: false
   vars:
-    role_path: "{{ playbook_dir }}/../../ansible-content/roles/cisco-iosxe-upgrade"
+    role_path: >-
+      {{ playbook_dir }}/../../ansible-content/roles/cisco-iosxe-upgrade
     test_scenarios:
       - name: "Install Mode Capable Device"
         device_vars:
@@ -19,7 +21,7 @@
         expected_results:
           install_mode_supported: true
           upgrade_method: "install_mode_upgrade"
-          
+
       - name: "Bundle Mode Device"
         device_vars:
           platform_type: "cisco_iosxe"
@@ -31,7 +33,7 @@
         expected_results:
           install_mode_supported: false
           upgrade_method: "bundle_mode_upgrade"
-          
+
       - name: "Legacy Device (Bundle Only)"
         device_vars:
           platform_type: "cisco_iosxe"
@@ -49,7 +51,7 @@
       stat:
         path: "{{ role_path }}"
       register: iosxe_role_check
-      
+
     - name: Assert IOS-XE role exists
       assert:
         that:
@@ -73,7 +75,7 @@
         - "tasks/ipsec-validation.yml"
         - "tasks/optics-validation.yml"
         - "vars/main.yml"
-        
+
     - name: Assert all required IOS-XE files exist
       assert:
         that:
@@ -85,7 +87,7 @@
     - name: Test IOS-XE platform detection logic
       set_fact:
         test_platform_detection: "{{ test_scenarios }}"
-        
+
     - name: Validate IOS-XE install mode detection
       include_tasks: validate_iosxe_scenario.yml
       loop: "{{ test_scenarios }}"
@@ -99,19 +101,19 @@
           stat:
             path: "{{ role_path }}/tasks/ipsec-validation.yml"
           register: ipsec_validation_check
-          
+
         - name: Assert IPSec validation exists
           assert:
             that:
               - ipsec_validation_check.stat.exists
             fail_msg: "IPSec validation task missing"
             success_msg: "✓ IPSec validation capability confirmed"
-            
+
         - name: Validate optics validation task exists
           stat:
             path: "{{ role_path }}/tasks/optics-validation.yml"
           register: optics_validation_check
-          
+
         - name: Assert optics validation exists
           assert:
             that:
@@ -135,7 +137,7 @@
             - "boot-config.j2"
           register: template_render_results
           ignore_errors: true
-          
+
         - name: Clean up template test files
           file:
             path: "/tmp/test_{{ item.item | basename }}"

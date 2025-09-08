@@ -1,12 +1,14 @@
 ---
 # Cisco NX-OS Vendor-Specific Tests
-# Tests NX-OS role functionality including ISSU, EPLD upgrades, and validation capabilities
+# Tests NX-OS role functionality including ISSU, EPLD upgrades,
+# and validation capabilities
 
 - name: Cisco NX-OS Platform Tests
   hosts: localhost
   gather_facts: false
   vars:
-    role_path: "{{ playbook_dir }}/../../ansible-content/roles/cisco-nxos-upgrade"
+    role_path: >-
+      {{ playbook_dir }}/../../ansible-content/roles/cisco-nxos-upgrade
     test_scenarios:
       - name: "ISSU Capable with EPLD Upgrade"
         device_vars:
@@ -25,7 +27,7 @@
           upgrade_method: "issu"
           epld_required: true
           nxapi_supported: true
-          
+
       - name: "Non-ISSU Device without EPLD"
         device_vars:
           platform_type: "cisco_nxos"
@@ -42,7 +44,7 @@
           upgrade_method: "standard"
           epld_required: false
           nxapi_supported: false
-          
+
       - name: "ISSU with Multiple EPLD Images"
         device_vars:
           platform_type: "cisco_nxos"
@@ -67,7 +69,7 @@
       stat:
         path: "{{ role_path }}"
       register: nxos_role_check
-      
+
     - name: Assert NX-OS role exists
       assert:
         that:
@@ -87,7 +89,7 @@
         - "tasks/issu-procedures.yml"
         - "tasks/validation.yml"
         - "vars/main.yml"
-        
+
     - name: Assert all required NX-OS files exist
       assert:
         that:
@@ -109,13 +111,13 @@
           stat:
             path: "{{ role_path }}/tasks/validation.yml"
           register: bgp_validation_check
-          
+
         - name: Read validation task content
           slurp:
             src: "{{ role_path }}/tasks/validation.yml"
           register: validation_content
           when: bgp_validation_check.stat.exists
-          
+
         - name: Assert NX-OS validation capabilities
           assert:
             that:
@@ -133,7 +135,7 @@
             src: "{{ role_path }}/tasks/main.yml"
           register: main_tasks_content
           when: nxos_role_check.stat.exists
-          
+
         - name: Validate EPLD upgrade logic exists
           assert:
             that:
@@ -148,13 +150,13 @@
           stat:
             path: "{{ role_path }}/tasks/issu-procedures.yml"
           register: issu_procedures_check
-          
+
         - name: Read ISSU procedures content
           slurp:
             src: "{{ role_path }}/tasks/issu-procedures.yml"
           register: issu_content
           when: issu_procedures_check.stat.exists
-          
+
         - name: Assert ISSU procedures capability
           assert:
             that:

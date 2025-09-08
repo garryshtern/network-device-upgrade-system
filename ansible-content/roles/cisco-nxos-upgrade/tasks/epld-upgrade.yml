@@ -142,7 +142,7 @@
     - name: Document EPLD upgrade completion
       set_fact:
         epld_upgrade_summary:
-          timestamp: "{{ ansible_date_time.iso8601 }}"
+          timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
           modules_upgraded: "{{ epld_modules_to_upgrade | default(['all']) }}"
           upgrade_method: "{{ 'Non-disruptive' if has_dual_sup_for_epld else 'Disruptive' }}"
           success: "{{ epld_upgrade_status is defined and 'Success' in epld_upgrade_status.stdout[0] }}"

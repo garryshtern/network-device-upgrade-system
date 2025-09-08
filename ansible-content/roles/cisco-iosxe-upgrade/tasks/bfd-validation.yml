@@ -153,7 +153,7 @@
 - name: Store BFD validation baseline
   ansible.builtin.copy:
     content: |
-      # BFD Validation Baseline - {{ ansible_date_time.iso8601 }}
+      # BFD Validation Baseline - {{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}
       # Generated during firmware upgrade validation
       
       Total_BFD_Sessions: {{ bfd_total_sessions if bfd_total_sessions is defined else 0 }}
@@ -182,7 +182,7 @@
       {% endif %}
       
       Validation_Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions | int > 0) else 'CHECK' }}
-      Timestamp: {{ ansible_date_time.iso8601 }}
-    dest: "/tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_date_time.epoch }}.txt"
+      Timestamp: {{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}
+    dest: "/tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash("md5") }}.txt"
     mode: '0644'
   delegate_to: localhost

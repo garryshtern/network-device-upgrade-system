@@ -12,7 +12,7 @@
         - "nxos-switch-01"
         - "nxos-switch-02"
       cisco_iosxe:
-        - "iosxe-router-01" 
+        - "iosxe-router-01"
       opengear:
         - "console-server-01"
       fortios:
@@ -34,30 +34,30 @@
     vault_metamako_username: "test_user"
 # No image server credentials needed - using server-initiated PUSH only
     vault_snmp_community: "test_community"
-    
+
   tasks:
     - name: Test main upgrade workflow playbook syntax
       ansible.builtin.shell: |
         ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/main-upgrade-workflow.yml -i /dev/null
       register: main_workflow_syntax
       failed_when: main_workflow_syntax.rc != 0
-      
+
     - name: Test phase-specific playbook syntax (except network-validation)
       ansible.builtin.shell: |
         ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/{{ item }} -i /dev/null
       register: phase_workflow_syntax
       loop:
         - "image-loading.yml"
-        - "image-installation.yml" 
+        - "image-installation.yml"
         - "health-check.yml"
         - "emergency-rollback.yml"
       failed_when: phase_workflow_syntax.rc != 0
-      
+
     - name: Test network-validation playbook syntax separately
       ansible.builtin.stat:
         path: "{{ ansible_content_dir }}/playbooks/network-validation.yml"
       register: network_validation_syntax
-      
+
     - name: Validate network-validation playbook exists and has content
       ansible.builtin.assert:
         that:
@@ -65,75 +65,75 @@
           - network_validation_syntax.stat.size > 1000  # Should be a substantial file
         success_msg: "✓ Network validation playbook exists and has substantial content"
         fail_msg: "Network validation playbook missing or too small"
-      
+
     - name: Test vendor role inclusion in workflows
       ansible.builtin.shell: |
         grep -l "cisco-nxos-upgrade\|cisco-iosxe-upgrade\|opengear-upgrade\|fortios-upgrade\|metamako-mos-upgrade" {{ ansible_content_dir }}/playbooks/*.yml
       register: vendor_role_usage
       changed_when: false
-      
+
     - name: Validate vendor roles are properly referenced
       ansible.builtin.assert:
         that:
           - vendor_role_usage.stdout_lines | length > 0
         fail_msg: "Vendor roles not properly referenced in playbooks"
-        
+
     - name: Test workflow variable requirements
       ansible.builtin.shell: |
         grep -o "{{ '{{[^}]*}}' }}" {{ ansible_content_dir }}/playbooks/main-upgrade-workflow.yml | sort | uniq
       register: workflow_variables
       changed_when: false
-      
+
     - name: Mock workflow execution test (dry run)
       ansible.builtin.shell: |
         ansible-playbook --check --diff -i /dev/null {{ ansible_content_dir }}/playbooks/main-upgrade-workflow.yml \
         --extra-vars="target_firmware=test-version target_hosts=localhost maintenance_window=true" || true
       register: workflow_dry_run
       changed_when: false
-      
+
     - name: Test AWX job template compatibility
       ansible.builtin.find:
         paths: "{{ playbook_dir }}/../../awx-config/job-templates"
         patterns: "*.yml"
       register: job_templates
-      
+
     - name: Validate job template syntax
       ansible.builtin.shell: |
         python -c "import yaml; print('Valid YAML') if yaml.safe_load(open('{{ item.path }}')) else print('Invalid')"
       register: job_template_syntax
       loop: "{{ job_templates.files }}"
       failed_when: "'Invalid' in job_template_syntax.stdout"
-      
+
     - name: Test workflow template compatibility
       ansible.builtin.find:
-        paths: "{{ playbook_dir }}/../../awx-config/workflow-templates" 
+        paths: "{{ playbook_dir }}/../../awx-config/workflow-templates"
         patterns: "*.yml"
       register: workflow_templates
-      
+
     - name: Validate workflow template syntax
       ansible.builtin.shell: |
         python -c "import yaml; print('Valid YAML') if yaml.safe_load(open('{{ item.path }}')) else print('Invalid')"
       register: workflow_template_syntax
       loop: "{{ workflow_templates.files }}"
       failed_when: "'Invalid' in workflow_template_syntax.stdout"
-      
+
     - name: Test inventory group variables compatibility
       ansible.builtin.find:
         paths: "{{ ansible_content_dir }}/inventory/group_vars"
         patterns: "*.yml"
       register: group_vars_files
-      
+
     - name: Load and validate group variables
       ansible.builtin.include_vars: "{{ item.path }}"
       register: group_vars_load
       loop: "{{ group_vars_files.files }}"
       failed_when: false
-      
+
     - name: Verify network validation playbook exists
       ansible.builtin.stat:
         path: "{{ ansible_content_dir }}/playbooks/network-validation.yml"
       register: network_val_playbook
-      
+
     - name: Assert network validation playbook exists
       ansible.builtin.assert:
         that:
@@ -141,69 +141,69 @@
           - network_val_playbook.stat.size > 1000
         success_msg: "✓ Network validation playbook found and has content"
         fail_msg: "Network validation playbook missing or empty"
-      
+
     - name: Test validation role integration
       ansible.builtin.shell: |
         find {{ ansible_content_dir }}/roles/network-validation/tasks -name "*.yml" | wc -l
       register: validation_tasks_count
       changed_when: false
-      
+
     - name: Verify validation tasks exist
       ansible.builtin.assert:
         that:
           - validation_tasks_count.stdout | int >= 5
         fail_msg: "Insufficient validation tasks found"
-        
+
     - name: Test rollback workflow
       ansible.builtin.shell: |
         ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/emergency-rollback.yml -i /dev/null
-      register: rollback_workflow_test  
+      register: rollback_workflow_test
       failed_when: rollback_workflow_test.rc != 0
-      
+
     - name: Test batch operations workflow
       ansible.builtin.shell: |
         ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/batch-operations.yml -i /dev/null || echo "File may not exist yet"
       register: batch_workflow_test
       changed_when: false
       failed_when: false
-      
+
     - name: Test metrics and logging integration
       ansible.builtin.shell: |
         grep -r "influxdb\|telegraf\|metrics" {{ ansible_content_dir }}/roles/common/tasks/ || echo "Metrics integration not found"
       register: metrics_integration
       changed_when: false
       failed_when: false
-      
+
     - name: Generate workflow integration test report
       ansible.builtin.debug:
         msg: |
           Workflow Integration Test Results:
           =================================
-          
+
           Playbook Syntax Tests:
           - Main workflow: {{ 'PASS' if main_workflow_syntax.rc == 0 else 'FAIL' }}
           - Phase workflows: {{ phase_workflow_syntax.results | selectattr('rc', 'equalto', 0) | list | length }}/{{ phase_workflow_syntax.results | length }}
           - Network validation: {{ 'PASS' if validation_workflow_test.rc == 0 else 'FAIL' }}
           - Emergency rollback: {{ 'PASS' if rollback_workflow_test.rc == 0 else 'FAIL' }}
-          
+
           AWX Integration:
           - Job templates: {{ job_templates.files | length }} files, {{ job_template_syntax.results | selectattr('rc', 'equalto', 0) | list | length }} valid
           - Workflow templates: {{ workflow_templates.files | length }} files, {{ workflow_template_syntax.results | selectattr('rc', 'equalto', 0) | list | length }} valid
-          
+
           Role Integration:
           - Vendor roles referenced: {{ 'YES' if vendor_role_usage.stdout_lines | length > 0 else 'NO' }}
           - Validation tasks: {{ validation_tasks_count.stdout }} found
-          
+
           Configuration:
           - Group variables: {{ group_vars_files.files | length }} files loaded successfully
           - Required variables: {{ workflow_variables.stdout_lines | length }} detected
-          
+
           Overall Status: {{ 'PASS' if (main_workflow_syntax.rc == 0 and validation_workflow_test.rc == 0 and rollback_workflow_test.rc == 0) else 'ISSUES FOUND' }}
 
     - name: Fail if critical workflow tests fail
       ansible.builtin.fail:
         msg: "Critical workflow integration failures detected"
       when: >
-        main_workflow_syntax.rc != 0 or 
+        main_workflow_syntax.rc != 0 or
         validation_workflow_test.rc != 0 or
         rollback_workflow_test.rc != 0

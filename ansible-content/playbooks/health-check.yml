@@ -6,9 +6,8 @@
 - name: Device Health Check and Baseline Capture
   hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
-  connection: network_cli
   vars:
-    health_check_timestamp: "{{ ansible_date_time.iso8601 }}"
+    health_check_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
     baseline_data_path: "/var/lib/network-upgrade/baselines"
     validation_timeout: 300
     

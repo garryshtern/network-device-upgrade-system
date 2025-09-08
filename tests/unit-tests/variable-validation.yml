@@ -16,7 +16,7 @@
           upgrade_phase: "loading"
           skip_validation: false
         should_pass: true
-        
+
       - name: "Valid IOS-XE Variables"
         vars:
           platform_type: "cisco_iosxe"
@@ -25,7 +25,7 @@
           upgrade_phase: "installation"
           skip_validation: false
         should_pass: true
-        
+
       - name: "Invalid Platform Type"
         vars:
           platform_type: "invalid_platform"
@@ -33,13 +33,13 @@
           target_version: "2.0.0"
           upgrade_phase: "loading"
         should_pass: false
-        
+
       - name: "Missing Required Variables"
         vars:
           platform_type: "cisco_nxos"
           # Missing firmware_version and target_version
         should_pass: false
-        
+
       - name: "Invalid Upgrade Phase"
         vars:
           platform_type: "fortios"

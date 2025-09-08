@@ -14,14 +14,14 @@
       set_fact:
         validation_tasks: "{{ [] if skip_validation else ['pre_validation', 'post_validation'] }}"
       when: skip_validation is defined
-      
+
     # Test emergency rollback logic
     - name: "Test emergency rollback workflow"
       set_fact:
         rollback_actions: ["stop_upgrade", "restore_backup", "reboot_device"]
         rollback_triggered: true
       when: emergency_rollback is defined and emergency_rollback
-      
+
     # Test upgrade phase workflow
     - name: "Test upgrade phase workflow"
       set_fact:
@@ -32,7 +32,7 @@
           installation: "firmware_install"
           validation: "state_check"
       when: upgrade_phase is defined
-      
+
     # Validate scenario outcomes
     - name: "Validate scenario outcomes for {{ test_scenario.name }}"
       assert:
@@ -42,7 +42,7 @@
             (upgrade_phase is defined and current_workflow_step is defined)
         fail_msg: "Scenario logic validation failed"
         success_msg: "Scenario logic validation passed"
-        
+
     # Display scenario results
     - name: "Display scenario results: {{ test_scenario.name }}"
       debug:
@@ -54,11 +54,11 @@
           - "Rollback Actions: {{ rollback_actions | default('not applicable') }}"
           - "Upgrade Phase: {{ upgrade_phase | default('not set') }}"
           - "Workflow Step: {{ current_workflow_step | default('not applicable') }}"
-          
+
     - name: "✓ Scenario logic test passed: {{ test_scenario.name }}"
       debug:
         msg: "Scenario {{ test_scenario.name }} logic validation successful"
-        
+
   rescue:
     - name: "✗ Scenario logic test failed: {{ test_scenario.name }}"
       debug:

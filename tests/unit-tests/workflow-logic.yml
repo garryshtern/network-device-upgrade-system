@@ -15,7 +15,7 @@
           firmware_version: "9.3.10"
           target_version: "10.1.2"
         expected_path: "issu_upgrade"
-        
+
       - name: "NX-OS Non-ISSU Path"
         device_vars:
           platform_type: "cisco_nxos"
@@ -23,7 +23,7 @@
           firmware_version: "9.2.4"
           target_version: "10.1.2"
         expected_path: "standard_upgrade"
-        
+
       - name: "IOS-XE Install Mode Path"
         device_vars:
           platform_type: "cisco_iosxe"
@@ -31,7 +31,7 @@
           firmware_version: "16.12.07"
           target_version: "17.06.04"
         expected_path: "install_mode"
-        
+
       - name: "IOS-XE Bundle Mode Path"
         device_vars:
           platform_type: "cisco_iosxe"
@@ -39,7 +39,7 @@
           firmware_version: "16.12.07"
           target_version: "17.06.04"
         expected_path: "bundle_mode"
-        
+
       - name: "FortiOS HA Primary Path"
         device_vars:
           platform_type: "fortios"
@@ -48,7 +48,7 @@
           firmware_version: "7.0.8"
           target_version: "7.2.4"
         expected_path: "ha_primary_upgrade"
-        
+
       - name: "FortiOS HA Secondary Path"
         device_vars:
           platform_type: "fortios"
@@ -57,7 +57,7 @@
           firmware_version: "7.0.8"
           target_version: "7.2.4"
         expected_path: "ha_secondary_upgrade"
-        
+
       - name: "Skip Validation Path"
         device_vars:
           platform_type: "cisco_nxos"
@@ -73,7 +73,7 @@
       loop_control:
         loop_var: workflow_test
         label: "{{ workflow_test.name }}"
-        
+
     - name: Workflow logic tests completed
       debug:
         msg: "All workflow logic tests completed successfully"

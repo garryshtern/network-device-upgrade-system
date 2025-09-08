@@ -13,11 +13,11 @@
     upgrade_phase: "loading"
     skip_validation: true  # Skip actual network validation
     test_mode: true
-    
+
     # Mock paths for testing
     firmware_base_path: "/tmp/firmware"
     backup_location: "/tmp/backups"
-    
+
   tasks:
     - name: Create test directories
       file:
@@ -29,7 +29,7 @@
         - "{{ backup_location }}"
       delegate_to: localhost
       run_once: true
-        
+
     - name: Test variable validation
       assert:
         that:
@@ -39,7 +39,7 @@
           - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
         fail_msg: "Required variables not properly defined"
         success_msg: "✓ Variable validation passed"
-        
+
     - name: Test upgrade phase logic
       set_fact:
         upgrade_actions: "{{ phase_actions[upgrade_phase] | default([]) }}"
@@ -56,7 +56,7 @@
           validation:
             - "check_device_status"
             - "validate_network_state"
-            
+
     - name: Verify upgrade actions were determined
       assert:
         that:
@@ -64,7 +64,7 @@
           - upgrade_actions | length > 0
         fail_msg: "No upgrade actions determined for phase: {{ upgrade_phase }}"
         success_msg: "✓ Upgrade actions determined: {{ upgrade_actions | join(', ') }}"
-        
+
     - name: Test platform-specific logic
       set_fact:
         platform_commands: "{{ commands_map[platform_type] | default([]) }}"
@@ -81,7 +81,7 @@
           fortios:
             - "get system status"
             - "get system firmware"
-            
+
     - name: Verify platform commands
       assert:
         that:
@@ -89,32 +89,32 @@
           - platform_commands | length > 0
         fail_msg: "No platform commands defined for: {{ platform_type }}"
         success_msg: "✓ Platform commands available: {{ platform_commands | length }} commands"
-        
+
     - name: Test conditional logic
       set_fact:
         workflow_path: "{{ 'test_mode' if test_mode else 'production_mode' }}"
-        
+
     - name: Create mock firmware file
       copy:
         content: "# Mock firmware file for testing"
         dest: "{{ firmware_base_path }}/{{ platform_type }}_{{ target_version }}.bin"
       delegate_to: localhost
       run_once: true
-      
+
     - name: Test file operations
       stat:
         path: "{{ firmware_base_path }}/{{ platform_type }}_{{ target_version }}.bin"
       register: firmware_file
       delegate_to: localhost
       run_once: true
-      
+
     - name: Verify file creation
       assert:
         that:
           - firmware_file.stat.exists
         fail_msg: "Mock firmware file was not created"
         success_msg: "✓ Mock firmware file created successfully"
-        
+
     - name: Display test results
       debug:
         msg:

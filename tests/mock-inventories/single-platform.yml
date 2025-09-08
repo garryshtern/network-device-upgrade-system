@@ -17,7 +17,7 @@ all:
       vars:
         ansible_user: test_user
         ansible_password: test_password
-        
+
     # Alternative: Metamako MOS for application management testing
     metamako_mos:
       hosts:

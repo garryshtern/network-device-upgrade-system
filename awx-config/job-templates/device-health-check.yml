@@ -27,20 +27,20 @@ survey_spec:
       question_description: "Type of health check to perform"
       required: true
       type: "multiplechoice"
-      variable: "check_type" 
+      variable: "check_type"
       choices:
         - "pre_upgrade"
         - "post_upgrade"
         - "routine_check"
       default: "routine_check"
-      
+
     - question_name: "Capture Baseline"
       question_description: "Capture network state baseline for later comparison"
       required: false
       type: "boolean"
       variable: "baseline_capture"
       default: true
-      
+
     - question_name: "Validation Level"
       question_description: "Level of validation to perform"
       required: true
@@ -48,38 +48,38 @@ survey_spec:
       variable: "validation_level"
       choices:
         - "basic"
-        - "standard"  
+        - "standard"
         - "comprehensive"
       default: "standard"
-      
+
     - question_name: "Skip BGP Validation"
       question_description: "Skip BGP neighbor and routing validation"
       required: false
       type: "boolean"
       variable: "skip_bgp_validation"
       default: false
-      
+
     - question_name: "Skip Interface Validation"
       question_description: "Skip interface and optics validation"
       required: false
       type: "boolean"
-      variable: "skip_interface_validation" 
+      variable: "skip_interface_validation"
       default: false
-      
+
     - question_name: "Skip Multicast Validation"
       question_description: "Skip PIM/IGMP multicast validation"
       required: false
       type: "boolean"
       variable: "skip_multicast_validation"
       default: false
-      
+
     - question_name: "Continue on Failure"
       question_description: "Continue with remaining checks if individual validations fail"
       required: false
       type: "boolean"
       variable: "continue_on_failure"
       default: false
-      
+
     - question_name: "Send Metrics to InfluxDB"
       question_description: "Send validation results to InfluxDB for monitoring"
       required: false
@@ -93,20 +93,20 @@ extra_vars:
   interface_error_threshold: 5
   bgp_convergence_timeout: 180
   multicast_timeout: 120
-  
+
 # Labels for organization
 labels:
   - "health-check"
   - "validation"
   - "pre-upgrade"
-  
+
 # Notification templates
 success_notifications:
   - "Health Check Success"
-  
+
 failure_notifications:
   - "Health Check Failure"
-  
+
 # Execution environment
 execution_environment: "Network Automation EE"
 

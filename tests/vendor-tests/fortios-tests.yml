@@ -21,12 +21,12 @@
           ha_upgrade_required: true
           upgrade_method: "ha_upgrade"
           ha_coordination: true
-          
+
       - name: "HA Secondary Firewall"
         device_vars:
           platform_type: "fortios"
           device_model: "FortiGate-600E"
-          firmware_version: "7.0.8" 
+          firmware_version: "7.0.8"
           target_version: "7.2.4"
           ha_enabled: true
           ha_role: "secondary"
@@ -35,7 +35,7 @@
           ha_upgrade_required: true
           upgrade_method: "ha_upgrade"
           ha_coordination: true
-          
+
       - name: "Standalone Firewall"
         device_vars:
           platform_type: "fortios"
@@ -55,7 +55,7 @@
       stat:
         path: "{{ role_path }}"
       register: fortios_role_check
-      
+
     - name: Assert FortiOS role exists
       assert:
         that:
@@ -76,7 +76,7 @@
         - "tasks/license-validation.yml"
         - "tasks/validation.yml"
         - "vars/main.yml"
-        
+
     - name: Assert all required FortiOS files exist
       assert:
         that:
@@ -98,13 +98,13 @@
           stat:
             path: "{{ role_path }}/tasks/validation.yml"
           register: security_validation_check
-          
+
         - name: Read validation task content
           slurp:
             src: "{{ role_path }}/tasks/validation.yml"
           register: validation_content
           when: security_validation_check.stat.exists
-          
+
         - name: Assert security policy validation exists
           assert:
             that:
@@ -119,7 +119,7 @@
           stat:
             path: "{{ role_path }}/tasks/license-validation.yml"
           register: license_validation_check
-          
+
         - name: Assert license validation exists
           assert:
             that:
@@ -134,7 +134,7 @@
             src: "{{ role_path }}/tasks/validation.yml"
           register: vpn_validation_content
           when: fortios_role_check.stat.exists
-          
+
         - name: Assert VPN validation capability
           assert:
             that:
@@ -150,7 +150,7 @@
             src: "{{ role_path }}/vars/main.yml"
           register: vdom_vars_content
           when: fortios_role_check.stat.exists
-          
+
         - name: Assert VDOM support
           assert:
             that:

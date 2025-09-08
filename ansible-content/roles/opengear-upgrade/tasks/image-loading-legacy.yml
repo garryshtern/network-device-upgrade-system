@@ -104,7 +104,7 @@
       
     - name: Create firmware staging marker
       ansible.builtin.raw: |
-        echo "Firmware staged: {{ ansible_date_time.iso8601 }}" > /usr/local/upgrade/.{{ target_firmware_filename }}.staged
+        echo "Firmware staged: {{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}" > /usr/local/upgrade/.{{ target_firmware_filename }}.staged
         echo "Source checksum: {{ expected_checksum }}" >> /usr/local/upgrade/.{{ target_firmware_filename }}.staged
         echo "Device checksum: {{ device_calculated_checksum }}" >> /usr/local/upgrade/.{{ target_firmware_filename }}.staged
       delegate_to: "{{ inventory_hostname }}"
@@ -122,7 +122,7 @@
         msg: |
           Configuration backup completed:
           - Backup Location: /usr/local/upgrade/
-          - Backup Time: {{ ansible_date_time.iso8601 }}
+          - Backup Time: {{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}
           - CLI Result: {{ config_backup_result.stdout | default('Success') }}
 
 - name: Log legacy image loading completion

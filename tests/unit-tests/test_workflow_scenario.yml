@@ -14,25 +14,25 @@
       set_fact:
         determined_path: "{{ 'issu_upgrade' if issu_capable else 'standard_upgrade' }}"
       when: platform_type == 'cisco_nxos'
-      
-    # Test IOS-XE workflow paths  
+
+    # Test IOS-XE workflow paths
     - name: "Determine IOS-XE upgrade path"
       set_fact:
         determined_path: "{{ 'install_mode' if install_mode else 'bundle_mode' }}"
       when: platform_type == 'cisco_iosxe'
-      
+
     # Test FortiOS workflow paths
     - name: "Determine FortiOS upgrade path"
       set_fact:
         determined_path: "{{ 'ha_' + ha_role + '_upgrade' if ha_enabled else 'standalone_upgrade' }}"
       when: platform_type == 'fortios'
-      
+
     # Test validation skip logic
     - name: "Check validation skip logic"
       set_fact:
         determined_path: "skip_validation"
       when: skip_validation is defined and skip_validation
-      
+
     # Verify the determined path matches expected
     - name: "Verify workflow path: {{ workflow_test.name }}"
       assert:
@@ -41,11 +41,11 @@
           - determined_path == workflow_test.expected_path
         fail_msg: "Expected path '{{ workflow_test.expected_path }}' but got '{{ determined_path | default('undefined') }}'"
         success_msg: "✓ Correct workflow path determined: {{ determined_path }}"
-        
+
     - name: "✓ Workflow test passed: {{ workflow_test.name }}"
       debug:
         msg: "Workflow logic test successful: {{ determined_path }}"
-        
+
   rescue:
     - name: "✗ Workflow test failed: {{ workflow_test.name }}"
       fail:

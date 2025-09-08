@@ -1,0 +1,27 @@
+---
+# Common Error Handling Tasks
+# Provides standardized error handling and recovery procedures
+
+- name: Log failure details
+  ansible.builtin.debug:
+    msg:
+      - "=== TASK FAILURE DETECTED ==="
+      - "Failed Task: {{ ansible_failed_task.name | default('Unknown') }}"
+      - "Host: {{ inventory_hostname }}"
+      - "Error: {{ ansible_failed_result.msg | default('No error message') }}"
+      - "Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      - "=========================="
+
+- name: Set failure state
+  ansible.builtin.set_fact:
+    task_failed: true
+    failure_details:
+      failed_task: "{{ ansible_failed_task.name | default('Unknown task') }}"
+      error_message: "{{ ansible_failed_result.msg | default('Unknown error') }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      host: "{{ inventory_hostname }}"
+
+- name: Send failure notification
+  ansible.builtin.debug:
+    msg: "ALERT: Task failure on {{ inventory_hostname }} - {{ ansible_failed_task.name | default('Unknown task') }}"
+  when: task_failed is defined and task_failed

@@ -9,11 +9,11 @@
     test_phases:
       - phase: "loading"
         description: "Image loading phase testing"
-      - phase: "installation" 
+      - phase: "installation"
         description: "Image installation phase testing"
       - phase: "validation"
         description: "Post-upgrade validation testing"
-    
+
     test_scenarios:
       - name: "Skip Validation Scenario"
         extra_vars:
@@ -36,21 +36,21 @@
           Platform: {{ platform_type }}
           Current Version: {{ firmware_version }}
           Target Version: {{ target_version }}
-          
+
     - name: Test phase-based workflow logic
       include_tasks: test_phase_logic.yml
       loop: "{{ test_phases }}"
       loop_control:
         loop_var: test_phase
         label: "{{ test_phase.description }}"
-        
-    - name: Test scenario-based workflow logic  
+
+    - name: Test scenario-based workflow logic
       include_tasks: test_scenario_logic.yml
       loop: "{{ test_scenarios }}"
       loop_control:
         loop_var: test_scenario
         label: "{{ test_scenario.name }}"
-        
+
     - name: Check mode integration tests completed
       debug:
         msg: "All check mode tests completed for {{ inventory_hostname }}"

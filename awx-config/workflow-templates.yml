@@ -275,28 +275,28 @@ workflow_templates:
         unified_job_template: "Network Device Health Check"
         success_nodes: ["storage_cleanup"]
         failure_nodes: ["phase1_failed"]
-        
+
       - identifier: "storage_cleanup"
         unified_job_template: "Storage Cleanup"
         success_nodes: ["config_backup"]
         failure_nodes: ["phase1_failed"]
-        
+
       - identifier: "config_backup"
         unified_job_template: "Configuration Backup"
         success_nodes: ["firmware_loading"]
         failure_nodes: ["phase1_failed"]
-        
+
       - identifier: "firmware_loading"
         unified_job_template: "Firmware Image Loading"
         success_nodes: ["phase1_success"]
         failure_nodes: ["phase1_failed"]
-        
+
       - identifier: "phase1_success"
         unified_job_template: "Send Notification"
         extra_data:
           notification_type: "phase1_success"
           message: "Phase 1 (Image Loading) completed successfully. Devices ready for Phase 2 installation."
-          
+
       - identifier: "phase1_failed"
         unified_job_template: "Send Notification"
         extra_data:
@@ -331,25 +331,25 @@ workflow_templates:
         failure_nodes: ["rollback_cancelled"]
         extra_data:
           approval_message: "EMERGENCY ROLLBACK REQUESTED. Confirm to proceed with rollback of firmware and configuration."
-          
+
       - identifier: "emergency_rollback"
         unified_job_template: "Emergency Rollback"
         success_nodes: ["post_rollback_validation"]
         failure_nodes: ["rollback_failed_critical"]
-        
+
       - identifier: "post_rollback_validation"
         unified_job_template: "Network State Validation"
         success_nodes: ["rollback_success"]
         failure_nodes: ["rollback_validation_failed"]
         extra_data:
           validation_type: "post_rollback"
-          
+
       - identifier: "rollback_success"
         unified_job_template: "Send Notification"
         extra_data:
           notification_type: "rollback_success"
           message: "Emergency rollback completed successfully. Devices restored and validated."
-          
+
       - identifier: "rollback_failed_critical"
         unified_job_template: "Send Notification"
         extra_data:

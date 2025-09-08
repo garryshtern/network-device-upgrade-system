@@ -15,25 +15,25 @@
         detected_epld_required: "{{ epld_upgrade_required | default(false) | bool }}"
         detected_nxapi_enabled: "{{ nxapi_enabled | default(false) | bool }}"
         detected_epld_images: "{{ epld_images | default([]) | list }}"
-        
+
     - name: Determine upgrade method based on ISSU capability
       set_fact:
         selected_upgrade_method: "{{ 'issu' if detected_issu_capable else 'standard' }}"
-        
+
     - name: Assert ISSU detection accuracy
       assert:
         that:
           - selected_upgrade_method == nxos_scenario.expected_results.upgrade_method
         fail_msg: "ISSU detection failed for {{ nxos_scenario.name }}"
         success_msg: "✓ ISSU detection correct for {{ nxos_scenario.name }}"
-        
+
     - name: Assert EPLD requirement detection accuracy
       assert:
         that:
           - detected_epld_required == nxos_scenario.expected_results.epld_required
         fail_msg: "EPLD requirement detection failed for {{ nxos_scenario.name }}"
         success_msg: "✓ EPLD requirement detection correct for {{ nxos_scenario.name }}"
-        
+
     - name: Assert NXAPI support detection accuracy
       assert:
         that:
@@ -82,7 +82,7 @@
 
     - name: "✓ {{ nxos_scenario.name }} - PASSED"
       debug:
-        msg: 
+        msg:
           - "NX-OS scenario validation successful:"
           - "  Device: {{ device_model }}"
           - "  ISSU Capable: {{ detected_issu_capable }}"
@@ -90,12 +90,12 @@
           - "  NXAPI Enabled: {{ detected_nxapi_enabled }}"
           - "  Upgrade Method: {{ selected_upgrade_method }}"
           - "  EPLD Images: {{ detected_epld_images | length }}"
-        
+
   rescue:
     - name: "✗ {{ nxos_scenario.name }} - FAILED"
       debug:
         msg: "NX-OS scenario validation failed for {{ nxos_scenario.name }}"
-      
+
     - name: Fail the test
       fail:
         msg: "NX-OS scenario {{ nxos_scenario.name }} validation failed"

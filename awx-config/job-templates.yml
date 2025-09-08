@@ -5,7 +5,8 @@
 job_templates:
   # Phase 1: Health Check and Baseline Capture
   - name: "Network Device Health Check"
-    description: "Comprehensive device health validation and baseline network state capture"
+    description: >-
+      Comprehensive device health validation and baseline network state capture
     project: "Network Device Upgrade System"
     playbook: "ansible-content/playbooks/health-check.yml"
     inventory: "NetBox Dynamic Inventory"
@@ -23,7 +24,8 @@ job_templates:
       description: "Select devices and options for health check"
       spec:
         - question_name: "Target Devices"
-          question_description: "Enter device hostnames or groups (comma-separated)"
+          question_description: >-
+            Enter device hostnames or groups (comma-separated)
           variable: "target_hosts"
           type: "text"
           required: true
@@ -38,7 +40,9 @@ job_templates:
 
   # Phase 2: Image Loading (Business Hours Safe)
   - name: "Firmware Image Loading"
-    description: "Download and stage firmware images on network devices (business hours safe)"
+    description: >-
+      Download and stage firmware images on network devices
+      (business hours safe)
     project: "Network Device Upgrade System"
     playbook: "ansible-content/playbooks/image-loading.yml"
     inventory: "NetBox Dynamic Inventory"
@@ -56,7 +60,8 @@ job_templates:
       description: "Configure firmware loading parameters"
       spec:
         - question_name: "Target Devices"
-          question_description: "Enter device hostnames or groups (comma-separated)"
+          question_description: >-
+            Enter device hostnames or groups (comma-separated)
           variable: "target_hosts"
           type: "text"
           required: true
@@ -71,14 +76,16 @@ job_templates:
           type: "text"
           required: true
         - question_name: "Firmware SHA512 Hash"
-          question_description: "SHA512 hash for firmware integrity verification"
+          question_description: >-
+            SHA512 hash for firmware integrity verification
           variable: "firmware_sha512"
           type: "text"
           required: true
 
   # Phase 3: Image Installation (Maintenance Window Required)
   - name: "Firmware Installation"
-    description: "Install and activate firmware images (requires maintenance window)"
+    description: >-
+      Install and activate firmware images (requires maintenance window)
     project: "Network Device Upgrade System"
     playbook: "ansible-content/playbooks/image-installation.yml"
     inventory: "NetBox Dynamic Inventory"
@@ -97,7 +104,8 @@ job_templates:
       description: "Configure firmware installation parameters"
       spec:
         - question_name: "Target Devices"
-          question_description: "Enter device hostnames or groups (comma-separated)"
+          question_description: >-
+            Enter device hostnames or groups (comma-separated)
           variable: "target_hosts"
           type: "text"
           required: true
@@ -123,7 +131,9 @@ job_templates:
 
   # Complete Upgrade Workflow
   - name: "Complete Network Device Upgrade"
-    description: "Full upgrade workflow with all phases (health check, loading, installation, validation)"
+    description: >-
+      Full upgrade workflow with all phases
+      (health check, loading, installation, validation)
     project: "Network Device Upgrade System"
     playbook: "ansible-content/playbooks/main-upgrade-workflow.yml"
     inventory: "NetBox Dynamic Inventory"
@@ -143,7 +153,8 @@ job_templates:
       description: "Configure complete upgrade workflow"
       spec:
         - question_name: "Target Devices"
-          question_description: "Enter device hostnames or groups (comma-separated)"
+          question_description: >-
+            Enter device hostnames or groups (comma-separated)
           variable: "target_hosts"
           type: "text"
           required: true
@@ -187,7 +198,8 @@ job_templates:
 
   # Network State Validation
   - name: "Network State Validation"
-    description: "Comprehensive network state validation and comparison with baseline"
+    description: >-
+      Comprehensive network state validation and comparison with baseline
     project: "Network Device Upgrade System"
     playbook: "ansible-content/playbooks/network-validation.yml"
     inventory: "NetBox Dynamic Inventory"
@@ -205,7 +217,8 @@ job_templates:
       description: "Configure network validation parameters"
       spec:
         - question_name: "Target Devices"
-          question_description: "Enter device hostnames or groups (comma-separated)"
+          question_description: >-
+            Enter device hostnames or groups (comma-separated)
           variable: "target_hosts"
           type: "text"
           required: true
@@ -245,7 +258,8 @@ job_templates:
       description: "Configure emergency rollback parameters"
       spec:
         - question_name: "Target Devices"
-          question_description: "Enter device hostnames requiring rollback (comma-separated)"
+          question_description: >-
+            Enter device hostnames requiring rollback (comma-separated)
           variable: "target_hosts"
           type: "text"
           required: true
@@ -253,7 +267,12 @@ job_templates:
           question_description: "Reason for initiating rollback"
           variable: "rollback_reason"
           type: "multiplechoice"
-          choices: ["upgrade_failure", "network_issues", "performance_degradation", "security_issue", "manual_request"]
+          choices:
+            - "upgrade_failure"
+            - "network_issues"
+            - "performance_degradation"
+            - "security_issue"
+            - "manual_request"
           default: "upgrade_failure"
           required: true
         - question_name: "Restore Configuration"
@@ -290,7 +309,8 @@ job_templates:
       description: "Configure compliance audit parameters"
       spec:
         - question_name: "Target Devices"
-          question_description: "Enter device hostnames or groups (comma-separated)"
+          question_description: >-
+            Enter device hostnames or groups (comma-separated)
           variable: "target_hosts"
           type: "text"
           required: true
@@ -298,7 +318,10 @@ job_templates:
           question_description: "Select compliance standards to audit"
           variable: "compliance_standards"
           type: "multiselect"
-          choices: ["security_baseline", "network_hardening", "vendor_best_practices"]
+          choices:
+            - "security_baseline"
+            - "network_hardening"
+            - "vendor_best_practices"
           default: ["security_baseline", "network_hardening"]
           required: true
         - question_name: "Generate HTML Report"
@@ -328,7 +351,8 @@ job_templates:
       description: "Configure storage cleanup parameters"
       spec:
         - question_name: "Target Devices"
-          question_description: "Enter device hostnames or groups (comma-separated)"
+          question_description: >-
+            Enter device hostnames or groups (comma-separated)
           variable: "target_hosts"
           type: "text"
           required: true
@@ -367,7 +391,8 @@ job_templates:
       description: "Configure backup parameters"
       spec:
         - question_name: "Target Devices"
-          question_description: "Enter device hostnames or groups (comma-separated)"
+          question_description: >-
+            Enter device hostnames or groups (comma-separated)
           variable: "target_hosts"
           type: "text"
           required: true

@@ -128,7 +128,7 @@
       critical_logs_present: "{{ critical_logs | length > 0 }}"
       igmp_validated: "{{ 'PASS' if (validate_igmp is defined and validate_igmp | bool) else 'SKIPPED' }}"
       bfd_validated: "{{ 'PASS' if (validate_bfd is defined and validate_bfd | bool) else 'SKIPPED' }}"
-      validation_timestamp: "{{ ansible_date_time.iso8601 }}"
+      validation_timestamp: "{{ lookup("pipe", "date -u +%Y-%m-%dT%H:%M:%SZ") }}"
       
 - name: Display comprehensive validation summary
   ansible.builtin.debug:
