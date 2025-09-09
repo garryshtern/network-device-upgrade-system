@@ -5,10 +5,10 @@
 collections:
   # Cisco Network Collections
   - name: cisco.nxos
-    version: ">=8.0.0"
+    version: ">=11.0.0"
     source: https://galaxy.ansible.com
   - name: cisco.ios
-    version: ">=8.0.0"
+    version: ">=9.0.0"
     source: https://galaxy.ansible.com
 
   # Fortinet Collection
@@ -18,7 +18,7 @@ collections:
 
   # Core Network Collections
   - name: ansible.netcommon
-    version: ">=6.1.0"
+    version: ">=8.1.0"
     source: https://galaxy.ansible.com
   - name: community.network
     version: ">=5.0.0"

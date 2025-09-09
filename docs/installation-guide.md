@@ -42,7 +42,7 @@ For development and testing without physical devices:
 
 ```bash
 # Install Ansible with compatible version
-pip install 'ansible>=8.0.0,<10.0.0'
+pip install 'ansible>=11.0.0'
 
 # Install Ansible collections
 ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force --ignore-certs
@@ -394,11 +394,11 @@ telegraf --test --config $HOME/.config/telegraf/telegraf.conf --input-filter inf
 ```bash
 # Clean install compatible Ansible version
 pip uninstall ansible ansible-core ansible-base -y
-pip install 'ansible>=8.0.0,<10.0.0'
+pip install 'ansible>=11.0.0'
 
 # Install collections with SSL workaround if needed
-ansible-galaxy collection install cisco.nxos:8.1.0 cisco.ios:8.0.0 fortinet.fortios:2.3.0 \
-  ansible.netcommon:6.1.0 community.network:5.0.0 community.general:8.0.0 --force --ignore-certs
+ansible-galaxy collection install cisco.nxos cisco.ios fortinet.fortios \
+  ansible.netcommon community.network community.general --force --ignore-certs
 
 # Verify installation
 ansible --version
