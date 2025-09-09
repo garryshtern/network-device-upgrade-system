@@ -13,7 +13,6 @@
     restore_config: "{{ restore_config | default(true) }}"
     restore_firmware: "{{ restore_firmware | default(true) }}"
     emergency_mode: "{{ emergency_mode | default(false) }}"
-    
   pre_tasks:
     - name: Initialize rollback tracking
       ansible.builtin.set_fact:
@@ -42,31 +41,49 @@
       block:
         - name: Update rollback step
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'current_step': 'status_assessment'}) }}"
+            rollback_state: >
+              {{
+                rollback_state | combine({'current_step': 'status_assessment'})
+              }}
 
         - name: Test device connectivity
-          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
-          ignore_errors: true
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/connectivity-check.yml
+          failed_when: false
 
         - name: Gather current device state
-          ansible.builtin.include_tasks: ../roles/common/tasks/device-status.yml
-          ignore_errors: true
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/device-status.yml
+          failed_when: false
 
         - name: Mark status assessment complete
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['status_assessment']}) }}"
+            rollback_state: >
+              {{
+                rollback_state | combine({
+                  'steps_completed': rollback_state.steps_completed + ['status_assessment']
+                })
+              }}
 
       rescue:
         - name: Mark status assessment failed
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['status_assessment']}) }}"
+            rollback_state: >
+              {{
+                rollback_state | combine({
+                  'steps_failed': rollback_state.steps_failed + ['status_assessment']
+                })
+              }}
 
     # Step 2: Platform-specific firmware rollback
     - name: Step 2 - Firmware rollback
       block:
         - name: Update rollback step
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'current_step': 'firmware_rollback'}) }}"
+            rollback_state: >
+              {{
+                rollback_state | combine({'current_step': 'firmware_rollback'})
+              }}
 
         - name: Rollback Cisco NX-OS firmware
           ansible.builtin.include_role:
@@ -110,12 +127,22 @@
 
         - name: Mark firmware rollback complete
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['firmware_rollback']}) }}"
+            rollback_state: >
+              {{
+                rollback_state | combine({
+                  'steps_completed': rollback_state.steps_completed + ['firmware_rollback']
+                })
+              }}
 
       rescue:
         - name: Mark firmware rollback failed
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['firmware_rollback']}) }}"
+            rollback_state: >
+              {{
+                rollback_state | combine({
+                  'steps_failed': rollback_state.steps_failed + ['firmware_rollback']
+                })
+              }}
 
     # Step 3: Configuration rollback
     - name: Step 3 - Configuration rollback
@@ -218,11 +245,19 @@
   post_tasks:
     - name: Calculate rollback duration
       ansible.builtin.set_fact:
-        rollback_duration: "{{ ((ansible_date_time.epoch | int) - (rollback_timestamp | to_datetime('%Y-%m-%dT%H:%M:%SZ').strftime('%s') | int)) }}"
+        rollback_duration: >
+          {{
+            (ansible_date_time.epoch | int) -
+            (rollback_timestamp | to_datetime('%Y-%m-%dT%H:%M:%SZ') | int)
+          }}
 
     - name: Determine rollback success
       ansible.builtin.set_fact:
-        rollback_successful: "{{ 'firmware_rollback' in rollback_state.steps_completed and 'post_rollback_validation' in rollback_state.steps_completed }}"
+        rollback_successful: >
+          {{
+            'firmware_rollback' in rollback_state.steps_completed and
+            'post_rollback_validation' in rollback_state.steps_completed
+          }}
 
     - name: Record rollback metrics
       ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
@@ -250,10 +285,10 @@
           custom_fields:
             upgrade_status: "{{ 'rollback_complete' if rollback_successful else 'rollback_failed' }}"
             last_rollback: "{{ rollback_timestamp }}"
-      when: 
+      when:
         - netbox_url is defined
         - netbox_token is defined
-      ignore_errors: true
+      failed_when: false
 
     - name: Display rollback summary
       ansible.builtin.debug:
