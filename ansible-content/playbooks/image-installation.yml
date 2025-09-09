@@ -12,7 +12,6 @@
     reboot_required: true
     max_reboot_wait: 600
     validation_timeout: 300
-    
   pre_tasks:
     - name: Verify maintenance window
       ansible.builtin.assert:
@@ -65,7 +64,7 @@
             tasks_from: image-installation
           when: ansible_network_os == 'nxos'
 
-        - name: Install firmware - Cisco IOS-XE  
+        - name: Install firmware - Cisco IOS-XE
           ansible.builtin.include_role:
             name: cisco-iosxe-upgrade
             tasks_from: image-installation
@@ -163,7 +162,7 @@
   post_tasks:
     - name: Calculate installation duration
       ansible.builtin.set_fact:
-        installation_duration: "{{ ((ansible_date_time.epoch | int) - (installation_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ').strftime('%s') | int)) }}"
+        installation_duration: "{{ (ansible_date_time.epoch | int) - (installation_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | strftime('%s') | int) }}"
 
     - name: Display installation summary
       ansible.builtin.debug:

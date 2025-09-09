@@ -59,19 +59,16 @@
         - name: Mark status assessment complete
           ansible.builtin.set_fact:
             rollback_state: >
-              {{
-                rollback_state | combine({
-                  'steps_completed': rollback_state.steps_completed + ['status_assessment']
-                })
-              }}
+              {{ rollback_state | combine({
+                'steps_completed': rollback_state.steps_completed + ['status_assessment']
+              }) }}
 
       rescue:
         - name: Mark status assessment failed
           ansible.builtin.set_fact:
             rollback_state: >
-              {{
-                rollback_state | combine({
-                  'steps_failed': rollback_state.steps_failed + ['status_assessment']
+              {{ rollback_state | combine({
+                'steps_failed': rollback_state.steps_failed + ['status_assessment']
                 })
               }}
 
@@ -128,21 +125,17 @@
         - name: Mark firmware rollback complete
           ansible.builtin.set_fact:
             rollback_state: >
-              {{
-                rollback_state | combine({
-                  'steps_completed': rollback_state.steps_completed + ['firmware_rollback']
-                })
-              }}
+              {{ rollback_state | combine({
+                'steps_completed': rollback_state.steps_completed + ['firmware_rollback']
+              }) }}
 
       rescue:
         - name: Mark firmware rollback failed
           ansible.builtin.set_fact:
             rollback_state: >
-              {{
-                rollback_state | combine({
-                  'steps_failed': rollback_state.steps_failed + ['firmware_rollback']
-                })
-              }}
+              {{ rollback_state | combine({
+                'steps_failed': rollback_state.steps_failed + ['firmware_rollback']
+              }) }}
 
     # Step 3: Configuration rollback
     - name: Step 3 - Configuration rollback
@@ -162,7 +155,8 @@
 
         - name: Select most recent backup
           ansible.builtin.set_fact:
-            latest_backup: "{{ (backup_files.files | sort(attribute='mtime') | last).path }}"
+            latest_backup: >
+              {{ (backup_files.files | sort(attribute='mtime') | last).path }}
           when: backup_files.files | length > 0
 
         - name: Restore configuration from backup
@@ -180,14 +174,18 @@
       rescue:
         - name: Mark config rollback failed
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['config_rollback']}) }}"
+            rollback_state: >
+              {{ rollback_state | combine({
+                'steps_failed': rollback_state.steps_failed + ['config_rollback']
+              }) }}
 
     # Step 4: Device reboot (if required)
     - name: Step 4 - Device reboot
       block:
         - name: Update rollback step
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'current_step': 'rollback_reboot'}) }}"
+            rollback_state: >
+              {{ rollback_state | combine({'current_step': 'rollback_reboot'}) }}
 
         - name: Reboot device for rollback
           ansible.builtin.include_role:
@@ -205,12 +203,18 @@
 
         - name: Mark rollback reboot complete
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['rollback_reboot']}) }}"
+            rollback_state: >
+              {{ rollback_state | combine({
+                'steps_completed': rollback_state.steps_completed + ['rollback_reboot']
+              }) }}
 
       rescue:
         - name: Mark rollback reboot failed
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['rollback_reboot']}) }}"
+            rollback_state: >
+              {{ rollback_state | combine({
+                'steps_failed': rollback_state.steps_failed + ['rollback_reboot']
+              }) }}
 
     # Step 5: Post-rollback validation
     - name: Step 5 - Post-rollback validation
