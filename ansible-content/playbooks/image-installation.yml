@@ -36,18 +36,24 @@
       block:
         - name: Update step tracking
           ansible.builtin.set_fact:
-            installation_state: "{{ installation_state | combine({'current_step': 'pre_installation_validation'}) }}"
+            installation_state: >
+              {{ installation_state | combine({
+                'current_step': 'pre_installation_validation'
+              }) }}
 
         - name: Verify Phase 1 completion
-          ansible.builtin.include_tasks: ../roles/common/tasks/phase-validation.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/phase-validation.yml
           vars:
             required_phase: "phase_1_complete"
 
         - name: Validate network convergence
-          ansible.builtin.include_tasks: ../roles/network-validation/tasks/protocol-convergence.yml
+          ansible.builtin.include_tasks: >
+            ../roles/network-validation/tasks/protocol-convergence.yml
 
         - name: Final device health check
-          ansible.builtin.include_tasks: "../roles/common/tasks/health-check.yml"
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/health-check.yml
           vars:
             check_type: "pre_installation"
 
@@ -56,7 +62,10 @@
       block:
         - name: Update step tracking
           ansible.builtin.set_fact:
-            installation_state: "{{ installation_state | combine({'current_step': 'firmware_installation'}) }}"
+            installation_state: >
+              {{ installation_state | combine({
+                'current_step': 'firmware_installation'
+              }) }}
 
         - name: Install firmware - Cisco NX-OS
           ansible.builtin.include_role:
@@ -90,14 +99,21 @@
 
         - name: Mark pre-reboot tasks complete
           ansible.builtin.set_fact:
-            installation_state: "{{ installation_state | combine({'pre_reboot_complete': true}) }}"
+            installation_state: >
+              {{ installation_state | combine({
+                'pre_reboot_complete': true
+              }) }}
 
     # Step 3: Device reboot (if required)
     - name: Step 3 - Device reboot
       block:
         - name: Update step tracking
           ansible.builtin.set_fact:
-            installation_state: "{{ installation_state | combine({'current_step': 'device_reboot', 'reboot_started': true}) }}"
+            installation_state: >
+              {{ installation_state | combine({
+                'current_step': 'device_reboot',
+                'reboot_started': true
+              }) }}
 
         - name: Execute platform-specific reboot
           ansible.builtin.include_role:
@@ -112,20 +128,26 @@
           when: reboot_required | bool
 
         - name: Verify device responsiveness
-          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/connectivity-check.yml
 
     # Step 4: Post-installation validation
     - name: Step 4 - Post-installation validation
       block:
         - name: Update step tracking
           ansible.builtin.set_fact:
-            installation_state: "{{ installation_state | combine({'current_step': 'post_installation_validation'}) }}"
+            installation_state: >
+              {{ installation_state | combine({
+                'current_step': 'post_installation_validation'
+              }) }}
 
         - name: Verify firmware version
-          ansible.builtin.include_tasks: ../roles/image-validation/tasks/version-verification.yml
+          ansible.builtin.include_tasks: >
+            ../roles/image-validation/tasks/version-verification.yml
 
         - name: Run post-installation health check
-          ansible.builtin.include_tasks: "../roles/common/tasks/health-check.yml"
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/health-check.yml
           vars:
             check_type: "post_installation"
 
@@ -136,17 +158,24 @@
 
         - name: Mark post-reboot validation complete
           ansible.builtin.set_fact:
-            installation_state: "{{ installation_state | combine({'post_reboot_complete': true}) }}"
+            installation_state: >
+              {{ installation_state | combine({
+                'post_reboot_complete': true
+              }) }}
 
     # Step 5: Installation completion
     - name: Step 5 - Installation completion
       block:
         - name: Update step tracking
           ansible.builtin.set_fact:
-            installation_state: "{{ installation_state | combine({'current_step': 'completion'}) }}"
+            installation_state: >
+              {{ installation_state | combine({
+                'current_step': 'completion'
+              }) }}
 
         - name: Record installation metrics
-          ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/metrics-export.yml
           vars:
             metric_type: "installation_completion"
             metric_data:
@@ -157,12 +186,18 @@
               reboot_required: "{{ reboot_required }}"
 
         - name: Update device inventory
-          ansible.builtin.include_tasks: ../roles/common/tasks/inventory-update.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/inventory-update.yml
 
   post_tasks:
     - name: Calculate installation duration
       ansible.builtin.set_fact:
-        installation_duration: "{{ (ansible_date_time.epoch | int) - (installation_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') | strftime('%s') | int) }}"
+        installation_duration: >
+          {{
+            (ansible_date_time.epoch | int) -
+            (installation_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ') |
+             strftime('%s') | int)
+          }}
 
     - name: Display installation summary
       ansible.builtin.debug:
