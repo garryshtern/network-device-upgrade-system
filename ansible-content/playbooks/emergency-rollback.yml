@@ -54,7 +54,7 @@
         - name: Gather current device state
           ansible.builtin.include_tasks: >
             ../roles/common/tasks/device-status.yml
-          failed_when: false
+          ignore_errors: true
 
         - name: Mark status assessment complete
           ansible.builtin.set_fact:
@@ -197,7 +197,9 @@
         - name: Update rollback step
           ansible.builtin.set_fact:
             rollback_state: >
-              {{ rollback_state | combine({'current_step': 'rollback_reboot'}) }}
+              {{
+                rollback_state | combine({'current_step': 'rollback_reboot'})
+              }}
 
         - name: Reboot device for rollback
           ansible.builtin.include_role:
@@ -235,13 +237,18 @@
       block:
         - name: Update rollback step
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'current_step': 'post_rollback_validation'}) }}"
+            rollback_state: >
+              {{
+                rollback_state | combine({'current_step': 'post_rollback_validation'})
+              }}
 
         - name: Validate device connectivity
-          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/connectivity-check.yml
 
         - name: Run health check after rollback
-          ansible.builtin.include_tasks: "../roles/common/tasks/health-check.yml"
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/health-check.yml
           vars:
             check_type: "post_rollback"
 
@@ -253,12 +260,20 @@
 
         - name: Mark post-rollback validation complete
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['post_rollback_validation']}) }}"
+            rollback_state: >
+              {{ rollback_state | combine({
+                'steps_completed': rollback_state.steps_completed +
+                ['post_rollback_validation']
+              }) }}
 
       rescue:
         - name: Mark post-rollback validation failed
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_failed': rollback_state.steps_failed + ['post_rollback_validation']}) }}"
+            rollback_state: >
+              {{ rollback_state | combine({
+                'steps_failed': rollback_state.steps_failed +
+                ['post_rollback_validation']
+              }) }}
 
   post_tasks:
     - name: Calculate rollback duration
@@ -301,7 +316,8 @@
         body:
           name: "{{ inventory_hostname }}"
           custom_fields:
-            upgrade_status: "{{ 'rollback_complete' if rollback_successful else 'rollback_failed' }}"
+            upgrade_status: >
+              {{ 'rollback_complete' if rollback_successful else 'rollback_failed' }}
             last_rollback: "{{ rollback_timestamp }}"
       when:
         - netbox_url is defined
