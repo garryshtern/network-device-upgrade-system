@@ -44,12 +44,16 @@
           - target_firmware is defined
           - target_firmware != ""
           - target_hosts is defined
-        fail_msg: "Required variables missing: target_firmware and target_hosts must be defined"
+        fail_msg: >
+          Required variables missing: target_firmware and target_hosts
+          must be defined
 
     - name: Set upgrade start timestamp
       ansible.builtin.set_fact:
-        upgrade_start_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-        upgrade_job_id: "{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}"
+        upgrade_start_time: >
+          {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
+        upgrade_job_id: >
+          {{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}
 
     - name: Display upgrade parameters
       ansible.builtin.debug:
@@ -69,21 +73,26 @@
     - name: Phase 0 - Pre-Upgrade Validation
       block:
         - name: Device connectivity check
-          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/connectivity-check.yml
 
         - name: Device health check and baseline capture
-          ansible.builtin.include_tasks: "../roles/common/tasks/health-check.yml"
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/health-check.yml
           when: not skip_validation
 
         - name: Verify firmware file availability
-          ansible.builtin.include_tasks: ../roles/image-validation/tasks/integrity-audit.yml
+          ansible.builtin.include_tasks: >
+            ../roles/image-validation/tasks/integrity-audit.yml
 
         - name: Check storage space requirements
-          ansible.builtin.include_tasks: ../roles/space-management/tasks/space-check.yml
+          ansible.builtin.include_tasks: >
+            ../roles/space-management/tasks/space-check.yml
 
       rescue:
         - name: Pre-validation failure handling
-          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "pre_validation"
             error_message: "Pre-upgrade validation failed"
@@ -92,7 +101,8 @@
     - name: Phase 1 - Image Loading
       block:
         - name: Storage cleanup and preparation
-          ansible.builtin.include_tasks: "../roles/common/tasks/storage-cleanup.yml"
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/storage-cleanup.yml
           when: upgrade_phase in ['full', 'loading']
 
         - name: Backup current configuration
@@ -104,12 +114,14 @@
           when: upgrade_phase in ['full', 'loading']
 
         - name: Verify loaded image integrity
-          ansible.builtin.include_tasks: ../roles/image-validation/tasks/hash-verification.yml
+          ansible.builtin.include_tasks: >
+            ../roles/image-validation/tasks/hash-verification.yml
           when: upgrade_phase in ['full', 'loading']
 
       rescue:
         - name: Image loading failure handling
-          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "image_loading"
             error_message: "Image loading phase failed"
@@ -125,8 +137,10 @@
           when: upgrade_phase in ['full', 'installation']
 
         - name: Final pre-installation checks
-          ansible.builtin.include_tasks: ../roles/network-validation/tasks/protocol-convergence.yml
-          when: upgrade_phase in ['full', 'installation'] and not skip_validation
+          ansible.builtin.include_tasks: >
+            ../roles/network-validation/tasks/protocol-convergence.yml
+          when: >
+            upgrade_phase in ['full', 'installation'] and not skip_validation
 
         - name: Install firmware image
           ansible.builtin.include_tasks: image-installation.yml
@@ -148,10 +162,13 @@
 
         - name: Post-upgrade network validation
           ansible.builtin.include_tasks: network-validation.yml
-          when: upgrade_phase in ['full', 'installation', 'validation'] and not skip_validation
+          when: >
+            upgrade_phase in ['full', 'installation', 'validation']
+            and not skip_validation
 
         - name: Update device inventory
-          ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/metrics-export.yml
           vars:
             metric_type: "upgrade_completion"
             upgrade_status: "success"
@@ -174,10 +191,12 @@
 
       rescue:
         - name: Rollback failure handling
-          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "rollback"
-            error_message: "Rollback procedure failed - manual intervention required"
+            error_message: >
+              Rollback procedure failed - manual intervention required
 
   post_tasks:
     - name: Set upgrade completion timestamp
@@ -186,14 +205,19 @@
 
     - name: Calculate upgrade duration
       ansible.builtin.set_fact:
-        upgrade_duration: "{{ ((upgrade_end_time | to_datetime) - (upgrade_start_time | to_datetime)).total_seconds() }}"
+        upgrade_duration: >
+          {{
+            ((upgrade_end_time | to_datetime) -
+             (upgrade_start_time | to_datetime)).total_seconds()
+          }}
 
     - name: Export final metrics
       ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
       vars:
         metric_type: "upgrade_summary"
         duration_seconds: "{{ upgrade_duration }}"
-        final_status: "{{ 'success' if ansible_failed_result is not defined else 'failed' }}"
+        final_status: >
+          {{ 'success' if ansible_failed_result is not defined else 'failed' }}
 
     - name: Display upgrade summary
       ansible.builtin.debug:
@@ -202,13 +226,17 @@
           - "Device: {{ inventory_hostname }}"
           - "Job ID: {{ upgrade_job_id }}"
           - "Duration: {{ upgrade_duration }}s"
-          - "Status: {{ 'SUCCESS' if ansible_failed_result is not defined else 'FAILED' }}"
+          - >
+            Status: {{
+              'SUCCESS' if ansible_failed_result is not defined else 'FAILED'
+            }}
           - "Start: {{ upgrade_start_time }}"
           - "End: {{ upgrade_end_time }}"
           - "======================="
 
   handlers:
     - name: Emergency cleanup
-      ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+      ansible.builtin.include_tasks: >
+        ../roles/common/tasks/error-handling.yml
       vars:
         cleanup_required: true
