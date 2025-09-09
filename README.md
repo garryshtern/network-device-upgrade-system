@@ -219,8 +219,8 @@ flowchart TD
 - **Network**: Reliable connectivity to all managed devices
 
 ### Software Requirements
-- **Python**: 3.8+ with pip
-- **Ansible**: 8.x-9.x (ansible-core 2.15-2.17) - *Required for six.moves compatibility*
+- **Python**: 3.13 with pip
+- **Ansible**: 11.9.0 (ansible-core 2.19.1) - *Latest stable version*
 - **Git**: Latest stable version
 
 ### Supported Platforms
