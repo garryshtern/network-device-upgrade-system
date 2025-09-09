@@ -49,7 +49,7 @@
         - name: Test device connectivity
           ansible.builtin.include_tasks: >
             ../roles/common/tasks/connectivity-check.yml
-          failed_when: false
+          ignore_errors: true
 
         - name: Gather current device state
           ansible.builtin.include_tasks: >
@@ -60,7 +60,8 @@
           ansible.builtin.set_fact:
             rollback_state: >
               {{ rollback_state | combine({
-                'steps_completed': rollback_state.steps_completed + ['status_assessment']
+                'steps_completed': rollback_state.steps_completed +
+                ['status_assessment']
               }) }}
 
       rescue:
@@ -68,7 +69,8 @@
           ansible.builtin.set_fact:
             rollback_state: >
               {{ rollback_state | combine({
-                'steps_failed': rollback_state.steps_failed + ['status_assessment']
+                'steps_failed': rollback_state.steps_failed +
+                ['status_assessment']
                 })
               }}
 
@@ -126,7 +128,8 @@
           ansible.builtin.set_fact:
             rollback_state: >
               {{ rollback_state | combine({
-                'steps_completed': rollback_state.steps_completed + ['firmware_rollback']
+                'steps_completed': rollback_state.steps_completed +
+                ['firmware_rollback']
               }) }}
 
       rescue:
@@ -134,7 +137,8 @@
           ansible.builtin.set_fact:
             rollback_state: >
               {{ rollback_state | combine({
-                'steps_failed': rollback_state.steps_failed + ['firmware_rollback']
+                'steps_failed': rollback_state.steps_failed +
+                ['firmware_rollback']
               }) }}
 
     # Step 3: Configuration rollback
@@ -142,7 +146,10 @@
       block:
         - name: Update rollback step
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'current_step': 'config_rollback'}) }}"
+            rollback_state: >
+              {{
+                rollback_state | combine({'current_step': 'config_rollback'})
+              }}
 
         - name: Find latest configuration backup
           ansible.builtin.find:
@@ -169,14 +176,19 @@
 
         - name: Mark config rollback complete
           ansible.builtin.set_fact:
-            rollback_state: "{{ rollback_state | combine({'steps_completed': rollback_state.steps_completed + ['config_rollback']}) }}"
+            rollback_state: >
+              {{ rollback_state | combine({
+                'steps_completed': rollback_state.steps_completed +
+                ['config_rollback']
+              }) }}
 
       rescue:
         - name: Mark config rollback failed
           ansible.builtin.set_fact:
             rollback_state: >
               {{ rollback_state | combine({
-                'steps_failed': rollback_state.steps_failed + ['config_rollback']
+                'steps_failed': rollback_state.steps_failed +
+                ['config_rollback']
               }) }}
 
     # Step 4: Device reboot (if required)
@@ -205,7 +217,8 @@
           ansible.builtin.set_fact:
             rollback_state: >
               {{ rollback_state | combine({
-                'steps_completed': rollback_state.steps_completed + ['rollback_reboot']
+                'steps_completed': rollback_state.steps_completed +
+                ['rollback_reboot']
               }) }}
 
       rescue:
@@ -213,7 +226,8 @@
           ansible.builtin.set_fact:
             rollback_state: >
               {{ rollback_state | combine({
-                'steps_failed': rollback_state.steps_failed + ['rollback_reboot']
+                'steps_failed': rollback_state.steps_failed +
+                ['rollback_reboot']
               }) }}
 
     # Step 5: Post-rollback validation
