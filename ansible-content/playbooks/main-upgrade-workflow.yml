@@ -2,7 +2,7 @@
 # Network Device Upgrade Management System - Master Workflow
 # Complete upgrade orchestration with phase separation and validation
 #
-# This playbook orchestrates the entire upgrade process across all
+# This playbook orchestrates the entire upgrade process across
 # supported platforms:
 # - Phase 1: Image Loading (Business Hours Safe)
 # - Phase 2: Image Installation (Maintenance Window)
@@ -14,8 +14,8 @@
   serial: "{{ max_concurrent | default(5) }}"
   vars:
     # Workflow control variables
-    upgrade_phase: "{{ phase | default('full') }}"  # full, loading,
-    # installation, validation, rollback
+    # Options: full, loading, installation, validation, rollback
+    upgrade_phase: "{{ phase | default('full') }}"
     firmware_version: "{{ target_firmware }}"
     maintenance_window: "{{ maintenance | default(false) | bool }}"
     skip_validation: "{{ skip_checks | default(false) | bool }}"

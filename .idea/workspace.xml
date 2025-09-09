@@ -5,73 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="87629bf4-cfe3-439f-a321-a3033a721acb" name="Changes" comment="Fix the failure in workflow">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/comprehensive-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/comprehensive-tests.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/health-check.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/health-check.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/main-upgrade-workflow.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/main-upgrade-workflow.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/bfd-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/bfd-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/ipsec-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/ipsec-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/optics-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/optics-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/bfd-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/bfd-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/epld-upgrade.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/epld-upgrade.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/igmp-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/igmp-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-installation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-installation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-loading.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/image-loading.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/reboot.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/reboot.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/common/tasks/connectivity-check.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/common/tasks/connectivity-check.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/common/tasks/metrics-export.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/common/tasks/metrics-export.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/arp-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/arp-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/bgp-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/bgp-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/interface-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/interface-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/multicast-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/multicast-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/protocol-convergence.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/protocol-convergence.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/routing-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/routing-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation-legacy.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation-legacy.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-loading-legacy.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-loading-legacy.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/awx-config/inventories.yml" beforeDir="false" afterPath="$PROJECT_DIR$/awx-config/inventories.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/awx-config/job-templates.yml" beforeDir="false" afterPath="$PROJECT_DIR$/awx-config/job-templates.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/awx-config/job-templates/device-health-check.yml" beforeDir="false" afterPath="$PROJECT_DIR$/awx-config/job-templates/device-health-check.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/awx-config/workflow-templates.yml" beforeDir="false" afterPath="$PROJECT_DIR$/awx-config/workflow-templates.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/ansible-tests/syntax-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/ansible-tests/syntax-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration-tests/check-mode-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/check-mode-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration-tests/multi-platform-integration-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/multi-platform-integration-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration-tests/secure-transfer-integration-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/secure-transfer-integration-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration-tests/test_phase_logic.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/test_phase_logic.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration-tests/test_scenario_logic.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/test_scenario_logic.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration-tests/workflow-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/workflow-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/mock-inventories/all-platforms.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/mock-inventories/all-platforms.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/mock-inventories/single-platform.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/mock-inventories/single-platform.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/molecule-tests/converge.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/molecule-tests/converge.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/molecule-tests/molecule/default/converge.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/molecule-tests/molecule/default/converge.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/molecule-tests/molecule/default/molecule.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/molecule-tests/molecule/default/molecule.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/molecule-tests/molecule/default/verify.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/molecule-tests/molecule/default/verify.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/molecule-tests/network-upgrade-test/molecule.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/molecule-tests/network-upgrade-test/molecule.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/molecule-tests/verify.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/molecule-tests/verify.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/scenario-tests/upgrade-scenario-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/scenario-tests/upgrade-scenario-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-vars.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test-vars.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit-tests/error-handling.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit-tests/error-handling.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit-tests/secure-image-transfer-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit-tests/secure-image-transfer-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit-tests/template-rendering.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit-tests/template-rendering.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit-tests/test_error_scenario.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit-tests/test_error_scenario.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit-tests/test_template_scenario.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit-tests/test_template_scenario.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit-tests/test_workflow_scenario.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit-tests/test_workflow_scenario.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit-tests/validate_scenario.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit-tests/validate_scenario.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit-tests/variable-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit-tests/variable-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit-tests/workflow-logic.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/unit-tests/workflow-logic.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/validation-tests/comprehensive-validation-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/validation-tests/comprehensive-validation-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/validation-tests/network-validation-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/validation-tests/network-validation-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/vendor-tests/cisco-iosxe-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/vendor-tests/cisco-iosxe-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/vendor-tests/cisco-nxos-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/vendor-tests/cisco-nxos-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/vendor-tests/fortios-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/vendor-tests/fortios-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/vendor-tests/metamako-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/vendor-tests/metamako-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/vendor-tests/opengear-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/vendor-tests/opengear-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/vendor-tests/validate_fortios_scenario.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/vendor-tests/validate_fortios_scenario.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/vendor-tests/validate_iosxe_scenario.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/vendor-tests/validate_iosxe_scenario.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/vendor-tests/validate_metamako_scenario.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/vendor-tests/validate_metamako_scenario.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/vendor-tests/validate_nxos_scenario.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/vendor-tests/validate_nxos_scenario.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -123,7 +57,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyIntegratedToolsModulesConfigurable",
+    "settings.editor.selected.configurable": "com.anthropic.code.plugin.settings",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -153,7 +87,7 @@
       <workItem from="1756861021857" duration="170000" />
       <workItem from="1756895195040" duration="5130000" />
       <workItem from="1756951775422" duration="9763000" />
-      <workItem from="1757115228585" duration="47949000" />
+      <workItem from="1757115228585" duration="63528000" />
     </task>
     <task id="LOCAL-00001" summary="Added implementations">
       <option name="closed" value="true" />

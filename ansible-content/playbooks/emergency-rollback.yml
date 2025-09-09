@@ -239,7 +239,9 @@
           ansible.builtin.set_fact:
             rollback_state: >
               {{
-                rollback_state | combine({'current_step': 'post_rollback_validation'})
+                rollback_state | combine({
+                  'current_step': 'post_rollback_validation'
+                })
               }}
 
         - name: Validate device connectivity
@@ -317,12 +319,15 @@
           name: "{{ inventory_hostname }}"
           custom_fields:
             upgrade_status: >
-              {{ 'rollback_complete' if rollback_successful else 'rollback_failed' }}
+              {{
+                'rollback_complete' if rollback_successful
+                else 'rollback_failed'
+              }}
             last_rollback: "{{ rollback_timestamp }}"
       when:
         - netbox_url is defined
         - netbox_token is defined
-      failed_when: false
+      ignore_errors: true
 
     - name: Display rollback summary
       ansible.builtin.debug:
@@ -334,7 +339,10 @@
           - "Duration: {{ rollback_duration }}s"
           - "Steps Completed: {{ rollback_state.steps_completed | join(', ') }}"
           - "Steps Failed: {{ rollback_state.steps_failed | join(', ') }}"
-          - "Rollback Status: {{ 'SUCCESS' if rollback_successful else 'FAILED' }}"
+          - >
+            Rollback Status: {{
+              'SUCCESS' if rollback_successful else 'FAILED'
+            }}
           - "Timestamp: {{ rollback_timestamp }}"
           - "========================"
 
