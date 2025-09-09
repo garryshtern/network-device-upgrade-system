@@ -8,7 +8,8 @@ ansible_connection: ansible.netcommon.network_cli
 ansible_user: "{{ vault_metamako_username | default('admin') }}"
 ansible_password: "{{ vault_metamako_password }}"
 ansible_ssh_common_args: >
-  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+  -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null
 
 # Platform specific settings
 platform_type: "metamako_mos"
@@ -99,7 +100,7 @@ validate_pcie_links: true
 manage_applications: false  # Enable application management during upgrades
 application_action: ""  # install, remove, enable, disable
 application_name: ""
-application_source: ""  # URL or local path to application file
+application_source: ""  # URL or local path to app file
 application_filename: >
   # Optional: specify filename on device (defaults to basename of source)
 applications_to_enable: []
@@ -109,6 +110,6 @@ applications_to_force_shutdown: []
 # EOS extension management
 eos_extension_action: ""  # install, remove
 eos_extension_name: ""
-eos_extension_source: ""  # URL or local path to EOS extension file
+eos_extension_source: ""  # URL or local path to EOS ext file
 eos_extension_filename: >
   # Optional: specify filename on device (defaults to basename of source)

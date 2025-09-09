@@ -48,7 +48,7 @@
           ansible.builtin.include_tasks: ../roles/network-validation/tasks/protocol-convergence.yml
 
         - name: Final device health check
-          ansible.builtin.include_tasks: health-check.yml
+          ansible.builtin.include_tasks: "{{ playbook_dir }}/roles/common/tasks/health-check.yml"
           vars:
             check_type: "pre_installation"
 
@@ -126,7 +126,7 @@
           ansible.builtin.include_tasks: ../roles/image-validation/tasks/version-verification.yml
 
         - name: Run post-installation health check
-          ansible.builtin.include_tasks: health-check.yml
+          ansible.builtin.include_tasks: "{{ playbook_dir }}/roles/common/tasks/health-check.yml"
           vars:
             check_type: "post_installation"
 

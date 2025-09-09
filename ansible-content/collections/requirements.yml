@@ -47,5 +47,5 @@ collections:
     version: ">=3.18.0"
     source: https://galaxy.ansible.com
 
-  # Installation command:
-  # ansible-galaxy collection install -r collections/requirements.yml --force
+# Installation command:
+# ansible-galaxy collection install -r collections/requirements.yml --force

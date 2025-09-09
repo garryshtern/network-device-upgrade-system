@@ -76,7 +76,7 @@
           ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
 
         - name: Device health check and baseline capture
-          ansible.builtin.include_tasks: health-check.yml
+          ansible.builtin.include_tasks: "{{ playbook_dir }}/roles/common/tasks/health-check.yml"
           when: not skip_validation
 
         - name: Verify firmware file availability
@@ -96,7 +96,7 @@
     - name: Phase 1 - Image Loading
       block:
         - name: Storage cleanup and preparation
-          ansible.builtin.include_tasks: storage-cleanup.yml
+          ansible.builtin.include_tasks: "{{ playbook_dir }}/roles/common/tasks/storage-cleanup.yml"
           when: upgrade_phase in ['full', 'loading']
 
         - name: Backup current configuration
