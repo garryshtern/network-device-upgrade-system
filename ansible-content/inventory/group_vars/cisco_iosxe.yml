@@ -1,5 +1,5 @@
 ---
-# Cisco IOS-XE Specific Configuration  
+# Cisco IOS-XE Specific Configuration
 # For enterprise routers and switches
 
 # Connection settings
@@ -7,11 +7,12 @@ ansible_network_os: cisco.ios.ios
 ansible_connection: ansible.netcommon.network_cli
 ansible_user: "{{ vault_cisco_iosxe_username | default('admin') }}"
 ansible_password: "{{ vault_cisco_iosxe_password }}"
-ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+ansible_ssh_common_args: >
+  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
 
 # Platform specific settings
 platform_type: "cisco_iosxe"
-vendor: "cisco" 
+vendor: "cisco"
 device_family: "catalyst"
 
 # Install mode settings

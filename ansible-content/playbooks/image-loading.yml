@@ -12,21 +12,22 @@
     device_storage_path: "/var/lib/firmware"
     integrity_check_required: true
     cleanup_old_images: true
-    
   tasks:
     - name: Validate firmware file exists locally
       ansible.builtin.stat:
         path: "{{ firmware_source_path }}/{{ firmware_version }}"
       register: firmware_file
       delegate_to: localhost
-      
     - name: Fail if firmware file not found
       ansible.builtin.fail:
-        msg: "Firmware file not found: {{ firmware_source_path }}/{{ firmware_version }}"
+        msg: >
+          Firmware file not found:
+          {{ firmware_source_path }}/{{ firmware_version }}
       when: not firmware_file.stat.exists
 
     - name: Check device storage capacity
-      ansible.builtin.include_tasks: ../roles/space-management/tasks/space-check.yml
+      ansible.builtin.include_tasks: >
+        ../roles/space-management/tasks/space-check.yml
       vars:
         required_space_gb: "{{ firmware_size_gb | default(2) }}"
 
@@ -68,7 +69,8 @@
           when: ansible_network_os == 'fortios'
 
     - name: Verify image integrity
-      ansible.builtin.include_tasks: ../roles/image-validation/tasks/hash-verification.yml
+      ansible.builtin.include_tasks: >
+        ../roles/image-validation/tasks/hash-verification.yml
 
     - name: Record image loading completion
       ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
@@ -89,4 +91,4 @@
           - "Platform: {{ ansible_network_os }}"
           - "Firmware: {{ firmware_version }}"
           - "Status: LOADED"
-          - "============================="
+          - "=============================="

@@ -7,7 +7,8 @@ ansible_network_os: cisco.nxos.nxos
 ansible_connection: ansible.netcommon.network_cli
 ansible_user: "{{ vault_cisco_nxos_username | default('admin') }}"
 ansible_password: "{{ vault_cisco_nxos_password }}"
-ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+ansible_ssh_common_args: >
+  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
 
 # Platform specific settings
 platform_type: "cisco_nxos"
@@ -48,7 +49,7 @@ validate_bgp: true
 bgp_convergence_timeout: 300
 expected_bgp_neighbors: []  # Define per host
 
-# OSPF validation  
+# OSPF validation
 validate_ospf: true
 ospf_convergence_timeout: 180
 
@@ -73,7 +74,7 @@ secondary_boot_image: "bootflash:///nxos.backup.bin"
 # Feature validation
 required_features:
   - "bgp"
-  - "ospf"  
+  - "ospf"
   - "pim"
   - "igmp"
   - "vpc"

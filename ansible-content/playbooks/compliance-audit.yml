@@ -38,8 +38,6 @@
     # Security Baseline Compliance
     - name: Security Baseline Compliance Check
       when: "'security_baseline' in compliance_standards"
-
-      # Network Hardening Compliance
       block:
         - name: Run security baseline audit
           ansible.builtin.include_role:
@@ -50,16 +48,30 @@
 
         - name: Update compliance results - security baseline
           ansible.builtin.set_fact:
-            compliance_results: "{{ compliance_results | combine({'standards_tested': compliance_results.standards_tested + ['security_baseline'], 'compliance_checks':
-              {'passed': compliance_results.compliance_checks.passed + security_baseline_results.passed, 'failed': compliance_results.compliance_checks.failed + security_baseline_results.failed,
-              'skipped': compliance_results.compliance_checks.skipped + security_baseline_results.skipped, 'warnings': compliance_results.compliance_checks.warnings
-              + security_baseline_results.warnings}}) }}"
+            compliance_results: >
+              {{
+                compliance_results | combine({
+                  'standards_tested': compliance_results.standards_tested + ['security_baseline'],
+                  'compliance_checks': {
+                    'passed': compliance_results.compliance_checks.passed + security_baseline_results.passed,
+                    'failed': compliance_results.compliance_checks.failed + security_baseline_results.failed,
+                    'skipped': compliance_results.compliance_checks.skipped + security_baseline_results.skipped,
+                    'warnings': compliance_results.compliance_checks.warnings + security_baseline_results.warnings
+                  }
+                })
+              }}
 
       rescue:
         - name: Handle security baseline audit failure
           ansible.builtin.set_fact:
-            compliance_results: "{{ compliance_results | combine({'compliance_checks': {'failed': compliance_results.compliance_checks.failed + ['security_baseline_audit_error']}})
-              }}"
+            compliance_results: >
+              {{
+                compliance_results | combine({
+                  'compliance_checks': {
+                    'failed': compliance_results.compliance_checks.failed + ['security_baseline_audit_error']
+                  }
+                })
+              }}
     - name: Network Hardening Compliance Check
       when: "'network_hardening' in compliance_standards"
 
@@ -74,16 +86,30 @@
 
         - name: Update compliance results - network hardening
           ansible.builtin.set_fact:
-            compliance_results: "{{ compliance_results | combine({'standards_tested': compliance_results.standards_tested + ['network_hardening'], 'compliance_checks':
-              {'passed': compliance_results.compliance_checks.passed + network_hardening_results.passed, 'failed': compliance_results.compliance_checks.failed + network_hardening_results.failed,
-              'skipped': compliance_results.compliance_checks.skipped + network_hardening_results.skipped, 'warnings': compliance_results.compliance_checks.warnings
-              + network_hardening_results.warnings}}) }}"
+            compliance_results: >
+              {{
+                compliance_results | combine({
+                  'standards_tested': compliance_results.standards_tested + ['network_hardening'],
+                  'compliance_checks': {
+                    'passed': compliance_results.compliance_checks.passed + network_hardening_results.passed,
+                    'failed': compliance_results.compliance_checks.failed + network_hardening_results.failed,
+                    'skipped': compliance_results.compliance_checks.skipped + network_hardening_results.skipped,
+                    'warnings': compliance_results.compliance_checks.warnings + network_hardening_results.warnings
+                  }
+                })
+              }}
 
       rescue:
         - name: Handle network hardening audit failure
           ansible.builtin.set_fact:
-            compliance_results: "{{ compliance_results | combine({'compliance_checks': {'failed': compliance_results.compliance_checks.failed + ['network_hardening_audit_error']}})
-              }}"
+            compliance_results: >
+              {{
+                compliance_results | combine({
+                  'compliance_checks': {
+                    'failed': compliance_results.compliance_checks.failed + ['network_hardening_audit_error']
+                  }
+                })
+              }}
     - name: Platform-Specific Compliance Checks
       block:
         # Cisco NX-OS Compliance
@@ -133,17 +159,31 @@
 
         - name: Update compliance results - platform specific
           ansible.builtin.set_fact:
-            compliance_results: "{{ compliance_results | combine({'standards_tested': compliance_results.standards_tested + ['platform_specific'], 'compliance_checks':
-              {'passed': compliance_results.compliance_checks.passed + platform_compliance_results.passed, 'failed': compliance_results.compliance_checks.failed +
-              platform_compliance_results.failed, 'skipped': compliance_results.compliance_checks.skipped + platform_compliance_results.skipped, 'warnings': compliance_results.compliance_checks.warnings
-              + platform_compliance_results.warnings}}) }}"
+            compliance_results: >
+              {{
+                compliance_results | combine({
+                  'standards_tested': compliance_results.standards_tested + ['platform_specific'],
+                  'compliance_checks': {
+                    'passed': compliance_results.compliance_checks.passed + platform_compliance_results.passed,
+                    'failed': compliance_results.compliance_checks.failed + platform_compliance_results.failed,
+                    'skipped': compliance_results.compliance_checks.skipped + platform_compliance_results.skipped,
+                    'warnings': compliance_results.compliance_checks.warnings + platform_compliance_results.warnings
+                  }
+                })
+              }}
           when: platform_compliance_results is defined
 
       rescue:
         - name: Handle platform compliance audit failure
           ansible.builtin.set_fact:
-            compliance_results: "{{ compliance_results | combine({'compliance_checks': {'failed': compliance_results.compliance_checks.failed + ['platform_compliance_audit_error']}})
-              }}"
+            compliance_results: >
+              {{
+                compliance_results | combine({
+                  'compliance_checks': {
+                    'failed': compliance_results.compliance_checks.failed + ['platform_compliance_audit_error']
+                  }
+                })
+              }}
 
   post_tasks:
     - name: Calculate compliance metrics
