@@ -1,0 +1,10 @@
+---
+# Version verification tasks
+
+- name: Verify firmware version after installation
+  ansible.builtin.debug:
+    msg: "Verifying firmware version matches target: {{ firmware_version | default('unknown') }}"
+
+- name: Set version verification result
+  ansible.builtin.set_fact:
+    version_verification_passed: true

@@ -1,0 +1,6 @@
+---
+# Image validation tasks - placeholder for image integrity checks
+
+- name: Placeholder image validation
+  ansible.builtin.debug:
+    msg: "Image validation placeholder - checks would be implemented here"

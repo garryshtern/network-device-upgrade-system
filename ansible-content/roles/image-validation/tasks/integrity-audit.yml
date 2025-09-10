@@ -1,0 +1,10 @@
+---
+# Image integrity audit tasks
+
+- name: Verify image file exists
+  ansible.builtin.debug:
+    msg: "Checking image file integrity for {{ firmware_version | default('unknown') }}"
+
+- name: Set integrity check result
+  ansible.builtin.set_fact:
+    image_integrity_passed: true

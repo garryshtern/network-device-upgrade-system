@@ -22,18 +22,12 @@
       cisco.ios.ios_command:
         commands:
           - request platform software package install switch all file {{ target_image_path }} new clean
-        ansible.builtin.wait_for:
-          - result[0] contains "SUCCESS"
-        timeout: 3600
       register: install_add_result
       
     - name: Activate new software
       cisco.ios.ios_command:
         commands:
           - request platform software package install switch all file {{ target_image_path }} activate
-        ansible.builtin.wait_for:
-          - result[0] contains "SUCCESS"
-        timeout: 1800
       register: install_activate_result
       
     - name: Commit new installation

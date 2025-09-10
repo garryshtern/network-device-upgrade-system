@@ -14,7 +14,7 @@
     validation_results_path: "/var/lib/network-upgrade/validation"
     compare_with_baseline: "{{ network_state_comparison | default(true) }}"
     validation_timeout: 300
-    
+
   pre_tasks:
     - name: Create validation results directory
       ansible.builtin.file:
@@ -44,15 +44,18 @@
             tasks_from: bgp-validation
           vars:
             capture_mode: "validation"
-            output_file: "{{ validation_results_path }}/{{ inventory_hostname }}/bgp_current_{{ validation_timestamp }}.json"
+            output_file: >
+              {{ validation_results_path }}/{{ inventory_hostname }}/bgp_current_{{ validation_timestamp }}.json
 
         - name: Compare BGP with baseline
           ansible.builtin.include_role:
             name: network-validation
             tasks_from: bgp-comparison
           vars:
-            baseline_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/bgp_baseline_*.json"
-            current_file: "{{ validation_results_path }}/{{ inventory_hostname }}/bgp_current_{{ validation_timestamp }}.json"
+            baseline_file: >
+              {{ baseline_data_path }}/{{ inventory_hostname }}/bgp_baseline_*.json
+            current_file: >
+              {{ validation_results_path }}/{{ inventory_hostname }}/bgp_current_{{ validation_timestamp }}.json
           when: compare_with_baseline
 
         - name: Mark BGP validation as passed
@@ -73,15 +76,18 @@
             tasks_from: interface-validation
           vars:
             capture_mode: "validation"
-            output_file: "{{ validation_results_path }}/{{ inventory_hostname }}/interfaces_current_{{ validation_timestamp }}.json"
+            output_file: >
+              {{ validation_results_path }}/{{ inventory_hostname }}/interfaces_current_{{ validation_timestamp }}.json
 
         - name: Compare interfaces with baseline
           ansible.builtin.include_role:
             name: network-validation
             tasks_from: interface-comparison
           vars:
-            baseline_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/interfaces_baseline_*.json"
-            current_file: "{{ validation_results_path }}/{{ inventory_hostname }}/interfaces_current_{{ validation_timestamp }}.json"
+            baseline_file: >
+              {{ baseline_data_path }}/{{ inventory_hostname }}/interfaces_baseline_*.json
+            current_file: >
+              {{ validation_results_path }}/{{ inventory_hostname }}/interfaces_current_{{ validation_timestamp }}.json
           when: compare_with_baseline
 
         - name: Mark interface validation as passed

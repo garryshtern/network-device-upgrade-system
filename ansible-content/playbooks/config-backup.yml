@@ -17,7 +17,8 @@
   tasks:
     - name: Create backup directory structure
       ansible.builtin.file:
-        path: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
+        path: >
+          {{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}
         state: directory
         mode: '0755'
       delegate_to: localhost
@@ -73,7 +74,8 @@
 
     - name: Verify backup files were created
       ansible.builtin.find:
-        paths: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}"
+        paths: >
+          {{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}
         file_type: file
       register: backup_files
       delegate_to: localhost
@@ -108,4 +110,7 @@
           backup_type: "{{ backup_type }}"
           file_count: "{{ backup_files.files | length }}"
           backup_size_mb: >
-            {{ (backup_files.files | map(attribute='size') | sum / 1024 / 1024) | round(2) }}
+            {{
+              (backup_files.files | map(attribute='size') | sum /
+              1024 / 1024) | round(2)
+            }}

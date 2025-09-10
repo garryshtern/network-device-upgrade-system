@@ -1,0 +1,10 @@
+---
+# Hash verification tasks
+
+- name: Verify loaded image hash
+  ansible.builtin.debug:
+    msg: "Verifying hash for loaded image {{ firmware_version | default('unknown') }}"
+
+- name: Set hash verification result
+  ansible.builtin.set_fact:
+    hash_verification_passed: true

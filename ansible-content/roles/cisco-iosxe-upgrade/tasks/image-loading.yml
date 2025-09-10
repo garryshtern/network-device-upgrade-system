@@ -73,7 +73,6 @@
       cisco.ios.ios_command:
         commands:
           - "verify /md5 bootflash:{{ target_image_filename }}"
-        timeout: 1800
       register: md5_verification
       when: expected_md5_hash is defined
       

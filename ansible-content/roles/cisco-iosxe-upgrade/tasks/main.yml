@@ -23,9 +23,7 @@
   
 - name: Set current firmware version
   ansible.builtin.set_fact:
-    iosxe_upgrade_state: "{{ iosxe_upgrade_state | combine({
-      'current_version': iosxe_facts.ansible_facts.ansible_net_version
-    }) }}"
+    iosxe_upgrade_state: "{{ iosxe_upgrade_state | combine({'current_version': iosxe_facts.ansible_facts.ansible_net_version}) }}"
     
 - name: Check install mode capability
   ansible.builtin.include_tasks: check-install-mode.yml
