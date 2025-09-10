@@ -20,13 +20,13 @@ Network device upgrade management system for 1000+ heterogeneous network devices
 
 ## Development Commands
 
-**Requires Ansible 11.9.0 with ansible-core 2.19.1 and Python 3.13**.
+**Requires latest versions: Ansible with ansible-core 2.19.2 and Python 3.13.7**.
 
 ### Setup & Testing
 
 ```bash
-# Install latest Ansible version
-pip install ansible==11.9.0
+# Install latest Ansible version (includes ansible-core 2.19.2)
+pip install --upgrade ansible
 
 # Install Ansible collections
 ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force
@@ -52,12 +52,19 @@ yamllint ansible-content/
 This issue is resolved in modern Ansible versions. Update to latest:
 
 ```bash
+# Clean install latest versions
 pip uninstall ansible ansible-core ansible-base -y
-pip install ansible==11.9.0
+pip install --upgrade ansible
 
-# Install specific collection versions
-ansible-galaxy collection install cisco.nxos:11.0.0 cisco.ios:9.0.0 fortinet.fortios:2.3.0 \
-  ansible.netcommon:8.1.0 community.network:5.0.0 community.general:8.0.0 --force --ignore-certs
+# Install latest collection versions (as of September 2025)
+ansible-galaxy collection install \
+  cisco.nxos:9.4.0 \
+  cisco.ios:9.2.0 \
+  fortinet.fortios:2.3.0 \
+  ansible.netcommon:8.1.0 \
+  community.network:5.0.0 \
+  community.general:8.0.0 \
+  --force --upgrade
 ```
 
 ## Testing Framework

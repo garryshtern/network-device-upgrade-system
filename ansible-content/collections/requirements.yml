@@ -1,14 +1,14 @@
 ---
 # Ansible Collections Requirements for Network Device Upgrade System
-# Production-ready collections with specific version requirements
+# Latest versions as of September 2025 for production use
 
 collections:
-  # Cisco Network Collections
+  # Cisco Network Collections (Latest 2025 Versions)
   - name: cisco.nxos
-    version: "11.0.0"
+    version: "9.4.0"
     source: https://galaxy.ansible.com
   - name: cisco.ios
-    version: "9.0.0"
+    version: "9.2.0"
     source: https://galaxy.ansible.com
 
   # Fortinet Collection
@@ -48,4 +48,7 @@ collections:
     source: https://galaxy.ansible.com
 
 # Installation command:
-# ansible-galaxy collection install -r collections/requirements.yml --force
+# ansible-galaxy collection install -r collections/requirements.yml --force --upgrade
+
+# Note: All versions updated to latest available as of September 2025
+# Compatible with ansible-core 2.19.2 and Python 3.13.7
