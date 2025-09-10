@@ -10,7 +10,8 @@
   vars:
     audit_timestamp: "{{ ansible_date_time.iso8601 }}"
     audit_results_path: "/var/lib/network-upgrade/compliance"
-    compliance_standards: "{{ compliance_standards | default(['security_baseline', 'network_hardening']) }}"
+    compliance_standards: >
+      {{ compliance_standards | default(['security_baseline', 'network_hardening']) }}
     generate_report: "{{ generate_report | default(true) }}"
   pre_tasks:
     - name: Create compliance audit directory
@@ -27,7 +28,8 @@
           device_name: "{{ inventory_hostname }}"
           platform: "{{ ansible_network_os }}"
           audit_timestamp: "{{ audit_timestamp }}"
-          firmware_version: "{{ current_firmware_version | default('unknown') }}"
+          firmware_version: >
+            {{ current_firmware_version | default('unknown') }}
           standards_tested: []
           compliance_checks:
             passed: []
@@ -44,19 +46,29 @@
             name: compliance-validation
             tasks_from: security-baseline
           vars:
-            audit_output: "{{ audit_results_path }}/{{ inventory_hostname }}/security_baseline_{{ audit_timestamp }}.json"
+            audit_output: >
+              {{ audit_results_path }}/{{ inventory_hostname }}/security_baseline_{{ audit_timestamp }}.json
 
         - name: Update compliance results - security baseline
           ansible.builtin.set_fact:
             compliance_results: >
               {{
                 compliance_results | combine({
-                  'standards_tested': compliance_results.standards_tested + ['security_baseline'],
+                  'standards_tested': >
+                    compliance_results.standards_tested + ['security_baseline'],
                   'compliance_checks': {
-                    'passed': compliance_results.compliance_checks.passed + security_baseline_results.passed,
-                    'failed': compliance_results.compliance_checks.failed + security_baseline_results.failed,
-                    'skipped': compliance_results.compliance_checks.skipped + security_baseline_results.skipped,
-                    'warnings': compliance_results.compliance_checks.warnings + security_baseline_results.warnings
+                    'passed': >
+                      compliance_results.compliance_checks.passed +
+                      security_baseline_results.passed,
+                    'failed': >
+                      compliance_results.compliance_checks.failed +
+                      security_baseline_results.failed,
+                    'skipped': >
+                      compliance_results.compliance_checks.skipped +
+                      security_baseline_results.skipped,
+                    'warnings': >
+                      compliance_results.compliance_checks.warnings +
+                      security_baseline_results.warnings
                   }
                 })
               }}

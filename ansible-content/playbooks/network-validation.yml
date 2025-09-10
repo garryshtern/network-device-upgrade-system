@@ -45,7 +45,8 @@
           vars:
             capture_mode: "validation"
             output_file: >
-              {{ validation_results_path }}/{{ inventory_hostname }}/bgp_current_{{ validation_timestamp }}.json
+              {{ validation_results_path }}/{{ inventory_hostname }}/
+              bgp_current_{{ validation_timestamp }}.json
 
         - name: Compare BGP with baseline
           ansible.builtin.include_role:
@@ -53,19 +54,27 @@
             tasks_from: bgp-comparison
           vars:
             baseline_file: >
-              {{ baseline_data_path }}/{{ inventory_hostname }}/bgp_baseline_*.json
+              {{ baseline_data_path }}/{{ inventory_hostname }}/
+              bgp_baseline_*.json
             current_file: >
-              {{ validation_results_path }}/{{ inventory_hostname }}/bgp_current_{{ validation_timestamp }}.json
+              {{ validation_results_path }}/{{ inventory_hostname }}/
+              bgp_current_{{ validation_timestamp }}.json
           when: compare_with_baseline
 
         - name: Mark BGP validation as passed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['bgp_validation']}) }}"
+            validation_results: >
+              {{ validation_results | combine({
+                'tests_passed': validation_results.tests_passed + ['bgp_validation']
+              }) }}
 
       rescue:
         - name: Mark BGP validation as failed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['bgp_validation']}) }}"
+            validation_results: >
+              {{ validation_results | combine({
+                'tests_failed': validation_results.tests_failed + ['bgp_validation']
+              }) }}
 
     # Interface Validation
     - name: Interface State Validation
@@ -77,7 +86,8 @@
           vars:
             capture_mode: "validation"
             output_file: >
-              {{ validation_results_path }}/{{ inventory_hostname }}/interfaces_current_{{ validation_timestamp }}.json
+              {{ validation_results_path }}/{{ inventory_hostname }}/
+              interfaces_current_{{ validation_timestamp }}.json
 
         - name: Compare interfaces with baseline
           ansible.builtin.include_role:
@@ -85,14 +95,19 @@
             tasks_from: interface-comparison
           vars:
             baseline_file: >
-              {{ baseline_data_path }}/{{ inventory_hostname }}/interfaces_baseline_*.json
+              {{ baseline_data_path }}/{{ inventory_hostname }}/
+              interfaces_baseline_*.json
             current_file: >
-              {{ validation_results_path }}/{{ inventory_hostname }}/interfaces_current_{{ validation_timestamp }}.json
+              {{ validation_results_path }}/{{ inventory_hostname }}/
+              interfaces_current_{{ validation_timestamp }}.json
           when: compare_with_baseline
 
         - name: Mark interface validation as passed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['interface_validation']}) }}"
+            validation_results: >
+              {{ validation_results | combine({
+                'tests_passed': validation_results.tests_passed + ['interface_validation']
+              }) }}
 
       rescue:
         - name: Mark interface validation as failed
