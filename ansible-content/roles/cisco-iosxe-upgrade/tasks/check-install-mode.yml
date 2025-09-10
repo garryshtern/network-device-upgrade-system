@@ -39,11 +39,7 @@
   
 - name: Parse storage information
   ansible.builtin.set_fact:
-    iosxe_upgrade_state: "{{ iosxe_upgrade_state | combine({
-      'install_mode': platform_supports_install,
-      'boot_mode': 'install' if platform_supports_install else 'bundle',
-      'available_space': bootflash_space.stdout[0] | regex_search('\\d+') | int
-    }) }}"
+    iosxe_upgrade_state: "{{ iosxe_upgrade_state | combine({'install_mode': platform_supports_install, 'boot_mode': 'install' if platform_supports_install else 'bundle', 'available_space': bootflash_space.stdout[0] | regex_search('\\d+') | int}) }}"
     
 - name: Display install mode assessment
   ansible.builtin.debug:

@@ -193,7 +193,7 @@
 
     - name: Generate compliance report
       ansible.builtin.template:
-        src: "{{ playbook_dir }}/../templates/compliance-report.j2"
+        src: "templates/compliance-report.j2"
         dest: "{{ audit_results_path }}/{{ inventory_hostname }}/compliance_report_{{ audit_timestamp }}.json"
         mode: "0644"
       vars:
@@ -205,7 +205,7 @@
 
     - name: Generate human-readable compliance report
       ansible.builtin.template:
-        src: "{{ playbook_dir }}/../templates/compliance-report.html.j2"
+        src: "templates/compliance-report.html.j2"
         dest: "{{ audit_results_path }}/{{ inventory_hostname }}/compliance_report_{{ audit_timestamp }}.html"
         mode: "0644"
       vars:

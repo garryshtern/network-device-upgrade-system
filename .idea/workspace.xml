@@ -4,14 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="87629bf4-cfe3-439f-a321-a3033a721acb" name="Changes" comment="Fix the failure in workflow">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/compliance-audit.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/compliance-audit.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/config-backup.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/config-backup.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/image-loading.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/image-loading.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/network-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/network-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration-tests/workflow-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/workflow-tests.yml" afterDir="false" />
-    </list>
+    <list default="true" id="87629bf4-cfe3-439f-a321-a3033a721acb" name="Changes" comment="Fix the failure in workflow" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -92,7 +85,7 @@
       <workItem from="1756861021857" duration="170000" />
       <workItem from="1756895195040" duration="5130000" />
       <workItem from="1756951775422" duration="9763000" />
-      <workItem from="1757115228585" duration="66339000" />
+      <workItem from="1757115228585" duration="66703000" />
     </task>
     <task id="LOCAL-00001" summary="Added implementations">
       <option name="closed" value="true" />

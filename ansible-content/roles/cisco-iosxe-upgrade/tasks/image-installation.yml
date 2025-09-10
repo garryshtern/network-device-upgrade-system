@@ -30,9 +30,6 @@
           cisco.ios.ios_command:
             commands:
               - "request platform software package install switch all file bootflash:{{ target_image_filename }} activate commit"
-            timeout: 3600
-            ansible.builtin.wait_for:
-              - result[0] contains "SUCCESS"
           register: install_mode_result
           
         - name: Verify install mode completion
@@ -73,10 +70,6 @@
       cisco.ios.ios_command:
         commands:
           - reload
-        prompt:
-          - 'confirm'
-        answer:
-          - 'y'
       register: reboot_command
       when: bundle_mode_reboot_required | default(false)
       
@@ -126,7 +119,6 @@
         commands:
           - show processes cpu sorted
           - show memory statistics
-        timeout: 60
       register: post_install_stability
       
     - name: Verify boot variables (bundle mode)
