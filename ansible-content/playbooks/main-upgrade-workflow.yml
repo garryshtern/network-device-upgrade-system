@@ -73,21 +73,25 @@
     - name: Phase 0 - Pre-Upgrade Validation
       block:
         - name: Device connectivity check
-          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/connectivity-check.yml
 
         - name: Device health check and baseline capture
           ansible.builtin.include_tasks: ../roles/common/tasks/health-check.yml
           when: not skip_validation
 
         - name: Verify firmware file availability
-          ansible.builtin.include_tasks: ../roles/image-validation/tasks/integrity-audit.yml
+          ansible.builtin.include_tasks: >
+            ../roles/image-validation/tasks/integrity-audit.yml
 
         - name: Check storage space requirements
-          ansible.builtin.include_tasks: ../roles/space-management/tasks/space-check.yml
+          ansible.builtin.include_tasks: >
+            ../roles/space-management/tasks/space-check.yml
 
       rescue:
         - name: Pre-validation failure handling
-          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "pre_validation"
             error_message: "Pre-upgrade validation failed"
@@ -96,7 +100,8 @@
     - name: Phase 1 - Image Loading
       block:
         - name: Storage cleanup and preparation
-          ansible.builtin.include_tasks: ../roles/common/tasks/storage-cleanup.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/storage-cleanup.yml
           when: upgrade_phase in ['full', 'loading']
 
         - name: Backup current configuration
@@ -108,12 +113,14 @@
           when: upgrade_phase in ['full', 'loading']
 
         - name: Verify loaded image integrity
-          ansible.builtin.include_tasks: ../roles/image-validation/tasks/hash-verification.yml
+          ansible.builtin.include_tasks: >
+            ../roles/image-validation/tasks/hash-verification.yml
           when: upgrade_phase in ['full', 'loading']
 
       rescue:
         - name: Image loading failure handling
-          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "image_loading"
             error_message: "Image loading phase failed"
@@ -129,7 +136,8 @@
           when: upgrade_phase in ['full', 'installation']
 
         - name: Final pre-installation checks
-          ansible.builtin.include_tasks: ../roles/network-validation/tasks/protocol-convergence.yml
+          ansible.builtin.include_tasks: >
+            ../roles/network-validation/tasks/protocol-convergence.yml
           when: >
             upgrade_phase in ['full', 'installation'] and not skip_validation
 
@@ -158,7 +166,8 @@
             and not skip_validation
 
         - name: Update device inventory
-          ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/metrics-export.yml
           vars:
             metric_type: "upgrade_completion"
             upgrade_status: "success"
@@ -181,7 +190,8 @@
 
       rescue:
         - name: Rollback failure handling
-          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: >
+            ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "rollback"
             error_message: >
@@ -194,7 +204,12 @@
 
     - name: Calculate upgrade duration
       ansible.builtin.set_fact:
-        upgrade_duration: "{{ ((upgrade_end_time | to_datetime('%Y-%m-%dT%H:%M:%SZ')) - (upgrade_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ'))).total_seconds() }}"
+        upgrade_duration: >
+          {{
+            ((upgrade_end_time | to_datetime('%Y-%m-%dT%H:%M:%SZ')) -
+            (upgrade_start_time |
+            to_datetime('%Y-%m-%dT%H:%M:%SZ'))).total_seconds()
+          }}
 
     - name: Export final metrics
       ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
