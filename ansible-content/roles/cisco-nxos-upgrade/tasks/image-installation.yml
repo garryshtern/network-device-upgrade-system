@@ -29,7 +29,7 @@
         commands:
           - show install all impact system bootflash:{{ target_firmware_version }}
       register: issu_compatibility_check
-      ignore_errors: true
+      failed_when: false
 
     - name: Set ISSU capability flag
       ansible.builtin.set_fact:

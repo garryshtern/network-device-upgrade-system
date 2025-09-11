@@ -65,7 +65,8 @@
           ansible.builtin.set_fact:
             validation_results: >
               {{ validation_results | combine({
-                'tests_passed': validation_results.tests_passed + ['bgp_validation']
+                'tests_passed':
+                  validation_results.tests_passed + ['bgp_validation']
               }) }}
 
       rescue:
@@ -73,7 +74,8 @@
           ansible.builtin.set_fact:
             validation_results: >
               {{ validation_results | combine({
-                'tests_failed': validation_results.tests_failed + ['bgp_validation']
+                'tests_failed':
+                  validation_results.tests_failed + ['bgp_validation']
               }) }}
 
     # Interface Validation
@@ -106,13 +108,15 @@
           ansible.builtin.set_fact:
             validation_results: >
               {{ validation_results | combine({
-                'tests_passed': validation_results.tests_passed + ['interface_validation']
+                'tests_passed':
+                  validation_results.tests_passed + ['interface_validation']
               }) }}
 
       rescue:
         - name: Mark interface validation as failed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['interface_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_failed':
+                  validation_results.tests_failed + ['interface_validation']}) }}"
 
     # Routing Validation
     - name: Routing State Validation
@@ -136,12 +140,14 @@
 
         - name: Mark routing validation as passed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['routing_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_passed':
+                  validation_results.tests_passed + ['routing_validation']}) }}"
 
       rescue:
         - name: Mark routing validation as failed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['routing_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_failed':
+                  validation_results.tests_failed + ['routing_validation']}) }}"
 
     # Multicast Validation (if applicable)
     - name: Multicast State Validation
@@ -171,7 +177,8 @@
 
         - name: Mark multicast validation as passed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['multicast_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_passed':
+                  validation_results.tests_passed + ['multicast_validation']}) }}"
           when:
             - ansible_network_os in ['nxos', 'ios']
             - multicast_enabled | default(true) | bool
@@ -184,7 +191,8 @@
       rescue:
         - name: Mark multicast validation as failed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['multicast_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_failed':
+                  validation_results.tests_failed + ['multicast_validation']}) }}"
 
     # ARP Table Validation
     - name: ARP Table Validation
@@ -208,12 +216,14 @@
 
         - name: Mark ARP validation as passed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['arp_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_passed':
+                  validation_results.tests_passed + ['arp_validation']}) }}"
 
       rescue:
         - name: Mark ARP validation as failed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['arp_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_failed':
+                  validation_results.tests_failed + ['arp_validation']}) }}"
 
     # Protocol Convergence Check
     - name: Protocol Convergence Validation
@@ -227,12 +237,14 @@
 
         - name: Mark convergence validation as passed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['protocol_convergence']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_passed':
+                  validation_results.tests_passed + ['protocol_convergence']}) }}"
 
       rescue:
         - name: Mark convergence validation as failed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['protocol_convergence']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_failed':
+                  validation_results.tests_failed + ['protocol_convergence']}) }}"
 
   post_tasks:
     - name: Generate validation summary

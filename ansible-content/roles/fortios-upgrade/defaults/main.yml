@@ -1,0 +1,65 @@
+---
+# FortiOS Upgrade Role - Default Variables
+
+# Connection settings
+fortios_connection_timeout: 300
+fortios_command_timeout: 60
+fortios_ssh_retries: 3
+
+# FortiOS API settings
+fortios_api_version: "v2"
+fortios_api_timeout: 300
+fortios_verify_ssl: false
+
+# HA cluster settings
+fortios_ha_enabled: false
+fortios_ha_sync_timeout: 600
+fortios_ha_upgrade_sequence: "primary_first"
+fortios_validate_ha_sync: true
+
+# Image management
+fortios_image_directory: "/var"
+fortios_backup_image_directory: "/var/backup"
+fortios_image_extension: "out"
+fortios_verify_image_signature: true
+
+# Storage management
+fortios_minimum_free_space_mb: 2048
+fortios_cleanup_old_images: true
+fortios_preserve_current_image: true
+
+# License validation
+fortios_validate_license: true
+fortios_license_grace_period: 30
+
+# Upgrade behavior
+fortios_reboot_required: true
+fortios_reboot_timeout: 900
+fortios_post_reboot_delay: 180
+
+# Validation settings
+fortios_validation_timeout: 300
+fortios_validate_version_after_upgrade: true
+fortios_validate_policies_after_upgrade: true
+fortios_validate_ha_after_upgrade: true
+fortios_validate_vpn_after_upgrade: true
+
+# Security policy validation
+validate_firewall_policies: true
+validate_vpn_tunnels: true
+validate_antivirus_signatures: true
+validate_ips_signatures: true
+
+# Performance thresholds
+max_cpu_utilization: 80
+max_memory_utilization: 85
+max_session_count_threshold: 0.8
+
+# Rollback settings
+fortios_enable_rollback: true
+fortios_rollback_timeout: 600
+
+# Timing controls
+policy_sync_timeout: 300
+signature_update_timeout: 600
+ha_failover_timeout: 120

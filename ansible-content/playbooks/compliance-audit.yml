@@ -86,8 +86,6 @@
               }}
     - name: Network Hardening Compliance Check
       when: "'network_hardening' in compliance_standards"
-
-      # Platform-specific compliance checks
       block:
         - name: Run network hardening audit
           ansible.builtin.include_role:

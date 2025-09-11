@@ -24,8 +24,12 @@
 
 - name: Parse file listings
   ansible.builtin.set_fact:
-    opengear_firmware_images: "{{ opengear_firmware_files.stdout_lines | select('match', '.*(img|bin)$') | map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}"
-    opengear_temp_file_list: "{{ opengear_temp_files.stdout_lines | select('match', '.*(upgrade_|opengear_).*') | map('regex_replace', '.* ([^/]+)$', '\\1') | list }}"
+    opengear_firmware_images: "
+      {{ opengear_firmware_files.stdout_lines | select('match', '.*(img|bin)$') | map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}
+      "
+    opengear_temp_file_list: "
+      {{ opengear_temp_files.stdout_lines | select('match', '.*(upgrade_|opengear_).*') | map('regex_replace', '.* ([^/]+)$', '\\1') | list }}
+      "
 
 - name: Convert storage sizes to GB
   ansible.builtin.set_fact:

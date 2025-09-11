@@ -1,0 +1,42 @@
+{
+  "arp_validation": {
+    "device_name": "{{ device_name }}",
+    "platform": "{{ platform }}",
+    "timestamp": "{{ validation_timestamp }}",
+    "arp_table_summary": {
+      "total_arp_entries": {{ arp_entries_total | default(0) }},
+      "static_arp_entries": {{ arp_static_entries | default(0) }},
+      "dynamic_arp_entries": {{ arp_dynamic_entries | default(0) }},
+      "incomplete_arp_entries": {{ arp_incomplete_entries | default(0) }}
+    },
+    "arp_table_health": {
+      "arp_table_utilization_percent": {{ ((arp_entries_total | default(0) / arp_table_max_size | default(1)) * 100) | round(2) }},
+      "arp_table_max_size": {{ arp_table_max_size | default(16384) }},
+      "arp_aging_timeout": {{ arp_aging_timeout | default(240) }},
+      "gratuitous_arp_enabled": {{ gratuitous_arp_enabled | default(true) | lower }}
+    },
+    "critical_arp_entries": {
+      "gateway_arp_entries": {{ gateway_arp_entries | default([]) }},
+      "server_arp_entries": {{ server_arp_entries | default([]) }},
+      "management_arp_entries": {{ management_arp_entries | default([]) }}
+    },
+    "arp_interface_summary": {
+      "interfaces_with_arp": {{ interfaces_with_arp | default([]) | length }},
+      "vlan_interfaces": {{ vlan_arp_interfaces | default([]) | length }},
+      "physical_interfaces": {{ physical_arp_interfaces | default([]) | length }}
+    },
+    "arp_validation_tests": {
+      "critical_gateways_reachable": {{ critical_gateways_reachable | default(true) | lower }},
+      "duplicate_arp_entries": {{ duplicate_arp_entries | default([]) | length }},
+      "arp_conflicts": {{ arp_conflicts | default([]) | length }},
+      "missing_critical_entries": {{ missing_critical_arp | default([]) | length }}
+    },
+    "validation_results": {
+      "overall_status": "{{ 'pass' if arp_validation_pass else 'fail' }}",
+      "arp_table_health": "{{ 'healthy' if arp_table_utilization_percent < 80 else 'degraded' }}",
+      "critical_issues": {{ critical_issues | default([]) }},
+      "warnings": {{ warnings | default([]) }},
+      "recommendations": {{ recommendations | default([]) }}
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "bgp_validation": {
+    "device_name": "{{ device_name }}",
+    "platform": "{{ platform }}",
+    "timestamp": "{{ validation_timestamp }}",
+    "bgp_global_summary": {
+      "bgp_enabled": {{ bgp_enabled | default(false) | lower }},
+      "router_id": "{{ bgp_router_id | default('0.0.0.0') }}",
+      "local_as": {{ bgp_local_as | default(0) }},
+      "total_neighbors": {{ bgp_neighbors_total | default(0) }},
+      "established_neighbors": {{ bgp_neighbors_established | default(0) }},
+      "idle_neighbors": {{ bgp_neighbors_idle | default(0) }},
+      "active_neighbors": {{ bgp_neighbors_active | default(0) }},
+      "connect_neighbors": {{ bgp_neighbors_connect | default(0) }}
+    },
+    "bgp_address_families": {
+      "ipv4_unicast": {
+        "enabled": {{ bgp_ipv4_unicast_enabled | default(false) | lower }},
+        "total_prefixes": {{ bgp_ipv4_prefixes_total | default(0) }},
+        "best_paths": {{ bgp_ipv4_best_paths | default(0) }}
+      },
+      "ipv6_unicast": {
+        "enabled": {{ bgp_ipv6_unicast_enabled | default(false) | lower }},
+        "total_prefixes": {{ bgp_ipv6_prefixes_total | default(0) }},
+        "best_paths": {{ bgp_ipv6_best_paths | default(0) }}
+      },
+      "vpnv4": {
+        "enabled": {{ bgp_vpnv4_enabled | default(false) | lower }},
+        "total_prefixes": {{ bgp_vpnv4_prefixes_total | default(0) }}
+      },
+      "evpn": {
+        "enabled": {{ bgp_evpn_enabled | default(false) | lower }},
+        "total_prefixes": {{ bgp_evpn_prefixes_total | default(0) }}
+      }
+    },
+    "bgp_neighbor_details": {
+      "external_neighbors": {{ bgp_external_neighbors | default([]) | length }},
+      "internal_neighbors": {{ bgp_internal_neighbors | default([]) | length }},
+      "route_reflector_clients": {{ bgp_rr_clients | default([]) | length }},
+      "confederation_peers": {{ bgp_confederation_peers | default([]) | length }}
+    },
+    "bgp_convergence": {
+      "convergence_time_seconds": {{ bgp_convergence_time | default(0) }},
+      "last_convergence": "{{ bgp_last_convergence | default('never') }}",
+      "flap_dampening_enabled": {{ bgp_dampening_enabled | default(false) | lower }}
+    },
+    "bgp_route_summary": {
+      "total_routes_received": {{ bgp_routes_received | default(0) }},
+      "total_routes_advertised": {{ bgp_routes_advertised | default(0) }},
+      "filtered_routes": {{ bgp_routes_filtered | default(0) }},
+      "suppressed_routes": {{ bgp_routes_suppressed | default(0) }}
+    },
+    "validation_results": {
+      "overall_status": "{{ 'pass' if bgp_convergence_ok else 'fail' }}",
+      "neighbor_health": "{{ 'healthy' if (bgp_neighbors_established | default(0) / bgp_neighbors_total | default(1)) > 0.8 else 'degraded' }}",
+      "route_health": "{{ 'stable' if bgp_routes_stable else 'unstable' }}",
+      "critical_issues": {{ critical_issues | default([]) }},
+      "warnings": {{ warnings | default([]) }},
+      "recommendations": {{ recommendations | default([]) }}
+    }
+  }
+}

@@ -61,7 +61,7 @@
     - item != running_firmware
     - cleanup_candidates | length > 0
   register: cleanup_result
-  ignore_errors: true
+  failed_when: false
 
 - name: Verify storage space after cleanup
   ansible.builtin.raw: "df -h /tmp"

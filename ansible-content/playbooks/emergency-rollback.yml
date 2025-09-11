@@ -327,7 +327,7 @@
       when:
         - netbox_url is defined
         - netbox_token is defined
-      ignore_errors: true
+      failed_when: false
 
     - name: Display rollback summary
       ansible.builtin.debug:

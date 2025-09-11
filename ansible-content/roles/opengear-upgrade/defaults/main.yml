@@ -1,0 +1,53 @@
+---
+# Opengear Console Server Upgrade Role - Default Variables
+
+# Connection settings
+opengear_connection_timeout: 300
+opengear_command_timeout: 60
+opengear_ssh_retries: 3
+
+# Architecture detection settings
+auto_detect_architecture: true
+fallback_architecture: "legacy"
+api_test_timeout: 10
+
+# Legacy architecture settings (older Opengear devices)
+legacy_upgrade_method: "cli"
+legacy_reboot_required: true
+legacy_reboot_timeout: 600
+
+# Modern architecture settings (newer Opengear devices with API)
+modern_upgrade_method: "api"
+modern_api_endpoint: "/api/v1/firmware/upgrade"
+modern_reboot_required: true
+modern_reboot_timeout: 600
+
+# Image management
+opengear_image_directory: "/tmp"
+opengear_backup_image_directory: "/var/backups"
+opengear_image_extension: "bin"
+opengear_verify_image_checksum: true
+
+# Storage management
+opengear_minimum_free_space_mb: 1024
+opengear_cleanup_old_images: true
+opengear_preserve_current_image: true
+
+# Validation settings
+opengear_validation_timeout: 300
+opengear_validate_version_after_upgrade: true
+opengear_validate_connectivity_after_upgrade: true
+opengear_validate_services_after_upgrade: true
+
+# Rollback settings
+opengear_enable_rollback: true
+opengear_rollback_timeout: 600
+
+# Service validation
+validate_ssh_service: true
+validate_web_interface: true
+validate_console_ports: true
+
+# Timing controls
+post_upgrade_delay: 60
+service_check_timeout: 120

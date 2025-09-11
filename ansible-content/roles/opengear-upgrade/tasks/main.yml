@@ -73,12 +73,12 @@
 
     - name: Set legacy device information
       ansible.builtin.set_fact:
-        opengear_upgrade_state: "{{ opengear_upgrade_state | combine({ 
-          'device_model': device_model_parsed, 
-          'current_version': current_version_parsed, 
+        opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
+          'device_model': device_model_parsed,
+          'current_version': current_version_parsed,
           'device_type': 'console_server',
-          'architecture': 'legacy', 
-          'upgrade_method': 'cli' 
+          'architecture': 'legacy',
+          'upgrade_method': 'cli'
         }) }}"
       when: not api_available
 - name: Check device-specific capabilities

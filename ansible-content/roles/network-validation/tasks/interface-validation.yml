@@ -12,7 +12,7 @@
           - show interface counters errors | json
       register: nxos_interface_info
       when: ansible_network_os == "cisco.nxos.nxos"
-      
+
     - name: Get interface status (IOS-XE)
       cisco.ios.ios_command:
         commands:
@@ -21,7 +21,7 @@
           - show interfaces counters errors
       register: ios_interface_info
       when: ansible_network_os == "cisco.ios.ios"
-      
+
     - name: Get interface status (Generic)
       ansible.netcommon.cli_command:
         ansible.builtin.command: "{{ item }}"
@@ -40,7 +40,7 @@
         interface_status: "{{ nxos_interface_info.stdout[1] | from_json }}"
         interface_errors: "{{ nxos_interface_info.stdout[2] | from_json }}"
       when: ansible_network_os == "cisco.nxos.nxos"
-      
+
     - name: Parse interface states
       set_fact:
         up_interfaces: "{{ interface_brief.TABLE_interface.ROW_interface | selectattr('state', 'equalto', 'up') | list }}"
@@ -55,7 +55,7 @@
         that:
           - up_interfaces | length > 0
         fail_msg: "No interfaces are in 'up' state"
-        
+
     - name: Validate management interface is up
       ansible.builtin.assert:
         that:
@@ -63,7 +63,7 @@
         fail_msg: "Management interface is not operational"
       when: ansible_network_os == "cisco.nxos.nxos" and interface_brief.TABLE_interface is defined
       failed_when: false
-      
+
     - name: Check for interface errors
       ansible.builtin.debug:
         msg: |
@@ -83,12 +83,13 @@
           - show vlan brief | json
       register: vlan_info
       when: ansible_network_os == "cisco.nxos.nxos"
-      
+
     - name: Validate VLAN assignments
       ansible.builtin.debug:
         msg: |
           VLAN Summary:
-          Active VLANs: {{ vlan_info.stdout[0] | from_json | json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief[?vlanshowbr_vlanstate==`active`]') | length }}
+          Active VLANs: 
+            {{ vlan_info.stdout[0] | from_json | json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief[?vlanshowbr_vlanstate==`active`]') | length }}
           Total VLANs: {{ vlan_info.stdout[0] | from_json | json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief') | length }}
       when: ansible_network_os == "cisco.nxos.nxos" and vlan_info.stdout[0] | from_json
 
@@ -101,7 +102,7 @@
       register: portchannel_info
       when: ansible_network_os == "cisco.nxos.nxos"
       failed_when: false
-      
+
     - name: Validate port-channel states
       ansible.builtin.debug:
         msg: |
@@ -120,7 +121,7 @@
       register: transceiver_info
       when: ansible_network_os == "cisco.nxos.nxos"
       failed_when: false
-      
+
     - name: Check SFP/QSFP status
       ansible.builtin.debug:
         msg: |
@@ -141,7 +142,7 @@
       down_interfaces: "{{ down_interfaces | length if down_interfaces is defined else 0 }}"
       admin_down: "{{ admin_down_interfaces | length if admin_down_interfaces is defined else 0 }}"
       interface_list: "{{ up_interfaces | map(attribute='interface') | list if up_interfaces is defined else [] }}"
-      
+
 - name: Interface validation summary
   ansible.builtin.debug:
     msg: |

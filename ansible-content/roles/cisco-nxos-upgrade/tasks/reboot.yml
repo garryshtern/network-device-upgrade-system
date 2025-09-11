@@ -23,7 +23,7 @@
       - reload
     timeout: 30
   register: reload_command
-  ignore_errors: true
+  failed_when: false
   vars:
     ansible_command_timeout: 30
 
@@ -31,7 +31,7 @@
   ansible.builtin.wait_for_connection:
     timeout: 60
     sleep: 5
-  ignore_errors: true
+  failed_when: false
 
 - name: Wait additional time for complete shutdown
   ansible.builtin.pause:
@@ -77,7 +77,7 @@
     commands:
       - show logging last 50 | grep -i "error\|fail\|warn"
   register: boot_log_check
-  ignore_errors: true
+  failed_when: false
 
 - name: Display boot warnings if found
   ansible.builtin.debug:

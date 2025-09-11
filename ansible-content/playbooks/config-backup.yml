@@ -97,6 +97,7 @@
         format: gz
         owner: ansible
         group: network-operators
+        mode: '0640'
       delegate_to: localhost
 
     - name: Record backup metrics

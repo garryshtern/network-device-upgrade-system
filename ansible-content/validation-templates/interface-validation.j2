@@ -1,0 +1,41 @@
+{
+  "interface_validation": {
+    "device_name": "{{ device_name }}",
+    "platform": "{{ platform }}",
+    "timestamp": "{{ validation_timestamp }}",
+    "interface_summary": {
+      "total_interfaces": {{ ansible_facts.interfaces | length | default(0) }},
+      "interfaces_up": {{ interfaces_up_count | default(0) }},
+      "interfaces_down": {{ interfaces_down_count | default(0) }},
+      "administrative_down": {{ admin_down_count | default(0) }}
+    },
+    "critical_interfaces": {
+      "total_critical": {{ critical_interfaces | length | default(0) }},
+      "critical_up": {{ critical_interfaces_up | default(0) }},
+      "critical_down": {{ critical_interfaces_down | default(0) }}
+    },
+    "interface_errors": {
+      "total_input_errors": {{ total_input_errors | default(0) }},
+      "total_output_errors": {{ total_output_errors | default(0) }},
+      "total_crc_errors": {{ total_crc_errors | default(0) }},
+      "interfaces_with_errors": {{ interfaces_with_errors | default([]) | length }}
+    },
+    "optical_interfaces": {
+      "total_optical": {{ optical_interfaces | length | default(0) }},
+      "optical_ok": {{ optical_ok_count | default(0) }},
+      "optical_degraded": {{ optical_degraded_count | default(0) }},
+      "optical_failed": {{ optical_failed_count | default(0) }}
+    },
+    "port_channels": {
+      "total_port_channels": {{ port_channels | length | default(0) }},
+      "port_channels_up": {{ port_channels_up | default(0) }},
+      "port_channels_down": {{ port_channels_down | default(0) }}
+    },
+    "validation_results": {
+      "overall_status": "{{ 'pass' if critical_interfaces_down == 0 else 'fail' }}",
+      "critical_issues": {{ critical_issues | default([]) }},
+      "warnings": {{ warnings | default([]) }},
+      "recommendations": {{ recommendations | default([]) }}
+    }
+  }
+}

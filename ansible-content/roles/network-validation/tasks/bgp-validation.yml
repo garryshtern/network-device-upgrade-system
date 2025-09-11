@@ -19,18 +19,18 @@
   block:
     - name: Get BGP summary (Cisco)
       cisco.nxos.nxos_command:
-        commands: 
+        commands:
           - show bgp all summary
       register: bgp_summary_raw
       when: ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
-      
+
     - name: Get BGP summary (Arista)
       arista.eos.eos_command:
         commands:
           - show bgp summary
       register: bgp_summary_raw
       when: ansible_network_os == 'arista.eos.eos'
-      
+
     - name: Parse BGP neighbor states
       ansible.builtin.set_fact:
         bgp_neighbors: "{{ bgp_summary_raw.stdout[0] | bgp_neighbors_parser }}"
@@ -56,7 +56,7 @@
             {%- endif -%}
           {%- endfor -%}
           {{ neighbors }}
-          
+
   rescue:
     - name: Handle BGP command failure
       ansible.builtin.set_fact:
@@ -68,26 +68,26 @@
   block:
     - name: Get BGP neighbor received routes
       cisco.nxos.nxos_command:
-        commands: 
+        commands:
           - "show bgp all neighbors {{ item.neighbor_ip }} received-routes summary"
       register: bgp_received_routes
       loop: "{{ bgp_neighbors | default([]) }}"
-      when: 
+      when:
         - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
         - bgp_neighbors is defined
-      ignore_errors: true
-      
+      failed_when: false
+
     - name: Get BGP neighbor advertised routes
       cisco.nxos.nxos_command:
         commands:
           - "show bgp all neighbors {{ item.neighbor_ip }} advertised-routes summary"
       register: bgp_advertised_routes
       loop: "{{ bgp_neighbors | default([]) }}"
-      when: 
+      when:
         - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
         - bgp_neighbors is defined
-      ignore_errors: true
-      
+      failed_when: false
+
   rescue:
     - name: Log BGP detailed statistics failure
       ansible.builtin.set_fact:
@@ -124,21 +124,21 @@
         path: "/var/log/network-upgrade/baselines/{{ inventory_hostname }}_bgp_baseline.json"
       register: baseline_file
       delegate_to: localhost
-      
+
     - name: Load baseline data
       ansible.builtin.set_fact:
         bgp_baseline: "{{ lookup('file', '/var/log/network-upgrade/baselines/' + inventory_hostname + '_bgp_baseline.json') | from_json }}"
-      when: 
+      when:
         - baseline_file.stat.exists
         - validation_mode == 'post_upgrade'
-        
+
     - name: Store baseline in validation results
       ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({
           'baseline': bgp_baseline | default({})
         }) }}"
       when: bgp_baseline is defined
-      
+
   rescue:
     - name: Handle baseline loading failure
       ansible.builtin.set_fact:
@@ -159,13 +159,21 @@
     - name: Perform BGP state comparison
       ansible.builtin.set_fact:
         bgp_comparison:
-          neighbor_count_match: "{{ bgp_validation.baseline.analysis.total_neighbors | default(0) == bgp_validation.current.analysis.total_neighbors | default(0) }}"
-          established_count_match: "{{ bgp_validation.baseline.analysis.established_neighbors | default(0) == bgp_validation.current.analysis.established_neighbors | default(0) }}"
-          prefix_count_variance: "{{ ((bgp_validation.current.analysis.total_received_prefixes | default(0) - bgp_validation.baseline.analysis.total_received_prefixes | default(0)) | abs) }}"
-          prefix_variance_percentage: "{{ ((bgp_validation.current.analysis.total_received_prefixes | default(1) - bgp_validation.baseline.analysis.total_received_prefixes | default(1)) / (bgp_validation.baseline.analysis.total_received_prefixes | default(1)) * 100) | abs }}"
+          neighbor_count_match: "
+            {{ bgp_validation.baseline.analysis.total_neighbors | default(0) == bgp_validation.current.analysis.total_neighbors | default(0) }}
+            "
+          established_count_match: "
+            {{ bgp_validation.baseline.analysis.established_neighbors | default(0) == bgp_validation.current.analysis.established_neighbors | default(0) }}
+            "
+          prefix_count_variance: "
+            {{ ((bgp_validation.current.analysis.total_received_prefixes | default(0) - bgp_validation.baseline.analysis.total_received_prefixes | default(0)) | abs) }}
+            "
+          prefix_variance_percentage: "
+            {{ ((bgp_validation.current.analysis.total_received_prefixes | default(1) - bgp_validation.baseline.analysis.total_received_prefixes | default(1)) / (bgp_validation.baseline.analysis.total_received_prefixes | default(1)) * 100) | abs }}
+            "
           new_down_neighbors: []
           recovered_neighbors: []
-          
+
     - name: Identify neighbor state changes
       ansible.builtin.set_fact:
         bgp_comparison: "{{ bgp_comparison | combine({
@@ -174,23 +182,25 @@
         }) }}"
       vars:
         current_down_neighbors: "{{ bgp_validation.current.neighbors | rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list }}"
-        baseline_down_neighbors: "{{ bgp_validation.baseline.neighbors | default([]) | rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list }}"
-        
+        baseline_down_neighbors: "
+          {{ bgp_validation.baseline.neighbors | default([]) | rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list }}
+          "
+
     - name: Store comparison results
       ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({
           'comparison': bgp_comparison
         }) }}"
-        
-  when: 
+
+  when:
     - validation_mode == 'post_upgrade'
     - bgp_validation.baseline != {}
 
 - name: Evaluate BGP validation results
   ansible.builtin.set_fact:
-    bgp_validation_passed: "{{ 
+    bgp_validation_passed: "{{
       bgp_validation.current.analysis.established_neighbors | default(0) > 0 and
-      (validation_mode == 'pre_upgrade' or 
+      (validation_mode == 'pre_upgrade' or
        (bgp_validation.comparison.neighbor_count_match | default(true) and
         bgp_validation.comparison.established_count_match | default(true) and
         bgp_validation.comparison.prefix_variance_percentage | default(0) <= 10 and
@@ -243,11 +253,21 @@
     headers:
       Authorization: "Token {{ influxdb_token }}"
     body: |
-      network_validation,device_id={{ inventory_hostname }},validation_type=bgp,protocol=bgp baseline_count={{ bgp_validation.baseline.analysis.total_neighbors | default(0) }},current_count={{ bgp_validation.current.analysis.established_neighbors | default(0) }},validation_success={{ bgp_validation.passed | lower }},convergence_time=0 {{ ansible_play_batch | hash('md5') }}000000000
-  when: 
+      network_validation,device_id=
+        {{ inventory_hostname }}
+        ,validation_type=bgp,protocol=bgp baseline_count=
+        {{ bgp_validation.baseline.analysis.total_neighbors | default(0) }}
+        ,current_count=
+        {{ bgp_validation.current.analysis.established_neighbors | default(0) }}
+        ,validation_success=
+        {{ bgp_validation.passed | lower }}
+        ,convergence_time=0 
+        {{ ansible_play_batch | hash('md5') }}
+        000000000
+  when:
     - influxdb_url is defined
     - send_metrics | default(true)
-  ignore_errors: true
+  failed_when: false
 
 - name: Display BGP validation results
   ansible.builtin.debug:

@@ -64,7 +64,7 @@
           - show bgp ipv4 unicast summary | json
           - show bgp ipv6 unicast summary | json
       register: bgp_status
-      ignore_errors: true
+      failed_when: false
 
     - name: Check BGP neighbor states
       ansible.builtin.set_fact:
@@ -142,4 +142,5 @@
       IGMP Validation: {{ nxos_validation_results.igmp_validated }}
       BFD Validation: {{ nxos_validation_results.bfd_validated }}
 
-      Overall Status: {{ 'PASS' if (nxos_validation_results.device_healthy and nxos_validation_results.interfaces_up and nxos_validation_results.bgp_neighbors_up and not nxos_validation_results.critical_logs_present) else 'CHECK REQUIRED' }}
+      Overall Status: 
+        {{ 'PASS' if (nxos_validation_results.device_healthy and nxos_validation_results.interfaces_up and nxos_validation_results.bgp_neighbors_up and not nxos_validation_results.critical_logs_present) else 'CHECK REQUIRED' }}

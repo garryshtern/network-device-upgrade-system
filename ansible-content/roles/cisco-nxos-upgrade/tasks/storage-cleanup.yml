@@ -55,7 +55,7 @@
     - item != running_image_file
     - cleanup_candidates | length > 0
   register: cleanup_result
-  ignore_errors: true
+  failed_when: false
 
 - name: Verify storage space after cleanup
   cisco.nxos.nxos_command:

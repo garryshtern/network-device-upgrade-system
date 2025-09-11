@@ -266,7 +266,12 @@
       - Routing: {{ 'Operational' if fortios_routing_table.meta is defined else 'Check Required' }}
       - VPN Services: SSL={{ fortios_ssl_vpn.meta.results.active_sessions | default(0) }}, IPSec={{ fortios_ipsec_vpn.meta.results.tunnel_count | default(0) }}
       - HA Status: {{ fortios_ha_status.meta.results.sync_status if fortios_ha_status is defined else 'Standalone' }}
-      - Security Services: AV={{ 'OK' if fortios_antivirus.meta is defined else 'N/A' }}, IPS={{ 'OK' if fortios_ips.meta is defined else 'N/A' }}, Web={{ 'OK' if fortios_webfilter.meta is defined else 'N/A' }}
+      - Security Services: AV=
+        {{ 'OK' if fortios_antivirus.meta is defined else 'N/A' }}
+        , IPS=
+        {{ 'OK' if fortios_ips.meta is defined else 'N/A' }}
+        , Web=
+        {{ 'OK' if fortios_webfilter.meta is defined else 'N/A' }}
       - License: {{ fortios_license_check.meta.results.status if fortios_license_check.meta is defined else 'Unknown' }}
       - CPU Usage: {{ fortios_system_resources.meta.results.cpu_usage }}%
       - Memory Usage: {{ fortios_system_resources.meta.results.memory_usage }}%

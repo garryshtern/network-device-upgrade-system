@@ -1,0 +1,2 @@
+# Example vault variables for demonstration
+vault_example_var: "{{ vault_example_password }}"

@@ -1,5 +1,5 @@
 ---
-# Legacy Opengear Image Installation (CLI-based)  
+# Legacy Opengear Image Installation (CLI-based)
 # For OM2200 and CM7100 models without REST API
 
 - name: Pre-installation validation (Legacy)

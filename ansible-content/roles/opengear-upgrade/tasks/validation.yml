@@ -103,19 +103,19 @@
           Console Server Validation:
           - Total Serial Ports: {{ serial_ports_validation.json | length }}
           - >-
-            Operational Ports: {{ 
-              serial_port_status_check.results | 
-              selectattr('json.status', 'equalto', 'available') | 
-              list | length if serial_port_status_check.results is defined else 0 
+            Operational Ports: {{
+              serial_port_status_check.results |
+              selectattr('json.status', 'equalto', 'available') |
+              list | length if serial_port_status_check.results is defined else 0
             }}
           - >-
-            Connectivity Tests: {{ 
-              serial_connectivity_test.results | 
-              selectattr('json.status', 'equalto', 'ok') | 
-              list | length if serial_connectivity_test.results is defined else 'N/A' 
-            }}/{{ 
-              serial_connectivity_test.results | 
-              length if serial_connectivity_test.results is defined else 0 
+            Connectivity Tests: {{
+              serial_connectivity_test.results |
+              selectattr('json.status', 'equalto', 'ok') |
+              list | length if serial_connectivity_test.results is defined else 'N/A'
+            }}/{{
+              serial_connectivity_test.results |
+              length if serial_connectivity_test.results is defined else 0
             }}
       when: opengear_upgrade_state.device_type == "console_server"
 
@@ -158,15 +158,15 @@
           Authorization: "Token {{ validation_api_token }}"
         validate_certs: false
       register: power_outlet_test
-      loop: "{{ 
-        (power_outlets_validation.json | 
-         selectattr('critical', 'equalto', false) | 
-         list)[0:2] 
+      loop: "{{
+        (power_outlets_validation.json |
+         selectattr('critical', 'equalto', false) |
+         list)[0:2]
       }}"
       failed_when: false
       when: >
-        power_outlets_validation.json | 
-        selectattr('critical', 'equalto', false) | 
+        power_outlets_validation.json |
+        selectattr('critical', 'equalto', false) |
         list | length > 0
 
     - name: Validate smart PDU functionality
@@ -175,24 +175,24 @@
           Smart PDU Validation:
           - Total Power Outlets: {{ power_outlets_validation.json | length }}
           - >-
-            Operational Outlets: {{ 
-              power_outlet_status_check.results | 
-              selectattr('json.status', 'equalto', 'on') | 
-              list | length if power_outlet_status_check.results is defined else 0 
+            Operational Outlets: {{
+              power_outlet_status_check.results |
+              selectattr('json.status', 'equalto', 'on') |
+              list | length if power_outlet_status_check.results is defined else 0
             }}
           - Power Capacity: {{ overall_power_status.json.max_capacity }}W
           - >-
-            Current Usage: {{ overall_power_status.json.current_usage }}W 
-            ({{ (overall_power_status.json.current_usage / 
+            Current Usage: {{ overall_power_status.json.current_usage }}W
+            ({{ (overall_power_status.json.current_usage /
             overall_power_status.json.max_capacity * 100) | round(1) }}%)
           - >-
-            Control Tests: {{ 
-              power_outlet_test.results | 
-              selectattr('json.status', 'equalto', 'success') | 
-              list | length if power_outlet_test.results is defined else 'N/A' 
-            }}/{{ 
-              power_outlet_test.results | 
-              length if power_outlet_test.results is defined else 0 
+            Control Tests: {{
+              power_outlet_test.results |
+              selectattr('json.status', 'equalto', 'success') |
+              list | length if power_outlet_test.results is defined else 'N/A'
+            }}/{{
+              power_outlet_test.results |
+              length if power_outlet_test.results is defined else 0
             }}
       when: opengear_upgrade_state.device_type == "smart_pdu"
 
@@ -264,7 +264,8 @@
           {% if environmental_sensors_check.json is defined and environmental_sensors_check.json | length > 0 %}
           - Temperature Sensors: {{ environmental_sensors_check.json | selectattr('type', 'equalto', 'temperature') | list | length }}
           - Humidity Sensors: {{ environmental_sensors_check.json | selectattr('type', 'equalto', 'humidity') | list | length }}
-          - All Sensors Normal: {{ 'YES' if environmental_sensors_check.json | selectattr('status', 'ne', 'normal') | list | length == 0 else 'CHECK REQUIRED' }}
+          - All Sensors Normal: 
+            {{ 'YES' if environmental_sensors_check.json | selectattr('status', 'ne', 'normal') | list | length == 0 else 'CHECK REQUIRED' }}
           {% else %}
           - Environmental Sensors: Not Available
           {% endif %}
@@ -280,11 +281,21 @@
       - System Health: {{ system_health_validation.json.status if system_health_validation.json is defined else 'Unknown' }}
       - Network Connectivity: {{ 'PASS' if network_connectivity_test.json.success | default(false) else 'CHECK' }}
       {% if opengear_upgrade_state.device_type == 'console_server' %}
-      - Serial Ports: {{ serial_ports_validation.json | length }} total, {{ serial_port_status_check.results | selectattr('json.status', 'equalto', 'available') | list | length if serial_port_status_check.results is defined else 'Unknown' }} operational
+      - Serial Ports: 
+        {{ serial_ports_validation.json | length }}
+         total, 
+        {{ serial_port_status_check.results | selectattr('json.status', 'equalto', 'available') | list | length if serial_port_status_check.results is defined else 'Unknown' }}
+         operational
       {% endif %}
       {% if opengear_upgrade_state.device_type == 'smart_pdu' %}
-      - Power Outlets: {{ power_outlets_validation.json | length }} total, {{ power_outlet_status_check.results | selectattr('json.status', 'defined') | list | length if power_outlet_status_check.results is defined else 'Unknown' }} responsive
-      - Power Usage: {{ (overall_power_status.json.current_usage / overall_power_status.json.max_capacity * 100) | round(1) if overall_power_status.json is defined else 'Unknown' }}%
+      - Power Outlets: 
+        {{ power_outlets_validation.json | length }}
+         total, 
+        {{ power_outlet_status_check.results | selectattr('json.status', 'defined') | list | length if power_outlet_status_check.results is defined else 'Unknown' }}
+         responsive
+      - Power Usage: 
+        {{ (overall_power_status.json.current_usage / overall_power_status.json.max_capacity * 100) | round(1) if overall_power_status.json is defined else 'Unknown' }}
+        %
       {% endif %}
       - Configuration: {{ 'VALID' if config_validation.json.status == 'valid' else 'CHECK' if config_validation.json is defined else 'Not Tested' }}
       - Backups Available: {{ backup_availability.json | length if backup_availability.json is defined else 'Unknown' }}

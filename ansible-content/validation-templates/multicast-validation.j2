@@ -1,0 +1,42 @@
+{
+  "multicast_validation": {
+    "device_name": "{{ device_name }}",
+    "platform": "{{ platform }}",
+    "timestamp": "{{ validation_timestamp }}",
+    "igmp_summary": {
+      "igmp_enabled": {{ igmp_enabled | default(false) | lower }},
+      "igmp_version": "{{ igmp_version | default('v2') }}",
+      "total_groups": {{ igmp_groups_total | default(0) }},
+      "active_groups": {{ igmp_groups_active | default(0) }},
+      "querier_interfaces": {{ igmp_querier_interfaces | default([]) | length }}
+    },
+    "igmp_snooping": {
+      "snooping_enabled": {{ igmp_snooping_enabled | default(false) | lower }},
+      "snooping_vlans": {{ igmp_snooping_vlans | default([]) | length }},
+      "multicast_forwarding_table_entries": {{ mcast_fwd_table_entries | default(0) }}
+    },
+    "pim_summary": {
+      "pim_enabled": {{ pim_enabled | default(false) | lower }},
+      "pim_mode": "{{ pim_mode | default('sparse') }}",
+      "rp_addresses": {{ rp_addresses | default([]) }},
+      "pim_neighbors": {{ pim_neighbors_total | default(0) }},
+      "pim_interfaces": {{ pim_interfaces | default([]) | length }}
+    },
+    "multicast_routes": {
+      "mroute_entries": {{ mroute_entries | default(0) }},
+      "active_sources": {{ active_sources | default(0) }},
+      "active_receivers": {{ active_receivers | default(0) }}
+    },
+    "rp_reachability": {
+      "rp_reachable": {{ rp_reachable | default(true) | lower }},
+      "rp_reachability_test_results": {{ rp_test_results | default([]) }}
+    },
+    "validation_results": {
+      "overall_status": "{{ 'pass' if multicast_convergence_ok else 'fail' }}",
+      "multicast_convergence": "{{ 'converged' if multicast_convergence_ok else 'not_converged' }}",
+      "critical_issues": {{ critical_issues | default([]) }},
+      "warnings": {{ warnings | default([]) }},
+      "recommendations": {{ recommendations | default([]) }}
+    }
+  }
+}

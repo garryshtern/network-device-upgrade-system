@@ -392,7 +392,7 @@
           ✓ Cisco NX-OS: {{ (validation_test_matrix.cisco_nxos.platform_validation_tasks | length) + (validation_test_matrix.cisco_nxos.common_validation_tasks | length) }} validation tasks - 100% COMPLETE
             Features: {{ validation_test_matrix.cisco_nxos.expected_features | join(', ') }}
 
-          ✓ Cisco IOS-XE: {{ validation_test_matrix.cisco_iosxe.validation_tasks | length }} validation tasks - 95% COMPLETE
+          ✓ Cisco IOS-XE: {{ (validation_test_matrix.cisco_iosxe.platform_validation_tasks | length) + (validation_test_matrix.cisco_iosxe.common_validation_tasks | length) }} validation tasks - 95% COMPLETE
             Features: {{ validation_test_matrix.cisco_iosxe.expected_features | join(', ') }}
 
           ✓ Opengear: Multi-architecture support - 95% COMPLETE

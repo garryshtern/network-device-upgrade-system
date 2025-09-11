@@ -6,7 +6,10 @@
   block:
     - name: Verify staged image
       ansible.netcommon.cli_command:
-        ansible.builtin.command: show image staged
+
+        command: show image staged
+
+      changed_when: false
       register: staged_check
 
     - name: Confirm image is ready
@@ -17,25 +20,32 @@
 
     - name: Final system state check
       ansible.netcommon.cli_command:
-        ansible.builtin.command: show system status
+
+        command: show system status
+
+      changed_when: false
       register: final_system_check
 
 - name: Metamako installation process
   block:
     - name: Set installation mode
       ansible.netcommon.cli_command:
-        ansible.builtin.command: system install-mode fast-reboot
+        command: system install-mode fast-reboot
       failed_when: false
 
     - name: Execute image installation
       ansible.netcommon.cli_command:
-        ansible.builtin.command: "image install {{ target_image_filename }} activate"
+        command: "image install {{ target_image_filename }} activate"
         timeout: 1800
+      changed_when: false
       register: install_result
 
     - name: Monitor installation progress
       ansible.netcommon.cli_command:
-        ansible.builtin.command: show install progress
+
+        command: show install progress
+
+      changed_when: false
       register: install_progress
       until: "'complete' in install_progress.stdout | lower or 'failed' in install_progress.stdout | lower"
       retries: 30
@@ -46,7 +56,10 @@
   block:
     - name: Verify new firmware is active
       ansible.netcommon.cli_command:
-        ansible.builtin.command: show version
+
+        command: show version
+
+      changed_when: false
       register: post_install_version
 
     - name: Confirm target version
@@ -57,7 +70,10 @@
 
     - name: Check system health
       ansible.netcommon.cli_command:
-        ansible.builtin.command: show system health
+
+        command: show system health
+
+      changed_when: false
       register: system_health_check
 
     - name: Validate system is healthy
@@ -70,14 +86,20 @@
   block:
     - name: Re-check Metawatch status (if equipped)
       ansible.netcommon.cli_command:
-        ansible.builtin.command: show metawatch status
+
+        command: show metawatch status
+
+      changed_when: false
       register: post_metawatch_status
       failed_when: false
       when: metamako_upgrade_state.metawatch_enabled
 
     - name: Re-check Metamux status (if equipped)
       ansible.netcommon.cli_command:
-        ansible.builtin.command: show metamux status
+
+        command: show metamux status
+
+      changed_when: false
       register: post_metamux_status
       failed_when: false
       when: metamako_upgrade_state.metamux_enabled

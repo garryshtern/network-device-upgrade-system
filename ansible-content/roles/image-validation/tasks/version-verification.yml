@@ -81,7 +81,7 @@
       Expected version: {{ expected_firmware_version }}
       Actual version:   {{ actual_firmware_version }}
     success_msg: "Firmware version verification passed: {{ actual_firmware_version }}"
-  when: 
+  when:
     - strict_version_check | default(true) | bool
     - actual_firmware_version != 'unknown'
 

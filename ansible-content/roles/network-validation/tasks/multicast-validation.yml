@@ -13,7 +13,7 @@
       register: nxos_pim_info
       when: ansible_network_os == "cisco.nxos.nxos"
       failed_when: false
-      
+
     - name: Get PIM neighbor status (IOS-XE)
       cisco.ios.ios_command:
         commands:
@@ -32,7 +32,7 @@
         pim_interfaces: "{{ nxos_pim_info.stdout[1] | from_json | json_query('TABLE_intf.ROW_intf') | default([]) }}"
         pim_rp_info: "{{ nxos_pim_info.stdout[2] | from_json | json_query('TABLE_rp.ROW_rp') | default([]) }}"
       when: ansible_network_os == "cisco.nxos.nxos" and nxos_pim_info.rc == 0
-      
+
     - name: Classify PIM neighbor states
       set_fact:
         pim_neighbors_up: "{{ pim_neighbors | selectattr('neighbor_state', 'equalto', 'up') | list }}"
@@ -54,7 +54,7 @@
           - {{ neighbor.neighbor_addr }}: {{ neighbor.neighbor_state }} ({{ neighbor.interface }})
           {% endfor %}
       when: pim_neighbors is defined
-      
+
     - name: Validate PIM interface modes
       ansible.builtin.debug:
         msg: |
@@ -76,13 +76,13 @@
       register: igmp_info
       when: ansible_network_os == "cisco.nxos.nxos"
       failed_when: false
-      
+
     - name: Parse IGMP information
       set_fact:
         igmp_groups: "{{ igmp_info.stdout[0] | from_json | json_query('TABLE_group.ROW_group') | default([]) }}"
         igmp_interfaces: "{{ igmp_info.stdout[1] | from_json | json_query('TABLE_intf.ROW_intf') | default([]) }}"
       when: igmp_info is defined and igmp_info.rc == 0
-      
+
     - name: Validate IGMP groups
       ansible.builtin.debug:
         msg: |
@@ -105,7 +105,7 @@
           - RP {{ rp.rp_addr }}: Groups {{ rp.group_range }} ({{ rp.rp_type }})
           {% endfor %}
       when: pim_rp_info is defined
-      
+
     - name: Test RP reachability
       cisco.nxos.nxos_command:
         commands:
@@ -114,7 +114,7 @@
       loop: "{{ pim_rp_info[:5] }}"  # Test first 5 RPs
       when: ansible_network_os == "cisco.nxos.nxos" and pim_rp_info is defined and pim_rp_info | length > 0
       failed_when: false
-      
+
     - name: Report RP reachability results
       ansible.builtin.debug:
         msg: |
@@ -133,12 +133,12 @@
       register: anycast_rp_info
       when: ansible_network_os == "cisco.nxos.nxos"
       failed_when: false
-      
+
     - name: Parse Anycast RP information
       set_fact:
         anycast_rp_sets: "{{ anycast_rp_info.stdout[0] | from_json | json_query('TABLE_anycast_rp.ROW_anycast_rp') | default([]) }}"
       when: anycast_rp_info is defined and anycast_rp_info.rc == 0
-      
+
     - name: Validate Anycast RP consistency
       ansible.builtin.debug:
         msg: |
@@ -163,13 +163,13 @@
       register: mroute_info
       when: ansible_network_os == "cisco.nxos.nxos"
       failed_when: false
-      
+
     - name: Parse multicast routes
       set_fact:
         mroute_summary: "{{ mroute_info.stdout[0] | from_json }}"
         mroute_entries: "{{ mroute_info.stdout[1] | from_json | json_query('TABLE_mroute.ROW_mroute') | default([]) }}"
       when: mroute_info is defined and mroute_info.rc == 0
-      
+
     - name: Validate multicast forwarding
       ansible.builtin.debug:
         msg: |

@@ -139,7 +139,11 @@
           - INIT sessions: {{ bfd_init_sessions }}
           - Total sessions: {{ bfd_total_sessions }}
           Expected: At least 80% of sessions should be UP
-        success_msg: "BFD sessions healthy: {{ bfd_up_sessions }}/{{ bfd_total_sessions }} UP ({{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1)
+        success_msg: "BFD sessions healthy: 
+          {{ bfd_up_sessions }}
+          /
+          {{ bfd_total_sessions }}
+           UP ({{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1)
           }}%)"
       when:
         - bfd_up_sessions is defined
@@ -234,7 +238,8 @@
       {% endfor %}
       {% endif %}
 
-      Health Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
+      Health Status: 
+        {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
 
 - name: Store BFD validation baseline
   ansible.builtin.copy:
@@ -250,7 +255,9 @@
         "enabled_interfaces": {{ bfd_enabled_interfaces | length if bfd_enabled_interfaces is defined else 0 }},
         "neighbor_sessions": {{ bfd_neighbor_sessions | default([]) | to_json }},
         "session_metrics": {{ bfd_session_metrics | default([]) | to_json }},
-        "validation_status": "{{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}"
+        "validation_status": "
+          {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
+          "
       }
     dest: "/tmp/bfd_baseline_{{ inventory_hostname }}.json"
     mode: "0644"
@@ -268,7 +275,9 @@
       DOWN_Sessions: {{ bfd_down_sessions if bfd_down_sessions is defined else 0 }}
       INIT_Sessions: {{ bfd_init_sessions if bfd_init_sessions is defined else 0 }}
       Enabled_Interfaces: {{ bfd_enabled_interfaces | length if bfd_enabled_interfaces is defined else 0 }}
-      Success_Rate: {{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1) if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_total_sessions | int > 0) else 0 }}%
+      Success_Rate: 
+        {{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1) if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_total_sessions | int > 0) else 0 }}
+        %
 
       {% if bfd_neighbor_sessions is defined %}
       Neighbor_Session_Details:
@@ -305,7 +314,8 @@
       {% endfor %}
       {% endif %}
 
-      Validation_Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
+      Validation_Status: 
+        {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: "/tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}.txt"
     mode: "0644"

@@ -207,7 +207,8 @@
       {% endfor %}
       {% endif %}
 
-      Health Status: {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans | int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
+      Health Status: 
+        {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans | int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
 
 - name: Store IGMP validation baseline
   ansible.builtin.copy:
@@ -257,7 +258,8 @@
       {% endfor %}
       {% endif %}
 
-      Validation_Status: {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans | int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
+      Validation_Status: 
+        {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans | int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: "/tmp/igmp_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}.txt"
     mode: "0644"

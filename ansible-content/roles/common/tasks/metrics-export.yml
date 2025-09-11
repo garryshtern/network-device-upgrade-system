@@ -42,7 +42,7 @@
     - influxdb_token is defined
     - influx_line is defined
     - send_metrics | default(true)
-  ignore_errors: true
+  failed_when: false
 
 - name: Log InfluxDB export status
   ansible.builtin.debug:
@@ -52,12 +52,20 @@
 - name: Export metrics to local file (backup/debugging)
   ansible.builtin.lineinfile:
     path: "/var/log/network-upgrade/metrics.log"
-    line: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }} | {{ inventory_hostname }} | {{ metric_type | default('unknown') }} | {{ metric_data | to_json }}"
+    line: "
+      {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
+       | 
+      {{ inventory_hostname }}
+       | 
+      {{ metric_type | default('unknown') }}
+       | 
+      {{ metric_data | to_json }}
+      "
     create: true
     mode: "0644"
   delegate_to: localhost
   when: log_metrics_locally | default(false)
-  ignore_errors: true
+  failed_when: false
 
 - name: Send metrics to external webhook (if configured)
   ansible.builtin.uri:
@@ -77,7 +85,7 @@
   when:
     - metrics_webhook_url is defined
     - send_metrics | default(true)
-  ignore_errors: true
+  failed_when: false
 
 - name: Update NetBox custom fields (if applicable)
   ansible.builtin.uri:
@@ -96,7 +104,7 @@
     - netbox_token is defined
     - netbox_custom_fields is defined
     - update_netbox | default(false)
-  ignore_errors: true
+  failed_when: false
 
 - name: Set metrics export results
   ansible.builtin.set_fact:

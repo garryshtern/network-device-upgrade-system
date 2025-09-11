@@ -59,7 +59,7 @@
     - cleanup_needed
     - cleanup_candidates | length > 0
   register: cleanup_result
-  ignore_errors: true
+  failed_when: false
 
 - name: Clear FortiOS logs to free space
   fortinet.fortios.fortios_log_setting:
@@ -68,7 +68,7 @@
       resolve_ip: "enable"
       log_invalid_packet: "disable"
   when: cleanup_needed
-  ignore_errors: true
+  failed_when: false
 
 - name: Execute garbage collection
   fortinet.fortios.fortios_system_global:
@@ -76,7 +76,7 @@
     system_global:
       admin_sport: "{{ ansible_port | default(443) }}"
   when: cleanup_needed
-  ignore_errors: true
+  failed_when: false
 
 - name: Verify storage space after cleanup
   fortinet.fortios.fortios_configuration_fact:

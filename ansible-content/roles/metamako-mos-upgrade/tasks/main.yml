@@ -15,7 +15,10 @@
 
 - name: Gather Metamako device facts
   ansible.netcommon.cli_command:
-    ansible.builtin.command: show version
+
+    command: show version
+
+  changed_when: false
   register: metamako_version
 
 - name: Parse device information

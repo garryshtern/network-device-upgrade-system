@@ -6,7 +6,7 @@
 supported_mos_versions:
   - "0.39"
 
-# Application versions  
+# Application versions
 default_metawatch_version: "4.2.0"
 default_metamux_version: "3.8.0"
 

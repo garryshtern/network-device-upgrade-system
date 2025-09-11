@@ -1,0 +1,43 @@
+{
+  "bfd_validation": {
+    "device_name": "{{ device_name }}",
+    "platform": "{{ platform }}",
+    "timestamp": "{{ validation_timestamp }}",
+    "bfd_global_summary": {
+      "bfd_enabled": {{ bfd_enabled | default(false) | lower }},
+      "bfd_echo_enabled": {{ bfd_echo_enabled | default(false) | lower }},
+      "total_sessions": {{ bfd_sessions_total | default(0) }},
+      "active_sessions": {{ bfd_sessions_up | default(0) }},
+      "down_sessions": {{ bfd_sessions_down | default(0) }},
+      "init_sessions": {{ bfd_sessions_init | default(0) }}
+    },
+    "bfd_interface_summary": {
+      "interfaces_with_bfd": {{ bfd_interfaces | length | default(0) }},
+      "physical_interfaces": {{ physical_bfd_interfaces | default([]) | length }},
+      "vlan_interfaces": {{ vlan_bfd_interfaces | default([]) | length }},
+      "port_channel_interfaces": {{ portchannel_bfd_interfaces | default([]) | length }}
+    },
+    "bfd_neighbor_status": {
+      "established_neighbors": {{ bfd_neighbors_established | default(0) }},
+      "failed_neighbors": {{ bfd_neighbors_failed | default(0) }},
+      "neighbor_details": {{ bfd_neighbor_details | default([]) }}
+    },
+    "bfd_timers": {
+      "default_hello_interval": {{ bfd_hello_interval | default(1000) }},
+      "default_hold_time": {{ bfd_hold_time | default(3000) }},
+      "echo_interval": {{ bfd_echo_interval | default(50) }}
+    },
+    "bfd_performance": {
+      "session_flaps_last_hour": {{ bfd_session_flaps | default(0) }},
+      "average_detection_time_ms": {{ bfd_detection_time_avg | default(0) }},
+      "max_detection_time_ms": {{ bfd_detection_time_max | default(0) }}
+    },
+    "validation_results": {
+      "overall_status": "{{ 'pass' if bfd_health_ok else 'fail' }}",
+      "session_health": "{{ 'healthy' if (bfd_sessions_up | default(0) / bfd_sessions_total | default(1)) > 0.8 else 'degraded' }}",
+      "critical_issues": {{ critical_issues | default([]) }},
+      "warnings": {{ warnings | default([]) }},
+      "recommendations": {{ recommendations | default([]) }}
+    }
+  }
+}

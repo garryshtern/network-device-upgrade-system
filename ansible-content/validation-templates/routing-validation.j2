@@ -1,0 +1,40 @@
+{
+  "routing_validation": {
+    "device_name": "{{ device_name }}",
+    "platform": "{{ platform }}",
+    "timestamp": "{{ validation_timestamp }}",
+    "bgp_summary": {
+      "bgp_enabled": {{ bgp_enabled | default(false) | lower }},
+      "total_neighbors": {{ bgp_neighbors_total | default(0) }},
+      "established_neighbors": {{ bgp_neighbors_established | default(0) }},
+      "idle_neighbors": {{ bgp_neighbors_idle | default(0) }},
+      "active_neighbors": {{ bgp_neighbors_active | default(0) }},
+      "convergence_time_seconds": {{ bgp_convergence_time | default(0) }}
+    },
+    "ospf_summary": {
+      "ospf_enabled": {{ ospf_enabled | default(false) | lower }},
+      "total_neighbors": {{ ospf_neighbors_total | default(0) }},
+      "full_neighbors": {{ ospf_neighbors_full | default(0) }},
+      "loading_neighbors": {{ ospf_neighbors_loading | default(0) }},
+      "areas_configured": {{ ospf_areas | length | default(0) }}
+    },
+    "route_table": {
+      "total_routes": {{ routes_total | default(0) }},
+      "connected_routes": {{ connected_routes | default(0) }},
+      "static_routes": {{ static_routes | default(0) }},
+      "bgp_routes": {{ bgp_routes | default(0) }},
+      "ospf_routes": {{ ospf_routes | default(0) }}
+    },
+    "redistribution": {
+      "bgp_redistribution": {{ bgp_redistribution | default([]) }},
+      "ospf_redistribution": {{ ospf_redistribution | default([]) }}
+    },
+    "validation_results": {
+      "overall_status": "{{ 'pass' if routing_convergence_ok else 'fail' }}",
+      "routing_convergence": "{{ 'converged' if routing_convergence_ok else 'not_converged' }}",
+      "critical_issues": {{ critical_issues | default([]) }},
+      "warnings": {{ warnings | default([]) }},
+      "recommendations": {{ recommendations | default([]) }}
+    }
+  }
+}

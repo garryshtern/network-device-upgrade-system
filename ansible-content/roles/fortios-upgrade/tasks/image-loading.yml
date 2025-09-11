@@ -73,7 +73,9 @@
       Secure FortiOS Image Loading Completed:
       - Target Version: {{ fortios_upgrade_state.target_version }}
       - Transfer Method: Server-Initiated PUSH (Secure Upload)
-      - File Size: {{ available_firmware.meta.results | selectattr('version', 'equalto', fortios_upgrade_state.target_version) | map(attribute='size_mb') | first | default('Unknown') }}MB
+      - File Size: 
+        {{ available_firmware.meta.results | selectattr('version', 'equalto', fortios_upgrade_state.target_version) | map(attribute='size_mb') | first | default('Unknown') }}
+        MB
       - Integrity: {{ firmware_verification.meta.results.status | default('Not Verified') }}
       - Security: PUSH transfer from server (HIGH SECURITY)
       - Status: Ready for Installation

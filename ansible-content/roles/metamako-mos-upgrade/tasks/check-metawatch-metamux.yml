@@ -4,26 +4,38 @@
 
 - name: Check for installed applications
   ansible.netcommon.cli_command:
-    ansible.builtin.command: show application
+
+    command: show application
+
+  changed_when: false
   register: installed_applications
   failed_when: false
 
 - name: Check MetaWatch application status (if installed)
   ansible.netcommon.cli_command:
-    ansible.builtin.command: show application metawatch
+
+    command: show application metawatch
+
+  changed_when: false
   register: metawatch_app_status
   failed_when: false
 
 - name: Get MetaWatch sync and telemetry status (if running)
   ansible.netcommon.cli_command:
-    ansible.builtin.command: app metawatch show status
+
+    command: app metawatch show status
+
+  changed_when: false
   register: metawatch_detailed_status
   failed_when: false
   when: metawatch_app_status.rc == 0 and 'running' in metawatch_app_status.stdout | lower
 
 - name: Check MetaMux application status (if installed)
   ansible.netcommon.cli_command:
-    ansible.builtin.command: show application metamux
+
+    command: show application metamux
+
+  changed_when: false
   register: metamux_app_status
   failed_when: false
 
