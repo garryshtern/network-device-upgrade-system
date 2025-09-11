@@ -22,9 +22,6 @@ RUN apk add --no-cache \
     gcc \
     musl-dev \
     libffi-dev \
-    openssl-dev \
-    cargo \
-    rust \
     && rm -rf /var/cache/apk/*
 
 # Create non-root user for security and RHEL/podman compatibility
@@ -45,12 +42,11 @@ USER ansible
 RUN pip install --user --no-cache-dir --upgrade pip \
     && pip install --user --no-cache-dir \
         ansible \
-        paramiko>=3.0.0 \
+        paramiko \
         netaddr \
         jinja2 \
         pyyaml \
-        requests \
-        cryptography
+        requests
 
 # Install Ansible collections with explicit versions
 RUN ansible-galaxy collection install \
