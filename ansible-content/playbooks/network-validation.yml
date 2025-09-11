@@ -253,14 +253,17 @@
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../validation-templates/validation-summary.j2"
         dest: "{{ validation_results_path }}/{{ inventory_hostname }}/validation_summary_{{ validation_timestamp }}.json"
+        mode: '0644'
       vars:
         summary_data: "{{ validation_results }}"
       delegate_to: localhost
 
     - name: Calculate validation score
       ansible.builtin.set_fact:
-        validation_score: "{{ (validation_results.tests_passed | length / (validation_results.tests_passed | length + validation_results.tests_failed | length) *
-          100) | round(2) }}"
+        validation_score: >-
+          {{ (validation_results.tests_passed | length /
+             (validation_results.tests_passed | length +
+              validation_results.tests_failed | length) * 100) | round(2) }}
       when: (validation_results.tests_passed | length + validation_results.tests_failed | length) > 0
 
     - name: Record validation metrics
