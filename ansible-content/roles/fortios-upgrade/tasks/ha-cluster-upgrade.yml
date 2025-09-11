@@ -122,7 +122,7 @@
     - name: Check final HA status
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
-        selector: "system_ha_status"
+        selector: "system_ha-statistics"
       register: final_cluster_status
 
     - name: Verify cluster health

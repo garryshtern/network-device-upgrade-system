@@ -4,14 +4,14 @@
 
 # Validation control flags
 # Enable/disable specific validation modules
-validate_ipsec: true # Enable IPSec tunnel validation
-validate_bfd: true # Enable BFD session validation
-validate_optics: true # Enable interface optics validation
+validate_ipsec: true  # Enable IPSec tunnel validation
+validate_bfd: true  # Enable BFD session validation
+validate_optics: true  # Enable interface optics validation
 
 # Upgrade behavior settings
-check_install_mode: true # Verify install vs bundle mode before upgrade
-verify_space: true # Check available storage space
-backup_config: true # Create configuration backup before upgrade
+check_install_mode: true  # Verify install vs bundle mode before upgrade
+verify_space: true  # Check available storage space
+backup_config: true  # Create configuration backup before upgrade
 rollback_on_failure: true # Automatically rollback on upgrade failure
 
 # Validation thresholds

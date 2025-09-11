@@ -5,7 +5,7 @@
 - name: Get HA cluster status
   fortinet.fortios.fortios_monitor_fact:
     vdom: "root"
-    selector: "system_ha_status"
+    selector: "system_ha-statistics"
   register: ha_status
 
 - name: Parse HA cluster information
@@ -80,7 +80,7 @@
     - name: Wait for cluster upgrade readiness
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
-        selector: "system_ha_status"
+        selector: "system_ha-statistics"
       register: ha_readiness_check
       until: ha_readiness_check.meta.results.upgrade_ready | default(false)
       retries: 30

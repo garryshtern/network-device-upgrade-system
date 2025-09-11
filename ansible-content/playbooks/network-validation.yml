@@ -159,7 +159,8 @@
             tasks_from: multicast-validation
           vars:
             capture_mode: "validation"
-            output_file: "{{ validation_results_path }}/{{ inventory_hostname }}/multicast_current_{{ validation_timestamp }}.json"
+            output_file: >-
+              {{ validation_results_path }}/{{ inventory_hostname }}/multicast_current_{{ validation_timestamp }}.json
           when:
             - ansible_network_os in ['nxos', 'ios']
             - multicast_enabled | default(true) | bool

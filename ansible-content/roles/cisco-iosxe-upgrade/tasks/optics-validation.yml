@@ -122,8 +122,8 @@
     - name: Verify low error rates on active interfaces
       ansible.builtin.assert:
         that:
-          - item[2] | int < 100 # Input errors < 100
-          - item[3] | int < 100 # Output errors < 100
+          - item[2] | int < 100  # Input errors < 100
+          - item[3] | int < 100  # Output errors < 100
         fail_msg: |
           Interface {{ item[0] }} has high error count:
           Input errors: {{ item[2] }}, Output errors: {{ item[3] }}
@@ -131,7 +131,7 @@
       loop: "{{ interface_error_summary }}"
       when:
         - interface_error_summary is defined
-        - item[1] == 'up' # Only check interfaces that are up
+        - item[1] == 'up'  # Only check interfaces that are up
 
 - name: Advanced optics diagnostics
   block:
