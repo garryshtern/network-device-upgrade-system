@@ -19,6 +19,12 @@ RUN apk add --no-cache \
     sudo \
     tzdata \
     ca-certificates \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    cargo \
+    rust \
     && rm -rf /var/cache/apk/*
 
 # Create non-root user for security and RHEL/podman compatibility
