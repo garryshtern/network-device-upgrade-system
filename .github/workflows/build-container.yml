@@ -146,7 +146,7 @@ jobs:
           
           # Test version information
           echo "::group::Testing container environment"
-          echo "Skipping environment test due to galaxy config requirements"
+          docker run --rm "$IMAGE_TAG" shell -c "ansible --version && python3 --version"
           echo "::endgroup::"
           
           echo "✅ Container functionality tests completed successfully"
