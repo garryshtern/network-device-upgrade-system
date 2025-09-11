@@ -69,7 +69,7 @@ class FileValidator:
                     if 'hosts' not in play and 'import_playbook' not in play:
                         self.warnings.append(f"Missing 'hosts' in play in {file_path}")
 
-        except Exception as e:
+        except Exception:
             # Already caught by validate_yaml_file
             pass
 
@@ -83,7 +83,8 @@ class FileValidator:
             for file_path in directory.rglob(f"*{ext}"):
                 if ext in ['.yml', '.yaml']:
                     self.validate_yaml_file(file_path)
-                    if 'ansible-content' in str(file_path) or 'playbook' in str(file_path):
+                    if ('ansible-content' in str(file_path) or
+                            'playbook' in str(file_path)):
                         self.validate_ansible_structure(file_path)
                 elif ext == '.json':
                     self.validate_json_file(file_path)
