@@ -7,6 +7,12 @@ name: Ansible Tests
     branches: [main, develop]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  issues: read
+  checks: read
+  pull-requests: read
+
 jobs:
   lint-and-syntax:
     name: Lint and Syntax Tests
@@ -233,17 +239,12 @@ jobs:
           EOF
 
       - name: Create release
-        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.get_version.outputs.new_version }}
-          release_name: >-
-            Network Device Upgrade System
-            ${{ steps.get_version.outputs.new_version }}
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
+        run: |
+          gh release create "${{ steps.get_version.outputs.new_version }}" \
+            --title "Network Device Upgrade System ${{ steps.get_version.outputs.new_version }}" \
+            --notes-file release_notes.md
 
       - name: Create deployment artifact
         run: |
@@ -263,13 +264,8 @@ jobs:
             *.md
 
       - name: Upload release asset
-        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: >-
-            ./network-upgrade-system-${{ steps.get_version.outputs.new_version }}.tar.gz
-          asset_name: >-
-            network-upgrade-system-${{ steps.get_version.outputs.new_version }}.tar.gz
-          asset_content_type: application/gzip
+        run: |
+          gh release upload "${{ steps.get_version.outputs.new_version }}" \
+            "./network-upgrade-system-${{ steps.get_version.outputs.new_version }}.tar.gz"
