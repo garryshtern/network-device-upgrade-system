@@ -41,6 +41,9 @@ COPY ansible-content/collections/requirements.yml ./ansible-content/collections/
 # Install Ansible and Python dependencies as non-root user
 USER ansible
 
+# Set PATH to include user pip binaries
+ENV PATH="/home/ansible/.local/bin:${PATH}"
+
 # Upgrade pip and install Ansible with latest versions
 RUN pip install --user --no-cache-dir --upgrade pip \
     && pip install --user --no-cache-dir \
@@ -67,8 +70,7 @@ COPY --chown=ansible:ansible docker-entrypoint.sh ./docker-entrypoint.sh
 # Make entrypoint executable
 RUN chmod +x docker-entrypoint.sh
 
-# Set PATH to include user pip binaries
-ENV PATH="/home/ansible/.local/bin:${PATH}"
+# Set Ansible environment variables
 ENV ANSIBLE_CONFIG="/opt/network-upgrade/ansible-content/ansible.cfg"
 ENV ANSIBLE_COLLECTIONS_PATH="/home/ansible/.ansible/collections"
 ENV ANSIBLE_ROLES_PATH="/opt/network-upgrade/ansible-content/roles"
