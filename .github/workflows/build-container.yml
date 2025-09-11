@@ -113,7 +113,7 @@ jobs:
         if: inputs.push_image && github.event_name != 'pull_request'
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ steps.meta.outputs.tags }}
+          image: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
           format: spdx-json
           output-file: sbom.spdx.json
 
