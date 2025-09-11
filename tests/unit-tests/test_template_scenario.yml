@@ -62,7 +62,7 @@
 
 - name: "Verify template content: {{ template_test.name }}"
   assert:
-    that: "rendered_content.content | b64decode | regex_search(expected_item)"
+    that: "(rendered_content.content | b64decode | regex_search(expected_item)) is not none"
     fail_msg: "Expected content '{{ expected_item }}' not found in rendered template"
     success_msg: "✓ Found expected content: {{ expected_item }}"
   loop: "{{ template_test.expected_content }}"
