@@ -4,6 +4,12 @@
 
 - name: Pre-upload validation (Legacy)
   block:
+    - name: Check system information via CLI
+      ansible.builtin.raw: |
+        echo "show system info" | /bin/cli
+      register: system_info_check
+      delegate_to: "{{ inventory_hostname }}"
+
     - name: Check available storage space via CLI
       ansible.builtin.raw: |
         echo "show disk usage" | /bin/cli
@@ -43,6 +49,7 @@
       delegate_to: "{{ inventory_hostname }}"
 
 - name: Transfer firmware image via SCP
+  # SCP transfer used for legacy devices
   block:
     - name: Start firmware transfer
       ansible.builtin.copy:

@@ -46,11 +46,13 @@ jobs:
         run: |
           echo "Running extended platform-specific tests..."
           # Test each platform with extended scenarios
-          for platform in cisco_nxos cisco_iosxe fortios opengear metamako_mos; do
+          for platform in cisco_nxos cisco_iosxe fortios opengear \
+                       metamako_mos; do
             echo "=== Extended testing for platform: $platform ==="
             if [ -f "tests/vendor-tests/${platform}-tests.yml" ]; then
               ansible-playbook "tests/vendor-tests/${platform}-tests.yml" \
-                --check --diff || echo "Extended test completed for $platform"
+                --check --diff || \
+                echo "Extended test completed for $platform"
             fi
           done
 
@@ -93,7 +95,8 @@ jobs:
           echo "- Stress testing (5 iterations): ✅" >> extended-test-report.md
           echo "- Performance benchmarks: ✅" >> extended-test-report.md
           echo "" >> extended-test-report.md
-          echo "Extended testing provides deeper validation beyond standard CI/CD tests." >> extended-test-report.md
+          echo "Extended testing provides deeper validation beyond standard" \
+            "CI/CD tests." >> extended-test-report.md
 
       - name: Upload extended test report
         uses: actions/upload-artifact@v3

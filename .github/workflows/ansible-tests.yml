@@ -178,7 +178,8 @@ jobs:
         id: get_version
         run: |
           # Get the latest tag, or use v1.0.0 if no tags exist
-          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || \
+            echo "v0.0.0")
           echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
 
           # Generate new version (increment patch version)
@@ -206,7 +207,8 @@ jobs:
 
           # Create release notes
           cat > release_notes.md << 'EOF'
-          ## Network Device Upgrade System Release ${{ steps.get_version.outputs.new_version }}
+          ## Network Device Upgrade System Release
+          ${{ steps.get_version.outputs.new_version }}
 
           ### What's Changed
           $commits
@@ -219,13 +221,15 @@ jobs:
           - Security scanning
 
           ### Installation
-          This release includes the complete Ansible-based network device upgrade system supporting:
+          This release includes the complete Ansible-based network device
+          upgrade system supporting:
           - Cisco NX-OS and IOS-XE platforms
           - FortiOS firewall upgrades
           - Metamako MOS switches
           - Opengear console servers
 
-          For installation instructions, see the [Installation Guide](docs/installation-guide.md).
+          For installation instructions, see the
+          [Installation Guide](docs/installation-guide.md).
           EOF
 
       - name: Create release
@@ -234,7 +238,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.get_version.outputs.new_version }}
-          release_name: Network Device Upgrade System ${{ steps.get_version.outputs.new_version }}
+          release_name: >-
+            Network Device Upgrade System
+            ${{ steps.get_version.outputs.new_version }}
           body_path: release_notes.md
           draft: false
           prerelease: false
@@ -262,6 +268,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: ./network-upgrade-system-${{ steps.get_version.outputs.new_version }}.tar.gz
-          asset_name: network-upgrade-system-${{ steps.get_version.outputs.new_version }}.tar.gz
+          asset_path: >-
+            ./network-upgrade-system-${{ steps.get_version.outputs.new_version }}.tar.gz
+          asset_name: >-
+            network-upgrade-system-${{ steps.get_version.outputs.new_version }}.tar.gz
           asset_content_type: application/gzip

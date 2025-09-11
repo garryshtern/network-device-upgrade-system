@@ -10,8 +10,13 @@
       <change beforePath="$PROJECT_DIR$/ansible-content/ansible.cfg" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/ansible.cfg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ansible-content/collections/requirements.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/collections/requirements.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ansible-content/roles/image-validation/tasks/hash-verification.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/image-validation/tasks/hash-verification.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/main.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/main.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/storage-cleanup.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/storage-cleanup.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/validation.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/integration-tests/multi-platform-integration-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/multi-platform-integration-tests.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/integration-tests/workflow-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/workflow-tests.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/performance-tests/memory-profiler.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/performance-tests/memory-profiler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/validation-scripts/yaml-validator.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/validation-scripts/yaml-validator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,7 +100,7 @@
       <workItem from="1756951775422" duration="9763000" />
       <workItem from="1757115228585" duration="72241000" />
       <workItem from="1757551344727" duration="70000" />
-      <workItem from="1757554781068" duration="1057000" />
+      <workItem from="1757554781068" duration="1732000" />
     </task>
     <task id="LOCAL-00001" summary="Added implementations">
       <option name="closed" value="true" />
