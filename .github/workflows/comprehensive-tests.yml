@@ -16,6 +16,10 @@ name: Scheduled Comprehensive Tests
           - performance-only
           - stress-test
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   extended-testing:
     name: Extended Test Suite (Scheduled)
@@ -27,13 +31,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.13.7'
 
       - name: Install dependencies
         run: |
-          pip install 'ansible>=6.0.0,<8.0.0'
+          pip install --upgrade ansible
           pip install yamllint ansible-lint pytest pytest-ansible
           ansible-galaxy collection install \
             -r ansible-content/collections/requirements.yml \
@@ -99,7 +103,7 @@ jobs:
             "CI/CD tests." >> extended-test-report.md
 
       - name: Upload extended test report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: extended-test-report-${{ github.run_number }}
           path: extended-test-report.md

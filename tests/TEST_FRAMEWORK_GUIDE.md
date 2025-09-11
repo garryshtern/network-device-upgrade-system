@@ -122,8 +122,8 @@ tests/
 
 ### **Prerequisites**
 ```bash
-# Install Ansible with compatible version
-pip install 'ansible>=8.0.0,<10.0.0'
+# Install latest Ansible version (includes ansible-core 2.19.2)
+pip install --upgrade ansible
 
 # Install Ansible collections
 ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force --ignore-certs
@@ -332,7 +332,7 @@ Critical Validation Components:
 ### **Common Test Failures**
 ```bash
 # Missing dependencies
-pip install ansible pyyaml
+pip install --upgrade ansible pyyaml
 
 # Syntax errors in new files
 ansible-playbook --syntax-check path/to/new/file.yml
