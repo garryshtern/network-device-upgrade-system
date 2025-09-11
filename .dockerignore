@@ -1,0 +1,87 @@
+# Git files
+.git/
+.gitignore
+.github/
+
+# IDE and editor files  
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+ENV/
+
+# Testing and temporary files
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+logs/
+tmp/
+
+# Documentation build
+docs/_build/
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local development overrides
+ansible-content/inventory/hosts.yml.local
+ansible-content/group_vars/all.yml.local
+ansible-content/host_vars/
+*.retry
+
+# Ansible vault files (security)
+*.vault
+vault_*
+
+# Container build artifacts
+Dockerfile.*
+docker-compose*.yml
+
+# Build artifacts and binaries  
+build/
+dist/
+*.egg-info/
+
+# Local test results
+test-results/
+junit.xml
+
+# IDE specific
+*.iml
+.project
+.classpath
+.settings/

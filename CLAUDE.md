@@ -67,6 +67,29 @@ ansible-galaxy collection install \
   --force --upgrade --ignore-certs
 ```
 
+## Container Deployment
+
+🐳 **Production-ready container available:**
+
+```bash
+# Docker
+docker pull ghcr.io/garryshtern/network-device-upgrade-system:latest
+docker run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
+
+# Podman (RHEL8/9 compatible)
+podman pull ghcr.io/garryshtern/network-device-upgrade-system:latest
+podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
+```
+
+**Container Features:**
+- Alpine-based (minimal ~200MB)
+- Non-root execution (UID 1000)
+- RHEL8/9 podman compatible
+- Multi-architecture (amd64/arm64)
+- Pre-installed Ansible 12.0.0 & Python 3.13.7
+
+See [Container Deployment Guide](docs/container-deployment.md) for detailed usage.
+
 ## Testing Framework
 
 Comprehensive testing for Mac/Linux development without physical devices:

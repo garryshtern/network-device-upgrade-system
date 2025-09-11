@@ -1,0 +1,80 @@
+# Network Device Upgrade System - Production Container
+# Optimized for RHEL8/9 podman compatibility with non-root execution
+FROM python:3.13.7-alpine3.20
+
+# Metadata
+LABEL org.opencontainers.image.title="Network Device Upgrade System"
+LABEL org.opencontainers.image.description="Automated network device firmware upgrade system using Ansible"
+LABEL org.opencontainers.image.vendor="Network Operations"
+LABEL org.opencontainers.image.version="1.4.0"
+LABEL org.opencontainers.image.source="https://github.com/garryshtern/network-device-upgrade-system"
+
+# Install system dependencies required for Ansible and network operations
+RUN apk add --no-cache \
+    openssh-client \
+    sshpass \
+    git \
+    curl \
+    bash \
+    sudo \
+    tzdata \
+    ca-certificates \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user for security and RHEL/podman compatibility
+RUN addgroup -g 1000 ansible \
+    && adduser -D -u 1000 -G ansible -s /bin/bash ansible \
+    && echo 'ansible ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/ansible
+
+# Set working directory
+WORKDIR /opt/network-upgrade
+
+# Copy requirements first for better layer caching
+COPY ansible-content/collections/requirements.yml ./ansible-content/collections/requirements.yml
+
+# Install Ansible and Python dependencies as non-root user
+USER ansible
+
+# Upgrade pip and install Ansible with latest versions
+RUN pip install --user --no-cache-dir --upgrade pip \
+    && pip install --user --no-cache-dir \
+        ansible==12.0.0 \
+        paramiko>=3.0.0 \
+        netaddr \
+        jinja2 \
+        pyyaml \
+        requests \
+        cryptography
+
+# Install Ansible collections with explicit versions
+RUN ansible-galaxy collection install \
+    -r ansible-content/collections/requirements.yml \
+    --collections-path ~/.ansible/collections \
+    --force --ignore-certs
+
+# Copy application content with proper ownership
+COPY --chown=ansible:ansible ansible-content/ ./ansible-content/
+COPY --chown=ansible:ansible tests/ ./tests/
+COPY --chown=ansible:ansible docs/ ./docs/
+COPY --chown=ansible:ansible CLAUDE.md ./CLAUDE.md
+COPY --chown=ansible:ansible docker-entrypoint.sh ./docker-entrypoint.sh
+
+# Make entrypoint executable
+RUN chmod +x docker-entrypoint.sh
+
+# Set PATH to include user pip binaries
+ENV PATH="/home/ansible/.local/bin:${PATH}"
+ENV ANSIBLE_CONFIG="/opt/network-upgrade/ansible-content/ansible.cfg"
+ENV ANSIBLE_COLLECTIONS_PATH="/home/ansible/.ansible/collections"
+ENV ANSIBLE_ROLES_PATH="/opt/network-upgrade/ansible-content/roles"
+
+# Health check to verify Ansible installation
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD ansible --version && ansible-galaxy collection list
+
+# Set entrypoint and default command
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["syntax-check"]
+
+# Expose common ports for monitoring/metrics (optional)
+EXPOSE 8080 9090
