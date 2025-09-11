@@ -55,7 +55,8 @@ RUN pip install --user --no-cache-dir --upgrade pip \
         requests
 
 # Install Ansible collections with explicit versions
-RUN ansible-galaxy collection install \
+RUN export PATH="/home/ansible/.local/bin:${PATH}" && \
+    ansible-galaxy collection install \
     -r ansible-content/collections/requirements.yml \
     --collections-path ~/.ansible/collections \
     --force --ignore-certs
