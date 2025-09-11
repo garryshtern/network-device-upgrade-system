@@ -1,10 +1,51 @@
 ---
 # Image integrity audit tasks
 
+- name: Check if firmware image file exists
+  ansible.builtin.stat:
+    path: "{{ firmware_base_path }}/{{ target_firmware }}"
+  register: firmware_file_stat
+  delegate_to: localhost
+
 - name: Verify image file exists
-  ansible.builtin.debug:
-    msg: "Checking image file integrity for {{ firmware_version | default('unknown') }}"
+  ansible.builtin.assert:
+    that:
+      - firmware_file_stat.stat.exists
+      - firmware_file_stat.stat.isreg
+    fail_msg: "Firmware file {{ firmware_base_path }}/{{ target_firmware }} does not exist or is not a regular file"
+    success_msg: "Firmware file found: {{ firmware_base_path }}/{{ target_firmware }}"
+
+- name: Check minimum file size (prevent empty/corrupt files)
+  ansible.builtin.assert:
+    that:
+      - firmware_file_stat.stat.size > 1048576  # 1MB minimum
+    fail_msg: "Firmware file {{ target_firmware }} is too small ({{ firmware_file_stat.stat.size }} bytes). Minimum 1MB required."
+    success_msg: "Firmware file size validation passed: {{ (firmware_file_stat.stat.size / 1024 / 1024) | round(2) }} MB"
+
+- name: Check file permissions are readable
+  ansible.builtin.assert:
+    that:
+      - firmware_file_stat.stat.readable
+    fail_msg: "Firmware file {{ target_firmware }} is not readable"
+    success_msg: "Firmware file permissions validation passed"
+
+- name: Validate file extension for platform
+  ansible.builtin.assert:
+    that:
+      - (ansible_network_os == 'nxos' and target_firmware.endswith(('.bin', '.nxos'))) or
+        (ansible_network_os == 'ios' and target_firmware.endswith(('.bin', '.spa', '.pkg'))) or
+        (ansible_network_os == 'fortios' and target_firmware.endswith('.out')) or
+        (ansible_network_os == 'mos' and target_firmware.endswith(('.mos', '.tar.gz'))) or
+        (ansible_network_os == 'opengear' and target_firmware.endswith(('.dgz', '.bin')))
+    fail_msg: "Firmware file extension not valid for platform {{ ansible_network_os }}: {{ target_firmware }}"
+    success_msg: "Firmware file extension validation passed for {{ ansible_network_os }}"
 
 - name: Set integrity check result
   ansible.builtin.set_fact:
     image_integrity_passed: true
+    firmware_file_info:
+      path: "{{ firmware_base_path }}/{{ target_firmware }}"
+      size_bytes: "{{ firmware_file_stat.stat.size }}"
+      size_mb: "{{ (firmware_file_stat.stat.size / 1024 / 1024) | round(2) }}"
+      modified_time: "{{ firmware_file_stat.stat.mtime }}"
+      checksum: "{{ firmware_file_stat.stat.checksum | default('unknown') }}"

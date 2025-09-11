@@ -1,10 +1,100 @@
 ---
 # Version verification tasks
 
-- name: Verify firmware version after installation
+- name: Extract version from firmware filename
+  ansible.builtin.set_fact:
+    expected_firmware_version: "{{ target_firmware | regex_replace('.*[-_]([0-9]+[0-9\\.\\-a-zA-Z]*)\\.(bin|nxos|spa|pkg|out|mos|tar\\.gz|dgz)$', '\\1') }}"
+
+- name: Gather device facts to get current version
+  ansible.builtin.gather_facts:
+    gather_subset: min
+  when: ansible_connection == 'network_cli'
+
+- name: Get current firmware version (Cisco NX-OS)
+  cisco.nxos.nxos_command:
+    commands:
+      - show version | json
+  register: nxos_version_output
+  when: ansible_network_os == 'nxos'
+
+- name: Get current firmware version (Cisco IOS-XE)
+  cisco.ios.ios_command:
+    commands:
+      - show version
+  register: ios_version_output
+  when: ansible_network_os == 'ios'
+
+- name: Get current firmware version (FortiOS)
+  fortinet.fortios.fortios_monitor_fact:
+    selector: 'system_status'
+  register: fortios_version_output
+  when: ansible_network_os == 'fortios'
+
+- name: Get current firmware version (Opengear)
+  ansible.builtin.raw: "config show system.label 2>/dev/null || echo 'Unknown'"
+  register: opengear_version_output
+  when: ansible_network_os == 'opengear'
+
+- name: Get current firmware version (Metamako MOS)
+  ansible.builtin.raw: "cat /etc/mos-release 2>/dev/null || echo 'Unknown'"
+  register: mos_version_output
+  when: ansible_network_os == 'mos'
+
+- name: Extract actual version from device output
+  ansible.builtin.set_fact:
+    actual_firmware_version: |-
+      {%- if ansible_network_os == 'nxos' -%}
+        {{ (nxos_version_output.stdout[0] | from_json).sys_ver_str | default('unknown') }}
+      {%- elif ansible_network_os == 'ios' -%}
+        {{ ios_version_output.stdout[0] | regex_search('Cisco IOS XE Software, Version ([0-9\\.]+)', '\\1') | first | default('unknown') }}
+      {%- elif ansible_network_os == 'fortios' -%}
+        {{ fortios_version_output.meta.results.version | default('unknown') }}
+      {%- elif ansible_network_os == 'opengear' -%}
+        {{ opengear_version_output.stdout | regex_search('([0-9\\.]+)', '\\1') | first | default('unknown') }}
+      {%- elif ansible_network_os == 'mos' -%}
+        {{ mos_version_output.stdout | regex_search('VERSION=([0-9\\.]+)', '\\1') | first | default('unknown') }}
+      {%- else -%}
+        unknown
+      {%- endif -%}
+
+- name: Compare expected vs actual version
+  ansible.builtin.set_fact:
+    version_matches: "{{ expected_firmware_version in actual_firmware_version or actual_firmware_version in expected_firmware_version }}"
+
+- name: Validate firmware version compatibility
+  ansible.builtin.assert:
+    that:
+      - expected_firmware_version != target_firmware
+      - expected_firmware_version | length > 0
+      - expected_firmware_version != 'unknown'
+    fail_msg: "Could not extract valid version from firmware filename: {{ target_firmware }}"
+    success_msg: "Expected firmware version extracted: {{ expected_firmware_version }}"
+
+- name: Verify version matches (strict mode)
+  ansible.builtin.assert:
+    that:
+      - version_matches
+    fail_msg: |
+      Firmware version mismatch detected:
+      Expected version: {{ expected_firmware_version }}
+      Actual version:   {{ actual_firmware_version }}
+    success_msg: "Firmware version verification passed: {{ actual_firmware_version }}"
+  when: 
+    - strict_version_check | default(true) | bool
+    - actual_firmware_version != 'unknown'
+
+- name: Warning for version check in non-strict mode
   ansible.builtin.debug:
-    msg: "Verifying firmware version matches target: {{ firmware_version | default('unknown') }}"
+    msg: |
+      Version verification in non-strict mode:
+      Expected: {{ expected_firmware_version }}
+      Actual:   {{ actual_firmware_version }}
+      Match:    {{ version_matches }}
+  when: not (strict_version_check | default(true) | bool)
 
 - name: Set version verification result
   ansible.builtin.set_fact:
-    version_verification_passed: true
+    version_verification_passed: "{{ version_matches and actual_firmware_version != 'unknown' }}"
+    expected_version: "{{ expected_firmware_version }}"
+    actual_version: "{{ actual_firmware_version }}"
+    version_check_mode: "{{ 'strict' if (strict_version_check | default(true) | bool) else 'non-strict' }}"

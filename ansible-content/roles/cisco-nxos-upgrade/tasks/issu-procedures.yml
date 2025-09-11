@@ -30,9 +30,6 @@
       cisco.nxos.nxos_command:
         commands:
           - install all nxos {{ target_image_path }} non-disruptive
-        ansible.builtin.wait_for:
-          - result[0] contains "Install is successful"
-        timeout: 1800
       register: issu_install_result
       
     - name: Monitor ISSU progress

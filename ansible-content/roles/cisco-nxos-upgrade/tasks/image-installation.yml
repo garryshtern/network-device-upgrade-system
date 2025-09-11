@@ -47,7 +47,6 @@
       cisco.nxos.nxos_command:
         commands:
           - install all system bootflash:{{ target_firmware_version }}
-        timeout: 1800  # 30 minutes timeout for ISSU
       register: issu_upgrade_result
 
     - name: Wait for ISSU completion

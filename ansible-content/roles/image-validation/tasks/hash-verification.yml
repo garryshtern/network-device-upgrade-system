@@ -1,10 +1,64 @@
 ---
 # Hash verification tasks
 
-- name: Verify loaded image hash
+- name: Calculate SHA512 hash of firmware file
+  ansible.builtin.stat:
+    path: "{{ firmware_base_path }}/{{ target_firmware }}"
+    get_checksum: true
+    checksum_algorithm: sha512
+  register: firmware_file_hash
+  delegate_to: localhost
+
+- name: Look for expected hash file
+  ansible.builtin.stat:
+    path: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
+  register: hash_file_stat
+  delegate_to: localhost
+
+- name: Read expected hash from file
+  ansible.builtin.slurp:
+    src: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
+  register: expected_hash_content
+  delegate_to: localhost
+  when: hash_file_stat.stat.exists
+
+- name: Extract expected hash value
+  ansible.builtin.set_fact:
+    expected_hash: >
+      {{ (expected_hash_content.content | b64decode).split()[0] }}
+  when: hash_file_stat.stat.exists
+
+- name: Use provided hash if no hash file exists
+  ansible.builtin.set_fact:
+    expected_hash: "{{ firmware_expected_hash | default('') }}"
+  when: not hash_file_stat.stat.exists and firmware_expected_hash is defined
+
+- name: Verify hash matches expected value
+  ansible.builtin.assert:
+    that:
+      - expected_hash | length > 0
+      - firmware_file_hash.stat.checksum == expected_hash
+    fail_msg: |
+      Hash verification failed for {{ target_firmware }}
+      Calculated: {{ firmware_file_hash.stat.checksum }}
+      Expected:   {{ expected_hash }}
+    success_msg: "Hash verification passed for {{ target_firmware }}"
+  when: expected_hash is defined
+
+- name: Warning when no hash available
   ansible.builtin.debug:
-    msg: "Verifying hash for loaded image {{ firmware_version | default('unknown') }}"
+    msg: |
+      WARNING: No expected hash found for {{ target_firmware }}
+      Calculated hash: {{ firmware_file_hash.stat.checksum }}
+      To enable hash verification, provide either:
+      - A .sha512 file alongside the firmware
+      - Set firmware_expected_hash variable
+  when: expected_hash is not defined or expected_hash | length == 0
 
 - name: Set hash verification result
   ansible.builtin.set_fact:
-    hash_verification_passed: true
+    hash_verification_passed: >
+      {{ expected_hash is defined and expected_hash | length > 0 and
+         firmware_file_hash.stat.checksum == expected_hash }}
+    calculated_hash: "{{ firmware_file_hash.stat.checksum }}"
+    expected_hash_value: "{{ expected_hash | default('not_provided') }}"
