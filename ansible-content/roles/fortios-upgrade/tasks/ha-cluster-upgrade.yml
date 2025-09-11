@@ -7,7 +7,7 @@
     - name: Final HA health check
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
-        selector: "system_ha_status"
+        selector: "system_ha-statistics"
       register: final_ha_check
 
     - name: Ensure cluster is stable
@@ -68,7 +68,7 @@
     - name: Check secondary readiness
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
-        selector: "system_ha_peer"
+        selector: "system_ha-peer"
       register: secondary_readiness
 
     - name: Verify secondary is ready

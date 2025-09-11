@@ -13,7 +13,7 @@
     - name: Verify sufficient space for install mode
       ansible.builtin.assert:
         that:
-          - iosxe_upgrade_state.available_space | int > 2000000000 # 2GB minimum
+          - iosxe_upgrade_state.available_space | int > 2000000000  # 2GB minimum
         fail_msg: "Insufficient space for install mode upgrade"
 
 - name: Install mode upgrade process

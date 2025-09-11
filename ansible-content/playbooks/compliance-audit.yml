@@ -51,22 +51,22 @@
 
         - name: Update compliance results - security baseline
           ansible.builtin.set_fact:
-            compliance_results: >
+            compliance_results: >-
               {{
                 compliance_results | combine({
-                  'standards_tested': >
+                  'standards_tested': 
                     compliance_results.standards_tested + ['security_baseline'],
                   'compliance_checks': {
-                    'passed': >
+                    'passed': 
                       compliance_results.compliance_checks.passed +
                       security_baseline_results.passed,
-                    'failed': >
+                    'failed': 
                       compliance_results.compliance_checks.failed +
                       security_baseline_results.failed,
-                    'skipped': >
+                    'skipped': 
                       compliance_results.compliance_checks.skipped +
                       security_baseline_results.skipped,
-                    'warnings': >
+                    'warnings': 
                       compliance_results.compliance_checks.warnings +
                       security_baseline_results.warnings
                   }

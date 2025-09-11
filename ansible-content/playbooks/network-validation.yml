@@ -146,8 +146,9 @@
       rescue:
         - name: Mark routing validation as failed
           ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed':
-                  validation_results.tests_failed + ['routing_validation']}) }}"
+            validation_results: >-
+              {{ validation_results | combine({'tests_failed':
+                validation_results.tests_failed + ['routing_validation']}) }}
 
     # Multicast Validation (if applicable)
     - name: Multicast State Validation
@@ -249,7 +250,7 @@
   post_tasks:
     - name: Generate validation summary
       ansible.builtin.template:
-        src: ../templates/validation-summary.j2
+        src: "{{ playbook_dir }}/../validation-templates/validation-summary.j2"
         dest: "{{ validation_results_path }}/{{ inventory_hostname }}/validation_summary_{{ validation_timestamp }}.json"
       vars:
         summary_data: "{{ validation_results }}"

@@ -27,7 +27,7 @@
       cisco.ios.ios_config:
         lines:
           - ip scp server enable
-      failed_when: false # May already be enabled
+      failed_when: false  # May already be enabled
 
     - name: Push image from server to device via SCP
       ansible.posix.synchronize:
