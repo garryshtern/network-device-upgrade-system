@@ -7,7 +7,7 @@
     vdom: "root"
     selector: "system_ha_status"
   register: ha_status
-  
+
 - name: Parse HA cluster information
   ansible.builtin.set_fact:
     ha_cluster_info:
@@ -17,14 +17,11 @@
       role: "{{ ha_status.meta.results.role }}"
       sync_status: "{{ ha_status.meta.results.sync_status }}"
       members: "{{ ha_status.meta.results.members | default([]) }}"
-      
+
 - name: Update HA information in upgrade state
   ansible.builtin.set_fact:
-    fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
-      'ha_mode': ha_cluster_info.mode,
-      'ha_role': ha_cluster_info.role,
-      'cluster_member': ha_cluster_info.members | length
-    }) }}"
+    fortios_upgrade_state: "{{ fortios_upgrade_state | combine({'ha_mode': ha_cluster_info.mode, 'ha_role': ha_cluster_info.role, 'cluster_member': ha_cluster_info.members
+      | length}) }}"
 
 - name: Validate HA cluster health
   block:
@@ -33,13 +30,13 @@
         that:
           - ha_cluster_info.sync_status == "synchronized"
         fail_msg: "HA cluster not synchronized - upgrade cannot proceed safely"
-        
+
     - name: Verify all cluster members are healthy
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "system_ha_peer"
       register: ha_peers
-      
+
     - name: Check peer connectivity
       ansible.builtin.assert:
         that:
@@ -49,25 +46,25 @@
 - name: Determine upgrade sequence
   block:
     - name: Set upgrade order for A-P cluster
-      set_fact:
+      ansible.builtin.set_fact:
         upgrade_sequence:
           - role: "secondary"
             priority: 1
-          - role: "primary" 
+          - role: "primary"
             priority: 2
       when: ha_cluster_info.mode == "active-passive"
-      
+
     - name: Set upgrade order for A-A cluster
-      set_fact:
+      ansible.builtin.set_fact:
         upgrade_sequence:
           - role: "secondary"
             priority: 1
           - role: "primary"
             priority: 2
       when: ha_cluster_info.mode == "active-active"
-      
+
     - name: Determine current device upgrade priority
-      set_fact:
+      ansible.builtin.set_fact:
         current_upgrade_priority: "{{ upgrade_sequence | selectattr('role', 'equalto', ha_cluster_info.role) | map(attribute='priority') | first }}"
 
 - name: Check for cluster-wide upgrade coordination
@@ -79,7 +76,7 @@
           group_name: "{{ ha_cluster_info.group_id }}"
           upgrade_mode: "coordinated"
       when: ha_cluster_info.role == "primary"
-      
+
     - name: Wait for cluster upgrade readiness
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -92,7 +89,7 @@
 
 - name: Log HA coordination status
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       HA Cluster Coordination:
       - Mode: {{ ha_cluster_info.mode }}
       - Role: {{ ha_cluster_info.role }}

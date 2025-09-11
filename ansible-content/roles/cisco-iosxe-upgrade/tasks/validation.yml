@@ -9,13 +9,13 @@
         commands:
           - show version
       register: version_check
-      
+
     - name: Verify target version is active
       ansible.builtin.assert:
         that:
           - target_firmware_version in version_check.stdout[0]
         fail_msg: "Target firmware version not active: {{ version_check.stdout[0] }}"
-        
+
     - name: Check system uptime
       cisco.ios.ios_command:
         commands:
@@ -29,13 +29,13 @@
         commands:
           - show ip interface brief
       register: interface_status
-      
+
     - name: Verify critical interfaces are up
       ansible.builtin.assert:
         that:
           - "'up' in interface_status.stdout[0]"
         fail_msg: "Critical interfaces may be down"
-        
+
 - name: Routing validation
   block:
     - name: Check routing table
@@ -43,14 +43,14 @@
         commands:
           - show ip route summary
       register: routing_summary
-      
+
     - name: Verify default route exists
       cisco.ios.ios_command:
         commands:
           - show ip route 0.0.0.0
       register: default_route
       failed_when: false
-      
+
     - name: Check BGP status (if configured)
       cisco.ios.ios_command:
         commands:
@@ -65,13 +65,13 @@
         commands:
           - show arp
       register: arp_table
-      
+
     - name: Verify ARP entries exist
       ansible.builtin.assert:
         that:
           - arp_table.stdout[0] | length > 100
         fail_msg: "ARP table appears empty or minimal"
-        
+
 - name: System health validation
   block:
     - name: Check CPU utilization
@@ -79,30 +79,30 @@
         commands:
           - show processes cpu sorted
       register: cpu_usage
-      
+
     - name: Check memory utilization
       cisco.ios.ios_command:
         commands:
           - show memory statistics
       register: memory_stats
-      
+
     - name: Check for error messages
       cisco.ios.ios_command:
         commands:
           - show logging | include ERROR
       register: error_logs
       failed_when: false
-      
+
 - name: IPSec tunnel validation
   ansible.builtin.include_tasks: ipsec-validation.yml
-  when: 
-    - validate_ipsec is defined 
+  when:
+    - validate_ipsec is defined
     - validate_ipsec | bool
   tags:
     - ipsec
     - validation
-    
-- name: BFD session validation  
+
+- name: BFD session validation
   ansible.builtin.include_tasks: bfd-validation.yml
   when:
     - validate_bfd is defined
@@ -110,9 +110,9 @@
   tags:
     - bfd
     - validation
-    
+
 - name: Interface optics validation
-  ansible.builtin.include_tasks: optics-validation.yml  
+  ansible.builtin.include_tasks: optics-validation.yml
   when:
     - validate_optics is defined
     - validate_optics | bool
@@ -122,7 +122,7 @@
 
 - name: Log validation results
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       IOS-XE Validation Results:
       ==========================
       - Version: {{ 'PASS' if target_firmware_version in version_check.stdout[0] else 'FAIL' }}

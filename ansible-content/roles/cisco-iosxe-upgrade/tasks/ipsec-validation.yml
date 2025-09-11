@@ -10,21 +10,21 @@
           - show crypto session
       register: crypto_sessions
       failed_when: false
-      
+
     - name: Check IPSec SA status
       cisco.ios.ios_command:
         commands:
           - show crypto ipsec sa
       register: ipsec_sa_status
       failed_when: false
-      
+
     - name: Check ISAKMP SA status
       cisco.ios.ios_command:
         commands:
           - show crypto isakmp sa
       register: isakmp_sa_status
       failed_when: false
-      
+
     - name: Check crypto engine status
       cisco.ios.ios_command:
         commands:
@@ -35,21 +35,21 @@
 - name: Parse IPSec validation results
   block:
     - name: Extract active IPSec tunnels
-      set_fact:
+      ansible.builtin.set_fact:
         active_ipsec_tunnels: >-
-          {{ ipsec_sa_status.stdout[0] | 
+          {{ ipsec_sa_status.stdout[0] |
              regex_findall('interface:\s+(\S+).*?#pkts encaps:\s+(\d+).*?#pkts decaps:\s+(\d+)', multiline=True) }}
       when: ipsec_sa_status.rc == 0
-      
+
     - name: Extract ISAKMP sessions
-      set_fact:
+      ansible.builtin.set_fact:
         isakmp_sessions: >-
-          {{ isakmp_sa_status.stdout[0] | 
+          {{ isakmp_sa_status.stdout[0] |
              regex_findall('(\d+\.\d+\.\d+\.\d+)\s+(\d+\.\d+\.\d+\.\d+)\s+\S+\s+(\S+)', multiline=True) }}
       when: isakmp_sa_status.rc == 0
-      
+
     - name: Count crypto sessions
-      set_fact:
+      ansible.builtin.set_fact:
         total_crypto_sessions: >-
           {{ crypto_sessions.stdout[0] | regex_findall('Session status:\s+UP') | length }}
       when: crypto_sessions.rc == 0
@@ -62,10 +62,10 @@
           - active_ipsec_tunnels | length > 0
         fail_msg: "No active IPSec tunnels found. Expected at least one active tunnel."
         success_msg: "{{ active_ipsec_tunnels | length }} active IPSec tunnel(s) found"
-      when: 
+      when:
         - ipsec_sa_status.rc == 0
         - active_ipsec_tunnels is defined
-        
+
     - name: Verify ISAKMP phase 1 sessions
       ansible.builtin.assert:
         that:
@@ -75,7 +75,7 @@
       when:
         - isakmp_sa_status.rc == 0
         - isakmp_sessions is defined
-        
+
     - name: Verify crypto sessions are up
       ansible.builtin.assert:
         that:
@@ -95,7 +95,7 @@
         fail_msg: "No traffic on IPSec tunnel {{ item[0] }}"
         success_msg: "IPSec tunnel {{ item[0] }} has traffic (encaps: {{ item[1] }}, decaps: {{ item[2] }})"
       loop: "{{ active_ipsec_tunnels }}"
-      when: 
+      when:
         - active_ipsec_tunnels is defined
         - active_ipsec_tunnels | length > 0
 
@@ -113,17 +113,17 @@
       - Interface: {{ tunnel[0] }}, Encaps: {{ tunnel[1] }}, Decaps: {{ tunnel[2] }}
       {% endfor %}
       {% endif %}
-      
+
 - name: Store IPSec validation baseline
   ansible.builtin.copy:
     content: |
       # IPSec Validation Baseline - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
       # Generated during firmware upgrade validation
-      
+
       Active_IPSec_Tunnels: {{ active_ipsec_tunnels | length if active_ipsec_tunnels is defined else 0 }}
       ISAKMP_Sessions: {{ isakmp_sessions | length if isakmp_sessions is defined else 0 }}
       Crypto_Sessions_Up: {{ total_crypto_sessions if total_crypto_sessions is defined else 0 }}
-      
+
       {% if active_ipsec_tunnels is defined %}
       Tunnel_Details:
       {% for tunnel in active_ipsec_tunnels %}
@@ -132,9 +132,9 @@
           Decaps_Packets: {{ tunnel[2] }}
       {% endfor %}
       {% endif %}
-      
+
       Validation_Status: PASS
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: "/tmp/ipsec_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}.txt"
-    mode: '0644'
+    mode: "0644"
   delegate_to: localhost

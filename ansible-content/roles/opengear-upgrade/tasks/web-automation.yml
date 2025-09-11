@@ -16,13 +16,11 @@
           password: "{{ opengear_password }}"
         validate_certs: false
       register: web_auth
-      
+
     - name: Store authentication token
-      set_fact:
-        opengear_upgrade_state: "{{ opengear_upgrade_state | combine({
-          'web_session': web_auth.json.token
-        }) }}"
-        
+      ansible.builtin.set_fact:
+        opengear_upgrade_state: "{{ opengear_upgrade_state | combine({'web_session': web_auth.json.token}) }}"
+
     - name: Verify API access
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/status"
@@ -42,7 +40,7 @@
           Authorization: "Token {{ opengear_upgrade_state.web_session }}"
         validate_certs: false
       register: current_firmware_status
-      
+
     - name: Upload new firmware image
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/upload"
@@ -53,7 +51,7 @@
         body_format: form-multipart
         timeout: 1800
       register: firmware_upload
-      
+
     - name: Verify firmware upload
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/status"
@@ -76,13 +74,13 @@
           Authorization: "Token {{ opengear_upgrade_state.web_session }}"
         validate_certs: false
       register: firmware_validation
-      
+
     - name: Confirm validation success
       ansible.builtin.assert:
         that:
           - firmware_validation.json.valid == true
         fail_msg: "Firmware validation failed: {{ firmware_validation.json.message | default('Unknown error') }}"
-        
+
     - name: Install firmware
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/install"
@@ -95,7 +93,7 @@
           backup_config: true
         validate_certs: false
       register: firmware_install
-      
+
     - name: Monitor installation progress
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/install/status"
@@ -117,7 +115,7 @@
         port: 443
         delay: 30
         timeout: 600
-        
+
     - name: Re-authenticate after reboot
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/auth/login"
@@ -130,7 +128,7 @@
           password: "{{ opengear_password }}"
         validate_certs: false
       register: post_reboot_auth
-      
+
     - name: Verify new firmware version
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/info"
@@ -139,7 +137,7 @@
           Authorization: "Token {{ post_reboot_auth.json.token }}"
         validate_certs: false
       register: post_upgrade_info
-      
+
     - name: Confirm target version is active
       ansible.builtin.assert:
         that:
@@ -148,7 +146,7 @@
 
 - name: Log web automation completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Opengear Web Automation Completed:
       - Device: {{ opengear_upgrade_state.device_model }}
       - Previous Version: {{ opengear_upgrade_state.current_version }}

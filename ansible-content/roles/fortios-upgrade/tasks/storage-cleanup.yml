@@ -11,7 +11,7 @@
   fortinet.fortios.fortios_facts:
     vdom: "{{ vdom | default('root') }}"
     gather_subset:
-      - fact: 'system_status'
+      - fact: "system_status"
   register: fortios_status
 
 - name: Parse current version information
@@ -22,7 +22,7 @@
 - name: Get disk usage information
   fortinet.fortios.fortios_configuration_fact:
     vdom: "{{ vdom | default('root') }}"
-    selector: 'system_storage'
+    selector: "system_storage"
   register: storage_info
 
 - name: Calculate storage metrics
@@ -36,12 +36,13 @@
 - name: Execute diag hardware command for firmware listing
   fortinet.fortios.fortios_configuration_fact:
     vdom: "{{ vdom | default('root') }}"
-    selector: 'system_firmware'
+    selector: "system_firmware"
   register: firmware_info
 
 - name: List obsolete firmware images (keep current and backup)
   ansible.builtin.set_fact:
-    cleanup_candidates: "{{ firmware_info.meta.results | selectattr('current', 'equalto', false) | selectattr('backup', 'equalto', false) | map(attribute='filename') | list }}"
+    cleanup_candidates: "{{ firmware_info.meta.results | selectattr('current', 'equalto', false) | selectattr('backup', 'equalto', false) | map(attribute='filename')
+      | list }}"
 
 - name: Check if cleanup is needed
   ansible.builtin.set_fact:
@@ -54,7 +55,7 @@
       filename: "{{ item }}"
       state: "absent"
   loop: "{{ cleanup_candidates }}"
-  when: 
+  when:
     - cleanup_needed
     - cleanup_candidates | length > 0
   register: cleanup_result
@@ -80,7 +81,7 @@
 - name: Verify storage space after cleanup
   fortinet.fortios.fortios_configuration_fact:
     vdom: "{{ vdom | default('root') }}"
-    selector: 'system_storage'
+    selector: "system_storage"
   register: post_cleanup_storage_info
 
 - name: Calculate post-cleanup storage metrics

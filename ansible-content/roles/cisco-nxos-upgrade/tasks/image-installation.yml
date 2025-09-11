@@ -21,6 +21,8 @@
       - "Target system image: bootflash:{{ target_firmware_version }}"
 
 - name: Check if ISSU (In-Service Software Upgrade) is possible
+  when: nxos_issu_capable | default(false)
+
   block:
     - name: Check ISSU compatibility
       cisco.nxos.nxos_command:
@@ -39,9 +41,9 @@
         issu_supported: false
       when: issu_compatibility_check is failed
 
-  when: nxos_issu_capable | default(false)
-
 - name: Perform ISSU upgrade (if supported)
+  when: issu_supported | default(false)
+
   block:
     - name: Start ISSU upgrade
       cisco.nxos.nxos_command:
@@ -66,14 +68,14 @@
     - name: ISSU failed - falling back to disruptive upgrade
       ansible.builtin.debug:
         msg: "ISSU upgrade failed, proceeding with disruptive upgrade"
-      
+
     - name: Set fallback to disruptive upgrade
       ansible.builtin.set_fact:
         issu_supported: false
 
-  when: issu_supported | default(false)
-
 - name: Perform disruptive upgrade (if ISSU not supported or failed)
+  when: not issu_supported | default(true)
+
   block:
     - name: Update boot variables for disruptive upgrade
       cisco.nxos.nxos_config:
@@ -105,8 +107,6 @@
     - name: Save configuration before reboot
       cisco.nxos.nxos_config:
         save_when: always
-
-  when: not issu_supported | default(true)
 
 - name: Set installation completion status
   ansible.builtin.set_fact:

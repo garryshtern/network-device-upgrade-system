@@ -9,13 +9,13 @@
         echo "show disk usage" | /bin/cli
       register: disk_usage_check
       delegate_to: "{{ inventory_hostname }}"
-      
+
     - name: Parse available space
-      set_fact:
+      ansible.builtin.set_fact:
         available_space_mb: "{{ disk_usage_check.stdout | regex_search('Available:\\s+(\\d+)', '\\1') | first | int }}"
-        required_space_mb: "{{ (ansible_stat_firmware.size / 1024 / 1024) | int + 50 }}"  # Add 50MB buffer
+        required_space_mb: "{{ (ansible_stat_firmware.size / 1024 / 1024) | int + 50 }}" # Add 50MB buffer
       when: disk_usage_check.stdout is defined
-      
+
     - name: Validate sufficient storage space
       ansible.builtin.assert:
         that:
@@ -30,13 +30,13 @@
       register: existing_firmware
       delegate_to: "{{ inventory_hostname }}"
       failed_when: false
-      
+
     - name: Remove existing firmware if present
       ansible.builtin.raw: |
         rm -f /usr/local/upgrade/{{ target_firmware_filename }}
       delegate_to: "{{ inventory_hostname }}"
       when: existing_firmware.rc == 0
-      
+
     - name: Ensure upgrade directory exists
       ansible.builtin.raw: |
         mkdir -p /usr/local/upgrade
@@ -50,7 +50,7 @@
         dest: "/usr/local/upgrade/{{ target_firmware_filename }}"
       delegate_to: "{{ inventory_hostname }}"
       register: firmware_transfer
-      
+
     - name: Log transfer completion
       ansible.builtin.debug:
         msg: |
@@ -66,18 +66,18 @@
         sha512sum /usr/local/upgrade/{{ target_firmware_filename }} | awk '{print $1}'
       register: device_checksum
       delegate_to: "{{ inventory_hostname }}"
-      
+
     - name: Read expected checksum from local file
-      slurp:
+      ansible.builtin.slurp:
         src: "{{ local_firmware_path }}/{{ target_firmware_filename }}.sha512"
       register: expected_checksum_file
       delegate_to: localhost
-      
+
     - name: Parse expected checksum
-      set_fact:
+      ansible.builtin.set_fact:
         expected_checksum: "{{ expected_checksum_file.content | b64decode | trim | split(' ') | first }}"
         device_calculated_checksum: "{{ device_checksum.stdout | trim }}"
-        
+
     - name: Validate checksum match
       ansible.builtin.assert:
         that:
@@ -86,7 +86,7 @@
           Checksum verification failed!
           Expected: {{ expected_checksum }}
           Calculated: {{ device_calculated_checksum }}
-          
+
     - name: Log successful checksum verification
       ansible.builtin.debug:
         msg: |
@@ -101,7 +101,7 @@
       ansible.builtin.raw: |
         chmod 644 /usr/local/upgrade/{{ target_firmware_filename }}
       delegate_to: "{{ inventory_hostname }}"
-      
+
     - name: Create firmware staging marker
       ansible.builtin.raw: |
         echo "Firmware staged: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}" > /usr/local/upgrade/.{{ target_firmware_filename }}.staged
@@ -116,7 +116,7 @@
         echo "backup config /usr/local/upgrade/config-backup-$(date +%Y%m%d-%H%M%S).txt" | /bin/cli
       register: config_backup_result
       delegate_to: "{{ inventory_hostname }}"
-      
+
     - name: Log backup completion
       ansible.builtin.debug:
         msg: |
@@ -127,7 +127,7 @@
 
 - name: Log legacy image loading completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Legacy Opengear Image Loading Completed:
       - Device: {{ inventory_hostname }}
       - Model: {{ opengear_upgrade_state.device_model }}

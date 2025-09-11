@@ -14,7 +14,7 @@
   ansible.builtin.file:
     path: "{{ baseline_data_path }}/{{ inventory_hostname }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
   delegate_to: localhost
   run_once: true
 

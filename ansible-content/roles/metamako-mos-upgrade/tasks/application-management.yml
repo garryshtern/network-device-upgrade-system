@@ -7,11 +7,11 @@
   ansible.netcommon.cli_command:
     ansible.builtin.command: show application
   register: current_applications
-  
+
 - name: Parse application information
   ansible.builtin.set_fact:
     mos_applications: "{{ current_applications.stdout_lines | select('match', '^\\s*\\w+') | list }}"
-    
+
 - name: Display current applications
   ansible.builtin.debug:
     msg: |
@@ -19,13 +19,15 @@
       {{ current_applications.stdout }}
 
 - name: Application upload and installation
+  when: application_action is defined and application_action == 'install'
+
   block:
     - name: Check storage space for application
       ansible.netcommon.cli_command:
         ansible.builtin.command: show system storage
       register: app_storage_check
       when: application_action == 'install'
-      
+
     - name: Upload application to device (Server-Initiated Transfer)
       ansible.builtin.command:
         cmd: >
@@ -38,41 +40,41 @@
       register: app_upload_result
       vars:
         ansible_connection: local
-      when: 
+      when:
         - application_action == 'install'
         - application_source is defined
-        
+
     - name: Verify application file exists
       ansible.netcommon.cli_command:
         ansible.builtin.command: "dir flash:{{ application_filename | default(application_source | basename) }}"
       register: app_file_check
       when: application_action == 'install'
-      
+
     - name: Install application from flash
       ansible.netcommon.cli_config:
         config: |
           install application flash:{{ application_filename | default(application_source | basename) }}
       register: app_install_result
-      when: 
+      when:
         - application_action == 'install'
         - application_filename is defined or application_source is defined
-      
+
     - name: Verify application installation
       ansible.netcommon.cli_command:
         ansible.builtin.command: show application {{ application_name }}
       register: app_verify
       when: application_name is defined and application_action == 'install'
-      
+
     - name: Enable installed application
       ansible.netcommon.cli_config:
         config: |
           app {{ application_name }}
           no shutdown
       when: application_name is defined and application_action == 'install'
-      
-  when: application_action is defined and application_action == 'install'
 
 - name: Remove application (if specified)
+  when: application_action is defined and application_action == 'remove'
+
   block:
     - name: Shutdown application before removal
       ansible.netcommon.cli_config:
@@ -80,24 +82,24 @@
           app {{ application_name }}
           shutdown force
       when: application_name is defined
-      
+
     - name: Remove application state
       ansible.netcommon.cli_config:
         config: |
           app {{ application_name }}
           default app state
       when: application_name is defined
-      
+
     - name: Uninstall application
       ansible.netcommon.cli_config:
         config: |
           remove application {{ application_name }}
       register: app_remove_result
       when: application_name is defined
-      
-  when: application_action is defined and application_action == 'remove'
 
 - name: EOS extension management
+  when: eos_extension_action is defined
+
   block:
     - name: Upload EOS extension (Server-Initiated Transfer)
       ansible.builtin.command:
@@ -114,30 +116,28 @@
       when:
         - eos_extension_action == 'install'
         - eos_extension_source is defined
-        
+
     - name: Verify EOS extension file exists
       ansible.netcommon.cli_command:
         ansible.builtin.command: "dir flash:{{ eos_extension_filename | default(eos_extension_source | basename) }}"
       register: eos_file_check
       when: eos_extension_action == 'install'
-        
+
     - name: Install EOS extension from flash
       ansible.netcommon.cli_config:
         config: |
           install eos-extension flash:{{ eos_extension_filename | default(eos_extension_source | basename) }}
       register: eos_install_result
-      when: 
-        - eos_extension_source is defined 
+      when:
+        - eos_extension_source is defined
         - eos_extension_action == 'install'
-      
+
     - name: Remove EOS extension
       ansible.netcommon.cli_config:
         config: |
           remove eos-extension {{ eos_extension_name }}
       register: eos_remove_result
       when: eos_extension_name is defined and eos_extension_action == 'remove'
-      
-  when: eos_extension_action is defined
 
 - name: Application state management
   block:
@@ -147,14 +147,14 @@
           app {{ item }}
           no shutdown
       loop: "{{ applications_to_enable | default([]) }}"
-      
+
     - name: Disable application
       ansible.netcommon.cli_config:
         config: |
           app {{ item }}
           shutdown
       loop: "{{ applications_to_disable | default([]) }}"
-      
+
     - name: Force shutdown application
       ansible.netcommon.cli_config:
         config: |
@@ -166,9 +166,9 @@
   ansible.netcommon.cli_command:
     ansible.builtin.command: show application
   register: final_applications
-  
+
 - name: Display final application status
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Final MOS Application Status:
       {{ final_applications.stdout }}

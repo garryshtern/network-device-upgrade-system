@@ -9,13 +9,13 @@
         commands:
           - "dir bootflash:{{ target_image_filename }}"
       register: staged_image_check
-      
+
     - name: Confirm staged image exists
       ansible.builtin.assert:
         that:
           - target_image_filename in staged_image_check.stdout[0]
         fail_msg: "Target image not found on device storage"
-        
+
     - name: Final connectivity check
       cisco.ios.ios_command:
         commands:
@@ -25,44 +25,44 @@
 - name: Execute installation based on mode
   block:
     - name: Install mode installation
+      when: iosxe_upgrade_state.install_mode | default(false)
+
       block:
         - name: Execute install mode upgrade
           cisco.ios.ios_command:
             commands:
               - "request platform software package install switch all file bootflash:{{ target_image_filename }} activate commit"
           register: install_mode_result
-          
+
         - name: Verify install mode completion
           ansible.builtin.assert:
             that:
               - "'SUCCESS' in install_mode_result.stdout[0]"
             fail_msg: "Install mode installation failed"
-            
-      when: iosxe_upgrade_state.install_mode | default(false)
-      
+
     - name: Bundle mode installation
+      when: not iosxe_upgrade_state.install_mode | default(false)
+
       block:
         - name: Verify boot system configuration
           cisco.ios.ios_command:
             commands:
               - show running-config | include boot system
           register: boot_system_check
-          
+
         - name: Confirm boot system is configured
           ansible.builtin.assert:
             that:
               - target_image_filename in boot_system_check.stdout[0]
             fail_msg: "Boot system not properly configured for bundle mode"
-            
+
         - name: Save configuration before reboot
           cisco.ios.ios_config:
             save_when: always
-            
+
         - name: Set reboot flag for bundle mode
-          set_fact:
+          ansible.builtin.set_fact:
             bundle_mode_reboot_required: true
-            
-      when: not iosxe_upgrade_state.install_mode | default(false)
 
 - name: Handle device reboot (bundle mode)
   block:
@@ -72,7 +72,7 @@
           - reload
       register: reboot_command
       when: bundle_mode_reboot_required | default(false)
-      
+
     - name: Wait for device to become unreachable
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
@@ -82,7 +82,7 @@
         delay: 30
       delegate_to: localhost
       when: bundle_mode_reboot_required | default(false)
-      
+
     - name: Wait for device to come back online
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
@@ -92,7 +92,7 @@
         delay: 60
       delegate_to: localhost
       when: bundle_mode_reboot_required | default(false)
-      
+
     - name: Wait for device initialization
       ansible.builtin.pause:
         seconds: 120
@@ -107,27 +107,27 @@
       register: post_install_version
       retries: 5
       delay: 30
-      
+
     - name: Confirm target version is active
       ansible.builtin.assert:
         that:
           - iosxe_upgrade_state.target_version in post_install_version.stdout[0]
         fail_msg: "Installation completed but target version not active"
-        
+
     - name: Check system stability
       cisco.ios.ios_command:
         commands:
           - show processes cpu sorted
           - show memory statistics
       register: post_install_stability
-      
+
     - name: Verify boot variables (bundle mode)
       cisco.ios.ios_command:
         commands:
           - show boot
       register: post_boot_check
       when: bundle_mode_reboot_required | default(false)
-      
+
     - name: Validate boot configuration
       ansible.builtin.assert:
         that:
@@ -143,13 +143,13 @@
           - show logging | include ERROR
       register: post_install_errors
       failed_when: false
-      
+
     - name: Verify interfaces are operational
       cisco.ios.ios_command:
         commands:
           - show ip interface brief
       register: post_install_interfaces
-      
+
     - name: Basic connectivity test
       cisco.ios.ios_command:
         commands:
@@ -159,7 +159,7 @@
 
 - name: Log installation completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       IOS-XE Installation Completed:
       - Previous Version: {{ iosxe_upgrade_state.current_version }}
       - New Version: {{ iosxe_upgrade_state.target_version }}

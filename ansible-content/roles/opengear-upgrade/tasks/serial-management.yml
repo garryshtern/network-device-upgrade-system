@@ -12,7 +12,7 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: active_sessions
-      
+
     - name: Notify users of impending maintenance
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.port_id }}/send"
@@ -38,11 +38,11 @@
         validate_certs: false
       register: port_configs
       loop: "{{ opengear_upgrade_state.serial_ports }}"
-      
+
     - name: Store configuration backup
-      set_fact:
+      ansible.builtin.set_fact:
         serial_port_backup: "{{ port_configs.results | map(attribute='json') | list }}"
-        
+
     - name: Gracefully close active sessions
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/sessions/{{ item.session_id }}/close"
@@ -62,7 +62,7 @@
     - name: Wait for serial ports to initialize
       ansible.builtin.pause:
         seconds: 30
-        
+
     - name: Verify all serial ports are operational
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
@@ -72,7 +72,7 @@
         validate_certs: false
       register: post_upgrade_port_status
       loop: "{{ opengear_upgrade_state.serial_ports }}"
-      
+
     - name: Check port connectivity
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/test"
@@ -83,7 +83,7 @@
       register: port_connectivity_test
       loop: "{{ opengear_upgrade_state.serial_ports }}"
       failed_when: false
-      
+
     - name: Validate port configurations restored
       ansible.builtin.assert:
         that:
@@ -92,7 +92,7 @@
 
 - name: Serial management summary
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Serial Port Management Summary:
       - Total Ports: {{ opengear_upgrade_state.serial_ports | length }}
       - Active Sessions (Pre): {{ active_sessions.json | length }}

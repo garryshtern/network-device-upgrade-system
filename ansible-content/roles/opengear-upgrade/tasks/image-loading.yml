@@ -17,11 +17,11 @@
           password: "{{ opengear_password }}"
         validate_certs: false
       register: opengear_auth
-      
+
     - name: Store authentication token
-      set_fact:
+      ansible.builtin.set_fact:
         opengear_api_token: "{{ opengear_auth.json.token }}"
-        
+
     - name: Check available storage space
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/storage"
@@ -30,7 +30,7 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: storage_info
-      
+
     - name: Validate sufficient storage space
       ansible.builtin.assert:
         that:
@@ -45,14 +45,14 @@
       register: local_firmware_check
       delegate_to: localhost
       when: local_firmware_path is defined
-      
+
     - name: Validate local firmware file
       ansible.builtin.assert:
         that:
           - local_firmware_check.stat.exists
         fail_msg: "Local firmware file not found: {{ local_firmware_path }}"
       when: local_firmware_path is defined
-      
+
     - name: Calculate firmware file checksum
       ansible.builtin.stat:
         path: "{{ local_firmware_path }}"
@@ -62,6 +62,8 @@
       when: local_firmware_path is defined
 
 - name: Upload firmware image to Opengear device
+  when: local_firmware_path is defined
+
   block:
     - name: Start firmware upload session
       ansible.builtin.uri:
@@ -77,7 +79,7 @@
           checksum: "{{ firmware_checksum.stat.checksum if firmware_checksum is defined else omit }}"
         validate_certs: false
       register: upload_session
-      
+
     - name: Push firmware file from server via API (Server-Initiated PUSH)
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{ upload_session.json.session_id }}/chunk"
@@ -93,7 +95,7 @@
       when: local_firmware_path is defined
       vars:
         ansible_connection: local
-      
+
     - name: Complete firmware upload
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{ upload_session.json.session_id }}/complete"
@@ -102,9 +104,6 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: upload_complete
-  when: local_firmware_path is defined
-
-
 - name: Verify firmware upload/download
   block:
     - name: Get list of available firmware images
@@ -115,17 +114,17 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: firmware_list
-      
+
     - name: Verify target firmware is available
       ansible.builtin.assert:
         that:
           - firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | list | length > 0
         fail_msg: "Target firmware file not found in device storage"
-        
+
     - name: Extract firmware information
-      set_fact:
+      ansible.builtin.set_fact:
         uploaded_firmware_info: "{{ firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | first }}"
-        
+
     - name: Validate firmware integrity
       ansible.builtin.assert:
         that:
@@ -135,7 +134,7 @@
 
 - name: Log image loading completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Secure Opengear Image Loading Completed:
       - Device: {{ opengear_upgrade_state.device_model }}
       - Firmware File: {{ target_firmware_filename }}

@@ -122,11 +122,12 @@
         patterns: "*.yml"
       register: group_vars_files
 
-    - name: Load and validate group variables
-      ansible.builtin.include_vars: "{{ item.path }}"
+    - name: Load and validate group variables (YAML syntax only)
+      ansible.builtin.shell: |
+        python -c "import yaml; yaml.safe_load(open('{{ item.path }}'))" && echo "Valid YAML"
       register: group_vars_load
       loop: "{{ group_vars_files.files }}"
-      failed_when: false
+      failed_when: group_vars_load.rc != 0
 
     - name: Verify network validation playbook exists
       ansible.builtin.stat:

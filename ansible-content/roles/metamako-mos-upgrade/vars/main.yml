@@ -21,8 +21,8 @@ default_latency_thresholds:
 validate_app_exclusivity: true
 
 # Post-upgrade application management
-default_app_install_timeout: 1800  # 30 minutes
-default_app_enable_timeout: 300    # 5 minutes
+default_app_install_timeout: 1800 # 30 minutes
+default_app_enable_timeout: 300 # 5 minutes
 
 # Timing and stability
 post_upgrade_wait_seconds: 30

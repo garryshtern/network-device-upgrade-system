@@ -4,14 +4,17 @@
 - name: Get Opengear storage information
   ansible.builtin.raw: "df -h /tmp"
   register: opengear_storage_info
+  changed_when: false
 
 - name: Get firmware files
   ansible.builtin.raw: "ls -la /tmp/*.img /tmp/*.bin 2>/dev/null || echo 'No firmware files found'"
   register: opengear_firmware_files
+  changed_when: false
 
 - name: Get temporary files
   ansible.builtin.raw: "ls -la /tmp/upgrade_* /tmp/opengear_* 2>/dev/null || echo 'No temporary files found'"
   register: opengear_temp_files
+  changed_when: false
 
 - name: Parse storage information
   ansible.builtin.set_fact:

@@ -41,19 +41,21 @@
   when: target_firmware_exists
 
 - name: Transfer firmware image to device (Server-Initiated PUSH)
+  when: not target_firmware_exists
+
   block:
     - name: Enable SCP server on NX-OS device
       cisco.nxos.nxos_config:
         lines:
           - feature scp-server
-      ignore_errors: true  # May already be enabled
-      
+      ignore_errors: true # May already be enabled
+
     - name: Push firmware image from server to device via SCP
       cisco.nxos.nxos_file_copy:
         file_system: "bootflash:"
         local_file: "{{ local_firmware_path }}"
         remote_file: "{{ target_firmware_version }}"
-        file_pull: false  # Server pushes to device
+        file_pull: false # Server pushes to device
         connect_ssh_port: "{{ ansible_ssh_port | default(22) }}"
         vrf: "{{ management_vrf | default('management') }}"
       register: nxos_file_copy_result
@@ -67,8 +69,6 @@
           - nxos_file_copy_result is succeeded
           - nxos_file_copy_result.transfer_status == 'Received'
         fail_msg: "Secure firmware file transfer failed: {{ nxos_file_copy_result.msg | default('Unknown error') }}"
-
-  when: not target_firmware_exists
 
 - name: Verify firmware file on device
   cisco.nxos.nxos_command:
@@ -84,7 +84,7 @@
   ansible.builtin.assert:
     that:
       - firmware_file_info.file_list | length > 0
-      - firmware_file_info.file_list[0].size > 1024000  # Minimum 1MB
+      - firmware_file_info.file_list[0].size > 1024000 # Minimum 1MB
     fail_msg: "Firmware file validation failed"
 
 - name: Calculate MD5 hash of firmware file on device

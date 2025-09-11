@@ -7,21 +7,21 @@
     commands:
       - show version | include System image file
   register: current_boot_mode
-  
+
 - name: Check if install mode is supported
   cisco.ios.ios_command:
     commands:
       - show install summary
   register: install_mode_check
   failed_when: false
-  
+
 - name: Check platform capabilities
   cisco.ios.ios_command:
     commands:
       - show platform
   register: platform_info
   failed_when: false
-  
+
 - name: Determine install mode support
   ansible.builtin.set_fact:
     platform_supports_install: >-
@@ -30,20 +30,21 @@
         'packages.conf' in current_boot_mode.stdout[0] or
         'install mode' in install_mode_check.stdout[0] | default('')
       }}
-      
+
 - name: Check available storage space
   cisco.ios.ios_command:
     commands:
       - "dir bootflash: | include bytes"
   register: bootflash_space
-  
+
 - name: Parse storage information
   ansible.builtin.set_fact:
-    iosxe_upgrade_state: "{{ iosxe_upgrade_state | combine({'install_mode': platform_supports_install, 'boot_mode': 'install' if platform_supports_install else 'bundle', 'available_space': bootflash_space.stdout[0] | regex_search('\\d+') | int}) }}"
-    
+    iosxe_upgrade_state: "{{ iosxe_upgrade_state | combine({'install_mode': platform_supports_install, 'boot_mode': 'install' if platform_supports_install else 'bundle',
+      'available_space': bootflash_space.stdout[0] | regex_search('\\d+') | int}) }}"
+
 - name: Display install mode assessment
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Install Mode Assessment:
       - Platform: {{ ansible_net_platform }}
       - Install Mode Supported: {{ platform_supports_install }}

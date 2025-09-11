@@ -9,13 +9,13 @@
         vdom: "root"
         selector: "system_firmware_list"
       register: pre_install_firmware_check
-      
+
     - name: Confirm target firmware is available
       ansible.builtin.assert:
         that:
           - pre_install_firmware_check.meta.results | selectattr('version', 'equalto', fortios_upgrade_state.target_version) | list | length > 0
         fail_msg: "Target firmware not found in staged images"
-        
+
     - name: Verify system readiness
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -33,7 +33,7 @@
           vdom: "all"
           destination: "local"
       register: pre_install_backup
-      
+
     - name: Verify backup completion
       ansible.builtin.assert:
         that:
@@ -53,7 +53,7 @@
           reboot: true
       register: firmware_installation
       timeout: 1800
-      
+
     - name: Monitor installation progress
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -63,7 +63,7 @@
       retries: 60
       delay: 30
       failed_when: install_progress.meta.results.status == 'failed'
-      
+
     - name: Validate installation initiation
       ansible.builtin.assert:
         that:
@@ -75,7 +75,7 @@
     - name: Wait for system reboot to begin
       ansible.builtin.pause:
         seconds: 60
-        
+
     - name: Wait for device to become unreachable (reboot confirmation)
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
@@ -84,7 +84,7 @@
         timeout: 600
         delay: 30
       delegate_to: localhost
-      
+
     - name: Wait for device to come back online
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
@@ -93,7 +93,7 @@
         timeout: 1200
         delay: 60
       delegate_to: localhost
-      
+
     - name: Wait for FortiOS services to initialize
       ansible.builtin.pause:
         seconds: 180
@@ -107,19 +107,19 @@
       register: post_install_system_status
       retries: 10
       delay: 30
-      
+
     - name: Confirm target firmware version is active
       ansible.builtin.assert:
         that:
           - fortios_upgrade_state.target_version in post_install_system_status.meta.results.version
         fail_msg: "Installation completed but target version not active: {{ post_install_system_status.meta.results.version }}"
-        
+
     - name: Verify system health post-installation
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "system_resource_usage"
       register: post_install_health
-      
+
     - name: Check critical system services
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -134,20 +134,20 @@
         vdom: "root"
         selector: "firewall_policy_stats"
       register: post_install_policies
-      
+
     - name: Verify interface operational status
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "system_interface_physical"
       register: post_install_interfaces
-      
+
     - name: Check VPN tunnel status (if applicable)
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "vpn_ssl_stats"
       register: post_install_vpn
       failed_when: false
-      
+
     - name: Verify routing table
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -163,14 +163,14 @@
         selector: "system_ha_status"
       register: post_install_ha_status
       when: fortios_upgrade_state.ha_mode != "standalone"
-      
+
     - name: Verify HA cluster health
       ansible.builtin.assert:
         that:
           - post_install_ha_status.meta.results.sync_status == "synchronized"
         fail_msg: "HA cluster not synchronized after installation"
       when: fortios_upgrade_state.ha_mode != "standalone" and post_install_ha_status is defined
-      
+
     - name: Check HA peer status
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -186,7 +186,7 @@
         vdom: "root"
         selector: "license_status"
       register: post_install_license
-      
+
     - name: Check feature availability
       ansible.builtin.assert:
         that:
@@ -196,7 +196,7 @@
 
 - name: Installation completion logging
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       FortiOS Installation Completed Successfully:
       - Device Type: {{ 'HA Cluster' if fortios_upgrade_state.ha_mode != 'standalone' else 'Standalone' }}
       - Previous Version: {{ fortios_upgrade_state.current_version }}

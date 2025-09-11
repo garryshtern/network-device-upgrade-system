@@ -9,7 +9,7 @@
         commands:
           - show running-config | include boot system
       register: current_boot_config
-      
+
     - name: Check bootflash contents
       cisco.ios.ios_command:
         commands:
@@ -24,7 +24,7 @@
           - "boot system flash bootflash:{{ target_image_filename }}"
         save_when: always
       register: boot_config_result
-      
+
     - name: Remove old boot system entries (if any)
       cisco.ios.ios_config:
         lines:
@@ -32,13 +32,13 @@
         save_when: always
       loop: "{{ old_image_files | default([]) }}"
       when: old_image_files is defined
-      
+
     - name: Verify boot system configuration
       cisco.ios.ios_command:
         commands:
           - show running-config | include boot system
       register: new_boot_config
-      
+
     - name: Validate boot system entry
       ansible.builtin.assert:
         that:
@@ -50,12 +50,12 @@
     - name: Save configuration before reboot
       cisco.ios.ios_config:
         save_when: always
-        
+
     - name: Set reboot flag for bundle mode
-      set_fact:
+      ansible.builtin.set_fact:
         requires_reboot: true
         reboot_reason: "Bundle mode upgrade - boot system configured"
-        
+
 - name: Post-configuration validation
   block:
     - name: Display new boot configuration
@@ -65,13 +65,13 @@
           - Target Image: {{ target_image_filename }}
           - Boot System: {{ new_boot_config.stdout[0] }}
           - Reboot Required: {{ requires_reboot }}
-          
+
     - name: Verify image file exists on device
       cisco.ios.ios_command:
         commands:
           - "dir bootflash:{{ target_image_filename }}"
       register: image_verification
-      
+
     - name: Confirm image presence
       ansible.builtin.assert:
         that:

@@ -10,13 +10,13 @@
         vdom: "root"
         selector: "system_storage"
       register: storage_info
-      
+
     - name: Verify sufficient space
       ansible.builtin.assert:
         that:
           - storage_info.meta.results.available_mb | int > 1000
         fail_msg: "Insufficient disk space for firmware download"
-        
+
 - name: Secure local image upload (Server-Initiated PUSH ONLY)
   block:
     - name: Push firmware image from server to FortiOS device
@@ -31,7 +31,7 @@
       when: local_firmware_path is defined
       vars:
         ansible_connection: local
-      
+
     - name: Verify secure upload completion
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -46,21 +46,21 @@
         vdom: "root"
         selector: "system_firmware_list"
       register: available_firmware
-      
+
     - name: Verify target firmware is available
       ansible.builtin.assert:
         that:
           - available_firmware.meta.results | selectattr('version', 'equalto', fortios_upgrade_state.target_version) | list | length > 0
         fail_msg: "Target firmware not found in available images"
-        
+
     - name: Check firmware integritycon
       fortinet.fortios.fortios_monitor:
-        vdom: "root"  
+        vdom: "root"
         selector: "system_firmware_verify"
         params:
           version: "{{ fortios_upgrade_state.target_version }}"
       register: firmware_verification
-      
+
     - name: Confirm firmware integrity
       ansible.builtin.assert:
         that:
@@ -69,7 +69,7 @@
 
 - name: Log loading completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Secure FortiOS Image Loading Completed:
       - Target Version: {{ fortios_upgrade_state.target_version }}
       - Transfer Method: Server-Initiated PUSH (Secure Upload)

@@ -49,7 +49,7 @@
     commands:
       - delete /force bootflash:{{ item }}
   loop: "{{ cleanup_candidates }}"
-  when: 
+  when:
     - cleanup_needed
     - preserve_running_image | default(true)
     - item != running_image_file

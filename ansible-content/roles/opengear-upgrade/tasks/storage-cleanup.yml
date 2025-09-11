@@ -5,6 +5,7 @@
 - name: Get current firmware version and storage information
   ansible.builtin.raw: "df -h /tmp && echo '---VERSION---' && config -g config.version"
   register: opengear_storage_version
+  changed_when: false
 
 - name: Parse storage and version information
   ansible.builtin.set_fact:
@@ -20,16 +21,20 @@
 
 - name: Convert storage sizes to GB
   ansible.builtin.set_fact:
-    current_free_gb: "{{ (tmp_available_size | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in tmp_available_size else (0.001 if 'M' in tmp_available_size else 1))) | round(2) }}"
-    total_storage_gb: "{{ (tmp_total_size | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in tmp_total_size else (0.001 if 'M' in tmp_total_size else 1))) | round(2) }}"
+    current_free_gb: "{{ (tmp_available_size | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in tmp_available_size else (0.001 if 'M' in tmp_available_size
+      else 1))) | round(2) }}"
+    total_storage_gb: "{{ (tmp_total_size | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in tmp_total_size else (0.001 if 'M' in tmp_total_size else 1)))
+      | round(2) }}"
 
 - name: List firmware image files in /tmp
   ansible.builtin.raw: "ls -la /tmp/*.img /tmp/*.bin 2>/dev/null || echo 'No firmware files found'"
   register: firmware_files_list
+  changed_when: false
 
 - name: List temporary upgrade files
   ansible.builtin.raw: "ls -la /tmp/upgrade_* /tmp/opengear_* 2>/dev/null || echo 'No temporary files found'"
   register: temp_files_list
+  changed_when: false
 
 - name: Parse firmware file information
   ansible.builtin.set_fact:
@@ -51,7 +56,7 @@
 - name: Remove obsolete firmware files (if cleanup needed and safe)
   ansible.builtin.raw: "rm -f /tmp/{{ item }}"
   loop: "{{ cleanup_candidates }}"
-  when: 
+  when:
     - cleanup_needed
     - item != running_firmware
     - cleanup_candidates | length > 0
@@ -61,11 +66,13 @@
 - name: Verify storage space after cleanup
   ansible.builtin.raw: "df -h /tmp"
   register: post_cleanup_storage
+  changed_when: false
 
 - name: Parse post-cleanup storage information
   ansible.builtin.set_fact:
     post_cleanup_available: "{{ post_cleanup_storage.stdout | regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
-    post_cleanup_free_gb: "{{ (post_cleanup_available | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in post_cleanup_available else (0.001 if 'M' in post_cleanup_available else 1))) | round(2) }}"
+    post_cleanup_free_gb: "{{ (post_cleanup_available | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in post_cleanup_available else (0.001 if 'M' in post_cleanup_available
+      else 1))) | round(2) }}"
 
 - name: Set storage cleanup results
   ansible.builtin.set_fact:

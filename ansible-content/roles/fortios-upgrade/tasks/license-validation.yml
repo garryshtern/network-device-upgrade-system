@@ -7,27 +7,27 @@
     vdom: "root"
     selector: "license_status"
   register: license_info
-  
+
 - name: Parse license information
   ansible.builtin.set_fact:
     license_details:
       status: "{{ license_info.meta.results.status }}"
       expiry: "{{ license_info.meta.results.expiry_date | default('unknown') }}"
       support_contract: "{{ license_info.meta.results.support | default('unknown') }}"
-      
+
 - name: Check license expiry
   block:
     - name: Parse expiry date
-      set_fact:
+      ansible.builtin.set_fact:
         license_expires: "{{ license_details.expiry | to_datetime('%Y-%m-%d') }}"
         current_date: "{{ ansible_date_time.date | to_datetime('%Y-%m-%d') }}"
       when: license_details.expiry != "unknown"
-      
+
     - name: Calculate days until expiry
-      set_fact:
+      ansible.builtin.set_fact:
         days_until_expiry: "{{ ((license_expires - current_date).days) | int }}"
       when: license_expires is defined
-      
+
     - name: Warn about license expiry
       ansible.builtin.debug:
         msg: |
@@ -43,12 +43,11 @@
           - license_details.support != "expired"
           - license_details.status in ["valid", "registered"]
         fail_msg: "Invalid or expired FortiCare support contract"
-        
+
     - name: Update license status
-      set_fact:
-        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
-          'license_status': 'valid' if license_details.status in ['valid', 'registered'] else 'invalid'
-        }) }}"
+      ansible.builtin.set_fact:
+        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({'license_status': 'valid' if license_details.status in ['valid', 'registered'] else 'invalid'})
+          }}"
 
 - name: Check firmware download entitlement
   fortinet.fortios.fortios_monitor_fact:
@@ -56,14 +55,14 @@
     selector: "system_firmware"
   register: firmware_entitlement
   failed_when: false
-  
+
 - name: Validate firmware access
   block:
     - name: Check available firmware versions
       ansible.builtin.debug:
         msg: "Available firmware versions: {{ firmware_entitlement.meta.results.available | default([]) }}"
       when: firmware_entitlement.meta is defined
-      
+
     - name: Verify target version availability
       ansible.builtin.assert:
         that:
@@ -73,7 +72,7 @@
 
 - name: Log license validation results
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       FortiCare License Validation:
       - Status: {{ license_details.status }}
       - Support Contract: {{ license_details.support_contract }}

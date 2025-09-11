@@ -4,14 +4,17 @@
 - name: Get MOS storage information
   ansible.builtin.raw: "df -h /flash"
   register: mos_storage_info
+  changed_when: false
 
 - name: Get MOS firmware files
   ansible.builtin.raw: "ls -la /flash/*.mos 2>/dev/null || echo 'No MOS files found'"
   register: mos_firmware_files
+  changed_when: false
 
 - name: Get MOS application files
   ansible.builtin.raw: "ls -la /flash/*.tgz /flash/*.tar.gz 2>/dev/null || echo 'No application files found'"
   register: mos_app_files
+  changed_when: false
 
 - name: Parse storage information
   ansible.builtin.set_fact:

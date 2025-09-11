@@ -58,12 +58,11 @@ pip install --upgrade ansible
 
 # Install latest collection versions (as of September 2025)
 ansible-galaxy collection install \
-  cisco.nxos:9.4.0 \
-  cisco.ios:9.2.0 \
-  fortinet.fortios:2.3.0 \
+  cisco.nxos:11.0.0 \
+  cisco.ios:11.0.0 \
+  fortinet.fortios:2.4.0 \
   ansible.netcommon:8.1.0 \
-  community.network:5.0.0 \
-  community.general:8.0.0 \
+  community.general:11.2.1 \
   --force --upgrade
 ```
 
@@ -76,6 +75,8 @@ Comprehensive testing for Mac/Linux development without physical devices:
 - Workflow logic and error handling validation
 - Integration testing with complete workflows
 - YAML/JSON validation and performance testing
+- Shell script and Python script testing
+- Linting and formatting checks
 - Container-based molecule testing
 - CI/CD integration
 
@@ -88,6 +89,9 @@ Comprehensive testing for Mac/Linux development without physical devices:
 - **YAML Standards**: Consistent formatting and structure
 - **Testing**: Comprehensive unit and integration tests
 - **Security**: All sensitive data encrypted with Ansible Vault
+- **Documentation**: Clear inline comments and external documentation
+- **Version Control**: Git with meaningful commit messages
+- 
 
 ## Architecture
 
@@ -97,6 +101,9 @@ Native service-based system:
 - **Telegraf**: Metrics collection for InfluxDB v2
 - **Redis**: Job queuing and caching
 - **Single Server**: All services as systemd user services
+- **Ansible**: Core automation engine
+- **InfluxDB v2**: Time-series database for real-time tracking
+- **Grafana**: Visualization and dashboards
 
 **Master Workflow**: `ansible-content/playbooks/main-upgrade-workflow.yml`
 

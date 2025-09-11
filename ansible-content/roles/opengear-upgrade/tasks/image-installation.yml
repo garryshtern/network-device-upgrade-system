@@ -13,11 +13,11 @@
         validate_certs: false
       register: token_refresh
       failed_when: false
-      
+
     - name: Update API token if refreshed
-      set_fact:
+      ansible.builtin.set_fact:
         opengear_api_token: "{{ token_refresh.json.token if token_refresh.json is defined else opengear_api_token }}"
-        
+
     - name: Verify firmware image is ready for installation
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/list"
@@ -26,11 +26,12 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: pre_install_firmware_list
-      
+
     - name: Confirm target firmware availability
-      set_fact:
-        target_firmware_ready: "{{ pre_install_firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | selectattr('status', 'equalto', 'ready') | list | length > 0 }}"
-        
+      ansible.builtin.set_fact:
+        target_firmware_ready: "{{ pre_install_firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | selectattr('status', 'equalto',
+          'ready') | list | length > 0 }}"
+
     - name: Validate firmware is ready
       ansible.builtin.assert:
         that:
@@ -40,9 +41,9 @@
 - name: Console server preparation (if applicable)
   block:
     - name: Notify active console sessions
-      include_tasks: serial-management.yml
+      ansible.builtin.include_tasks: serial-management.yml
       when: opengear_upgrade_state.device_type == "console_server"
-      
+
     - name: Set console server to maintenance mode
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/maintenance"
@@ -70,7 +71,7 @@
       register: critical_power_check
       when: opengear_upgrade_state.device_type == "smart_pdu"
       failed_when: false
-      
+
     - name: Warn about critical power outlets
       ansible.builtin.debug:
         msg: |
@@ -92,7 +93,7 @@
           description: "Pre-upgrade backup - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
         validate_certs: false
       register: config_backup
-      
+
     - name: Initiate firmware installation
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/install"
@@ -108,7 +109,7 @@
           backup_id: "{{ config_backup.json.backup_id if config_backup.json is defined else omit }}"
         validate_certs: false
       register: firmware_install
-      
+
     - name: Monitor installation progress (before reboot)
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/install/{{ firmware_install.json.install_id }}/status"
@@ -127,7 +128,7 @@
     - name: Wait for device reboot to start
       ansible.builtin.pause:
         seconds: 30
-        
+
     - name: Wait for device to become unreachable (reboot confirmation)
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
@@ -136,7 +137,7 @@
         timeout: 300
         delay: 10
       delegate_to: localhost
-      
+
     - name: Wait for device to come back online
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
@@ -145,7 +146,7 @@
         timeout: 900
         delay: 30
       delegate_to: localhost
-      
+
     - name: Wait for web services to fully initialize
       ansible.builtin.pause:
         seconds: 60
@@ -166,11 +167,11 @@
       register: post_reboot_auth
       retries: 5
       delay: 30
-      
+
     - name: Update API token for post-reboot operations
-      set_fact:
+      ansible.builtin.set_fact:
         opengear_api_token: "{{ post_reboot_auth.json.token }}"
-        
+
     - name: Verify new firmware version is active
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/info"
@@ -179,13 +180,13 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: post_install_info
-      
+
     - name: Confirm target firmware version
       ansible.builtin.assert:
         that:
           - opengear_upgrade_state.target_version in post_install_info.json.version
         fail_msg: "Installation completed but target version not active: {{ post_install_info.json.version }}"
-        
+
     - name: Verify system health after installation
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/health"
@@ -194,7 +195,7 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: post_install_health
-      
+
     - name: Validate system health status
       ansible.builtin.assert:
         that:
@@ -204,6 +205,8 @@
 - name: Post-installation device-specific validation
   block:
     - name: Validate console server functionality
+      when: opengear_upgrade_state.device_type == "console_server"
+
       block:
         - name: Check serial port status after upgrade
           ansible.builtin.uri:
@@ -213,7 +216,7 @@
               Authorization: "Token {{ opengear_api_token }}"
             validate_certs: false
           register: post_serial_status
-          
+
         - name: Disable maintenance mode
           ansible.builtin.uri:
             url: "https://{{ ansible_host }}/api/v1/system/maintenance"
@@ -225,9 +228,9 @@
             body:
               enabled: false
             validate_certs: false
-      when: opengear_upgrade_state.device_type == "console_server"
-      
     - name: Validate smart PDU functionality
+      when: opengear_upgrade_state.device_type == "smart_pdu"
+
       block:
         - name: Check power outlet status after upgrade
           ansible.builtin.uri:
@@ -237,17 +240,15 @@
               Authorization: "Token {{ opengear_api_token }}"
             validate_certs: false
           register: post_power_status
-          
+
         - name: Verify power management is operational
           ansible.builtin.assert:
             that:
               - post_power_status.json | length > 0
             fail_msg: "Power management not operational after upgrade"
-      when: opengear_upgrade_state.device_type == "smart_pdu"
-
 - name: Log installation completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Opengear Installation Completed Successfully:
       - Device Model: {{ opengear_upgrade_state.device_model }}
       - Device Type: {{ opengear_upgrade_state.device_type | title }}

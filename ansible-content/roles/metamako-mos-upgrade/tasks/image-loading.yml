@@ -9,13 +9,13 @@
       ansible.netcommon.cli_command:
         ansible.builtin.command: show system storage
       register: storage_status
-      
+
     - name: Verify sufficient space
       ansible.builtin.assert:
         that:
           - "'available' in storage_status.stdout | lower"
         fail_msg: "Insufficient storage space for image loading"
-        
+
     - name: Verify upgrade server connectivity (from server side)
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
@@ -31,7 +31,7 @@
       ansible.netcommon.cli_command:
         ansible.builtin.command: system transfer-mode optimized
       failed_when: false
-      
+
     - name: Push firmware image from server to device (SCP)
       ansible.builtin.command:
         cmd: >
@@ -44,7 +44,7 @@
       register: scp_push_result
       vars:
         ansible_connection: local
-        
+
     - name: Alternative - Use SFTP for secure transfer
       ansible.builtin.command:
         cmd: >
@@ -57,12 +57,12 @@
       register: sftp_push_result
       vars:
         ansible_connection: local
-      
+
     - name: Verify download completion
       ansible.netcommon.cli_command:
         ansible.builtin.command: "show image {{ target_image_filename }}"
       register: image_verification
-      
+
     - name: Validate image integrity
       ansible.builtin.assert:
         that:
@@ -76,12 +76,12 @@
       ansible.netcommon.cli_command:
         ansible.builtin.command: "image stage {{ target_image_filename }}"
       register: staging_result
-      
+
     - name: Verify staging success
       ansible.netcommon.cli_command:
         ansible.builtin.command: show image staged
       register: staged_verification
-      
+
     - name: Confirm image is staged
       ansible.builtin.assert:
         that:
@@ -95,7 +95,7 @@
         ansible.builtin.command: "image checksum {{ target_image_filename }}"
       register: image_checksum
       when: expected_checksum is defined
-      
+
     - name: Verify checksum matches expected
       ansible.builtin.assert:
         that:
@@ -105,7 +105,7 @@
 
 - name: Log loading completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Secure Metamako Image Loading Completed:
       - Local Source: {{ local_image_path }}
       - Remote Destination: {{ ansible_host }}:/flash/{{ target_image_filename }}

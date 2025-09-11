@@ -82,7 +82,7 @@
 - name: Display boot warnings if found
   ansible.builtin.debug:
     msg: "Boot warnings/errors found: {{ boot_log_check.stdout[0] }}"
-  when: 
+  when:
     - boot_log_check is succeeded
     - boot_log_check.stdout[0] | length > 0
 

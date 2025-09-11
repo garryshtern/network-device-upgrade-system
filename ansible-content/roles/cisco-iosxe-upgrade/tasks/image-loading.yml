@@ -10,11 +10,11 @@
         commands:
           - "dir bootflash: | include bytes"
       register: space_check
-      
+
     - name: Parse available space
-      set_fact:
+      ansible.builtin.set_fact:
         available_bytes: "{{ space_check.stdout[0] | regex_search('(\\d+) bytes free') | regex_replace(' bytes free', '') | int }}"
-        
+
     - name: Verify sufficient space
       ansible.builtin.assert:
         that:
@@ -27,8 +27,8 @@
       cisco.ios.ios_config:
         lines:
           - ip scp server enable
-      ignore_errors: true  # May already be enabled
-      
+      ignore_errors: true # May already be enabled
+
     - name: Push image from server to device via SCP
       ansible.posix.synchronize:
         src: "{{ local_image_path }}"
@@ -41,7 +41,7 @@
       register: scp_result
       vars:
         ansible_ssh_pipelining: false
-        
+
     - name: Alternative SCP transfer method (if synchronize fails)
       ansible.builtin.command:
         cmd: >
@@ -53,13 +53,13 @@
       delegate_to: localhost
       when: scp_result is failed
       register: scp_fallback_result
-      
+
     - name: Verify file transfer completion
       cisco.ios.ios_command:
         commands:
           - "dir bootflash:{{ target_image_filename }}"
       register: file_verification
-      
+
     - name: Confirm file exists and size matches
       ansible.builtin.assert:
         that:
@@ -75,17 +75,17 @@
           - "verify /md5 bootflash:{{ target_image_filename }}"
       register: md5_verification
       when: expected_md5_hash is defined
-      
+
     - name: Verify MD5 hash matches expected
       ansible.builtin.assert:
         that:
           - expected_md5_hash in md5_verification.stdout[0]
         fail_msg: "MD5 hash verification failed"
       when: expected_md5_hash is defined
-      
+
 - name: Log transfer completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Secure Image Transfer Completed (Server-Initiated PUSH):
       - Local Source: {{ local_image_path }}
       - Remote Destination: {{ ansible_host }}:bootflash:{{ target_image_filename }}

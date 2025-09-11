@@ -10,21 +10,21 @@
           - show feature | include bfd
       register: bfd_feature_status
       failed_when: false
-      
+
     - name: Check BFD neighbor status
       cisco.nxos.nxos_command:
         commands:
           - show bfd neighbors | json
       register: bfd_neighbors
       failed_when: false
-      
+
     - name: Check BFD neighbor details
       cisco.nxos.nxos_command:
         commands:
           - show bfd neighbors details | json
-      register: bfd_neighbor_details  
+      register: bfd_neighbor_details
       failed_when: false
-      
+
     - name: Check BFD interface configuration
       cisco.nxos.nxos_command:
         commands:
@@ -35,12 +35,12 @@
 - name: Parse BFD feature status
   block:
     - name: Verify BFD feature is enabled
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_feature_enabled: >-
-          {{ 'bfd' in bfd_feature_status.stdout[0] and 
+          {{ 'bfd' in bfd_feature_status.stdout[0] and
              'enabled' in bfd_feature_status.stdout[0] }}
       when: bfd_feature_status.rc == 0
-      
+
     - name: Check BFD feature status
       ansible.builtin.assert:
         that:
@@ -53,12 +53,12 @@
 - name: Parse BFD neighbor information
   block:
     - name: Extract BFD neighbor details
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_neighbor_sessions: >-
           {{ bfd_neighbors.stdout[0] | from_json |
              json_query('TABLE_neighbor.ROW_neighbor[*].{
                neighbor: neighbor_addr,
-               local_addr: local_addr, 
+               local_addr: local_addr,
                interface: interface,
                state: session_state,
                type: session_type
@@ -66,9 +66,9 @@
       when:
         - bfd_neighbors.rc == 0
         - bfd_neighbors.stdout[0] | length > 10
-        
+
     - name: Count BFD session states
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_up_sessions: >-
           {{ bfd_neighbor_sessions | selectattr('state', 'equalto', 'Up') | list | length }}
         bfd_down_sessions: >-
@@ -82,7 +82,7 @@
 - name: Parse BFD session metrics
   block:
     - name: Extract detailed BFD metrics
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_session_metrics: >-
           {{ bfd_neighbor_details.stdout[0] | from_json |
              json_query('TABLE_neighbor.ROW_neighbor[*].{
@@ -100,10 +100,10 @@
         - bfd_neighbor_details.rc == 0
         - bfd_neighbor_details.stdout[0] | length > 10
 
-- name: Parse BFD interface information  
+- name: Parse BFD interface information
   block:
     - name: Extract BFD interface details
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_enabled_interfaces: >-
           {{ bfd_interfaces.stdout[0] | from_json |
              json_query('TABLE_interface.ROW_interface[*].{
@@ -121,12 +121,12 @@
     - name: Verify BFD sessions exist
       ansible.builtin.assert:
         that:
-          - bfd_total_sessions is defined  
+          - bfd_total_sessions is defined
           - bfd_total_sessions | int > 0
         fail_msg: "No BFD sessions configured on device"
         success_msg: "{{ bfd_total_sessions }} BFD session(s) found"
       when: bfd_neighbor_sessions is defined
-      
+
     - name: Verify majority of BFD sessions are UP
       ansible.builtin.assert:
         that:
@@ -139,12 +139,13 @@
           - INIT sessions: {{ bfd_init_sessions }}
           - Total sessions: {{ bfd_total_sessions }}
           Expected: At least 80% of sessions should be UP
-        success_msg: "BFD sessions healthy: {{ bfd_up_sessions }}/{{ bfd_total_sessions }} UP ({{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1) }}%)"
+        success_msg: "BFD sessions healthy: {{ bfd_up_sessions }}/{{ bfd_total_sessions }} UP ({{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1)
+          }}%)"
       when:
         - bfd_up_sessions is defined
         - bfd_total_sessions is defined
         - bfd_total_sessions | int > 0
-        
+
     - name: Warn about DOWN BFD sessions
       ansible.builtin.debug:
         msg: |
@@ -163,17 +164,17 @@
     - name: Check BFD session timing consistency
       ansible.builtin.assert:
         that:
-          - item.tx_interval | int <= 1000  # Less than 1 second
-          - item.rx_interval | int <= 1000  # Less than 1 second
-          - item.multiplier | int >= 3      # At least 3x multiplier
+          - item.tx_interval | int <= 1000 # Less than 1 second
+          - item.rx_interval | int <= 1000 # Less than 1 second
+          - item.multiplier | int >= 3 # At least 3x multiplier
         fail_msg: "BFD session {{ item.neighbor }} has suboptimal timing: TX={{ item.tx_interval }}ms, RX={{ item.rx_interval }}ms, Mult={{ item.multiplier }}"
         success_msg: "BFD session {{ item.neighbor }} timing optimal"
       loop: "{{ bfd_session_metrics }}"
       when:
         - bfd_session_metrics is defined
         - bfd_session_metrics | length > 0
-      failed_when: false  # Don't fail upgrade for timing warnings
-      
+      failed_when: false # Don't fail upgrade for timing warnings
+
     - name: Verify BFD echo function status
       ansible.builtin.debug:
         msg: |
@@ -188,19 +189,19 @@
 - name: BFD baseline comparison
   block:
     - name: Load previous BFD baseline (if exists)
-      slurp:
+      ansible.builtin.slurp:
         src: "/tmp/bfd_baseline_{{ inventory_hostname }}.json"
       register: previous_bfd_baseline
       failed_when: false
       delegate_to: localhost
-      
+
     - name: Parse previous baseline
-      set_fact:
+      ansible.builtin.set_fact:
         prev_bfd_baseline: "{{ previous_bfd_baseline.content | b64decode | from_json }}"
-      when: 
+      when:
         - previous_bfd_baseline is succeeded
         - previous_bfd_baseline.content is defined
-        
+
     - name: Compare with previous baseline
       ansible.builtin.debug:
         msg: |
@@ -209,7 +210,7 @@
           Current Total Sessions: {{ bfd_total_sessions | default(0) }}
           Previous UP Sessions: {{ prev_bfd_baseline.up_sessions | default('N/A') }}
           Current UP Sessions: {{ bfd_up_sessions | default(0) }}
-          
+
           Session Count Change: {{ (bfd_total_sessions | default(0) | int) - (prev_bfd_baseline.total_sessions | default(0) | int) }}
           UP Session Change: {{ (bfd_up_sessions | default(0) | int) - (prev_bfd_baseline.up_sessions | default(0) | int) }}
       when: prev_bfd_baseline is defined
@@ -225,14 +226,14 @@
       DOWN Sessions: {{ bfd_down_sessions if bfd_down_sessions is defined else 'N/A' }}
       INIT Sessions: {{ bfd_init_sessions if bfd_init_sessions is defined else 'N/A' }}
       Enabled Interfaces: {{ bfd_enabled_interfaces | length if bfd_enabled_interfaces is defined else 'N/A' }}
-      
+
       {% if bfd_neighbor_sessions is defined %}
       Session Details:
       {% for session in bfd_neighbor_sessions %}
       - {{ session.neighbor }} ({{ session.interface }}) - {{ session.state }}
       {% endfor %}
       {% endif %}
-      
+
       Health Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
 
 - name: Store BFD validation baseline
@@ -252,15 +253,15 @@
         "validation_status": "{{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}"
       }
     dest: "/tmp/bfd_baseline_{{ inventory_hostname }}.json"
-    mode: '0644'
+    mode: "0644"
   delegate_to: localhost
-  
+
 - name: Store detailed BFD validation report
   ansible.builtin.copy:
     content: |
       # BFD Validation Report - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
       # Generated during NX-OS firmware upgrade validation
-      
+
       BFD_Feature_Enabled: {{ bfd_feature_enabled if bfd_feature_enabled is defined else false }}
       Total_Sessions: {{ bfd_total_sessions if bfd_total_sessions is defined else 0 }}
       UP_Sessions: {{ bfd_up_sessions if bfd_up_sessions is defined else 0 }}
@@ -268,7 +269,7 @@
       INIT_Sessions: {{ bfd_init_sessions if bfd_init_sessions is defined else 0 }}
       Enabled_Interfaces: {{ bfd_enabled_interfaces | length if bfd_enabled_interfaces is defined else 0 }}
       Success_Rate: {{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1) if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_total_sessions | int > 0) else 0 }}%
-      
+
       {% if bfd_neighbor_sessions is defined %}
       Neighbor_Session_Details:
       {% for session in bfd_neighbor_sessions %}
@@ -279,7 +280,7 @@
           Type: {{ session.type }}
       {% endfor %}
       {% endif %}
-      
+
       {% if bfd_session_metrics is defined %}
       Session_Timing_Metrics:
       {% for metric in bfd_session_metrics %}
@@ -293,7 +294,7 @@
           Local_Diagnostic: {{ metric.local_diag }}
       {% endfor %}
       {% endif %}
-      
+
       {% if bfd_enabled_interfaces is defined %}
       BFD_Enabled_Interfaces:
       {% for intf in bfd_enabled_interfaces %}
@@ -303,9 +304,9 @@
           Authentication: {{ intf.authentication }}
       {% endfor %}
       {% endif %}
-      
+
       Validation_Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: "/tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}.txt"
-    mode: '0644'
+    mode: "0644"
   delegate_to: localhost

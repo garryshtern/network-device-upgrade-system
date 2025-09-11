@@ -33,11 +33,13 @@
 - name: Get current firmware version (Opengear)
   ansible.builtin.raw: "config show system.label 2>/dev/null || echo 'Unknown'"
   register: opengear_version_output
+  changed_when: false
   when: ansible_network_os == 'opengear'
 
 - name: Get current firmware version (Metamako MOS)
   ansible.builtin.raw: "cat /etc/mos-release 2>/dev/null || echo 'Unknown'"
   register: mos_version_output
+  changed_when: false
   when: ansible_network_os == 'mos'
 
 - name: Extract actual version from device output

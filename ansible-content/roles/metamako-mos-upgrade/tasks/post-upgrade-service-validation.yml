@@ -59,11 +59,11 @@
     - name: Restart Metawatch if it should be running
       ansible.netcommon.cli_command:
         ansible.builtin.command: metawatch start
-      when: 
+      when:
         - metamako_upgrade_state.metawatch_enabled | default(false)
         - pre_upgrade_baseline.metawatch_running | default(false)
         - not post_upgrade_services.metawatch_running | default(false)
-      
+
     - name: Restart Metamux if it should be running
       ansible.netcommon.cli_command:
         ansible.builtin.command: metamux start
@@ -71,7 +71,7 @@
         - metamako_upgrade_state.metamux_enabled | default(false)
         - pre_upgrade_baseline.metamux_running | default(false)
         - not post_upgrade_services.metamux_running | default(false)
-        
+
     - name: Restart telemetry if it should be running
       ansible.netcommon.cli_command:
         ansible.builtin.command: telemetry start
@@ -79,10 +79,10 @@
         - metamako_upgrade_state.telemetry_enabled | default(false)
         - pre_upgrade_baseline.telemetry_running | default(false)
         - not post_upgrade_services.telemetry_running | default(false)
-        
+
 - name: Final service status report
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       Post-Upgrade Service Status Summary:
       Metawatch: {{ 'Running' if post_upgrade_services.metawatch_running else 'Stopped' }} (Expected: {{ 'Running' if pre_upgrade_baseline.metawatch_running else 'Stopped' }})
       Metamux: {{ 'Running' if post_upgrade_services.metamux_running else 'Stopped' }} (Expected: {{ 'Running' if pre_upgrade_baseline.metamux_running else 'Stopped' }})

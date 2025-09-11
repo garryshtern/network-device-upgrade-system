@@ -9,11 +9,11 @@
         commands:
           - show version epld
       register: current_epld_versions
-      
+
     - name: Parse EPLD information
-      set_fact:
+      ansible.builtin.set_fact:
         epld_modules: "{{ current_epld_versions.stdout[0] | regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
-        
+
     - name: Display current EPLD status
       ansible.builtin.debug:
         msg: |
@@ -22,7 +22,7 @@
           - Module {{ module_info[0] }}: Version {{ module_info[1] }}
           {% endfor %}
       when: epld_modules | length > 0
-      
+
     - name: Check EPLD upgrade requirements
       cisco.nxos.nxos_command:
         commands:
@@ -39,11 +39,11 @@
           - show module
           - show system resources
       register: system_compatibility
-      
+
     - name: Check for dual supervisor setup
-      set_fact:
+      ansible.builtin.set_fact:
         has_dual_sup_for_epld: "{{ 'Supervisor' in system_compatibility.stdout[0] and system_compatibility.stdout[0].count('Supervisor') >= 2 }}"
-        
+
     - name: Validate EPLD upgrade feasibility
       ansible.builtin.assert:
         that:
@@ -57,7 +57,7 @@
         file_system: "bootflash:"
         local_file: "{{ epld_image_source }}"
         remote_file: "{{ target_epld_image }}"
-        file_pull: false  # Server pushes to device
+        file_pull: false # Server pushes to device
         connect_ssh_port: "{{ ansible_ssh_port | default(22) }}"
         vrf: "{{ management_vrf | default('management') }}"
       register: epld_stage_result
@@ -65,14 +65,14 @@
       when: target_epld_image is defined
       vars:
         ansible_connection: local
-      
+
     - name: Verify EPLD image staging
       cisco.nxos.nxos_command:
         commands:
           - "dir bootflash:{{ target_epld_image }}"
       register: epld_image_verification
       when: target_epld_image is defined
-      
+
     - name: Execute EPLD upgrade
       cisco.nxos.nxos_command:
         commands:
@@ -92,7 +92,7 @@
       retries: 60
       delay: 30
       when: epld_upgrade_result is defined
-      
+
     - name: Validate EPLD upgrade completion
       ansible.builtin.assert:
         that:
@@ -107,11 +107,11 @@
         commands:
           - show version epld
       register: updated_epld_versions
-      
+
     - name: Parse updated EPLD information
-      set_fact:
+      ansible.builtin.set_fact:
         updated_epld_modules: "{{ updated_epld_versions.stdout[0] | regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
-        
+
     - name: Verify EPLD version updates
       ansible.builtin.debug:
         msg: |
@@ -120,7 +120,7 @@
           - Module {{ module_info[0] }}: {{ 'UPDATED' if module_info[1] != (epld_modules | selectattr('0', 'equalto', module_info[0]) | map(attribute='1') | first | default('unknown')) else 'UNCHANGED' }} ({{ module_info[1] }})
           {% endfor %}
       when: updated_epld_modules | length > 0
-      
+
     - name: Check system stability after EPLD upgrade
       cisco.nxos.nxos_command:
         commands:
@@ -137,9 +137,9 @@
           - "delete bootflash:{{ target_epld_image }}"
       when: cleanup_epld_images | default(false) and target_epld_image is defined
       failed_when: false
-      
+
     - name: Document EPLD upgrade completion
-      set_fact:
+      ansible.builtin.set_fact:
         epld_upgrade_summary:
           timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
           modules_upgraded: "{{ epld_modules_to_upgrade | default(['all']) }}"
@@ -157,5 +157,5 @@
       - Post-upgrade Modules: {{ updated_epld_modules | length if updated_epld_modules is defined else 'Unknown' }}
       - System Stable: {{ 'YES' if post_epld_stability is defined else 'CHECK REQUIRED' }}
       - Timestamp: {{ epld_upgrade_summary.timestamp }}
-      
+
   when: epld_upgrade_summary is defined

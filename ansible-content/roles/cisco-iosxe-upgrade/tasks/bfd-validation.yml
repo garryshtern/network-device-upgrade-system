@@ -10,14 +10,14 @@
           - show bfd summary
       register: bfd_summary
       failed_when: false
-      
+
     - name: Check BFD neighbors
       cisco.ios.ios_command:
         commands:
           - show bfd neighbors
       register: bfd_neighbors
       failed_when: false
-      
+
     - name: Check BFD neighbor details
       cisco.ios.ios_command:
         commands:
@@ -28,29 +28,29 @@
 - name: Parse BFD session information
   block:
     - name: Extract BFD session count from summary
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_total_sessions: >-
-          {{ bfd_summary.stdout[0] | 
+          {{ bfd_summary.stdout[0] |
              regex_search('Number of BFD Sessions:\s+(\d+)', '\\1') | first | int }}
-      when: 
+      when:
         - bfd_summary.rc == 0
         - '"Number of BFD Sessions:" in bfd_summary.stdout[0]'
-        
+
     - name: Parse BFD neighbor sessions
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_active_neighbors: >-
-          {{ bfd_neighbors.stdout[0] | 
+          {{ bfd_neighbors.stdout[0] |
              regex_findall('(\d+\.\d+\.\d+\.\d+)\s+(\S+)\s+(\S+)\s+(Up|Down)', multiline=True) }}
       when: bfd_neighbors.rc == 0
-      
+
     - name: Count UP BFD sessions
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_up_sessions: >-
           {{ bfd_active_neighbors | selectattr('3', 'equalto', 'Up') | list | length }}
       when: bfd_active_neighbors is defined
-      
+
     - name: Count DOWN BFD sessions
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_down_sessions: >-
           {{ bfd_active_neighbors | selectattr('3', 'equalto', 'Down') | list | length }}
       when: bfd_active_neighbors is defined
@@ -58,12 +58,12 @@
 - name: Extract detailed BFD metrics
   block:
     - name: Parse BFD session details
-      set_fact:
+      ansible.builtin.set_fact:
         bfd_session_details: >-
-          {{ bfd_neighbor_details.stdout[0] | 
-             regex_findall('NeighAddr:\s+(\S+).*?State:\s+(\S+).*?MinTxInt:\s+(\d+).*?MinRxInt:\s+(\d+)', 
+          {{ bfd_neighbor_details.stdout[0] |
+             regex_findall('NeighAddr:\s+(\S+).*?State:\s+(\S+).*?MinTxInt:\s+(\d+).*?MinRxInt:\s+(\d+)',
              multiline=True, dotall=True) }}
-      when: 
+      when:
         - bfd_neighbor_details.rc == 0
         - bfd_neighbor_details.stdout[0] | length > 0
 
@@ -77,7 +77,7 @@
         fail_msg: "No BFD sessions configured on device"
         success_msg: "{{ bfd_total_sessions }} BFD session(s) configured"
       when: bfd_total_sessions is defined
-      
+
     - name: Verify BFD neighbors are reachable
       ansible.builtin.assert:
         that:
@@ -86,7 +86,7 @@
         fail_msg: "No BFD neighbors found"
         success_msg: "{{ bfd_active_neighbors | length }} BFD neighbor(s) found"
       when: bfd_active_neighbors is defined
-      
+
     - name: Verify majority of BFD sessions are UP
       ansible.builtin.assert:
         that:
@@ -99,7 +99,7 @@
           - Total neighbors: {{ bfd_active_neighbors | length }}
           At least 80% of BFD sessions should be UP
         success_msg: "BFD sessions healthy: {{ bfd_up_sessions }}/{{ bfd_active_neighbors | length }} UP"
-      when: 
+      when:
         - bfd_up_sessions is defined
         - bfd_down_sessions is defined
         - bfd_active_neighbors is defined
@@ -112,12 +112,12 @@
           - ping {{ item[0] }} repeat 3
       register: bfd_ping_results
       loop: "{{ bfd_active_neighbors }}"
-      when: 
+      when:
         - bfd_active_neighbors is defined
         - bfd_active_neighbors | length > 0
         - item[3] == 'Up'
       failed_when: false
-      
+
     - name: Verify BFD neighbor ping success
       ansible.builtin.assert:
         that:
@@ -125,7 +125,7 @@
         fail_msg: "BFD neighbor {{ bfd_active_neighbors[item.item_index][0] }} ping failed"
         success_msg: "BFD neighbor {{ bfd_active_neighbors[item.item_index][0] }} ping successful"
       loop: "{{ bfd_ping_results.results }}"
-      when: 
+      when:
         - bfd_ping_results is defined
         - item.rc == 0
       loop_control:
@@ -140,27 +140,27 @@
       Active Neighbors: {{ bfd_active_neighbors | length if bfd_active_neighbors is defined else 'N/A' }}
       Sessions UP: {{ bfd_up_sessions if bfd_up_sessions is defined else 'N/A' }}
       Sessions DOWN: {{ bfd_down_sessions if bfd_down_sessions is defined else 'N/A' }}
-      
+
       {% if bfd_active_neighbors is defined %}
       BFD Neighbor Status:
       {% for neighbor in bfd_active_neighbors %}
       - {{ neighbor[0] }} ({{ neighbor[1] }}) - {{ neighbor[3] }}
       {% endfor %}
       {% endif %}
-      
+
       Health Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions | int > 0) else 'CHECK' }}
-      
+
 - name: Store BFD validation baseline
   ansible.builtin.copy:
     content: |
       # BFD Validation Baseline - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
       # Generated during firmware upgrade validation
-      
+
       Total_BFD_Sessions: {{ bfd_total_sessions if bfd_total_sessions is defined else 0 }}
       Active_Neighbors: {{ bfd_active_neighbors | length if bfd_active_neighbors is defined else 0 }}
       Sessions_UP: {{ bfd_up_sessions if bfd_up_sessions is defined else 0 }}
       Sessions_DOWN: {{ bfd_down_sessions if bfd_down_sessions is defined else 0 }}
-      
+
       {% if bfd_active_neighbors is defined %}
       Neighbor_Details:
       {% for neighbor in bfd_active_neighbors %}
@@ -170,7 +170,7 @@
           State: {{ neighbor[3] }}
       {% endfor %}
       {% endif %}
-      
+
       {% if bfd_session_details is defined %}
       Session_Metrics:
       {% for session in bfd_session_details %}
@@ -180,9 +180,9 @@
           Min_Rx_Interval: {{ session[3] }}ms
       {% endfor %}
       {% endif %}
-      
+
       Validation_Status: {{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions | int > 0) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: "/tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}.txt"
-    mode: '0644'
+    mode: "0644"
   delegate_to: localhost

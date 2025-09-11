@@ -20,7 +20,7 @@
       ansible.builtin.file:
         path: "{{ validation_results_path }}/{{ inventory_hostname }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
       delegate_to: localhost
 
   tasks:
@@ -153,7 +153,7 @@
           vars:
             capture_mode: "validation"
             output_file: "{{ validation_results_path }}/{{ inventory_hostname }}/multicast_current_{{ validation_timestamp }}.json"
-          when: 
+          when:
             - ansible_network_os in ['nxos', 'ios']
             - multicast_enabled | default(true) | bool
 
@@ -164,7 +164,7 @@
           vars:
             baseline_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/multicast_baseline_*.json"
             current_file: "{{ validation_results_path }}/{{ inventory_hostname }}/multicast_current_{{ validation_timestamp }}.json"
-          when: 
+          when:
             - ansible_network_os in ['nxos', 'ios']
             - multicast_enabled | default(true) | bool
             - compare_with_baseline
@@ -172,7 +172,7 @@
         - name: Mark multicast validation as passed
           ansible.builtin.set_fact:
             validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['multicast_validation']}) }}"
-          when: 
+          when:
             - ansible_network_os in ['nxos', 'ios']
             - multicast_enabled | default(true) | bool
 
@@ -245,7 +245,8 @@
 
     - name: Calculate validation score
       ansible.builtin.set_fact:
-        validation_score: "{{ (validation_results.tests_passed | length / (validation_results.tests_passed | length + validation_results.tests_failed | length) * 100) | round(2) }}"
+        validation_score: "{{ (validation_results.tests_passed | length / (validation_results.tests_passed | length + validation_results.tests_failed | length) *
+          100) | round(2) }}"
       when: (validation_results.tests_passed | length + validation_results.tests_failed | length) > 0
 
     - name: Record validation metrics

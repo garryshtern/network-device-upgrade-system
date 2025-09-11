@@ -287,4 +287,3 @@
     - name: Compliance audit completion
       ansible.builtin.debug:
         msg: "Compliance audit completed for {{ inventory_hostname }} - Score: {{ compliance_percentage }}%"
-

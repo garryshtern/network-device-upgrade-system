@@ -35,6 +35,8 @@
     fail_msg: "System resources are under stress - CPU: {{ nxos_resources.cpu_usage_kernel }}%, Memory: {{ nxos_resources.memory_usage_kernel }}%"
 
 - name: Check VPC consistency (if VPC is configured)
+  when: nxos_vpc_consistency_check | default(true)
+
   block:
     - name: Get VPC status
       cisco.nxos.nxos_command:
@@ -54,8 +56,6 @@
     - name: VPC not configured - skipping VPC validation
       ansible.builtin.debug:
         msg: "VPC not configured on this device, skipping VPC validation"
-  when: nxos_vpc_consistency_check | default(true)
-
 - name: Validate BGP neighbors (if BGP is configured)
   block:
     - name: Get BGP neighbor status
@@ -74,7 +74,7 @@
     - name: Warn about BGP neighbors down
       ansible.builtin.debug:
         msg: "Warning: {{ bgp_neighbors_down }} BGP neighbors are not in Established state"
-      when: 
+      when:
         - bgp_neighbors_down is defined
         - bgp_neighbors_down | int > 0
 
@@ -109,7 +109,7 @@
     - igmp
     - multicast
     - validation
-    
+
 - name: Enhanced BFD validation
   ansible.builtin.include_tasks: bfd-validation.yml
   when:
@@ -129,10 +129,10 @@
       igmp_validated: "{{ 'PASS' if (validate_igmp is defined and validate_igmp | bool) else 'SKIPPED' }}"
       bfd_validated: "{{ 'PASS' if (validate_bfd is defined and validate_bfd | bool) else 'SKIPPED' }}"
       validation_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      
+
 - name: Display comprehensive validation summary
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       NX-OS Validation Summary:
       ========================
       Device Health: {{ 'PASS' if nxos_validation_results.device_healthy else 'FAIL' }}
@@ -141,5 +141,5 @@
       Critical Logs: {{ 'PRESENT' if nxos_validation_results.critical_logs_present else 'NONE' }}
       IGMP Validation: {{ nxos_validation_results.igmp_validated }}
       BFD Validation: {{ nxos_validation_results.bfd_validated }}
-      
+
       Overall Status: {{ 'PASS' if (nxos_validation_results.device_healthy and nxos_validation_results.interfaces_up and nxos_validation_results.bgp_neighbors_up and not nxos_validation_results.critical_logs_present) else 'CHECK REQUIRED' }}

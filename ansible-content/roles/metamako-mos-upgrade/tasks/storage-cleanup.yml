@@ -5,6 +5,7 @@
 - name: Get current MOS version and storage information
   ansible.builtin.raw: "df -h /flash && echo '---VERSION---' && cat /etc/version"
   register: mos_storage_version
+  changed_when: false
 
 - name: Parse storage and version information
   ansible.builtin.set_fact:
@@ -26,10 +27,12 @@
 - name: List MOS image files in /flash
   ansible.builtin.raw: "ls -la /flash/*.mos 2>/dev/null || echo 'No MOS files found'"
   register: mos_files_list
+  changed_when: false
 
 - name: Get application images
   ansible.builtin.raw: "ls -la /flash/*.tgz /flash/*.tar.gz 2>/dev/null || echo 'No application files found'"
   register: app_files_list
+  changed_when: false
 
 - name: Parse image file information
   ansible.builtin.set_fact:
@@ -51,7 +54,7 @@
 - name: Remove obsolete image files (if cleanup needed and safe)
   ansible.builtin.raw: "rm -f /flash/{{ item }}"
   loop: "{{ cleanup_candidates }}"
-  when: 
+  when:
     - cleanup_needed
     - item != running_image
     - cleanup_candidates | length > 0
@@ -61,6 +64,7 @@
 - name: Verify storage space after cleanup
   ansible.builtin.raw: "df -h /flash"
   register: post_cleanup_storage
+  changed_when: false
 
 - name: Parse post-cleanup storage information
   ansible.builtin.set_fact:

@@ -16,29 +16,25 @@
       multi_step_required: "{{ multi_step_upgrade_required | default(false) }}"
       upgrade_path: "{{ upgrade_path | default([target_firmware_version]) }}"
       current_step: "{{ current_step | default(0) }}"
-      
+
 - name: Gather FortiOS device facts
   fortinet.fortios.fortios_monitor_fact:
     vdom: "root"
     selector: "system_status"
   register: fortios_facts
-  
+
 - name: Parse device information
   ansible.builtin.set_fact:
-    fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
-      'current_version': fortios_facts.meta.results.version,
-      'ha_mode': fortios_facts.meta.results.ha_mode,
-      'ha_role': fortios_facts.meta.results.ha_group_name | default('standalone'),
-      'vdom_mode': fortios_facts.meta.results.vdom_mode == 'enable'
-    }) }}"
-    
+    fortios_upgrade_state: "{{ fortios_upgrade_state | combine({'current_version': fortios_facts.meta.results.version, 'ha_mode': fortios_facts.meta.results.ha_mode,
+      'ha_role': fortios_facts.meta.results.ha_group_name | default('standalone'), 'vdom_mode': fortios_facts.meta.results.vdom_mode == 'enable'}) }}"
+
 - name: Check HA cluster configuration
   ansible.builtin.include_tasks: ha-coordination.yml
   when: fortios_upgrade_state.ha_mode != "standalone"
-  
+
 - name: Validate FortiCare license
   ansible.builtin.include_tasks: license-validation.yml
-  
+
 - name: Display upgrade plan
   ansible.builtin.debug:
     msg: |
@@ -52,7 +48,7 @@
       HA Role: {{ fortios_upgrade_state.ha_role }}
       VDOM Mode: {{ fortios_upgrade_state.vdom_mode }}
       License: {{ fortios_upgrade_state.license_status }}
-      
+
 - name: Validate upgrade path
   ansible.builtin.assert:
     that:
@@ -66,7 +62,7 @@
 - name: Execute multi-step upgrade process
   ansible.builtin.include_tasks: multi-step-upgrade.yml
   when: fortios_upgrade_state.multi_step_required | bool
-    
+
 - name: Execute single-step upgrade based on HA mode
   ansible.builtin.include_tasks: "{{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode != 'standalone' else 'standalone-upgrade.yml' }}"
   when: not (fortios_upgrade_state.multi_step_required | bool)

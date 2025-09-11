@@ -26,8 +26,8 @@ multi_step_upgrade_paths:
     - "7.4.1"
 
 # HA cluster settings
-ha_sync_timeout: 600  # 10 minutes
-ha_failover_timeout: 300  # 5 minutes
+ha_sync_timeout: 600 # 10 minutes
+ha_failover_timeout: 300 # 5 minutes
 ha_cluster_wait_seconds: 60
 
 # License validation

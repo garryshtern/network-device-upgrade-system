@@ -9,14 +9,14 @@
         commands:
           - show system redundancy status
       register: redundancy_status
-      
+
     - name: Ensure both supervisors are active
       ansible.builtin.assert:
         that:
           - "'Active' in redundancy_status.stdout[0]"
           - "'Standby' in redundancy_status.stdout[0]"
         fail_msg: "Both supervisors must be present and healthy for ISSU"
-        
+
     - name: Check system resources before ISSU
       cisco.nxos.nxos_command:
         commands:
@@ -31,7 +31,7 @@
         commands:
           - install all nxos {{ target_image_path }} non-disruptive
       register: issu_install_result
-      
+
     - name: Monitor ISSU progress
       cisco.nxos.nxos_command:
         commands:
@@ -40,7 +40,7 @@
       until: "'Success' in issu_status.stdout[0] or 'Failed' in issu_status.stdout[0]"
       retries: 60
       delay: 30
-      
+
     - name: Validate ISSU completion
       ansible.builtin.assert:
         that:
@@ -54,29 +54,29 @@
         commands:
           - show version
       register: post_issu_version
-      
+
     - name: Confirm target version is running
       ansible.builtin.assert:
         that:
           - nxos_upgrade_state.target_version in post_issu_version.stdout[0]
         fail_msg: "ISSU completed but target version not active"
-        
+
     - name: Check supervisor synchronization
       cisco.nxos.nxos_command:
         commands:
           - show system redundancy status
       register: post_issu_redundancy
-      
+
     - name: Validate system stability
       cisco.nxos.nxos_command:
         commands:
           - show processes cpu summary
           - show logging last 50
       register: post_issu_stability
-      
+
 - name: Log ISSU completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       ISSU Upgrade Completed Successfully:
       - Previous Version: {{ nxos_upgrade_state.current_version }}
       - New Version: {{ nxos_upgrade_state.target_version }}

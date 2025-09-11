@@ -37,17 +37,16 @@
   when: fortios_upgrade_state.current_version == current_step_target
 
 - name: Execute current upgrade step
+  when: fortios_upgrade_state.current_version != current_step_target
+
   block:
     - name: Update upgrade state for current step
-      set_fact:
-        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
-          'step_target_version': current_step_target,
-          'step_number': fortios_upgrade_state.current_step + 1,
-          'total_steps': fortios_upgrade_state.upgrade_path | length
-        }) }}"
+      ansible.builtin.set_fact:
+        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({'step_target_version': current_step_target, 'step_number': fortios_upgrade_state.current_step
+          + 1, 'total_steps': fortios_upgrade_state.upgrade_path | length}) }}"
 
     - name: Execute step upgrade based on HA mode
-      include_tasks: "{{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode != 'standalone' else 'standalone-upgrade.yml' }}"
+      ansible.builtin.include_tasks: "{{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode != 'standalone' else 'standalone-upgrade.yml' }}"
       vars:
         # Override target version for this step
         target_firmware_version: "{{ current_step_target }}"
@@ -72,10 +71,8 @@
         fail_msg: "Step {{ fortios_upgrade_state.step_number }} failed: expected {{ current_step_target }}, got {{ step_verification.meta.results.version }}"
 
     - name: Update current version after successful step
-      set_fact:
-        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
-          'current_version': step_verification.meta.results.version
-        }) }}"
+      ansible.builtin.set_fact:
+        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({'current_version': step_verification.meta.results.version}) }}"
 
     - name: Display step completion
       ansible.builtin.debug:
@@ -88,8 +85,6 @@
           🎉 All upgrade steps completed!
           {% endif %}
 
-  when: fortios_upgrade_state.current_version != current_step_target
-
 - name: Check if more steps are required
   ansible.builtin.set_fact:
     next_step: "{{ fortios_upgrade_state.current_step + 1 }}"
@@ -98,7 +93,7 @@
   ansible.builtin.include_tasks: multi-step-upgrade.yml
   vars:
     current_step: "{{ next_step }}"
-  when: 
+  when:
     - next_step < fortios_upgrade_state.upgrade_path | length
     - fortios_upgrade_state.current_version != fortios_upgrade_state.target_version
 

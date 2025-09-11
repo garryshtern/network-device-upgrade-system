@@ -9,14 +9,14 @@
         vdom: "root"
         selector: "system_resource_usage"
       register: resource_usage
-      
+
     - name: Verify system is not under high load
       ansible.builtin.assert:
         that:
           - resource_usage.meta.results.cpu_usage | int < 80
           - resource_usage.meta.results.memory_usage | int < 90
         fail_msg: "System under high load - upgrade may be risky"
-        
+
     - name: Check active VPN tunnels
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -34,7 +34,7 @@
           scope: "global"
           vdom: "all"
       register: system_backup
-      
+
     - name: Verify backup creation
       ansible.builtin.assert:
         that:
@@ -50,7 +50,7 @@
         level: "warning"
         msg: "Firmware upgrade in progress - VPN connections may be interrupted"
       failed_when: false
-      
+
     - name: Gracefully close VPN sessions (optional)
       fortinet.fortios.fortios_monitor:
         vdom: "root"
@@ -69,14 +69,14 @@
           source: "upload"
           reboot: true
       register: firmware_install
-      
+
     - name: Wait for system reboot
       ansible.builtin.wait_for:
         host: "{{ ansible_host }}"
         port: 443
         delay: 90
         timeout: 1200
-        
+
     - name: Verify system is responsive
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -92,25 +92,25 @@
         that:
           - fortios_upgrade_state.target_version in post_reboot_status.meta.results.version
         fail_msg: "Standalone upgrade failed - target version not active"
-        
+
     - name: Check system health
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "system_resource_usage"
       register: post_upgrade_resources
-      
+
     - name: Verify security policies are active
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "firewall_policy_stats"
       register: policy_stats
-      
+
     - name: Check interface status
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "system_interface_physical"
       register: interface_status
-      
+
     - name: Validate VPN tunnel recovery
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
@@ -120,7 +120,7 @@
 
 - name: Log standalone upgrade completion
   ansible.builtin.debug:
-    msg: |
+    msg: |-
       FortiOS Standalone Upgrade Completed:
       - Previous Version: {{ fortios_upgrade_state.current_version }}
       - New Version: {{ post_reboot_status.meta.results.version }}

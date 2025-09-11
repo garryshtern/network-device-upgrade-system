@@ -4,7 +4,7 @@
 
 - name: Set default metric timestamp
   ansible.builtin.set_fact:
-    metric_timestamp: "{{ ansible_play_batch | hash('md5') }}000000000"  # InfluxDB nanosecond format
+    metric_timestamp: "{{ ansible_play_batch | hash('md5') }}000000000" # InfluxDB nanosecond format
 
 - name: Prepare InfluxDB line protocol data
   ansible.builtin.set_fact:
@@ -37,7 +37,7 @@
     body: "{{ influx_line }}"
     status_code: [204]
   register: influx_export_result
-  when: 
+  when:
     - influxdb_url is defined
     - influxdb_token is defined
     - influx_line is defined
@@ -54,7 +54,7 @@
     path: "/var/log/network-upgrade/metrics.log"
     line: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }} | {{ inventory_hostname }} | {{ metric_type | default('unknown') }} | {{ metric_data | to_json }}"
     create: true
-    mode: '0644'
+    mode: "0644"
   delegate_to: localhost
   when: log_metrics_locally | default(false)
   ignore_errors: true
@@ -74,7 +74,7 @@
       platform: "{{ ansible_network_os | default('unknown') }}"
       data: "{{ metric_data | default({}) }}"
   register: webhook_export_result
-  when: 
+  when:
     - metrics_webhook_url is defined
     - send_metrics | default(true)
   ignore_errors: true
@@ -91,7 +91,7 @@
       name: "{{ inventory_hostname }}"
       custom_fields: "{{ netbox_custom_fields | default({}) }}"
     status_code: [200, 201]
-  when: 
+  when:
     - netbox_url is defined
     - netbox_token is defined
     - netbox_custom_fields is defined

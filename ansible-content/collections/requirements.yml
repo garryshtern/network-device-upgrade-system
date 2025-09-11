@@ -5,28 +5,25 @@
 collections:
   # Cisco Network Collections (Latest 2025 Versions)
   - name: cisco.nxos
-    version: "9.4.0"
+    version: "11.0.0"
     source: https://galaxy.ansible.com
   - name: cisco.ios
-    version: "9.2.0"
+    version: "11.0.0"
     source: https://galaxy.ansible.com
 
   # Fortinet Collection
   - name: fortinet.fortios
-    version: "2.3.0"
+    version: "2.4.0"
     source: https://galaxy.ansible.com
 
   # Core Network Collections
   - name: ansible.netcommon
     version: "8.1.0"
     source: https://galaxy.ansible.com
-  - name: community.network
-    version: "5.0.0"
-    source: https://galaxy.ansible.com
 
   # Utility Collections
   - name: community.general
-    version: "8.0.0"
+    version: "11.2.1"
     source: https://galaxy.ansible.com
   - name: ansible.posix
     version: "1.5.0"

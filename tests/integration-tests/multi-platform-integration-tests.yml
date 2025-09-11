@@ -195,19 +195,17 @@
             fail_msg: "Emergency rollback components missing"
 
         - name: Test Error Handling in Platform Roles
-          find:
-            paths: "{{ playbook_dir }}/../../ansible-content/roles"
-            patterns: "*.yml"
-            recurse: yes
-            contains: "failed_when"
-          register: error_handling_files
+          shell: |
+            find {{ playbook_dir }}/../../ansible-content/roles -name "*.yml" -exec grep -l "failed_when" {} \; | wc -l
+          register: error_handling_count
+          changed_when: false
 
         - name: Validate Error Handling Implementation
           assert:
             that:
-              - error_handling_files.files | length > 10  # Should find many files with error handling
-            success_msg: "✓ Error handling implemented across roles ({{ error_handling_files.files | length }} files)"
-            fail_msg: "Insufficient error handling implementation - only {{ error_handling_files.files | length }} files found"
+              - error_handling_count.stdout | int > 10  # Should find many files with error handling
+            success_msg: "✓ Error handling implemented across roles ({{ error_handling_count.stdout }} files)"
+            fail_msg: "Insufficient error handling implementation - only {{ error_handling_count.stdout }} files found"
 
     # ==========================================
     # AWX Integration Tests
