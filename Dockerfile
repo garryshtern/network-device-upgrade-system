@@ -55,12 +55,15 @@ RUN pip install --user --no-cache-dir --upgrade pip \
         requests
 
 # Install Ansible collections with explicit versions
-# Temporary bypass: Skip collections for basic container testing
 RUN echo "DEBUG: PATH is $PATH" && \
     echo "DEBUG: USER is $(whoami)" && \
     echo "DEBUG: HOME is $HOME" && \
     ls -la /home/ansible/.local/bin/ && \
-    echo "Collections installation temporarily skipped for testing"
+    echo "Running ansible-galaxy collection install..." && \
+    ansible-galaxy collection install \
+    -r ansible-content/collections/requirements.yml \
+    --collections-path ~/.ansible/collections \
+    --force --ignore-certs
 
 # Copy application content with proper ownership
 COPY --chown=ansible:ansible ansible-content/ ./ansible-content/
