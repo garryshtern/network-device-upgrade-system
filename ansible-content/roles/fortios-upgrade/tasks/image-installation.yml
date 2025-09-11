@@ -45,7 +45,7 @@
     - name: Install firmware image
       fortinet.fortios.fortios_monitor:
         vdom: "root"
-        selector: "system_firmware_upgrade"
+        selector: "upgrade.system.firmware"
         params:
           version: "{{ fortios_upgrade_state.target_version }}"
           source: "upload"
@@ -57,7 +57,7 @@
     - name: Monitor installation progress
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
-        selector: "system_firmware_upgrade_status"
+        selector: "system.status"
       register: install_progress
       until: install_progress.meta.results.status in ['completed', 'failed', 'rebooting']
       retries: 60

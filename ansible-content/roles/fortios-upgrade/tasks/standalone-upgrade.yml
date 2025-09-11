@@ -63,7 +63,7 @@
     - name: Install new firmware
       fortinet.fortios.fortios_monitor:
         vdom: "root"
-        selector: "system_firmware_upgrade"
+        selector: "upgrade.system.firmware"
         params:
           version: "{{ fortios_upgrade_state.target_version }}"
           source: "upload"

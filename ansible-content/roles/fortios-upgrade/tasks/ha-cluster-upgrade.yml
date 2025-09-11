@@ -32,10 +32,10 @@
     - name: Install firmware on secondary
       fortinet.fortios.fortios_monitor:
         vdom: "root"
-        selector: "system_firmware_upgrade"
+        selector: "upgrade.system.firmware"
         params:
-          version: "{{ fortios_upgrade_state.target_version }}"
           source: "upload"
+          file: "{{ fortios_upgrade_state.target_version }}"
       register: secondary_upgrade
 
     - name: Wait for secondary reboot
@@ -88,7 +88,7 @@
     - name: Install firmware on primary
       fortinet.fortios.fortios_monitor:
         vdom: "root"
-        selector: "system_firmware_upgrade"
+        selector: "upgrade.system.firmware"
         params:
           version: "{{ fortios_upgrade_state.target_version }}"
           source: "upload"
