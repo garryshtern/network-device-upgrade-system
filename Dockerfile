@@ -1,6 +1,6 @@
 # Network Device Upgrade System - Production Container
 # Optimized for RHEL8/9 podman compatibility with non-root execution
-FROM python:3.13.7-alpine3.20
+FROM python:3.13-alpine
 
 # Metadata
 LABEL org.opencontainers.image.title="Network Device Upgrade System"
@@ -38,7 +38,7 @@ USER ansible
 # Upgrade pip and install Ansible with latest versions
 RUN pip install --user --no-cache-dir --upgrade pip \
     && pip install --user --no-cache-dir \
-        ansible==12.0.0 \
+        ansible \
         paramiko>=3.0.0 \
         netaddr \
         jinja2 \
