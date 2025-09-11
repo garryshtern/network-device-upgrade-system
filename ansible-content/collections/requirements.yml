@@ -1,6 +1,6 @@
 ---
 # Ansible Collections Requirements for Network Device Upgrade System
-# Latest versions as of September 2025 for production use
+# Absolute latest versions as of September 11, 2025 for production use
 
 collections:
   # Cisco Network Collections (Latest 2025 Versions)
@@ -23,7 +23,7 @@ collections:
 
   # Utility Collections
   - name: community.general
-    version: "11.2.1"
+    version: "11.3.0"
     source: https://galaxy.ansible.com
   - name: ansible.posix
     version: "1.5.0"
@@ -36,7 +36,7 @@ collections:
 
   # HTTP and API Collections
   - name: ansible.utils
-    version: "3.1.0"
+    version: "6.0.0"
     source: https://galaxy.ansible.com
 
   # NetBox Integration
@@ -47,5 +47,5 @@ collections:
 # Installation command:
 # ansible-galaxy collection install -r collections/requirements.yml --force
 
-# Note: All versions updated to latest available as of September 2025
-# Compatible with ansible-core 2.19.2 and Python 3.13.7
+# Note: All versions updated to absolute latest available as of September 11, 2025
+# Compatible with Ansible 12.0.0 (ansible-core 2.19.2) and Python 3.13.7
