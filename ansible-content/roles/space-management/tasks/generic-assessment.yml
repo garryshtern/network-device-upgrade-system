@@ -3,9 +3,11 @@
 
 - name: Default storage assessment for unknown platform
   ansible.builtin.set_fact:
-    storage_info: "{{ storage_info | combine({
-      'total_space_gb': 8,
-      'free_space_gb': 4,
-      'images_found': ['current-image.bin'],
-      'cleanup_candidates': []
-    }) }}"
+    storage_info: >-
+      {{ storage_info | combine({
+        
+        'total_space_gb': 8,
+        'free_space_gb': 4,
+        'images_found': ['current-image.bin'],
+        'cleanup_candidates': []
+      }) }}

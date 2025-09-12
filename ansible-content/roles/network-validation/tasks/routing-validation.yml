@@ -197,7 +197,7 @@
       - Connected Routes: {{ routing_baseline.connected_routes_count }}
       - Default Route: {{ 'Present' if routing_baseline.default_route_present else 'Missing' }}
       - Default Next-Hop: {{ routing_baseline.default_route_next_hop }}
-      - Default Route Reachable: 
+      - Default Route Reachable:
         {{ 'YES' if default_route_ping is defined and default_route_ping.stdout[0] | regex_search('Success rate is [^0]') else 'UNTESTED' }}
       - OSPF Neighbors: {{ routing_baseline.ospf_neighbors }}
       - EIGRP Neighbors: {{ routing_baseline.eigrp_neighbors }}

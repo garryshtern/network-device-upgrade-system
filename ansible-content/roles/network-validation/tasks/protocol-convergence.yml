@@ -216,49 +216,49 @@
 
       Per-Protocol Results:
       {% if 'bgp' in convergence_results %}
-      - BGP: 
+      - BGP:
         {{ 'CONVERGED' if convergence_results.bgp.converged else 'FAILED' }}
          (
         {{ convergence_results.bgp.time_seconds }}
-        s, 
+        s,
         {{ convergence_results.bgp.neighbors_established }}
          neighbors)
       {% endif %}
       {% if 'ospf' in convergence_results %}
-      - OSPF: 
+      - OSPF:
         {{ 'CONVERGED' if convergence_results.ospf.converged else 'FAILED' }}
          (
         {{ convergence_results.ospf.time_seconds }}
-        s, 
+        s,
         {{ convergence_results.ospf.neighbors_full }}
          neighbors)
       {% endif %}
       {% if 'eigrp' in convergence_results %}
-      - EIGRP: 
+      - EIGRP:
         {{ 'CONVERGED' if convergence_results.eigrp.converged else 'FAILED' }}
          (
         {{ convergence_results.eigrp.time_seconds }}
-        s, 
+        s,
         {{ convergence_results.eigrp.neighbors_up }}
          neighbors)
       {% endif %}
       {% if 'interfaces' in convergence_results %}
-      - Interfaces: 
+      - Interfaces:
         {{ 'CONVERGED' if convergence_results.interfaces.converged else 'FAILED' }}
          (
         {{ convergence_results.interfaces.time_seconds }}
-        s, 
+        s,
         {{ convergence_results.interfaces.interfaces_up }}
         /
         {{ convergence_results.interfaces.expected_up }}
         )
       {% endif %}
       {% if 'routing' in convergence_results %}
-      - Routing Table: 
+      - Routing Table:
         {{ 'CONVERGED' if convergence_results.routing.converged else 'FAILED' }}
          (
         {{ convergence_results.routing.time_seconds }}
-        s, 
+        s,
         {{ convergence_results.routing.current_routes }}
         /
         {{ convergence_results.routing.expected_routes }}

@@ -25,9 +25,10 @@
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:
-    storage_info: "{{ storage_info | combine({
-      'total_space_gb': (nxos_total_bytes / 1024 / 1024 / 1024) | round(2),
-      'free_space_gb': (nxos_free_bytes / 1024 / 1024 / 1024) | round(2),
-      'images_found': nxos_images,
-      'cleanup_candidates': nxos_images
-    }) }}"
+    storage_info: >-
+      {{ storage_info | combine({
+        'total_space_gb': (nxos_total_bytes / 1024 / 1024 / 1024) | round(2),
+        'free_space_gb': (nxos_free_bytes / 1024 / 1024 / 1024) | round(2),
+        'images_found': nxos_images,
+        'cleanup_candidates': nxos_images
+      }) }}

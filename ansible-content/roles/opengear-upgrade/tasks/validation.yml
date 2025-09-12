@@ -264,7 +264,7 @@
           {% if environmental_sensors_check.json is defined and environmental_sensors_check.json | length > 0 %}
           - Temperature Sensors: {{ environmental_sensors_check.json | selectattr('type', 'equalto', 'temperature') | list | length }}
           - Humidity Sensors: {{ environmental_sensors_check.json | selectattr('type', 'equalto', 'humidity') | list | length }}
-          - All Sensors Normal: 
+          - All Sensors Normal:
             {{ 'YES' if environmental_sensors_check.json | selectattr('status', 'ne', 'normal') | list | length == 0 else 'CHECK REQUIRED' }}
           {% else %}
           - Environmental Sensors: Not Available
@@ -281,19 +281,19 @@
       - System Health: {{ system_health_validation.json.status if system_health_validation.json is defined else 'Unknown' }}
       - Network Connectivity: {{ 'PASS' if network_connectivity_test.json.success | default(false) else 'CHECK' }}
       {% if opengear_upgrade_state.device_type == 'console_server' %}
-      - Serial Ports: 
+      - Serial Ports:
         {{ serial_ports_validation.json | length }}
-         total, 
+         total,
         {{ serial_port_status_check.results | selectattr('json.status', 'equalto', 'available') | list | length if serial_port_status_check.results is defined else 'Unknown' }}
          operational
       {% endif %}
       {% if opengear_upgrade_state.device_type == 'smart_pdu' %}
-      - Power Outlets: 
+      - Power Outlets:
         {{ power_outlets_validation.json | length }}
-         total, 
+         total,
         {{ power_outlet_status_check.results | selectattr('json.status', 'defined') | list | length if power_outlet_status_check.results is defined else 'Unknown' }}
          responsive
-      - Power Usage: 
+      - Power Usage:
         {{ (overall_power_status.json.current_usage / overall_power_status.json.max_capacity * 100) | round(1) if overall_power_status.json is defined else 'Unknown' }}
         %
       {% endif %}

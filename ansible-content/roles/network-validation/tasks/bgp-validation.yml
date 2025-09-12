@@ -261,7 +261,7 @@
         {{ bgp_validation.current.analysis.established_neighbors | default(0) }}
         ,validation_success=
         {{ bgp_validation.passed | lower }}
-        ,convergence_time=0 
+        ,convergence_time=0
         {{ ansible_play_batch | hash('md5') }}
         000000000
   when:

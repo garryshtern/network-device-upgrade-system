@@ -139,7 +139,7 @@
           - INIT sessions: {{ bfd_init_sessions }}
           - Total sessions: {{ bfd_total_sessions }}
           Expected: At least 80% of sessions should be UP
-        success_msg: "BFD sessions healthy: 
+        success_msg: "BFD sessions healthy:
           {{ bfd_up_sessions }}
           /
           {{ bfd_total_sessions }}
@@ -238,7 +238,7 @@
       {% endfor %}
       {% endif %}
 
-      Health Status: 
+      Health Status:
         {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
 
 - name: Store BFD validation baseline
@@ -275,7 +275,7 @@
       DOWN_Sessions: {{ bfd_down_sessions if bfd_down_sessions is defined else 0 }}
       INIT_Sessions: {{ bfd_init_sessions if bfd_init_sessions is defined else 0 }}
       Enabled_Interfaces: {{ bfd_enabled_interfaces | length if bfd_enabled_interfaces is defined else 0 }}
-      Success_Rate: 
+      Success_Rate:
         {{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1) if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_total_sessions | int > 0) else 0 }}
         %
 
@@ -314,7 +314,7 @@
       {% endfor %}
       {% endif %}
 
-      Validation_Status: 
+      Validation_Status:
         {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions | int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: "/tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}.txt"

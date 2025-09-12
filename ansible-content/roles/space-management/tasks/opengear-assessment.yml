@@ -33,9 +33,15 @@
 
 - name: Convert storage sizes to GB
   ansible.builtin.set_fact:
-    storage_info: "{{ storage_info | combine({
-      'total_space_gb': (opengear_total_size | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in opengear_total_size else (0.001 if 'M' in opengear_total_size else 1))) | round(2),
-      'free_space_gb': (opengear_available_size | regex_replace('[KMG]', '') | float * (0.000001 if 'K' in opengear_available_size else (0.001 if 'M' in opengear_available_size else 1))) | round(2),
-      'images_found': opengear_firmware_images + opengear_temp_file_list,
-      'cleanup_candidates': opengear_firmware_images + opengear_temp_file_list
-    }) }}"
+    storage_info: >-
+      {{ storage_info | combine({
+        
+        'total_space_gb': (opengear_total_size | regex_replace('[KMG]', '')
+          | float * (0.000001 if 'K' in opengear_total_size
+          else (0.001 if 'M' in opengear_total_size else 1))) | round(2),
+        'free_space_gb': (opengear_available_size | regex_replace('[KMG]', '')
+          | float * (0.000001 if 'K' in opengear_available_size
+          else (0.001 if 'M' in opengear_available_size else 1))) | round(2),
+        'images_found': opengear_firmware_images + opengear_temp_file_list,
+        'cleanup_candidates': opengear_firmware_images + opengear_temp_file_list
+      }) }}

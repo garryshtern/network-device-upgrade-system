@@ -1,8 +1,8 @@
 ---
 galaxy_info:
-  role_name: common
+  role_name: space_management
   author: Network Operations
-  description: Common utilities for network device upgrade system
+  description: Storage space assessment and management for network devices
   company: Enterprise Network Management
   license: proprietary
   min_ansible_version: "2.15"
@@ -13,9 +13,8 @@ galaxy_info:
         - 9
   galaxy_tags:
     - networking
-    - utilities
-    - common
-    - monitoring
-    - metrics
+    - storage
+    - assessment
+    - cleanup
 
 dependencies: []

@@ -117,9 +117,9 @@
         msg: |
           EPLD Upgrade Results:
           {% for module_info in updated_epld_modules %}
-          - Module 
+          - Module
             {{ module_info[0] }}
-            : 
+            :
             {{ 'UPDATED' if module_info[1] != (epld_modules | selectattr('0', 'equalto', module_info[0]) | map(attribute='1') | first | default('unknown')) else 'UNCHANGED' }}
              (
             {{ module_info[1] }}

@@ -88,7 +88,7 @@
       ansible.builtin.debug:
         msg: |
           VLAN Summary:
-          Active VLANs: 
+          Active VLANs:
             {{ vlan_info.stdout[0] | from_json | json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief[?vlanshowbr_vlanstate==`active`]') | length }}
           Total VLANs: {{ vlan_info.stdout[0] | from_json | json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief') | length }}
       when: ansible_network_os == "cisco.nxos.nxos" and vlan_info.stdout[0] | from_json

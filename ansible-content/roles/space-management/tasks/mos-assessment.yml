@@ -32,6 +32,7 @@
 - name: Convert storage sizes to GB
   ansible.builtin.set_fact:
     storage_info: "{{ storage_info | combine({
+        
       'total_space_gb': (mos_total_size | regex_replace('[GM]', '') | float * (1 if 'G' in mos_total_size else 0.001)) | round(2),
       'free_space_gb': (mos_available_size | regex_replace('[GM]', '') | float * (1 if 'G' in mos_available_size else 0.001)) | round(2),
       'images_found': mos_firmware_images + mos_application_images,
