@@ -5,18 +5,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="87629bf4-cfe3-439f-a321-a3033a721acb" name="Changes" comment="Fix the failure in workflow">
+      <change afterPath="$PROJECT_DIR$/tests/error-scenarios/concurrent_scenario_test.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/error-scenarios/concurrent_upgrade_tests.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/error-scenarios/device_error_tests.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/error-scenarios/edge_case_tests.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/error-scenarios/network_error_tests.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/error-scenarios/run-error-simulation-tests.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/mock-devices/mock_device_engine.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/mock-devices/ssh_mock_server.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/comprehensive-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/comprehensive-tests.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CLAUDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/CLAUDE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/ansible.cfg" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/ansible.cfg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/collections/requirements.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/collections/requirements.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/image-validation/tasks/hash-verification.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/image-validation/tasks/hash-verification.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/main.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/main.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/storage-cleanup.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/storage-cleanup.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration-tests/multi-platform-integration-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/multi-platform-integration-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration-tests/workflow-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/integration-tests/workflow-tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/performance-tests/memory-profiler.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/performance-tests/memory-profiler.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/validation-scripts/yaml-validator.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/validation-scripts/yaml-validator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/run-all-tests.sh" beforeDir="false" afterPath="$PROJECT_DIR$/tests/run-all-tests.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,7 +101,7 @@
       <workItem from="1756951775422" duration="9763000" />
       <workItem from="1757115228585" duration="72241000" />
       <workItem from="1757551344727" duration="70000" />
-      <workItem from="1757554781068" duration="1732000" />
+      <workItem from="1757554781068" duration="21867000" />
     </task>
     <task id="LOCAL-00001" summary="Added implementations">
       <option name="closed" value="true" />
@@ -145,7 +146,19 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>

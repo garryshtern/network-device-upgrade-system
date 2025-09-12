@@ -115,7 +115,10 @@ Comprehensive testing for Mac/Linux development without physical devices:
 - **Security**: All sensitive data encrypted with Ansible Vault
 - **Documentation**: Clear inline comments and external documentation
 - **Version Control**: Git with meaningful commit messages
-- 
+- **YAML/JSON Validation**: Use yamllint and jsonlint
+- **Linting**: Use ansible-lint for playbooks and roles
+- **Line Length**: Max 80 characters per line
+- **Error Handling**: Graceful error handling, no masking of errors
 
 ## Architecture
 
