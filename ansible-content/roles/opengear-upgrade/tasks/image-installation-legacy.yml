@@ -71,7 +71,7 @@
         echo "upgrade firmware /usr/local/upgrade/{{ target_firmware_filename }}" | /bin/cli
       register: upgrade_initiation
       delegate_to: "{{ inventory_hostname }}"
-      async: : 1800 #  # 30 minutes timeout
+      async: 1800  # 30 minutes timeout
       poll: 0
 
     - name: Monitor installation progress

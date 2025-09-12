@@ -172,7 +172,7 @@
       ansible.builtin.assert:
         that:
           - igmp_errors | length == 0
-        fail_msg: "IGMP errors found in logs: {{ igmp_errors[:3] }}" \t# Show first 3 errors
+        fail_msg: "IGMP errors found in logs: {{ igmp_errors[:3] }}"  # Show first 3 errors
         success_msg: "No IGMP errors found in recent logs"
       when: igmp_errors is defined
 
