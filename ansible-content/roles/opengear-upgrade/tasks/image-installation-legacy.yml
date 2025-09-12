@@ -107,7 +107,7 @@
         host: "{{ ansible_host }}"
         port: 22
         state: started
-        timeout: : 1200 #  # Legacy devices may take longer to boot
+        timeout: 1200  # Legacy devices may take longer to boot
         delay: 60
       delegate_to: localhost
 
