@@ -68,8 +68,8 @@
     that:
       - post_latency.system_latency | float <= (baseline_latency.system_latency | float
         * 1.1)
-    - post_latency.max_latency | float <= (baseline_latency.max_latency | float *
-      1.2)
+      - post_latency.max_latency | float <= (baseline_latency.max_latency | float *
+        1.2)
     fail_msg: Latency degradation detected after upgrade
 - name: Latency validation report
   ansible.builtin.debug:
