@@ -113,7 +113,7 @@
 
     - name: Wait for system services to initialize
       ansible.builtin.pause:
-        seconds: : 120 #  # Legacy devices need more time
+        seconds: 120  # Legacy devices need more time
         prompt: "Waiting for legacy device services to fully initialize"
 
 - name: Post-installation validation (Legacy)
