@@ -24,7 +24,7 @@ epld_max_images_per_upgrade: 3
 
 # Timing and stability
 post_upgrade_wait_seconds: 60
-issu_completion_timeout: 1800 # 30 minutes
+issu_completion_timeout: : 1800 #  # 30 minutes
 status_check_retries: 5
 status_check_delay: 30
 

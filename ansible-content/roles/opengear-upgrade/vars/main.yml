@@ -57,8 +57,8 @@ status_check_delay: 20
 
 # Web automation settings
 web_login_timeout: 30
-web_upload_timeout: 1800 # 30 minutes for large images
-web_reboot_timeout: 600 # 10 minutes
+web_upload_timeout: : 1800 #  # 30 minutes for large images
+web_reboot_timeout: : 600 #  # 10 minutes
 
 # Storage management
 min_free_space_mb: 512

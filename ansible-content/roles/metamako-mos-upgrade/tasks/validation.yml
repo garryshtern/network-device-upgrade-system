@@ -35,15 +35,27 @@
 - name: Parse latency performance
   ansible.builtin.set_fact:
     post_upgrade_latency:
-      avg_latency: "{{ post_upgrade_latency_stats.stdout | regex_search('Average: ([\\d\\.]+)', '\\1') | first | default('0') }}"
-      max_latency: "{{ post_upgrade_latency_stats.stdout | regex_search('Maximum: ([\\d\\.]+)', '\\1') | first | default('0') }}"
-      min_latency: "{{ post_upgrade_latency_stats.stdout | regex_search('Minimum: ([\\d\\.]+)', '\\1') | first | default('0') }}"
+      avg_latency: >
+        {{ post_upgrade_latency_stats.stdout
+        | regex_search('Average: ([\\d\\.]+)', '\\1')
+        | first | default('0') }}
+      max_latency: >
+        {{ post_upgrade_latency_stats.stdout
+        | regex_search('Maximum: ([\\d\\.]+)', '\\1')
+        | first | default('0') }}
+      min_latency: >
+        {{ post_upgrade_latency_stats.stdout
+        | regex_search('Minimum: ([\\d\\.]+)', '\\1')
+        | first | default('0') }}
 
 - name: Validate latency performance meets requirements
   ansible.builtin.assert:
     that:
-      - post_upgrade_latency.avg_latency | float < (max_allowed_latency_ns | default(100) | float)
-    fail_msg: "Average latency {{ post_upgrade_latency.avg_latency }}ns exceeds maximum allowed {{ max_allowed_latency_ns | default(100) }}ns"
+      - post_upgrade_latency.avg_latency | float <
+        (max_allowed_latency_ns | default(100) | float)
+    fail_msg: >
+      Average latency {{ post_upgrade_latency.avg_latency }}ns
+      exceeds maximum allowed {{ max_allowed_latency_ns | default(100) }}ns
 
 - name: Check interface operational status
   ansible.netcommon.cli_command:
@@ -91,10 +103,18 @@
     msg: |
       Metamako Component Status:
       {% if metamako_upgrade_state.metawatch_enabled %}
-      - Metawatch: {{ 'OPERATIONAL' if post_upgrade_metawatch is defined and 'enabled' in post_upgrade_metawatch.stdout | lower else 'CHECK REQUIRED' }}
+      - Metawatch: {{
+        'OPERATIONAL'
+        if post_upgrade_metawatch is defined and
+        'enabled' in post_upgrade_metawatch.stdout | lower
+        else 'CHECK REQUIRED' }}
       {% endif %}
       {% if metamako_upgrade_state.metamux_enabled %}
-      - Metamux: {{ 'OPERATIONAL' if post_upgrade_metamux is defined and 'enabled' in post_upgrade_metamux.stdout | lower else 'CHECK REQUIRED' }}
+      - Metamux: {{
+        'OPERATIONAL'
+        if post_upgrade_metamux is defined and
+        'enabled' in post_upgrade_metamux.stdout | lower
+        else 'CHECK REQUIRED' }}
       {% endif %}
 
 - name: Run performance benchmark

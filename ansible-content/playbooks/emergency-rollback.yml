@@ -49,12 +49,12 @@
         - name: Test device connectivity
           ansible.builtin.include_tasks: >
             ../roles/common/tasks/connectivity-check.yml
-          ignore_errors: true
+          failed_when: false
 
         - name: Gather current device state
           ansible.builtin.include_tasks: >
             ../roles/common/tasks/device-status.yml
-          ignore_errors: true
+          failed_when: false
 
         - name: Mark status assessment complete
           ansible.builtin.set_fact:

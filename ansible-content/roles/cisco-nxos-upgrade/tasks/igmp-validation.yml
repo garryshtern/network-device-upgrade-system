@@ -172,7 +172,7 @@
       ansible.builtin.assert:
         that:
           - igmp_errors | length == 0
-        fail_msg: "IGMP errors found in logs: {{ igmp_errors[:3] }}" # Show first 3 errors
+        fail_msg: "IGMP errors found in logs: {{ igmp_errors[:3] }}" \t# Show first 3 errors
         success_msg: "No IGMP errors found in recent logs"
       when: igmp_errors is defined
 
@@ -213,8 +213,8 @@
 - name: Store IGMP validation baseline
   ansible.builtin.copy:
     content: |
-      # IGMP Validation Baseline - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-      # Generated during firmware upgrade validation
+      \t# IGMP Validation Baseline - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
+      \t# Generated during firmware upgrade validation
 
       IGMP_Snooping_Enabled_VLANs: {{ igmp_enabled_vlans if igmp_enabled_vlans is defined else 0 }}
       IGMP_Total_VLANs: {{ igmp_total_vlans if igmp_total_vlans is defined else 0 }}

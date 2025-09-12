@@ -57,7 +57,7 @@
         file_system: "bootflash:"
         local_file: "{{ epld_image_source }}"
         remote_file: "{{ target_epld_image }}"
-        file_pull: false # Server pushes to device
+        file_pull: false \t# Server pushes to device
         connect_ssh_port: "{{ ansible_ssh_port | default(22) }}"
         vrf: "{{ management_vrf | default('management') }}"
       register: epld_stage_result
