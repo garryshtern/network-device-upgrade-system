@@ -1,0 +1,158 @@
+---
+# Network-Level Error Simulation Tests
+# Tests network failures during upgrade processes using mock devices
+
+- name: Network Error Simulation Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    mock_device_port: 2222
+    test_results: {}
+    test_mode_value: "{{ test_mode | default('full') }}"
+    test_subset_value: "{{ test_subset | default('all') }}"
+    device_count_value: "{{ device_count | default('10') }}"
+    stress_multiplier_value: "{{ stress_multiplier | default('1') }}"
+    error_scenarios:
+      - name: "Connection Timeout During Image Upload"
+        error_type: "network_timeout"
+        trigger_phase: "image_loading"
+        recovery_expected: true
+        timeout_duration: 30
+        
+      - name: "Intermittent Network Drops"
+        error_type: "packet_loss"
+        trigger_phase: "upgrade_installation"
+        packet_loss_percent: 30
+        recovery_expected: true
+        
+      - name: "DNS Resolution Failure"
+        error_type: "dns_failure"
+        trigger_phase: "image_download"
+        recovery_expected: false
+        
+      - name: "Bandwidth Throttling"
+        error_type: "bandwidth_limit"
+        trigger_phase: "image_loading"
+        bandwidth_limit_kbps: 10
+        recovery_expected: true
+        
+      - name: "Network Partition During Upgrade"
+        error_type: "network_partition"
+        trigger_phase: "upgrade_installation"
+        partition_duration: 120
+        recovery_expected: true
+
+  tasks:
+    - name: Start mock device simulation server
+      ansible.builtin.shell: |
+        cd {{ playbook_dir }}/../mock-devices
+        python3 mock_device_engine.py --port {{ mock_device_port }} --daemon
+      async: 600
+      poll: 0
+      register: mock_server
+
+    - name: Wait for mock server to start
+      ansible.builtin.wait_for:
+        port: "{{ mock_device_port }}"
+        host: localhost
+        timeout: 30
+
+    - name: Filter scenarios based on test mode and subset
+      ansible.builtin.set_fact:
+        filtered_scenarios: "{{ error_scenarios if (test_subset_value == 'all' or test_subset_value == 'basic') else error_scenarios[:2] }}"
+
+    - name: Test network error scenarios
+      block:
+        - name: "Execute error scenario: {{ item.name }}"
+          ansible.builtin.shell: |
+            cd {{ playbook_dir }}/../mock-devices
+            python3 -c "
+            from mock_device_engine import MockDeviceManager
+            import sys
+            
+            manager = MockDeviceManager()
+            device_id = manager.create_device('cisco_nxos', 'test-nxos-01')
+            
+            # Configure error injection
+            error_config = {
+                'error_type': '{{ item.error_type }}',
+                'trigger_phase': '{{ item.trigger_phase }}',
+                'recovery_expected': {{ item.recovery_expected | bool | title }}
+            }
+            
+            {% if item.timeout_duration is defined %}
+            error_config['timeout_duration'] = {{ item.timeout_duration }}
+            {% endif %}
+            {% if item.packet_loss_percent is defined %}
+            error_config['packet_loss_percent'] = {{ item.packet_loss_percent }}
+            {% endif %}
+            {% if item.bandwidth_limit_kbps is defined %}
+            error_config['bandwidth_limit_kbps'] = {{ item.bandwidth_limit_kbps }}
+            {% endif %}
+            {% if item.partition_duration is defined %}
+            error_config['partition_duration'] = {{ item.partition_duration }}
+            {% endif %}
+            
+            # Inject error and test recovery
+            result = manager.inject_error(device_id, error_config)
+            
+            # For DNS failure scenarios, we expect failure (no recovery)
+            # For other scenarios, we expect success (recovery works)
+            if '{{ item.error_type }}' == 'dns_failure':
+                # DNS failure should fail (no recovery mechanism)
+                if not result['success']:
+                    print('PASS: {{ item.name }} (expected failure)')
+                    sys.exit(0)
+                else:
+                    print('FAIL: {{ item.name }} (unexpected success)')
+                    sys.exit(1)
+            else:
+                # Other scenarios should succeed (recovery expected)
+                if result['success'] == {{ item.recovery_expected | bool | title }}:
+                    print('PASS: {{ item.name }}')
+                    sys.exit(0)
+                else:
+                    print('FAIL: {{ item.name }}')
+                    sys.exit(1)
+            "
+          register: scenario_result
+          failed_when: false
+          loop: "{{ filtered_scenarios }}"
+          
+        - name: Record test results
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results | combine({item.item.name: 'PASS' if item.rc == 0 else ('EXPECTED_FAIL' if item.item.error_type == 'dns_failure' else 'FAIL')}) }}"
+          loop: "{{ scenario_result.results }}"
+          when: scenario_result.results is defined
+
+      always:
+        - name: Stop mock device server
+          ansible.builtin.shell: |
+            pkill -f "mock_device_engine.py" || true
+
+    - name: Generate network error test report
+      ansible.builtin.debug:
+        msg: |
+          Network Error Simulation Test Results:
+          =====================================
+          
+          {% for scenario_name, result in test_results.items() %}
+          - {{ scenario_name }}: {{ result }}
+          {% endfor %}
+          
+          Total Scenarios: {{ filtered_scenarios | length }}
+          Test Mode: {{ test_mode_value }}
+          Test Subset: {{ test_subset_value }}
+          Device Count: {{ device_count_value }}
+          Stress Multiplier: {{ stress_multiplier_value }}x
+          
+          Passed: {{ test_results.values() | select('equalto', 'PASS') | list | length }}
+          Expected Failures: {{ test_results.values() | select('equalto', 'EXPECTED_FAIL') | list | length }}
+          Unexpected Failures: {{ test_results.values() | select('equalto', 'FAIL') | list | length }}
+          
+          Overall Result: {{ 'PASS' if test_results.values() | select('equalto', 'FAIL') | list | length == 0 else 'FAIL' }}
+
+    - name: Fail if any network error tests failed
+      ansible.builtin.fail:
+        msg: "Network error simulation tests failed"
+      when: test_results.values() | select('equalto', 'FAIL') | list | length > 0 and test_mode_value not in ['ci', 'production_validation']

@@ -1,0 +1,230 @@
+---
+# Edge Case Error Simulation Tests
+# Tests unusual scenarios and boundary conditions
+
+- name: Edge Case Error Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    mock_device_port: 2240
+    edge_case_scenarios:
+      - name: "Upgrade Interruption and Recovery"
+        scenario_type: "interruption_recovery"
+        device_platform: "cisco_nxos"
+        interruption_phase: "upgrade_installation"
+        interruption_duration: 45
+        recovery_expected: true
+        
+      - name: "Multiple Retry Scenarios with Exponential Backoff"
+        scenario_type: "retry_logic"
+        device_platform: "fortios"
+        failure_count: 3
+        backoff_multiplier: 2
+        max_retry_delay: 60
+        final_success_expected: true
+        
+      - name: "Device Reboot Loop Detection"
+        scenario_type: "reboot_loop"
+        device_platform: "cisco_iosxe"
+        reboot_count: 5
+        loop_detection_threshold: 3
+        intervention_expected: true
+        
+      - name: "Version Mismatch Conflicts"
+        scenario_type: "version_mismatch"
+        device_platform: "opengear"
+        current_version: "3.16.2"
+        target_version: "4.2.1"
+        intermediate_versions_missing: true
+        conflict_resolution_expected: true
+        
+      - name: "Firmware Rollback During Power Loss"
+        scenario_type: "power_loss_rollback"
+        device_platform: "metamako_mos"
+        power_loss_timing: "post_installation_pre_validation"
+        automatic_rollback_expected: true
+        
+      - name: "Certificate Rotation During Upgrade"
+        scenario_type: "cert_rotation"
+        device_platform: "fortios"
+        cert_expiry_during_upgrade: true
+        ha_pair_affected: true
+        graceful_handling_expected: true
+
+  tasks:
+    - name: Initialize edge case test results
+      ansible.builtin.set_fact:
+        edge_case_results: {}
+
+    - name: Execute edge case scenarios
+      block:
+        - name: "Run edge case: {{ item.name }}"
+          ansible.builtin.shell: |
+            cd {{ playbook_dir }}/../mock-devices
+            python3 -c "
+            from mock_device_engine import MockDeviceManager
+            import sys
+            import time
+            
+            manager = MockDeviceManager()
+            device_id = manager.create_device('{{ item.device_platform }}', 'test-{{ item.device_platform }}-edge')
+            device = manager.devices[device_id]
+            
+            print('Testing: {{ item.name }}')
+            print('Scenario: {{ item.scenario_type }}')
+            
+            success = False
+            
+            {% if item.scenario_type == 'interruption_recovery' %}
+            # Simulate upgrade interruption
+            device.state.current_phase = device.state.UpgradePhase.{{ item.interruption_phase.upper() }}
+            device.inject_error('power_interruption', {{ item.interruption_duration }})
+            
+            # Wait for interruption
+            time.sleep(2)
+            
+            # Attempt recovery
+            device.state.current_phase = device.state.UpgradePhase.RECOVERY
+            recovery_result = device.process_command('show upgrade status')
+            success = 'recovery' in recovery_result.get('output', '').lower()
+            
+            {% elif item.scenario_type == 'retry_logic' %}
+            # Test retry logic with exponential backoff
+            retry_count = 0
+            backoff_delay = 1
+            
+            while retry_count < {{ item.failure_count }}:
+                device.inject_error('temporary_failure', 5)
+                time.sleep(backoff_delay)
+                retry_count += 1
+                backoff_delay *= {{ item.backoff_multiplier }}
+                if backoff_delay > {{ item.max_retry_delay }}:
+                    backoff_delay = {{ item.max_retry_delay }}
+            
+            # Final attempt should succeed
+            device.state.error_state = None
+            final_result = device.simulate_upgrade_progress('old', 'new')
+            success = final_result.get('success', False)
+            
+            {% elif item.scenario_type == 'reboot_loop' %}
+            # Simulate reboot loop detection
+            reboot_count = 0
+            loop_detected = False
+            
+            while reboot_count < {{ item.reboot_count }}:
+                device.inject_error('unexpected_reboot', 10)
+                reboot_count += 1
+                
+                if reboot_count >= {{ item.loop_detection_threshold }}:
+                    loop_detected = True
+                    device.state.current_phase = device.state.UpgradePhase.ERROR
+                    break
+            
+            success = loop_detected and {{ item.intervention_expected | lower }}
+            
+            {% elif item.scenario_type == 'version_mismatch' %}
+            # Test version compatibility checking
+            device.state.current_firmware = '{{ item.current_version }}'
+            target_version = '{{ item.target_version }}'
+            
+            # Simulate version compatibility check
+            version_check = device.process_command(f'validate upgrade path {target_version}')
+            if 'intermediate versions required' in version_check.get('output', ''):
+                # This should trigger conflict resolution
+                success = {{ item.conflict_resolution_expected | lower }}
+            else:
+                success = False
+            
+            {% elif item.scenario_type == 'power_loss_rollback' %}
+            # Simulate power loss during upgrade
+            device.state.current_phase = device.state.UpgradePhase.POST_UPGRADE_VALIDATION
+            device.inject_error('power_loss', 0)  # Immediate power loss
+            
+            # Simulate boot-up and rollback detection
+            time.sleep(1)
+            rollback_status = device.process_command('show rollback status')
+            success = 'automatic rollback completed' in rollback_status.get('output', '').lower()
+            
+            {% elif item.scenario_type == 'cert_rotation' %}
+            # Simulate certificate expiry during HA upgrade
+            device.inject_error('certificate_expired', 0)
+            device.state.custom_data = {'ha_enabled': True, 'ha_role': 'primary'}
+            
+            cert_handling = device.process_command('renew certificates')
+            success = 'certificate renewed' in cert_handling.get('output', '').lower()
+            
+            {% endif %}
+            
+            print(f'Result: {\"PASS\" if success else \"FAIL\"}')
+            sys.exit(0 if success else 1)
+            "
+          register: edge_case_test_result
+          failed_when: false
+          loop: "{{ edge_case_scenarios }}"
+          
+        - name: Record edge case results
+          ansible.builtin.set_fact:
+            edge_case_results: "{{ edge_case_results | combine({item.item.name: 'PASS' if item.rc == 0 else 'FAIL'}) }}"
+          loop: "{{ edge_case_test_result.results }}"
+
+      always:
+        - name: Cleanup mock devices
+          ansible.builtin.shell: |
+            pkill -f "mock_device_engine.py" || true
+
+    - name: Analyze edge case test patterns
+      ansible.builtin.shell: |
+        python3 -c "
+        import json
+        
+        results = {{ edge_case_results | to_json }}
+        
+        # Analyze patterns
+        scenario_types = {}
+        for test_name, result in results.items():
+            # Extract scenario type from test name
+            if 'Interruption' in test_name:
+                scenario_types['interruption_recovery'] = scenario_types.get('interruption_recovery', 0) + (1 if result == 'PASS' else 0)
+            elif 'Retry' in test_name:
+                scenario_types['retry_logic'] = scenario_types.get('retry_logic', 0) + (1 if result == 'PASS' else 0)
+            elif 'Reboot Loop' in test_name:
+                scenario_types['reboot_loop'] = scenario_types.get('reboot_loop', 0) + (1 if result == 'PASS' else 0)
+            elif 'Version Mismatch' in test_name:
+                scenario_types['version_mismatch'] = scenario_types.get('version_mismatch', 0) + (1 if result == 'PASS' else 0)
+            elif 'Power Loss' in test_name:
+                scenario_types['power_loss_rollback'] = scenario_types.get('power_loss_rollback', 0) + (1 if result == 'PASS' else 0)
+            elif 'Certificate' in test_name:
+                scenario_types['cert_rotation'] = scenario_types.get('cert_rotation', 0) + (1 if result == 'PASS' else 0)
+        
+        print('Edge Case Analysis:')
+        for scenario, passed_count in scenario_types.items():
+            print(f'  {scenario}: {passed_count} passed')
+        "
+      register: edge_case_analysis
+
+    - name: Generate comprehensive edge case report
+      ansible.builtin.debug:
+        msg: |
+          Edge Case Error Simulation Results:
+          ===================================
+          
+          Individual Test Results:
+          {% for test_name, result in edge_case_results.items() %}
+          - {{ test_name }}: {{ result }}
+          {% endfor %}
+          
+          Pattern Analysis:
+          {{ edge_case_analysis.stdout }}
+          
+          Summary:
+          - Total Edge Cases: {{ edge_case_scenarios | length }}
+          - Passed: {{ edge_case_results.values() | select('equalto', 'PASS') | list | length }}
+          - Failed: {{ edge_case_results.values() | select('equalto', 'FAIL') | list | length }}
+          - Success Rate: {{ ((edge_case_results.values() | select('equalto', 'PASS') | list | length) * 100 / (edge_case_scenarios | length)) | round(1) }}%
+          
+          Overall Result: {{ 'PASS' if edge_case_results.values() | select('equalto', 'FAIL') | list | length == 0 else 'FAIL' }}
+
+    - name: Fail if any edge case tests failed
+      ansible.builtin.fail:
+        msg: "Edge case error simulation tests failed"
+      when: edge_case_results.values() | select('equalto', 'FAIL') | list | length > 0

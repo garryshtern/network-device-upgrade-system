@@ -1,0 +1,179 @@
+---
+# Device-Specific Error Simulation Tests
+# Tests hardware and software failures during upgrade processes
+
+- name: Device Error Simulation Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    mock_device_port: 2223
+    test_platforms:
+      - cisco_nxos
+      - cisco_iosxe
+      - fortios
+      - opengear
+      - metamako_mos
+    device_error_scenarios:
+      storage_errors:
+        - name: "Insufficient Disk Space"
+          error_code: "STORAGE_FULL"
+          trigger_phase: "image_loading"
+          recovery_expected: false
+          
+        - name: "Corrupted Image File"
+          error_code: "IMAGE_CORRUPTION"
+          trigger_phase: "image_verification"
+          recovery_expected: true
+          
+        - name: "Filesystem Read-Only"
+          error_code: "FILESYSTEM_RO"
+          trigger_phase: "configuration_backup"
+          recovery_expected: false
+          
+      memory_errors:
+        - name: "Out of Memory During Upgrade"
+          error_code: "OUT_OF_MEMORY"
+          trigger_phase: "upgrade_installation"
+          recovery_expected: false
+          
+        - name: "Memory Corruption"
+          error_code: "MEMORY_CORRUPTION"
+          trigger_phase: "post_upgrade_validation"
+          recovery_expected: false
+          
+      hardware_errors:
+        - name: "EPLD Upgrade Failure"
+          error_code: "EPLD_FAILURE"
+          trigger_phase: "epld_upgrade"
+          recovery_expected: false
+          platforms: ["cisco_nxos"]
+          
+        - name: "Power Supply Issue"
+          error_code: "POWER_SUPPLY_FAULT"
+          trigger_phase: "upgrade_installation"
+          recovery_expected: false
+          
+        - name: "Temperature Alert"
+          error_code: "TEMPERATURE_HIGH"
+          trigger_phase: "upgrade_installation"
+          recovery_expected: true
+          
+      authentication_errors:
+        - name: "Expired Certificate"
+          error_code: "CERT_EXPIRED"
+          trigger_phase: "initial_connection"
+          recovery_expected: false
+          
+        - name: "Invalid Credentials"
+          error_code: "AUTH_FAILED"
+          trigger_phase: "initial_connection"
+          recovery_expected: false
+          
+        - name: "Privilege Escalation Failure"
+          error_code: "PRIVILEGE_DENIED"
+          trigger_phase: "configuration_mode"
+          recovery_expected: false
+
+  tasks:
+    - name: Create device error test matrix
+      ansible.builtin.set_fact:
+        test_matrix: []
+
+    - name: Build test combinations for each platform
+      ansible.builtin.set_fact:
+        test_matrix: "{{ test_matrix + [{'platform': item.0, 'error_category': item.1.key, 'scenario': item.1.value}] }}"
+      loop: "{{ test_platforms | product(device_error_scenarios | dict2items) | list }}"
+      loop_control:
+        label: "{{ item.0 }} - {{ item.1.key }}"
+      when: item.1.value.platforms is not defined or item.0 in item.1.value.platforms
+
+    - name: Start mock device servers for each platform
+      ansible.builtin.shell: |
+        cd {{ playbook_dir }}/../mock-devices
+        python3 mock_device_engine.py --platform {{ item }} --port {{ mock_device_port|int + loop.index0 }} --daemon
+      loop: "{{ test_platforms }}"
+      async: 600
+      poll: 0
+
+    - name: Wait for mock servers to start
+      ansible.builtin.wait_for:
+        port: "{{ mock_device_port|int + loop.index0 }}"
+        host: localhost
+        timeout: 30
+      loop: "{{ test_platforms }}"
+
+    - name: Execute device error scenarios
+      block:
+        - name: "Test {{ item.platform }} - {{ item.error_category }} - {{ item.scenario.name }}"
+          ansible.builtin.shell: |
+            cd {{ playbook_dir }}/../mock-devices
+            python3 -c "
+            from mock_device_engine import MockDeviceManager
+            import sys
+            
+            manager = MockDeviceManager()
+            device_id = manager.create_device('{{ item.platform }}', 'test-{{ item.platform }}-01')
+            
+            # Configure device-specific error
+            error_config = {
+                'error_code': '{{ item.scenario.error_code }}',
+                'trigger_phase': '{{ item.scenario.trigger_phase }}',
+                'platform': '{{ item.platform }}',
+                'recovery_expected': {{ item.scenario.recovery_expected | lower }}
+            }
+            
+            # Execute error scenario
+            result = manager.inject_device_error(device_id, error_config)
+            
+            print(f'Testing {{ item.scenario.name }} on {{ item.platform }}...')
+            
+            if result['success'] == {{ item.scenario.recovery_expected | lower }}:
+                print('PASS')
+                sys.exit(0)
+            else:
+                print('FAIL')
+                print(f'Expected: {{ item.scenario.recovery_expected }}, Got: {result[\"success\"]}')
+                sys.exit(1)
+            "
+          register: device_error_results
+          failed_when: false
+          loop: "{{ test_matrix }}"
+          loop_control:
+            label: "{{ item.platform }} - {{ item.scenario.name }}"
+
+      always:
+        - name: Stop all mock device servers
+          ansible.builtin.shell: |
+            pkill -f "mock_device_engine.py" || true
+
+    - name: Analyze test results by platform
+      ansible.builtin.set_fact:
+        platform_results: "{{ platform_results | default({}) | combine({item.item.platform: (platform_results[item.item.platform] | default([])) + [{'scenario': item.item.scenario.name, 'result': 'PASS' if item.rc == 0 else 'FAIL'}]}) }}"
+      loop: "{{ device_error_results.results }}"
+
+    - name: Generate device error test report
+      ansible.builtin.debug:
+        msg: |
+          Device Error Simulation Test Results:
+          ====================================
+          
+          {% for platform, results in platform_results.items() %}
+          {{ platform | upper }}:
+          {% for test in results %}
+            - {{ test.scenario }}: {{ test.result }}
+          {% endfor %}
+            Total: {{ results | length }}, Passed: {{ results | selectattr('result', 'equalto', 'PASS') | list | length }}
+          
+          {% endfor %}
+          
+          Overall Summary:
+          - Total Tests: {{ device_error_results.results | length }}
+          - Passed: {{ device_error_results.results | selectattr('rc', 'equalto', 0) | list | length }}
+          - Failed: {{ device_error_results.results | rejectattr('rc', 'equalto', 0) | list | length }}
+          
+          Result: {{ 'PASS' if device_error_results.results | rejectattr('rc', 'equalto', 0) | list | length == 0 else 'FAIL' }}
+
+    - name: Fail if any device error tests failed
+      ansible.builtin.fail:
+        msg: "Device error simulation tests failed"
+      when: device_error_results.results | rejectattr('rc', 'equalto', 0) | list | length > 0

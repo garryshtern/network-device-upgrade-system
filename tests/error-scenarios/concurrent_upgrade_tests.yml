@@ -1,0 +1,88 @@
+---
+# Concurrent Upgrade Error Simulation Tests
+# Tests multi-device upgrade scenarios with failure conditions
+
+- name: Concurrent Upgrade Error Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    base_port: 2230
+    concurrent_scenarios:
+      - name: "HA Pair Sequential Upgrade with Secondary Failure"
+        devices:
+          - { platform: "fortios", name: "fortigate-fw-01", port: "{{ base_port }}" }
+          - { platform: "fortios", name: "fortigate-fw-02", port: "{{ base_port + 1 }}" }
+        coordination: "sequential_ha"
+        failure_injection:
+          target: "fortigate-fw-02"
+          phase: "upgrade_installation"
+          error: "POWER_SUPPLY_FAULT"
+        expected_outcome: "primary_success_secondary_rollback"
+        
+      - name: "Multi-Platform Batch with Network Partition"
+        devices:
+          - { platform: "cisco_nxos", name: "nxos-switch-01", port: "{{ base_port + 2 }}" }
+          - { platform: "cisco_iosxe", name: "iosxe-router-01", port: "{{ base_port + 3 }}" }
+          - { platform: "opengear", name: "opengear-im7200", port: "{{ base_port + 4 }}" }
+        coordination: "parallel"
+        failure_injection:
+          target: "all"
+          phase: "image_loading"
+          error: "NETWORK_PARTITION"
+          duration: 60
+        expected_outcome: "all_retry_success"
+        
+      - name: "Resource Exhaustion During Concurrent Upgrades"
+        devices:
+          - { platform: "cisco_nxos", name: "nxos-switch-01", port: "{{ base_port + 5 }}" }
+          - { platform: "cisco_nxos", name: "nxos-switch-02", port: "{{ base_port + 6 }}" }
+          - { platform: "cisco_nxos", name: "nxos-switch-03", port: "{{ base_port + 7 }}" }
+        coordination: "parallel"
+        resource_limits:
+          max_concurrent_uploads: 2
+          bandwidth_limit_mbps: 50
+        failure_injection:
+          target: "nxos-switch-03"
+          phase: "image_loading"
+          error: "BANDWIDTH_EXCEEDED"
+        expected_outcome: "queued_completion"
+
+  tasks:
+    - name: Initialize test environment
+      ansible.builtin.set_fact:
+        test_results: {}
+
+    - name: Execute concurrent upgrade scenarios
+      include_tasks: concurrent_scenario_test.yml
+      loop: "{{ concurrent_scenarios }}"
+      loop_control:
+        loop_var: scenario
+
+    - name: Generate concurrent upgrade test report
+      ansible.builtin.debug:
+        msg: |
+          Concurrent Upgrade Error Test Results:
+          =====================================
+          
+          {% for scenario_name, result in test_results.items() %}
+          {{ scenario_name }}:
+            Status: {{ result.status }}
+            Duration: {{ result.duration }}s
+            Devices: {{ result.device_count }}
+            {% if result.errors | length > 0 %}
+            Errors: {{ result.errors | join(', ') }}
+            {% endif %}
+          
+          {% endfor %}
+          
+          Overall Summary:
+          - Total Scenarios: {{ concurrent_scenarios | length }}
+          - Passed: {{ test_results.values() | selectattr('status', 'equalto', 'PASS') | list | length }}
+          - Failed: {{ test_results.values() | selectattr('status', 'equalto', 'FAIL') | list | length }}
+          
+          Result: {{ 'PASS' if test_results.values() | selectattr('status', 'equalto', 'FAIL') | list | length == 0 else 'FAIL' }}
+
+    - name: Fail if any concurrent upgrade tests failed
+      ansible.builtin.fail:
+        msg: "Concurrent upgrade error tests failed"
+      when: test_results.values() | selectattr('status', 'equalto', 'FAIL') | list | length > 0
