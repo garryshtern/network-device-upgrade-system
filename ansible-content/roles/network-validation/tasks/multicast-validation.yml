@@ -78,7 +78,8 @@
           Dense Mode Interfaces: {{ pim_dense_mode | length }}
           {% for intf in pim_sparse_mode %}
           - >: >-
-              {{ intf.interface }}: {{ intf.mode }} mode, DR: {{ intf.dr_address }}
+              {{ intf.interface }}: {{ intf.mode }} mode, DR:
+              {{ intf.dr_address }}
           {% endfor %}
       when: pim_interfaces is defined
 
@@ -111,7 +112,8 @@
           IGMP Interfaces: {{ igmp_interfaces | length }}
           {% for group in igmp_groups[:10] %}
           - >
-            Group {{ group.group_addr }}: {{ group.uptime }} ({{ group.interface }})
+            Group {{ group.group_addr }}: {{ group.uptime }}
+            ({{ group.interface }})
           {% endfor %}
       when: igmp_groups is defined
 
@@ -209,7 +211,8 @@
           Active Entries: {{ mroute_entries | length }}
           {% for route in mroute_entries[:5] %}
           - >-
-            ({{ route.source }}, {{ route.group }}): {{ route.incoming_intf }} -> {{ route.outgoing_intf_list |
+            ({{ route.source }}, {{ route.group }}):
+            {{ route.incoming_intf }} -> {{ route.outgoing_intf_list |
               join(', ') }}
           {% endfor %}
           {% else %}
@@ -243,11 +246,13 @@
         PIM Neighbors: {{ multicast_baseline.pim_neighbors_up
           }}/{{ multicast_baseline.pim_neighbors_total }}
       - >
-        PIM Sparse Mode Interfaces: {{ multicast_baseline.pim_sparse_interfaces }}
+        PIM Sparse Mode Interfaces:
+        {{ multicast_baseline.pim_sparse_interfaces }}
       - IGMP Groups: {{ multicast_baseline.igmp_groups_total }}
       - Configured RPs: {{ multicast_baseline.rp_count }}
       - Anycast RP Sets: {{ multicast_baseline.anycast_rp_sets }}
       - Active Multicast Routes: {{ multicast_baseline.mroute_entries }}
       - >-
-        Overall Status: {{ 'CONFIGURED' if multicast_baseline.pim_neighbors_total > 0 or
+        Overall Status: {{ 'CONFIGURED' if
+          multicast_baseline.pim_neighbors_total > 0 or
           multicast_baseline.igmp_groups_total > 0 else 'NOT CONFIGURED' }}

@@ -10,7 +10,7 @@ driver:
 
 platforms:
   - name: network-test-instance
-    image: quay.io/ansible/molecule-runner:latest
+    image: python:3.13-slim
     pre_build_image: true
     volumes:
       - ${PWD}:/opt/network-upgrade:rw

@@ -131,7 +131,8 @@
     - name: Storage cleanup failure handling
       ansible.builtin.debug:
         msg: >-
-          Storage cleanup failed for {{ inventory_hostname }}: {{ ansible_failed_result.msg |
+          Storage cleanup failed for {{ inventory_hostname }}:
+          {{ ansible_failed_result.msg |
             default('Unknown error') }}
 
     - name: Re-raise storage cleanup failure

@@ -76,7 +76,8 @@
       cisco.nxos.nxos_command:
         commands:
           - >
-            "show bgp all neighbors {{ item.neighbor_ip }} received-routes summary"
+            "show bgp all neighbors {{ item.neighbor_ip }}
+            received-routes summary"
       register: bgp_received_routes
       loop: "{{ bgp_neighbors | default([]) }}"
       when:
@@ -88,7 +89,8 @@
       cisco.nxos.nxos_command:
         commands:
           - >
-            "show bgp all neighbors {{ item.neighbor_ip }} advertised-routes summary"
+            "show bgp all neighbors {{ item.neighbor_ip }}
+            advertised-routes summary"
       register: bgp_advertised_routes
       loop: "{{ bgp_neighbors | default([]) }}"
       when:
