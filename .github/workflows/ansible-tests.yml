@@ -225,9 +225,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade ansible molecule molecule-plugins[docker] docker
+          # Clear any existing collections to avoid conflicts
+          rm -rf ~/.ansible/collections
+          # Install collections to user directory
           ansible-galaxy collection install \
             -r ansible-content/collections/requirements.yml \
-            --force --ignore-certs
+            --force --ignore-certs --collections-path ~/.ansible/collections
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -238,6 +241,7 @@ jobs:
           molecule test -s network-upgrade-test
         env:
           MOLECULE_NO_LOG: false
+          MOLECULE_VERBOSITY: 1
 
       - name: Run default molecule tests  
         run: |

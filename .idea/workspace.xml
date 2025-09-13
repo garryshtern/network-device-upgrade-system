@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="87629bf4-cfe3-439f-a321-a3033a721acb" name="Changes" comment="Fix the failure in workflow">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/compliance-audit.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/compliance-audit.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/molecule-tests/molecule/network-upgrade-test/molecule.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/molecule-tests/molecule/network-upgrade-test/molecule.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -90,7 +90,7 @@
       <workItem from="1756951775422" duration="9763000" />
       <workItem from="1757115228585" duration="72241000" />
       <workItem from="1757551344727" duration="70000" />
-      <workItem from="1757554781068" duration="33704000" />
+      <workItem from="1757554781068" duration="34041000" />
     </task>
     <task id="LOCAL-00001" summary="Added implementations">
       <option name="closed" value="true" />
