@@ -109,13 +109,17 @@
                     compliance_results.standards_tested + ['network_hardening'],
                   'compliance_checks': {
                     'passed': >
-                      compliance_results.compliance_checks.passed + network_hardening_results.passed,
+                      compliance_results.compliance_checks.passed +
+                      network_hardening_results.passed,
                     'failed': >
-                      compliance_results.compliance_checks.failed + network_hardening_results.failed,
+                      compliance_results.compliance_checks.failed +
+                      network_hardening_results.failed,
                     'skipped': >
-                      compliance_results.compliance_checks.skipped + network_hardening_results.skipped,
+                      compliance_results.compliance_checks.skipped +
+                      network_hardening_results.skipped,
                     'warnings': >
-                      compliance_results.compliance_checks.warnings + network_hardening_results.warnings
+                      compliance_results.compliance_checks.warnings +
+                      network_hardening_results.warnings
                   }
                 })
               }}
@@ -128,7 +132,8 @@
                 compliance_results | combine({
                   'compliance_checks': {
                     'failed': >
-                      compliance_results.compliance_checks.failed + ['network_hardening_audit_error']
+                      compliance_results.compliance_checks.failed +
+                      ['network_hardening_audit_error']
                   }
                 })
               }}
@@ -198,13 +203,17 @@
                     compliance_results.standards_tested + ['platform_specific'],
                   'compliance_checks': {
                     'passed': >
-                      compliance_results.compliance_checks.passed + platform_compliance_results.passed,
+                      compliance_results.compliance_checks.passed +
+                      platform_compliance_results.passed,
                     'failed': >
-                      compliance_results.compliance_checks.failed + platform_compliance_results.failed,
+                      compliance_results.compliance_checks.failed +
+                      platform_compliance_results.failed,
                     'skipped': >
-                      compliance_results.compliance_checks.skipped + platform_compliance_results.skipped,
+                      compliance_results.compliance_checks.skipped +
+                      platform_compliance_results.skipped,
                     'warnings': >
-                      compliance_results.compliance_checks.warnings + platform_compliance_results.warnings
+                      compliance_results.compliance_checks.warnings +
+                      platform_compliance_results.warnings
                   }
                 })
               }}
@@ -218,7 +227,8 @@
                 compliance_results | combine({
                   'compliance_checks': {
                     'failed': >
-                      compliance_results.compliance_checks.failed + ['platform_compliance_audit_error']
+                      compliance_results.compliance_checks.failed +
+                      ['platform_compliance_audit_error']
                   }
                 })
               }}
@@ -231,7 +241,8 @@
             length + compliance_results.compliance_checks.failed | length) }}
         compliance_percentage: >-
           {{ (compliance_results.compliance_checks.passed |
-            length / total_checks * 100) | round(2) if total_checks | int > 0 else 0 }}
+            length / total_checks * 100) | round(2) if
+            total_checks | int > 0 else 0 }}
 
     - name: Generate compliance report
       ansible.builtin.template:
@@ -276,8 +287,10 @@
           vendor={{ vendor | default('unknown') }},
           platform={{ ansible_network_os }}
           compliance_score={{ compliance_percentage }},
-          checks_passed={{ compliance_results.compliance_checks.passed | length }},
-          checks_failed={{ compliance_results.compliance_checks.failed | length }},
+          checks_passed={{
+            compliance_results.compliance_checks.passed | length }},
+          checks_failed={{
+            compliance_results.compliance_checks.failed | length }},
           checks_total={{ total_checks }},
           warnings={{ compliance_results.compliance_checks.warnings | length }}
           {{ ansible_date_time.epoch }}000000000
@@ -300,7 +313,8 @@
             compliance_score: "{{ compliance_percentage }}"
             last_compliance_audit: "{{ audit_timestamp }}"
             compliance_status: >-
-              {{ 'compliant' if compliance_percentage >= 90 else 'non_compliant' }}
+              {{ 'compliant' if compliance_percentage >= 90
+              else 'non_compliant' }}
       when:
         - netbox_url is defined
         - netbox_token is defined
@@ -315,13 +329,17 @@
           - "Firmware Version: {{ compliance_results.firmware_version }}"
           - "Audit Timestamp: {{ audit_timestamp }}"
           - >-
-            "Standards Tested: {{ compliance_results.standards_tested | join(', ') }}"
+            "Standards Tested: {{
+              compliance_results.standards_tested | join(', ') }}"
           - >-
-            "Checks Passed: {{ compliance_results.compliance_checks.passed | length }}"
+            "Checks Passed: {{
+              compliance_results.compliance_checks.passed | length }}"
           - >-
-            "Checks Failed: {{ compliance_results.compliance_checks.failed | length }}"
+            "Checks Failed: {{
+              compliance_results.compliance_checks.failed | length }}"
           - >-
-            "Warnings: {{ compliance_results.compliance_checks.warnings | length }}"
+            "Warnings: {{
+              compliance_results.compliance_checks.warnings | length }}"
           - "Compliance Score: {{ compliance_percentage }}%"
           - >-
             Overall Status: {{ 'COMPLIANT' if

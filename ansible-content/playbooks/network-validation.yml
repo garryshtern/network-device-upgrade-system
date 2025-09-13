@@ -335,7 +335,8 @@
           - "Validation Score: {{ validation_score | default('N/A') }}%"
           - "Overall Status: {{ 'PASS' if validation_passed else 'FAIL' }}"
           - >-
-            Results Location: {{ validation_results_path }}/{{ inventory_hostname }}/
+            Results Location: {{ validation_results_path }}/{{
+            inventory_hostname }}/
           - "=================================="
 
     - name: Fail if validation failed

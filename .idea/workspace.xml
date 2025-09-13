@@ -5,25 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="87629bf4-cfe3-439f-a321-a3033a721acb" name="Changes" comment="Fix the failure in workflow">
+      <change beforePath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/check-install-mode.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/check-install-mode.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/image-installation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/image-installation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/image-loading.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/image-loading.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/network-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/network-validation.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/install-mode.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/install-mode.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-iosxe-upgrade/tasks/validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/epld-upgrade.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/epld-upgrade.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/issu-procedures.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/issu-procedures.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/interface-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/interface-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/multicast-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/multicast-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/routing-validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/network-validation/tasks/routing-validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/console-server-check.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/console-server-check.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation-legacy.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation-legacy.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-installation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-loading-legacy.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-loading-legacy.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/serial-management.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/serial-management.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/smart-pdu-check.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/smart-pdu-check.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/defaults/main.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/defaults/main.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/main.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/main.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/validation.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/web-automation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/web-automation.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,7 +95,7 @@
       <workItem from="1756951775422" duration="9763000" />
       <workItem from="1757115228585" duration="72241000" />
       <workItem from="1757551344727" duration="70000" />
-      <workItem from="1757554781068" duration="32977000" />
+      <workItem from="1757554781068" duration="33388000" />
     </task>
     <task id="LOCAL-00001" summary="Added implementations">
       <option name="closed" value="true" />
