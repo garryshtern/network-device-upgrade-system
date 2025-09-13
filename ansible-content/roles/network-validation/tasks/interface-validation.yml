@@ -43,15 +43,15 @@
 
     - name: Parse interface states
       set_fact:
-        up_interfaces: >
-"{{ interface_brief.TABLE_interface.ROW_interface |
-            selectattr('state', 'equalto', 'up') | list }}"
-        down_interfaces: >
-"{{ interface_brief.TABLE_interface.ROW_interface |
-            selectattr('state', 'equalto', 'down') | list }}"
-        admin_down_interfaces: >
-"{{ interface_brief.TABLE_interface.ROW_interface |
-            selectattr('admin_state', 'equalto', 'down') | list }}"
+        up_interfaces: >-
+          {{ interface_brief.TABLE_interface.ROW_interface |
+            selectattr('state', 'equalto', 'up') | list }}
+        down_interfaces: >-
+          {{ interface_brief.TABLE_interface.ROW_interface |
+            selectattr('state', 'equalto', 'down') | list }}
+        admin_down_interfaces: >-
+          {{ interface_brief.TABLE_interface.ROW_interface |
+            selectattr('admin_state', 'equalto', 'down') | list }}
       when: >
         ansible_network_os == "cisco.nxos.nxos" and
           interface_brief.TABLE_interface is defined
