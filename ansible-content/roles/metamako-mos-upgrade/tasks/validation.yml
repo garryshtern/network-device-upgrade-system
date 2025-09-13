@@ -135,7 +135,7 @@
   ansible.builtin.debug:
     msg: |
       Performance Benchmark Results:
-      >
+      >-
         {{ benchmark_results.stdout if benchmark_results is defined else
           'Benchmark not available' }}
   when: benchmark_results is defined
