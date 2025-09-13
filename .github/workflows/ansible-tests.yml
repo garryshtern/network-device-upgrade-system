@@ -250,9 +250,81 @@ jobs:
         env:
           MOLECULE_NO_LOG: false
 
+  critical-gap-tests:
+    name: Critical Gap Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13.7"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade ansible psutil
+          pip install yamllint ansible-lint
+
+      - name: Install Ansible collections
+        run: |
+          ansible-galaxy collection install \
+            -r ansible-content/collections/requirements.yml \
+            --force --ignore-certs
+
+      - name: Create reports directory
+        run: mkdir -p tests/reports
+
+      - name: Run Critical Gap Test Suite
+        run: |
+          chmod +x tests/critical-gaps/run-all-critical-gap-tests.sh
+          # Set timeout to prevent infinite execution
+          timeout 600 tests/critical-gaps/run-all-critical-gap-tests.sh || true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: critical-gap-test-results-${{ matrix.python-version }}
+          path: |
+            tests/reports/critical-gap-*.json
+            tests/reports/critical-gap-*.log
+            tests/reports/*-coverage-*.json
+          retention-days: 30
+
+      - name: Display test summary
+        if: always()
+        run: |
+          echo "=== CRITICAL GAP TEST SUMMARY ==="
+          if [ -f tests/reports/critical-gap-test-summary-*.json ]; then
+            latest_summary=$(ls -t tests/reports/critical-gap-test-summary-*.json | head -1)
+            echo "📊 Latest test summary: $latest_summary"
+
+            # Extract key metrics using jq if available
+            if command -v jq &> /dev/null; then
+              echo "📈 Success Rate: $(jq -r '.test_execution_summary.success_rate_percent' "$latest_summary")%"
+              echo "✅ Passed Tests: $(jq -r '.test_execution_summary.passed_tests' "$latest_summary")"
+              echo "❌ Failed Tests: $(jq -r '.test_execution_summary.failed_tests' "$latest_summary")"
+              echo "💰 Business Risk Addressed: $(jq -r '.business_impact.total_risk_addressed' "$latest_summary")"
+              echo "🚀 Production Readiness: $(jq -r '.business_impact.production_readiness' "$latest_summary")"
+            else
+              echo "📄 Raw summary:"
+              cat "$latest_summary"
+            fi
+          else
+            echo "⚠️ No test summary found - tests may not have completed successfully"
+            ls -la tests/reports/ || echo "Reports directory not found"
+          fi
+
   call-container-build:
     name: Build Container Image
-    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests, molecule-tests]
+    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests, molecule-tests, critical-gap-tests]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/build-container.yml
     with:

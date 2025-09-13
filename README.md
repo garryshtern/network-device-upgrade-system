@@ -11,7 +11,7 @@ This system provides automated firmware upgrade capabilities for:
 - **Opengear** (Console Servers/Smart PDUs) with multi-architecture support
 - **FortiOS** (Fortinet Firewalls) with HA coordination
 
-**Status**: Production ready for all platforms. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for detailed status.
+**Status**: Production ready for all platforms. See [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for detailed status.
 
 ## Key Features
 
@@ -120,7 +120,7 @@ cd tests/molecule-tests && molecule test
 - **[⚙️ Installation Guide](docs/installation-guide.md)** - Step-by-step deployment  
 - **[🔄 Workflow Guide](docs/UPGRADE_WORKFLOW_GUIDE.md)** - Upgrade process and safety mechanisms
 - **[🏗️ Platform Guide](docs/PLATFORM_IMPLEMENTATION_GUIDE.md)** - Technical implementation details
-- **[📊 Implementation Status](IMPLEMENTATION_STATUS.md)** - Current completion analysis
+- **[📊 Implementation Status](docs/IMPLEMENTATION_STATUS.md)** - Current completion analysis
 - **[🧪 Testing Framework Guide](tests/TEST_FRAMEWORK_GUIDE.md)** - Comprehensive testing without physical devices
 
 ## Architecture
