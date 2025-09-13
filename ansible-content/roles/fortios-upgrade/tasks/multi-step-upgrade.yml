@@ -41,10 +41,8 @@
 
 - name: Check if current step is already completed
   ansible.builtin.debug:
-    msg: >
-"Step {{ fortios_upgrade_state.current_step +
-        1 }} already completed (current version: >
-        {{ fortios_upgrade_state.current_version }})"
+    msg: >-
+      Step {{ fortios_upgrade_state.current_step + 1 }} already completed (current version: {{ fortios_upgrade_state.current_version }})
   when: fortios_upgrade_state.current_version == current_step_target
 
 - name: Execute current upgrade step

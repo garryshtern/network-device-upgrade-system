@@ -30,8 +30,8 @@
 
     - name: Check if cleanup is needed
       ansible.builtin.set_fact:
-        cleanup_required: >
-          "{{ storage_info.free_space_gb < minimum_free_space_gb }}"
+        cleanup_required: >-
+          {{ storage_info.free_space_gb < minimum_free_space_gb }}
 
     - name: Platform-specific storage cleanup
       block:
@@ -107,9 +107,8 @@
           cleanup_performed: "{{ cleanup_required }}"
           space_before_gb: "{{ storage_info.free_space_gb }}"
           space_after_gb: "{{ post_cleanup_storage.free_space_gb }}"
-          space_freed_gb: >
-            "{{ post_cleanup_storage.free_space_gb
-              - storage_info.free_space_gb }}"
+          space_freed_gb: >-
+            {{ post_cleanup_storage.free_space_gb - storage_info.free_space_gb }}
 
     - name: Display storage cleanup results
       ansible.builtin.debug:
@@ -122,16 +121,14 @@
           - >
             "Space Freed: {{ post_cleanup_storage.free_space_gb
               - storage_info.free_space_gb }}GB"
-          - >
-"Status: {{ 'SUFFICIENT' if post_cleanup_storage.free_space_gb >= minimum_free_space_gb else
-              'INSUFFICIENT' }}"
+          - "Status: {{ 'SUFFICIENT' if post_cleanup_storage.free_space_gb >= minimum_free_space_gb else 'INSUFFICIENT' }}"
           - "==============================="
   rescue:
     - name: Storage cleanup failure handling
       ansible.builtin.debug:
-        msg: >
-"Storage cleanup failed for {{ inventory_hostname }}: {{ ansible_failed_result.msg |
-            default('Unknown error') }}"
+        msg: >-
+          Storage cleanup failed for {{ inventory_hostname }}: {{ ansible_failed_result.msg |
+            default('Unknown error') }}
 
     - name: Re-raise storage cleanup failure
       ansible.builtin.fail:
