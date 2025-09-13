@@ -127,13 +127,13 @@
         msg: |
           EPLD Upgrade Results:
           {% for module_info in updated_epld_modules %}
-          - Module
-            {{ module_info[0] }}
+          - Module: >-
+              {{ module_info[0] }}
             :
-{{ 'UPDATED' if module_info[1] != (epld_modules |
+      {{ 'UPDATED' if module_info[1] != (epld_modules |
               selectattr('0', 'equalto', module_info[0]) | map(attribute='1') | first | default('unknown')) else 'UNCHANGED' }}
-             (
-            {{ module_info[1] }}
+             (: >-
+              {{ module_info[1] }}
             )
           {% endfor %}
       when: updated_epld_modules | length > 0

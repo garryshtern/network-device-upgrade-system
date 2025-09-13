@@ -51,8 +51,8 @@
         (ansible_network_os == 'opengear' and
           target_firmware.endswith(('.dgz', '.bin')))
     fail_msg: >
-      "Firmware file extension not valid for platform
-        {{ ansible_network_os }}: {{ target_firmware }}"
+      "Firmware file extension not valid for platform: >-
+          {{ ansible_network_os }}: {{ target_firmware }}"
     success_msg: >
       "Firmware file extension validation passed for {{ ansible_network_os }}"
 

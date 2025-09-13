@@ -35,7 +35,7 @@
       ansible.builtin.set_fact:
         bgp_neighbors: "{{ bgp_summary_raw.stdout[0] | bgp_neighbors_parser }}"
       vars:
-        bgp_neighbors_parser: |
+        bgp_neighbors_parser: >-
           {%- set neighbors = [] -%}
           {%- for line in bgp_summary_raw.stdout[0].split('\n') -%}
             {%- if line | regex_search('^\d+\.\d+\.\d+\.\d+') -%}
@@ -45,13 +45,13 @@
                   'neighbor_ip': parts[0],
                   'version': parts[1] | default('4'),
                   'as_number': parts[2],
-                  'msg_received': >
+                  'msg_received':
                     parts[3] | int if parts[3] | regex_search('^\d+$') else 0,
-                  'msg_sent': >
+                  'msg_sent':
                     parts[4] | int if parts[4] | regex_search('^\d+$') else 0,
                   'state': parts[5],
                   'uptime': parts[6] if parts | length > 6 else 'unknown',
-                  'received_prefixes': >
+                  'received_prefixes':
                     parts[7] | int if parts | length > 7
                       and parts[7] | regex_search('^\d+$') else 0
                 } -%}
@@ -149,9 +149,9 @@
 
     - name: Load baseline data
       ansible.builtin.set_fact:
-        bgp_baseline: >
-"{{ lookup('file', '/var/log/network-upgrade/baselines/' + inventory_hostname + '_bgp_baseline.json') |
-            from_json }}"
+        bgp_baseline: >-
+          {{ lookup('file', '/var/log/network-upgrade/baselines/' + inventory_hostname + '_bgp_baseline.json') |
+            from_json }}
       when:
         - baseline_file.stat.exists
         - validation_mode == 'post_upgrade'
@@ -187,19 +187,19 @@
       ansible.builtin.set_fact:
         bgp_comparison:
           neighbor_count_match: "
-{{ bgp_validation.baseline.analysis.total_neighbors |
+      {{ bgp_validation.baseline.analysis.total_neighbors |
               default(0) == bgp_validation.current.analysis.total_neighbors | default(0) }}
             "
           established_count_match: "
-{{ bgp_validation.baseline.analysis.established_neighbors |
+      {{ bgp_validation.baseline.analysis.established_neighbors |
               default(0) == bgp_validation.current.analysis.established_neighbors | default(0) }}
             "
           prefix_count_variance: "
-{{ ((bgp_validation.current.analysis.total_received_prefixes |
+      {{ ((bgp_validation.current.analysis.total_received_prefixes |
               default(0) - bgp_validation.baseline.analysis.total_received_prefixes | default(0)) | abs) }}
             "
           prefix_variance_percentage: "
-{{ ((bgp_validation.current.analysis.total_received_prefixes |
+      {{ ((bgp_validation.current.analysis.total_received_prefixes |
               default(1) - bgp_validation.baseline.analysis.total_received_prefixes | default(1)) / (bgp_validation.baseline.analysis.total_received_prefixes | default(1)) * 100) | abs }}
             "
           new_down_neighbors: []
@@ -215,13 +215,12 @@
             baseline_down_neighbors | default([]) | difference(current_down_neighbors)
         }) }}"
       vars:
-        current_down_neighbors: >
-"{{ bgp_validation.current.neighbors |
-            rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list }}"
-        baseline_down_neighbors: "
-{{ bgp_validation.baseline.neighbors |
+        current_down_neighbors: >-
+          {{ bgp_validation.current.neighbors |
+            rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list }}
+        baseline_down_neighbors: >-
+          {{ bgp_validation.baseline.neighbors |
             default([]) | rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list }}
-          "
 
     - name: Store comparison results
       ansible.builtin.set_fact:
@@ -284,7 +283,7 @@
             down after upgrade: ' + neighbor) -%}
         {%- endfor -%}
       {%- endif -%}
-      {{ errors }}
+        {{ errors }}
 
 - name: Set final BGP validation status
   ansible.builtin.set_fact:
@@ -309,18 +308,8 @@
     method: POST
     headers:
       Authorization: "Token {{ influxdb_token }}"
-    body: |
-      network_validation,device_id=
-        {{ inventory_hostname }}
-        ,validation_type=bgp,protocol=bgp baseline_count=
-        {{ bgp_validation.baseline.analysis.total_neighbors | default(0) }}
-        ,current_count=
-        {{ bgp_validation.current.analysis.established_neighbors | default(0) }}
-        ,validation_success=
-        {{ bgp_validation.passed | lower }}
-        ,convergence_time=0
-        {{ ansible_play_batch | hash('md5') }}
-        000000000
+    body: >-
+      network_validation,device_id={{ inventory_hostname }},validation_type=bgp,protocol=bgp baseline_count={{ bgp_validation.baseline.analysis.total_neighbors | default(0) }},current_count={{ bgp_validation.current.analysis.established_neighbors | default(0) }},validation_success={{ bgp_validation.passed | lower }},convergence_time=0 {{ ansible_play_batch | hash('md5') }}000000000
   when:
     - influxdb_url is defined
     - send_metrics | default(true)
@@ -331,36 +320,19 @@
     msg: |
       BGP Validation Results for {{ inventory_hostname }}:
       Status: {{ 'PASSED' if bgp_validation.passed else 'FAILED' }}
-      Total Neighbors: >
-        {{ bgp_validation.current.analysis.total_neighbors | default(0) }}
-      Established Neighbors: >
-        {{ bgp_validation.current.analysis.established_neighbors | default(0) }}
-      Total Prefixes: >
-{{ bgp_validation.current.analysis.total_received_prefixes |
-          default(0) }}
-      {% if validation_mode == 'post_upgrade'
-        and bgp_validation.baseline != {} %}
+      Total Neighbors: {{ bgp_validation.current.analysis.total_neighbors | default(0) }}
+      Established Neighbors: {{ bgp_validation.current.analysis.established_neighbors | default(0) }}
+      Total Prefixes: {{ bgp_validation.current.analysis.total_received_prefixes | default(0) }}
+      {% if validation_mode == 'post_upgrade' and bgp_validation.baseline != {} %}
       Baseline Comparison:
-      - >
-Neighbor Count Match: {{ bgp_validation.comparison.neighbor_count_match |
-          default('N/A') }}
-      - >
-Established Count Match: {{ bgp_validation.comparison.established_count_match |
-          default('N/A') }}
-      - >
-Prefix Variance: {{ bgp_validation.comparison.prefix_variance_percentage |
-          default(0) | round(2) }}%
-      {% if bgp_validation.comparison.new_down_neighbors
-        | default([]) | length > 0 %}
-      - >
-New Down Neighbors: {{ bgp_validation.comparison.new_down_neighbors |
-          join(', ') }}
+      - Neighbor Count Match: {{ bgp_validation.comparison.neighbor_count_match | default('N/A') }}
+      - Established Count Match: {{ bgp_validation.comparison.established_count_match | default('N/A') }}
+      - Prefix Variance: {{ bgp_validation.comparison.prefix_variance_percentage | default(0) | round(2) }}%
+      {% if bgp_validation.comparison.new_down_neighbors | default([]) | length > 0 %}
+      - New Down Neighbors: {{ bgp_validation.comparison.new_down_neighbors | join(', ') }}
       {% endif %}
-      {% if bgp_validation.comparison.recovered_neighbors
-        | default([]) | length > 0 %}
-      - >
-Recovered Neighbors: {{ bgp_validation.comparison.recovered_neighbors |
-          join(', ') }}
+      {% if bgp_validation.comparison.recovered_neighbors | default([]) | length > 0 %}
+      - Recovered Neighbors: {{ bgp_validation.comparison.recovered_neighbors | join(', ') }}
       {% endif %}
       {% endif %}
       {% if bgp_validation.errors | length > 0 %}

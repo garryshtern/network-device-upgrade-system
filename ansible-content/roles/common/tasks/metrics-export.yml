@@ -63,12 +63,12 @@
     path: "/var/log/network-upgrade/metrics.log"
     line: "
       {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-       |
-      {{ inventory_hostname }}
-       |
-      {{ metric_type | default('unknown') }}
-       |
-      {{ metric_data | to_json }}
+       |: >-
+        {{ inventory_hostname }}
+       |: >-
+        {{ metric_type | default('unknown') }}
+       |: >-
+        {{ metric_data | to_json }}
       "
     create: true
     mode: "0644"

@@ -258,51 +258,51 @@
       {% if 'bgp' in convergence_results %}
       - BGP:
         {{ 'CONVERGED' if convergence_results.bgp.converged else 'FAILED' }}
-         (
-        {{ convergence_results.bgp.time_seconds }}
-        s,
-        {{ convergence_results.bgp.neighbors_established }}
+         (: >-
+          {{ convergence_results.bgp.time_seconds }}
+        s,: >-
+          {{ convergence_results.bgp.neighbors_established }}
          neighbors)
       {% endif %}
       {% if 'ospf' in convergence_results %}
       - OSPF:
         {{ 'CONVERGED' if convergence_results.ospf.converged else 'FAILED' }}
-         (
-        {{ convergence_results.ospf.time_seconds }}
-        s,
-        {{ convergence_results.ospf.neighbors_full }}
+         (: >-
+          {{ convergence_results.ospf.time_seconds }}
+        s,: >-
+          {{ convergence_results.ospf.neighbors_full }}
          neighbors)
       {% endif %}
       {% if 'eigrp' in convergence_results %}
       - EIGRP:
         {{ 'CONVERGED' if convergence_results.eigrp.converged else 'FAILED' }}
-         (
-        {{ convergence_results.eigrp.time_seconds }}
-        s,
-        {{ convergence_results.eigrp.neighbors_up }}
+         (: >-
+          {{ convergence_results.eigrp.time_seconds }}
+        s,: >-
+          {{ convergence_results.eigrp.neighbors_up }}
          neighbors)
       {% endif %}
       {% if 'interfaces' in convergence_results %}
       - Interfaces:
-{{ 'CONVERGED' if convergence_results.interfaces.converged else
+      {{ 'CONVERGED' if convergence_results.interfaces.converged else
           'FAILED' }}
-         (
-        {{ convergence_results.interfaces.time_seconds }}
-        s,
-        {{ convergence_results.interfaces.interfaces_up }}
-        /
-        {{ convergence_results.interfaces.expected_up }}
+         (: >-
+          {{ convergence_results.interfaces.time_seconds }}
+        s,: >-
+          {{ convergence_results.interfaces.interfaces_up }}
+        /: >-
+          {{ convergence_results.interfaces.expected_up }}
         )
       {% endif %}
       {% if 'routing' in convergence_results %}
       - Routing Table:
         {{ 'CONVERGED' if convergence_results.routing.converged else 'FAILED' }}
-         (
-        {{ convergence_results.routing.time_seconds }}
-        s,
-        {{ convergence_results.routing.current_routes }}
-        /
-        {{ convergence_results.routing.expected_routes }}
+         (: >-
+          {{ convergence_results.routing.time_seconds }}
+        s,: >-
+          {{ convergence_results.routing.current_routes }}
+        /: >-
+          {{ convergence_results.routing.expected_routes }}
          routes)
       {% endif %}
 

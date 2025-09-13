@@ -165,13 +165,13 @@
       Optics Validation Summary:
       =========================
       Active Transceivers: >
-{{ active_transceivers | length if
+      {{ active_transceivers | length if
           active_transceivers is defined else 'N/A' }}
       Optical Power Readings: >
-{{ optical_power_levels | length if
+      {{ optical_power_levels | length if
           optical_power_levels is defined else 'N/A' }}
       Temperature Readings: >
-{{ transceiver_temperatures | length if
+      {{ transceiver_temperatures | length if
           transceiver_temperatures is defined else 'N/A' }}
 
       {% if active_transceivers is defined %}
@@ -198,7 +198,7 @@
       {% endif %}
 
       Health Status: >
-{{ 'PASS' if (active_transceivers is defined and active_transceivers |
+      {{ 'PASS' if (active_transceivers is defined and active_transceivers |
           length > 0) else 'CHECK' }}
 
 - name: Store optics validation baseline
@@ -209,13 +209,13 @@
       # Generated during firmware upgrade validation
 
       Active_Transceivers: >
-{{ active_transceivers | length if
+      {{ active_transceivers | length if
           active_transceivers is defined else 0 }}
       Optical_Power_Readings: >
-{{ optical_power_levels | length if
+      {{ optical_power_levels | length if
           optical_power_levels is defined else 0 }}
       Temperature_Readings: >
-{{ transceiver_temperatures | length if
+      {{ transceiver_temperatures | length if
           transceiver_temperatures is defined else 0 }}
 
       {% if active_transceivers is defined %}
@@ -257,7 +257,7 @@
       {% endif %}
 
       Validation_Status: >
-{{ 'PASS' if (active_transceivers is defined and active_transceivers |
+      {{ 'PASS' if (active_transceivers is defined and active_transceivers |
           length > 0) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: >

@@ -197,10 +197,10 @@
       IGMP Validation Summary:
       ========================
       IGMP Snooping VLANs: >
-{{ igmp_enabled_vlans if igmp_enabled_vlans is defined else
+      {{ igmp_enabled_vlans if igmp_enabled_vlans is defined else
           'N/A' }}/{{ igmp_total_vlans if igmp_total_vlans is defined else 'N/A' }}
       IGMP Interfaces: >
-{{ igmp_active_interfaces if igmp_active_interfaces is defined else
+      {{ igmp_active_interfaces if igmp_active_interfaces is defined else
           'N/A' }}
       Total IGMP Groups: >
         {{ total_igmp_groups if total_igmp_groups is defined else 'N/A' }}
@@ -210,8 +210,8 @@
       {% if igmp_interfaces is defined %}
       IGMP Interface Details:
       {% for intf in igmp_interfaces %}
-      - >
-        {{ intf.interface }}: Version {{ intf.version }}, Querier {{ intf.querier }}
+      - >: >-
+          {{ intf.interface }}: Version {{ intf.version }}, Querier {{ intf.querier }}
       {% endfor %}
       {% endif %}
 
@@ -231,7 +231,7 @@
       {% endif %}
 
       Health Status:
-{{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans |
+      {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans |
           int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
 
 - name: Store IGMP validation baseline
@@ -289,7 +289,7 @@
       {% endif %}
 
       Validation_Status:
-{{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans |
+      {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans |
           int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: >

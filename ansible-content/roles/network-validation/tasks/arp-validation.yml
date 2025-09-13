@@ -151,8 +151,8 @@
 
       {% for binding in dhcp_bindings[:10] %}
 
-      - >
-        {{ binding.ip_addr }}: {{ binding.mac_addr }} ({{ binding.interface }}, VLAN
+      - >: >-
+          {{ binding.ip_addr }}: {{ binding.mac_addr }} ({{ binding.interface }}, VLAN
       {{ binding.vlan_id }})
 
       {% endfor %}
@@ -188,8 +188,8 @@
 
       {% for neighbor in ipv6_neighbors[:5] %}
 
-      - >
-        {{ neighbor.ipv6_addr }}: {{
+      - >: >-
+          {{ neighbor.ipv6_addr }}: {{
           neighbor.link_layer_addr }} ({{ neighbor.interface
       }})
 

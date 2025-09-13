@@ -155,16 +155,16 @@
       Device Health: >
         {{ 'PASS' if nxos_validation_results.device_healthy else 'FAIL' }}
       Interfaces: >
-{{ 'PASS' if nxos_validation_results.interfaces_up else
+      {{ 'PASS' if nxos_validation_results.interfaces_up else
           'CHECK' }} ({{ interfaces_down }} down)
       BGP Neighbors: >
         {{ 'PASS' if nxos_validation_results.bgp_neighbors_up else 'CHECK' }}
       Critical Logs: >
-{{ 'PRESENT' if nxos_validation_results.critical_logs_present else
+      {{ 'PRESENT' if nxos_validation_results.critical_logs_present else
           'NONE' }}
       IGMP Validation: {{ nxos_validation_results.igmp_validated }}
       BFD Validation: {{ nxos_validation_results.bfd_validated }}
 
       Overall Status:
-{{ 'PASS' if (nxos_validation_results.device_healthy and
+      {{ 'PASS' if (nxos_validation_results.device_healthy and
           nxos_validation_results.interfaces_up and nxos_validation_results.bgp_neighbors_up and not nxos_validation_results.critical_logs_present) else 'CHECK REQUIRED' }}

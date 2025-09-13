@@ -45,11 +45,11 @@
       set_fact:
         total_routes: "{{ routing_summary.total_routes | default(0) }}"
         static_routes: "
-{{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix |
+      {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix |
             selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'static') | list | default([]) }}
           "
         connected_routes: "
-{{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix |
+      {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix |
             selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'direct') | list | default([]) }}
           "
       when: >
@@ -63,8 +63,8 @@
         msg: |
           Static Routes Found: {{ static_routes | length }}
           {% for route in static_routes %}
-          - >
-{{ route.ipprefix }}: via {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
+          - >: >-
+        {{ route.ipprefix }}: via {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
               default('N/A') }}
           {% endfor %}
       when: static_routes is defined
@@ -86,8 +86,8 @@
         msg: |
           Static Route Reachability:
           {% for result in static_route_ping.results | default([]) %}
-          - >
-{{ static_routes[loop.index0].ipprefix }}: {{ 'REACHABLE' if result.stdout[0] |
+          - >: >-
+        {{ static_routes[loop.index0].ipprefix }}: {{ 'REACHABLE' if result.stdout[0] |
               regex_search('Success rate is [^0]') else 'UNREACHABLE' }}
           {% endfor %}
       when: static_route_ping is defined
@@ -106,11 +106,11 @@
         default_route_info:
           present: "{{ has_default_route | default(false) }}"
           next_hop: "
-{{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
+      {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
               default('None') }}
             "
           interface: "
-{{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.ROW_path.ifname |
+      {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.ROW_path.ifname |
               default('None') }}
             "
       when: >
@@ -141,8 +141,8 @@
         msg: |
           Connected Routes: {{ connected_routes | length }}
           {% for route in connected_routes[:10] %}
-          - >
-            {{ route.ipprefix }} via {{ route.ucast_nhops.TABLE_path.ROW_path.ifname }}
+          - >: >-
+              {{ route.ipprefix }} via {{ route.ucast_nhops.TABLE_path.ROW_path.ifname }}
           {% endfor %}
       when: connected_routes is defined
 
@@ -207,11 +207,11 @@
       default_route_next_hop: >
         "{{ default_route_info.next_hop | default('None') }}"
       ospf_neighbors: "
-{{ ospf_neighbors.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length if ospf_neighbors is defined and
+      {{ ospf_neighbors.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length if ospf_neighbors is defined and
           ospf_neighbors.rc == 0 else 0 }}
         "
       eigrp_neighbors: "
-{{ eigrp_neighbors.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length if eigrp_neighbors is defined and
+      {{ eigrp_neighbors.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length if eigrp_neighbors is defined and
           eigrp_neighbors.rc == 0 else 0 }}
         "
 
@@ -227,7 +227,7 @@ Default Route: {{ 'Present' if routing_baseline.default_route_present else
           'Missing' }}
       - Default Next-Hop: {{ routing_baseline.default_route_next_hop }}
       - Default Route Reachable:
-{{ 'YES' if default_route_ping is defined and default_route_ping.stdout[0] |
+      {{ 'YES' if default_route_ping is defined and default_route_ping.stdout[0] |
           regex_search('Success rate is [^0]') else 'UNTESTED' }}
       - OSPF Neighbors: {{ routing_baseline.ospf_neighbors }}
       - EIGRP Neighbors: {{ routing_baseline.eigrp_neighbors }}

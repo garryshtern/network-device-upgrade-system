@@ -51,14 +51,9 @@
       ansible.builtin.debug:
         msg: |
           Firewall Policy Status:
-          - Total Policies: >
-            {{ fortios_policy_stats.meta.results.total_policies }}
-          - Active Policies: >
-            {{ fortios_policy_stats.meta.results.active_policies |
-            default('N/A') }}
-          - Policy Hits: >
-            {{ 'Available' if fortios_policy_hits.meta is defined
-            else 'Limited Data' }}
+          - Total Policies: {{ fortios_policy_stats.meta.results.total_policies }}
+          - Active Policies: {{ fortios_policy_stats.meta.results.active_policies | default('N/A') }}
+          - Policy Hits: {{ 'Available' if fortios_policy_hits.meta is defined else 'Limited Data' }}
 
 - name: Network interface validation
   block:
@@ -117,14 +112,8 @@
       ansible.builtin.debug:
         msg: |
           Routing Status:
-          - >
-            Routing Table Entries: >
-{{ fortios_routing_table.meta.results |
-                length if fortios_routing_table.meta is defined else 'Unknown' }}
-          - >
-            Default Route: >
-{{ 'Present' if fortios_default_route.meta is defined else
-                'Check Required' }}
+          - Routing Table Entries: {{ fortios_routing_table.meta.results | length if fortios_routing_table.meta is defined else 'Unknown' }}
+          - Default Route: {{ 'Present' if fortios_default_route.meta is defined else 'Check Required' }}
 
 - name: VPN functionality validation
   block:
@@ -146,14 +135,9 @@
       ansible.builtin.debug:
         msg: |
           VPN Status:
-          - >
-            SSL VPN Sessions: >
-              {{ fortios_ssl_vpn.meta.results.active_sessions | default(0) }}
-          - >
-            IPSec Tunnels: {{ fortios_ipsec_vpn.meta.results.tunnel_count | default(0) }}
-          - >
-            VPN Services: >
-{{ 'Operational' if fortios_ssl_vpn.meta is defined or
+          - SSL VPN Sessions: {{ fortios_ssl_vpn.meta.results.active_sessions | default(0) }}
+          - IPSec Tunnels: {{ fortios_ipsec_vpn.meta.results.tunnel_count | default(0) }}
+          - VPN Services: {{ 'Operational' if fortios_ssl_vpn.meta is defined or
                 fortios_ipsec_vpn.meta is defined else 'Not Configured' }}
 
 - name: HA cluster validation (if applicable)
@@ -189,13 +173,9 @@
         msg: |
           HA Cluster Status:
           - Mode: {{ fortios_upgrade_state.ha_mode }}
-          - >
-            Sync Status: >
-{{ fortios_ha_status.meta.results.sync_status if
+          - Sync Status: {{ fortios_ha_status.meta.results.sync_status if
                 fortios_ha_status is defined else 'N/A' }}
-          - >
-            Cluster Members: >
-{{ fortios_ha_peers.meta.results |
+          - Cluster Members: {{ fortios_ha_peers.meta.results |
                 length if fortios_ha_peers.meta is defined else 'Unknown' }}
           - Role: {{ fortios_upgrade_state.ha_role }}
       when: fortios_upgrade_state.ha_mode != "standalone"
@@ -227,16 +207,9 @@
       ansible.builtin.debug:
         msg: |
           Security Services Status:
-          - >
-            Antivirus: >
-{{ 'Active' if fortios_antivirus.meta is defined else
-                'Not Available' }}
-          - >
-            IPS: {{ 'Active' if fortios_ips.meta is defined else 'Not Available' }}
-          - >
-            Web Filter: >
-{{ 'Active' if fortios_webfilter.meta is defined else
-                'Not Available' }}
+          - Antivirus: {{ 'Active' if fortios_antivirus.meta is defined else 'Not Available' }}
+          - IPS: {{ 'Active' if fortios_ips.meta is defined else 'Not Available' }}
+          - Web Filter: {{ 'Active' if fortios_webfilter.meta is defined else 'Not Available' }}
 
 - name: License validation
   block:
@@ -299,59 +272,31 @@
       ansible.builtin.debug:
         msg: |
           Logging Status:
-          - >
-            Log Disk Usage: >
-{{ fortios_log_usage.meta.results.usage_percent |
+          - Log Disk Usage: {{ fortios_log_usage.meta.results.usage_percent |
                 default('Unknown') }}%
-          - >
-            Log Services: >
-{{ 'Operational' if fortios_log_usage.meta is defined else
+          - Log Services: {{ 'Operational' if fortios_log_usage.meta is defined else
                 'Check Required' }}
 
 - name: Validation summary
   ansible.builtin.debug:
     msg: |-
       FortiOS Validation Results:
-      - >
-        Version: >
-{{ 'PASS' if fortios_upgrade_state.target_version in fortios_system_status.meta.results.version else
+      - Version: {{ 'PASS' if fortios_upgrade_state.target_version in fortios_system_status.meta.results.version else
             'FAIL' }}
-      - >
-        System Health: >
-{{ 'OK' if fortios_system_resources.meta.results.cpu_usage |
+      - System Health: {{ 'OK' if fortios_system_resources.meta.results.cpu_usage |
             int < 50 else 'High Load' }}
-      - >
-        Firewall Policies: >
-          {{ fortios_policy_stats.meta.results.total_policies }} active
-      - >
-        Interfaces Up: >
-{{ fortios_interfaces.meta.results |
+      - Firewall Policies:     {{ fortios_policy_stats.meta.results.total_policies }} active
+      - Interfaces Up: {{ fortios_interfaces.meta.results |
             selectattr('status', 'equalto', 'up') | list | length }}
-      - >
-        Routing: >
-{{ 'Operational' if fortios_routing_table.meta is defined else
+      - Routing: {{ 'Operational' if fortios_routing_table.meta is defined else
             'Check Required' }}
-      - >
-        VPN Services: >
-SSL={{ fortios_ssl_vpn.meta.results.active_sessions |
-            default(0) }}, IPSec={{ fortios_ipsec_vpn.meta.results.tunnel_count | default(0) }}
-      - >
-        HA Status: >
-{{ fortios_ha_status.meta.results.sync_status if
+      - VPN Services: SSL={{ fortios_ssl_vpn.meta.results.active_sessions | default(0) }}, IPSec={{ fortios_ipsec_vpn.meta.results.tunnel_count | default(0) }}
+      - HA Status: {{ fortios_ha_status.meta.results.sync_status if
             fortios_ha_status is defined else 'Standalone' }}
-      - Security Services: AV=
-        {{ 'OK' if fortios_antivirus.meta is defined else 'N/A' }}
-        , IPS=
-        {{ 'OK' if fortios_ips.meta is defined else 'N/A' }}
-        , Web=
-        {{ 'OK' if fortios_webfilter.meta is defined else 'N/A' }}
-      - >
-        License: >
-{{ fortios_license_check.meta.results.status if
+      - Security Services: AV={{ 'OK' if fortios_antivirus.meta is defined else 'N/A' }}, IPS={{ 'OK' if fortios_ips.meta is defined else 'N/A' }}, Web={{ 'OK' if fortios_webfilter.meta is defined else 'N/A' }}
+      - License: {{ fortios_license_check.meta.results.status if
             fortios_license_check.meta is defined else 'Unknown' }}
       - CPU Usage: {{ fortios_system_resources.meta.results.cpu_usage }}%
       - Memory Usage: {{ fortios_system_resources.meta.results.memory_usage }}%
-      - >
-        Overall Status: >
-{{ 'VALIDATION COMPLETE' if fortios_upgrade_state.target_version in fortios_system_status.meta.results.version else
+      - Overall Status: {{ 'VALIDATION COMPLETE' if fortios_upgrade_state.target_version in fortios_system_status.meta.results.version else
             'CHECK REQUIRED' }}

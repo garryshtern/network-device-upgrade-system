@@ -151,7 +151,7 @@
       Total BFD Sessions: >
         {{ bfd_total_sessions if bfd_total_sessions is defined else 'N/A' }}
       Active Neighbors: >
-{{ bfd_active_neighbors | length if
+      {{ bfd_active_neighbors | length if
           bfd_active_neighbors is defined else 'N/A' }}
       Sessions UP: >
         {{ bfd_up_sessions if bfd_up_sessions is defined else 'N/A' }}
@@ -166,7 +166,7 @@
       {% endif %}
 
       Health Status: >
-{{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions |
+      {{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions |
           int > 0) else 'CHECK' }}
 
 - name: Store BFD validation baseline
@@ -179,7 +179,7 @@
       Total_BFD_Sessions: >
         {{ bfd_total_sessions if bfd_total_sessions is defined else 0 }}
       Active_Neighbors: >
-{{ bfd_active_neighbors | length if
+      {{ bfd_active_neighbors | length if
           bfd_active_neighbors is defined else 0 }}
       Sessions_UP: {{ bfd_up_sessions if bfd_up_sessions is defined else 0 }}
       Sessions_DOWN: >
@@ -206,7 +206,7 @@
       {% endif %}
 
       Validation_Status: >
-{{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions |
+      {{ 'PASS' if (bfd_up_sessions is defined and bfd_up_sessions |
           int > 0) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: >

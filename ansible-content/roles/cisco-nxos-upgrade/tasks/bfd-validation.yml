@@ -145,8 +145,8 @@
           Expected: At least 80% of sessions should be UP
         success_msg: "BFD sessions healthy:
           {{ bfd_up_sessions }}
-          /
-          {{ bfd_total_sessions }}
+          /: >-
+            {{ bfd_total_sessions }}
            UP ({{ ((bfd_up_sessions | int /
              bfd_total_sessions | int) * 100) | round(1)
           }}%)"
@@ -161,8 +161,8 @@
           Warning: {{ bfd_down_sessions }} BFD session(s) are DOWN:
           {% for session in bfd_neighbor_sessions %}
           {% if session.state == 'Down' %}
-          - >
-            {{ session.neighbor }} via {{ session.interface }} ({{ session.type }})
+          - >: >-
+              {{ session.neighbor }} via {{ session.interface }} ({{ session.type }})
           {% endif %}
           {% endfor %}
       when:
@@ -192,8 +192,8 @@
         msg: |
           BFD Echo Function Status:
           {% for session in bfd_session_metrics %}
-          - >
-            {{ session.neighbor }}: Echo {{ session.echo_function | default('Unknown') }}
+          - >: >-
+              {{ session.neighbor }}: Echo {{ session.echo_function | default('Unknown') }}
           {% endfor %}
       when:
         - bfd_session_metrics is defined
@@ -251,7 +251,7 @@
       INIT Sessions: >
         {{ bfd_init_sessions if bfd_init_sessions is defined else 'N/A' }}
       Enabled Interfaces: >
-{{ bfd_enabled_interfaces | length if
+      {{ bfd_enabled_interfaces | length if
           bfd_enabled_interfaces is defined else 'N/A' }}
 
       {% if bfd_neighbor_sessions is defined %}
@@ -262,7 +262,7 @@
       {% endif %}
 
       Health Status:
-{{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions |
+      {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions |
           int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
 
 - name: Store BFD validation baseline
@@ -278,13 +278,13 @@
         "down_sessions": {{ bfd_down_sessions | default(0) }},
         "init_sessions": {{ bfd_init_sessions | default(0) }},
         "enabled_interfaces": >
-{{ bfd_enabled_interfaces | length if
+      {{ bfd_enabled_interfaces | length if
             bfd_enabled_interfaces is defined else 0 }},
         "neighbor_sessions": >
           {{ bfd_neighbor_sessions | default([]) | to_json }},
         "session_metrics": {{ bfd_session_metrics | default([]) | to_json }},
         "validation_status": "
-{{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions |
+      {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions |
             int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
           "
       }
@@ -309,10 +309,10 @@
       INIT_Sessions: >
         {{ bfd_init_sessions if bfd_init_sessions is defined else 0 }}
       Enabled_Interfaces: >
-{{ bfd_enabled_interfaces | length if
+      {{ bfd_enabled_interfaces | length if
           bfd_enabled_interfaces is defined else 0 }}
       Success_Rate:
-{{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1) if (bfd_up_sessions is defined and
+      {{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1) if (bfd_up_sessions is defined and
           bfd_total_sessions is defined and bfd_total_sessions | int > 0) else 0 }}
         %
 
@@ -352,7 +352,7 @@
       {% endif %}
 
       Validation_Status:
-{{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions |
+      {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions |
           int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: >

@@ -64,8 +64,8 @@
           Neighbors Up: {{ pim_neighbors_up | length }}
           Neighbors Down: {{ pim_neighbors_down | length }}
           {% for neighbor in pim_neighbors_up %}
-          - >
-            {{ neighbor.neighbor_addr }}: {{
+          - >: >-
+              {{ neighbor.neighbor_addr }}: {{
               neighbor.neighbor_state }} ({{ neighbor.interface }})
           {% endfor %}
       when: pim_neighbors is defined
@@ -77,8 +77,8 @@
           Sparse Mode Interfaces: {{ pim_sparse_mode | length }}
           Dense Mode Interfaces: {{ pim_dense_mode | length }}
           {% for intf in pim_sparse_mode %}
-          - >
-            {{ intf.interface }}: {{ intf.mode }} mode, DR: {{ intf.dr_address }}
+          - >: >-
+              {{ intf.interface }}: {{ intf.mode }} mode, DR: {{ intf.dr_address }}
           {% endfor %}
       when: pim_interfaces is defined
 
@@ -143,8 +143,8 @@
         msg: |
           RP Reachability Test Results:
           {% for result in rp_reachability.results | default([]) %}
-          - >
-{{ pim_rp_info[loop.index0].rp_addr }}: {{ 'REACHABLE' if result.stdout[0] |
+          - >: >-
+        {{ pim_rp_info[loop.index0].rp_addr }}: {{ 'REACHABLE' if result.stdout[0] |
               regex_search('Success rate is [^0]') else 'UNREACHABLE' }}
           {% endfor %}
       when: rp_reachability is defined

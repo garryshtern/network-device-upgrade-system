@@ -110,19 +110,13 @@
     msg: |
       IPSec Validation Summary:
       ========================
-      Active IPSec Tunnels: >
-{{ active_ipsec_tunnels | length if
-          active_ipsec_tunnels is defined else 'N/A' }}
-      ISAKMP Sessions: >
-        {{ isakmp_sessions | length if isakmp_sessions is defined else 'N/A' }}
-      Crypto Sessions Up: >
-{{ total_crypto_sessions if total_crypto_sessions is defined else
-          'N/A' }}
+      Active IPSec Tunnels: {{ active_ipsec_tunnels | length if active_ipsec_tunnels is defined else 'N/A' }}
+      ISAKMP Sessions: {{ isakmp_sessions | length if isakmp_sessions is defined else 'N/A' }}
+      Crypto Sessions Up: {{ total_crypto_sessions if total_crypto_sessions is defined else 'N/A' }}
       {% if active_ipsec_tunnels is defined %}
       Tunnel Details:
       {% for tunnel in active_ipsec_tunnels %}
-      - >
-        Interface: {{ tunnel[0] }}, Encaps: {{ tunnel[1] }}, Decaps: {{ tunnel[2] }}
+      - Interface: {{ tunnel[0] }}, Encaps: {{ tunnel[1] }}, Decaps: {{ tunnel[2] }}
       {% endfor %}
       {% endif %}
 
@@ -133,13 +127,9 @@
       # +%Y-%m-%dT%H:%M:%SZ') }}
       # Generated during firmware upgrade validation
 
-      Active_IPSec_Tunnels: >
-{{ active_ipsec_tunnels | length if
-          active_ipsec_tunnels is defined else 0 }}
-      ISAKMP_Sessions: >
-        {{ isakmp_sessions | length if isakmp_sessions is defined else 0 }}
-      Crypto_Sessions_Up: >
-        {{ total_crypto_sessions if total_crypto_sessions is defined else 0 }}
+      Active_IPSec_Tunnels: {{ active_ipsec_tunnels | length if active_ipsec_tunnels is defined else 0 }}
+      ISAKMP_Sessions: {{ isakmp_sessions | length if isakmp_sessions is defined else 0 }}
+      Crypto_Sessions_Up: {{ total_crypto_sessions if total_crypto_sessions is defined else 0 }}
 
       {% if active_ipsec_tunnels is defined %}
       Tunnel_Details:
@@ -152,8 +142,8 @@
 
       Validation_Status: PASS
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-    dest: >
-"/tmp/ipsec_validation_{{ inventory_hostname }}_{{ ansible_play_batch |
-        hash('md5') }}.txt"
+    dest: >-
+      /tmp/ipsec_validation_{{ inventory_hostname }}_{{ ansible_play_batch |
+        hash('md5') }}.txt
     mode: "0644"
   delegate_to: localhost

@@ -33,7 +33,7 @@
     msg: |
       Current Step Details:
       Step: >
-{{ fortios_upgrade_state.current_step + 1 }}/{{ fortios_upgrade_state.upgrade_path |
+      {{ fortios_upgrade_state.current_step + 1 }}/{{ fortios_upgrade_state.upgrade_path |
           length }}
       Current Version: {{ fortios_upgrade_state.current_version }}
       Step Target: {{ current_step_target }}
@@ -105,7 +105,7 @@
           {% if fortios_upgrade_state.current_step + 1
             < fortios_upgrade_state.upgrade_path | length %}
           Next Step: >
-{{ fortios_upgrade_state.upgrade_path[fortios_upgrade_state.current_step +
+      {{ fortios_upgrade_state.upgrade_path[fortios_upgrade_state.current_step +
               1] }}
           {% else %}
           🎉 All upgrade steps completed!

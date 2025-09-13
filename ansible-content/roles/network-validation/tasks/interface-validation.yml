@@ -83,8 +83,8 @@
           {% for intf in interface_errors.TABLE_interface.ROW_interface
             | default([]) %}
           {% if intf.in_error | int > 0 or intf.out_error | int > 0 %}
-          - >
-            {{ intf.interface }}: In Errors: {{
+          - >: >-
+              {{ intf.interface }}: In Errors: {{
               intf.in_error }}, Out Errors: {{ intf.out_error }}
           {% endif %}
           {% endfor %}
@@ -131,8 +131,8 @@
           Port-Channel Summary:
           {% for pc in portchannel_info.stdout[0] | from_json |
             json_query('TABLE_channel.ROW_channel') | default([]) %}
-          - >
-{{ pc.group }}: {{ pc.port_channel }} ({{ pc.protocol }}) - {{ pc.ports |
+          - >: >-
+        {{ pc.group }}: {{ pc.port_channel }} ({{ pc.protocol }}) - {{ pc.ports |
               length }} members
           {% endfor %}
       when: >
@@ -156,8 +156,8 @@
           {% for intf in transceiver_info.stdout[0] | from_json |
             json_query('TABLE_interface.ROW_interface') | default([]) %}
           {% if intf.sfp is defined %}
-          - >
-            {{ intf.interface }}: {{ intf.sfp }} ({{ intf.type | default('Unknown') }})
+          - >: >-
+              {{ intf.interface }}: {{ intf.sfp }} ({{ intf.type | default('Unknown') }})
           {% endif %}
           {% endfor %}
       when: >

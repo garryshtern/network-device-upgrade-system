@@ -57,7 +57,7 @@
       ssh_connectivity: "{{ ssh_connectivity | default(true) }}"
       cli_connectivity: "{{ cli_connectivity | default(true) }}"
       overall_status: "
-{{ (connectivity_test is succeeded) and (ping_result is succeeded) and (ssh_connectivity |
+      {{ (connectivity_test is succeeded) and (ping_result is succeeded) and (ssh_connectivity |
           default(true)) and (cli_connectivity | default(true)) }}
         "
 
