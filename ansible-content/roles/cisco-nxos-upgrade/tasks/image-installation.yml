@@ -13,9 +13,9 @@
     current_boot_image: >-
       {{ current_boot_config.stdout[0] |
         from_json | json_query('sys_img_name') }}
-    current_kickstart: >
-"{{ current_boot_config.stdout[0] |
-        from_json | json_query('kick_img_name') }}"
+    current_kickstart: >-
+      {{ current_boot_config.stdout[0] |
+        from_json | json_query('kick_img_name') }}
 
 - name: Display current boot configuration
   ansible.builtin.debug:

@@ -33,9 +33,9 @@
 
 - name: Parse firmware file listings
   ansible.builtin.set_fact:
-    mos_firmware_images: >
-"{{ mos_firmware_files.stdout_lines |
-        select('match', '.*\\.mos$') | map('regex_replace', '.* ([^/]+\\.mos)$', '\\1') | list }}"
+    mos_firmware_images: >-
+      {{ mos_firmware_files.stdout_lines |
+        select('match', '.*\\.mos$') | map('regex_replace', '.* ([^/]+\\.mos)$', '\\1') | list }}
     mos_application_images: "
       {{ mos_app_files.stdout_lines | select('match', '.*(tgz|tar\\.gz)$') |
         map('regex_replace', '.* ([^/]+\\.(tgz|tar\\.gz))$', '\\1') | list }}

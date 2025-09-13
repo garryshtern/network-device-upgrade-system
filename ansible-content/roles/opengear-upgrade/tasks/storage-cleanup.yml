@@ -69,9 +69,9 @@
 
 - name: Identify cleanup candidates (excluding running firmware)
   ansible.builtin.set_fact:
-    cleanup_candidates: >
-"{{ (firmware_images + temp_files) |
-        difference([running_firmware]) | list }}"
+    cleanup_candidates: >-
+      {{ (firmware_images + temp_files) |
+        difference([running_firmware]) | list }}
 
 - name: Check if cleanup is needed
   ansible.builtin.set_fact:
@@ -94,9 +94,9 @@
 
 - name: Parse post-cleanup storage information
   ansible.builtin.set_fact:
-    post_cleanup_available: >
-"{{ post_cleanup_storage.stdout |
-        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
+    post_cleanup_available: >-
+      {{ post_cleanup_storage.stdout |
+        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}
     post_cleanup_free_gb: >
       "{{ (post_cleanup_available | regex_replace('[KMG]', '') | float * (0.000001
         if 'K' in post_cleanup_available else (0.001 if 'M' in post_cleanup_available

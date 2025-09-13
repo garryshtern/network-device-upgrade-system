@@ -21,15 +21,15 @@
 
 - name: Parse storage information
   ansible.builtin.set_fact:
-    opengear_total_size: >
-"{{ opengear_storage_info.stdout |
-        regex_search('/tmp\\s+(\\S+)', '\\1') | first }}"
-    opengear_available_size: >
-"{{ opengear_storage_info.stdout |
-        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
-    opengear_usage_percent: >
-"{{ opengear_storage_info.stdout |
-        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}"
+    opengear_total_size: >-
+      {{ opengear_storage_info.stdout |
+        regex_search('/tmp\\s+(\\S+)', '\\1') | first }}
+    opengear_available_size: >-
+      {{ opengear_storage_info.stdout |
+        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}
+    opengear_usage_percent: >-
+      {{ opengear_storage_info.stdout |
+        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}
 
 - name: Parse file listings
   ansible.builtin.set_fact:

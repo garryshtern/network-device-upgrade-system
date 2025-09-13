@@ -15,12 +15,12 @@
 
 - name: Parse bootflash directory listing
   ansible.builtin.set_fact:
-    nxos_files: >
-"{{ nxos_bootflash_dir.stdout[0] |
-        regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+)') }}"
-    nxos_images: >
-"{{ nxos_bootflash_dir.stdout[0] |
-        regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+\\.bin)') }}"
+    nxos_files: >-
+      {{ nxos_bootflash_dir.stdout[0] |
+        regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+)') }}
+    nxos_images: >-
+      {{ nxos_bootflash_dir.stdout[0] |
+        regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+\\.bin)') }}
 
 - name: Parse free space information
   ansible.builtin.set_fact:

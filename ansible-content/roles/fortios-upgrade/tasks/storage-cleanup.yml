@@ -93,9 +93,9 @@
     post_cleanup_free_mb: >
       "{{ post_cleanup_storage_info.meta.results.total_disk
         - post_cleanup_storage_info.meta.results.used_disk }}"
-    post_cleanup_free_gb: >
-"{{ ((post_cleanup_storage_info.meta.results.total_disk - post_cleanup_storage_info.meta.results.used_disk) / 1024) |
-        round(2) }}"
+    post_cleanup_free_gb: >-
+      {{ ((post_cleanup_storage_info.meta.results.total_disk - post_cleanup_storage_info.meta.results.used_disk) / 1024) |
+        round(2) }}
 
 - name: Set storage cleanup results
   ansible.builtin.set_fact:

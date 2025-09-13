@@ -44,12 +44,12 @@
 
 - name: Parse free space information
   ansible.builtin.set_fact:
-    current_free_bytes: >
-"{{ free_space_result.stdout[0] |
-        regex_search('(\\d+) bytes free', '\\1') | first | int }}"
-    current_free_gb: >
-"{{ ((free_space_result.stdout[0] |
-        regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}"
+    current_free_bytes: >-
+      {{ free_space_result.stdout[0] |
+        regex_search('(\\d+) bytes free', '\\1') | first | int }}
+    current_free_gb: >-
+      {{ ((free_space_result.stdout[0] |
+        regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}
 
 - name: Check if cleanup is needed
   ansible.builtin.set_fact:
@@ -76,12 +76,12 @@
 
 - name: Calculate post-cleanup storage metrics
   ansible.builtin.set_fact:
-    post_cleanup_free_bytes: >
-"{{ post_cleanup_space.stdout[0] |
-        regex_search('(\\d+) bytes free', '\\1') | first | int }}"
-    post_cleanup_free_gb: >
-"{{ ((post_cleanup_space.stdout[0] |
-        regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}"
+    post_cleanup_free_bytes: >-
+      {{ post_cleanup_space.stdout[0] |
+        regex_search('(\\d+) bytes free', '\\1') | first | int }}
+    post_cleanup_free_gb: >-
+      {{ ((post_cleanup_space.stdout[0] |
+        regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}
 
 - name: Set storage cleanup results
   ansible.builtin.set_fact:
