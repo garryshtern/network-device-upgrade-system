@@ -108,7 +108,8 @@
           space_before_gb: "{{ storage_info.free_space_gb }}"
           space_after_gb: "{{ post_cleanup_storage.free_space_gb }}"
           space_freed_gb: >-
-            {{ post_cleanup_storage.free_space_gb - storage_info.free_space_gb }}
+            {{ post_cleanup_storage.free_space_gb -
+            storage_info.free_space_gb }}
 
     - name: Display storage cleanup results
       ansible.builtin.debug:
@@ -119,9 +120,12 @@
           - "Space Before: {{ storage_info.free_space_gb }}GB"
           - "Space After: {{ post_cleanup_storage.free_space_gb }}GB"
           - >
-            "Space Freed: {{ post_cleanup_storage.free_space_gb
-              - storage_info.free_space_gb }}GB"
-          - "Status: {{ 'SUFFICIENT' if post_cleanup_storage.free_space_gb >= minimum_free_space_gb else 'INSUFFICIENT' }}"
+            "Space Freed: {{ post_cleanup_storage.free_space_gb -
+              storage_info.free_space_gb }}GB"
+          - >-
+            "Status: {{ 'SUFFICIENT' if
+              post_cleanup_storage.free_space_gb >= minimum_free_space_gb
+              else 'INSUFFICIENT' }}"
           - "==============================="
   rescue:
     - name: Storage cleanup failure handling
