@@ -138,12 +138,12 @@
       interfaces_up: "{{ interfaces_down | int == 0 }}"
       bgp_neighbors_up: "{{ (bgp_neighbors_down | default(0)) | int == 0 }}"
       critical_logs_present: "{{ critical_logs | length > 0 }}"
-      igmp_validated: >
-"{{ 'PASS' if (validate_igmp is defined and validate_igmp |
-          bool) else 'SKIPPED' }}"
-      bfd_validated: >
-"{{ 'PASS' if (validate_bfd is defined and validate_bfd |
-          bool) else 'SKIPPED' }}"
+      igmp_validated: >-
+        {{ 'PASS' if (validate_igmp is defined and validate_igmp |
+          bool) else 'SKIPPED' }}
+      bfd_validated: >-
+        {{ 'PASS' if (validate_bfd is defined and validate_bfd |
+          bool) else 'SKIPPED' }}
       validation_timestamp: >
         "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 

@@ -131,8 +131,8 @@
       - >
         "Remote Destination: {{ ansible_host }}:bootflash:{{
           nxos_image_loading_results.firmware_file }}"
-      - >
-"File Size: {{ (nxos_image_loading_results.file_size_bytes |
-          int / 1024 / 1024) | round(2) }}MB"
+      - >-
+        File Size: {{ (nxos_image_loading_results.file_size_bytes |
+          int / 1024 / 1024) | round(2) }}MB
       - "Transfer Method: SCP (server-initiated)"
       - "Hash Verified: {{ nxos_image_loading_results.hash_verified }}"

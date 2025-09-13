@@ -16,9 +16,9 @@
 
     - name: Update API token if refreshed
       ansible.builtin.set_fact:
-        opengear_api_token: >
-"{{ token_refresh.json.token if token_refresh.json is defined else
-            opengear_api_token }}"
+        opengear_api_token: >-
+          {{ token_refresh.json.token if token_refresh.json is defined else
+            opengear_api_token }}
 
     - name: Verify firmware image is ready for installation
       ansible.builtin.uri:

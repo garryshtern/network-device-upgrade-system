@@ -56,12 +56,12 @@
 
 - name: Parse firmware file information
   ansible.builtin.set_fact:
-    firmware_images: >
-"{{ firmware_files_list.stdout_lines |
-        select('match', '.*(img|bin)$') | map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}"
-    temp_files: >
-"{{ temp_files_list.stdout_lines |
-        select('match', '.*(upgrade_|opengear_).*') | map('regex_replace', '.* ([^/]+)$', '\\1') | list }}"
+    firmware_images: >-
+      {{ firmware_files_list.stdout_lines |
+        select('match', '.*(img|bin)$') | map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}
+    temp_files: >-
+      {{ temp_files_list.stdout_lines |
+        select('match', '.*(upgrade_|opengear_).*') | map('regex_replace', '.* ([^/]+)$', '\\1') | list }}
 
 - name: Identify current running firmware
   ansible.builtin.set_fact:

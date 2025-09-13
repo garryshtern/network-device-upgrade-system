@@ -79,12 +79,12 @@
         body_format: json
         body:
           filename: "{{ target_firmware_filename }}"
-          size: >
-"{{ firmware_checksum.stat.size if firmware_checksum is defined else target_firmware_size_mb |
-              default(100) * 1024 * 1024 }}"
-          checksum: >
-"{{ firmware_checksum.stat.checksum if
-              firmware_checksum is defined else omit }}"
+          size: >-
+            {{ firmware_checksum.stat.size if firmware_checksum is defined else target_firmware_size_mb |
+              default(100) * 1024 * 1024 }}
+          checksum: >-
+            {{ firmware_checksum.stat.checksum if
+              firmware_checksum is defined else omit }}
         validate_certs: false
       register: upload_session
 

@@ -36,8 +36,8 @@
     - name: Warn about active sessions
       ansible.builtin.debug:
         msg: |
-          WARNING: >
-{{ active_sessions_check.stdout |
+          WARNING: >-
+            {{ active_sessions_check.stdout |
               default('0') }} active console sessions detected.
           These sessions will be disconnected during the upgrade.
       when: active_sessions_check.stdout | default('0') | int > 0
