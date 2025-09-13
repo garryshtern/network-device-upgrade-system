@@ -44,17 +44,16 @@
 
     - name: Check for dual supervisor setup
       ansible.builtin.set_fact:
-        has_dual_sup_for_epld: >
-"{{ 'Supervisor' in system_compatibility.stdout[0] and
-            system_compatibility.stdout[0].count('Supervisor') >= 2 }}"
+        has_dual_sup_for_epld: >-
+          {{ 'Supervisor' in system_compatibility.stdout[0] and
+            system_compatibility.stdout[0].count('Supervisor') >= 2 }}
 
     - name: Validate EPLD upgrade feasibility
       ansible.builtin.assert:
         that:
           - has_dual_sup_for_epld or allow_disruptive_epld | default(false)
-        fail_msg: >
-          "EPLD upgrade requires dual supervisors or
-            explicit approval for disruptive upgrade"
+        fail_msg: >-
+          EPLD upgrade requires dual supervisors or explicit approval for disruptive upgrade
 
 - name: EPLD upgrade execution
   block:
@@ -94,9 +93,8 @@
         commands:
           - show install all status
       register: epld_upgrade_status
-      until: >
-        "'Success' in epld_upgrade_status.stdout[0]
-          or 'Failed' in epld_upgrade_status.stdout[0]"
+      until: >-
+        'Success' in epld_upgrade_status.stdout[0] or 'Failed' in epld_upgrade_status.stdout[0]
       retries: 60
       delay: 30
       when: epld_upgrade_result is defined
@@ -118,23 +116,17 @@
 
     - name: Parse updated EPLD information
       ansible.builtin.set_fact:
-        updated_epld_modules: >
-"{{ updated_epld_versions.stdout[0] |
-            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
+        updated_epld_modules: >-
+          {{ updated_epld_versions.stdout[0] |
+            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}
 
     - name: Verify EPLD version updates
       ansible.builtin.debug:
         msg: |
           EPLD Upgrade Results:
           {% for module_info in updated_epld_modules %}
-          - Module: >-
-              {{ module_info[0] }}
-            :
-      {{ 'UPDATED' if module_info[1] != (epld_modules |
-              selectattr('0', 'equalto', module_info[0]) | map(attribute='1') | first | default('unknown')) else 'UNCHANGED' }}
-             (: >-
-              {{ module_info[1] }}
-            )
+          - Module {{ module_info[0] }}: {{ 'UPDATED' if module_info[1] != (epld_modules |
+              selectattr('0', 'equalto', module_info[0]) | map(attribute='1') | first | default('unknown')) else 'UNCHANGED' }} ({{ module_info[1] }})
           {% endfor %}
       when: updated_epld_modules | length > 0
 
@@ -161,18 +153,17 @@
         epld_upgrade_summary:
           timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
           modules_upgraded: "{{ epld_modules_to_upgrade | default(['all']) }}"
-          upgrade_method: >
-            "{{ 'Non-disruptive' if has_dual_sup_for_epld else 'Disruptive' }}"
-          success: >
-"{{ epld_upgrade_status is defined and
-              'Success' in epld_upgrade_status.stdout[0] }}"
+          upgrade_method: >-
+            {{ 'Non-disruptive' if has_dual_sup_for_epld else 'Disruptive' }}
+          success: >-
+            {{ epld_upgrade_status is defined and
+              'Success' in epld_upgrade_status.stdout[0] }}
 
 - name: EPLD upgrade completion log
   ansible.builtin.debug:
     msg: |
       EPLD Upgrade Completion Summary:
-      - >
-        Modules Processed: {{ epld_upgrade_summary.modules_upgraded | join(', ') }}
+      - Modules Processed: {{ epld_upgrade_summary.modules_upgraded | join(', ') }}
       - Upgrade Method: {{ epld_upgrade_summary.upgrade_method }}
       - Success: {{ epld_upgrade_summary.success }}
       - Pre-upgrade Modules: {{ epld_modules | length }}
