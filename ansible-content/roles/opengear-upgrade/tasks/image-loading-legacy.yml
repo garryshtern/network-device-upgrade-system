@@ -21,9 +21,9 @@
         available_space_mb: >
           "{{ disk_usage_check.stdout |
             regex_search('Available:\\s+(\\d+)', '\\1') | first | int }}"
-        required_space_mb: >
-"{{ (ansible_stat_firmware.size / 1024 / 1024) |
-            int + 50 }}" # Add 50MB buffer
+        required_space_mb: >-
+          {{ (ansible_stat_firmware.size / 1024 / 1024) |
+            int + 50 }} # Add 50MB buffer
       when: disk_usage_check.stdout is defined
 
     - name: Validate sufficient storage space

@@ -48,9 +48,9 @@
       Target Version: {{ fortios_upgrade_state.target_version }}
       Multi-Step Required: {{ fortios_upgrade_state.multi_step_required }}
       Upgrade Path: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}
-      Current Step: >
-{{ fortios_upgrade_state.current_step }}/{{ fortios_upgrade_state.upgrade_path |
-          length }}
+      Current Step: >-
+        {{ fortios_upgrade_state.current_step }}/{{ fortios_upgrade_state.upgrade_path |
+            length }}
       HA Mode: {{ fortios_upgrade_state.ha_mode }}
       HA Role: {{ fortios_upgrade_state.ha_role }}
       VDOM Mode: {{ fortios_upgrade_state.vdom_mode }}

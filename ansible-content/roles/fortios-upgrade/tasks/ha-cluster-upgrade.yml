@@ -21,10 +21,10 @@
   when: fortios_upgrade_state.ha_role == "secondary"
 
   block:
-    - name: Backup secondary configuration
-      fortinet.fortios.fortios_monitor:
+    - name: Backup secondary configuration  
+      fortinet.fortios.fortios_configuration:
         vdom: "root"
-        selector: "system_config_backup"
+        action: "backup.system.config"
         params:
           scope: "global"
       register: secondary_backup
@@ -81,9 +81,9 @@
         fail_msg: "Secondary unit not ready after upgrade"
 
     - name: Backup primary configuration
-      fortinet.fortios.fortios_monitor:
+      fortinet.fortios.fortios_configuration:
         vdom: "root"
-        selector: "system_config_backup"
+        action: "backup.system.config"
         params:
           scope: "global"
       register: primary_backup

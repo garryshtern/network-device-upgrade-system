@@ -87,15 +87,15 @@
       ansible.builtin.assert:
         that:
           - firmware_validation.json.valid == true
-        fail_msg: >
-"Firmware validation failed: {{ firmware_validation.json.message |
-            default('Unknown error') }}"
+        fail_msg: >-
+          "Firmware validation failed: {{ firmware_validation.json.message |
+              default('Unknown error') }}"
 
     - name: Install firmware
       ansible.builtin.uri:
-        url: >
+        url: >-
           "https://{{ ansible_host }}/api/v1/system/firmware/{{
-            firmware_upload.json.upload_id }}/install"
+              firmware_upload.json.upload_id }}/install"
         method: POST
         headers:
           Authorization: "Token {{ opengear_upgrade_state.web_session }}"

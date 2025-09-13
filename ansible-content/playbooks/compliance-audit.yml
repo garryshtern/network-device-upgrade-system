@@ -313,24 +313,24 @@
           - "Platform: {{ ansible_network_os }}"
           - "Firmware Version: {{ compliance_results.firmware_version }}"
           - "Audit Timestamp: {{ audit_timestamp }}"
-          - >
+          - >-
             "Standards Tested: {{ compliance_results.standards_tested | join(', ') }}"
-          - >
+          - >-
             "Checks Passed: {{ compliance_results.compliance_checks.passed | length }}"
-          - >
+          - >-
             "Checks Failed: {{ compliance_results.compliance_checks.failed | length }}"
-          - >
+          - >-
             "Warnings: {{ compliance_results.compliance_checks.warnings | length }}"
           - "Compliance Score: {{ compliance_percentage }}%"
-          - >
-"Overall Status: {{ 'COMPLIANT' if
-              compliance_percentage >= 90 else 'NON-COMPLIANT' }}"
-          - >
-            "Report Location: {{ audit_results_path }}/{{ inventory_hostname }}/"
+          - >-
+            Overall Status: {{ 'COMPLIANT' if
+              compliance_percentage >= 90 else 'NON-COMPLIANT' }}
+          - >-
+            Report Location: {{ audit_results_path }}/{{ inventory_hostname }}/
           - "==============================="
 
     - name: Compliance audit completion
       ansible.builtin.debug:
-        msg: >
+        msg: >-
           "Compliance audit completed for {{ inventory_hostname
             }} - Score: {{ compliance_percentage }}%"
