@@ -29,8 +29,8 @@ provisioner:
       callbacks_enabled: profile_tasks
   inventory:
     links:
-      group_vars: ../../../tests/mock-inventories/
-      host_vars: ../../../tests/mock-inventories/
+      group_vars: ../../../tests/mock-inventories/group_vars/
+      host_vars: ../../../tests/mock-inventories/host_vars/
   playbooks:
     converge: ../../../tests/molecule-tests/converge.yml
     verify: ../../../tests/molecule-tests/verify.yml

@@ -1,0 +1,25 @@
+---
+# Global variables for mock device testing
+ansible_connection: local
+ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+# Mock test variables
+target_firmware_version: "test-firmware-v1.0"
+target_firmware: "test-firmware.bin"
+firmware_base_path: "/tmp/firmware-test"
+
+# Network device variables
+cisco_nxos_username: "admin"
+cisco_nxos_password: "test-password"
+cisco_iosxe_username: "admin"
+cisco_iosxe_password: "test-password"
+opengear_username: "admin"
+opengear_password: "test-password"
+fortios_username: "admin"
+fortios_password: "test-password"
+metamako_username: "admin" 
+metamako_password: "test-password"
+
+# Test settings
+skip_actual_device_operations: true
+mock_mode: true
