@@ -88,13 +88,12 @@
         msg: |
           Interface Status:
           - >
-            Physical Interfaces Up: >
-{{ fortios_interfaces.meta.results |
+            Physical Interfaces Up: >-
+              {{ fortios_interfaces.meta.results |
                 selectattr('status', 'equalto', 'up') | list | length }}
-          - >
-            Total Interfaces: >
-{{ fortios_all_interfaces.meta.results |
-                length if fortios_all_interfaces.meta is defined else 'Unknown' }}
+          - >-
+            Total Interfaces: {{ fortios_all_interfaces.meta.results |
+              length if fortios_all_interfaces.meta is defined else 'Unknown' }}
 
 - name: Routing validation
   block:
