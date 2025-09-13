@@ -189,20 +189,21 @@
       ansible.builtin.set_fact:
         bgp_comparison:
           neighbor_count_match: "
-      {{ bgp_validation.baseline.analysis.total_neighbors |
-              default(0) == bgp_validation.current.analysis.total_neighbors | default(0) }}
+      {{ bgp_validation.baseline.analysis.total_neighbors | default(0) ==
+              bgp_validation.current.analysis.total_neighbors | default(0) }}
             "
           established_count_match: "
-      {{ bgp_validation.baseline.analysis.established_neighbors |
-              default(0) == bgp_validation.current.analysis.established_neighbors | default(0) }}
+      {{ bgp_validation.baseline.analysis.established_neighbors | default(0) ==
+              bgp_validation.current.analysis.established_neighbors | default(0) }}
             "
           prefix_count_variance: "
-      {{ ((bgp_validation.current.analysis.total_received_prefixes |
-              default(0) - bgp_validation.baseline.analysis.total_received_prefixes | default(0)) | abs) }}
+      {{ ((bgp_validation.current.analysis.total_received_prefixes | default(0) -
+              bgp_validation.baseline.analysis.total_received_prefixes | default(0)) | abs) }}
             "
           prefix_variance_percentage: "
-      {{ ((bgp_validation.current.analysis.total_received_prefixes |
-              default(1) - bgp_validation.baseline.analysis.total_received_prefixes | default(1)) / (bgp_validation.baseline.analysis.total_received_prefixes | default(1)) * 100) | abs }}
+      {{ ((bgp_validation.current.analysis.total_received_prefixes | default(1) -
+              bgp_validation.baseline.analysis.total_received_prefixes | default(1)) /
+              (bgp_validation.baseline.analysis.total_received_prefixes | default(1)) * 100) | abs }}
             "
           new_down_neighbors: []
           recovered_neighbors: []
@@ -211,8 +212,7 @@
       ansible.builtin.set_fact:
         bgp_comparison: "{{ bgp_comparison | combine({
           'new_down_neighbors': >
-            current_down_neighbors |
-              difference(baseline_down_neighbors | default([])),
+            current_down_neighbors | difference(baseline_down_neighbors | default([])),
           'recovered_neighbors': >
             baseline_down_neighbors | default([]) | difference(current_down_neighbors)
         }) }}"

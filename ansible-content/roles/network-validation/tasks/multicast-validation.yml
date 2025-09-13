@@ -176,7 +176,8 @@
           Total Anycast RP Sets: {{ anycast_rp_sets | length }}
           {% for rp_set in anycast_rp_sets %}
           - >
-            Set {{ rp_set.anycast_addr }}: Members {{ rp_set.rp_members | length }}
+            Set {{ rp_set.anycast_addr }}: Members
+            {{ rp_set.rp_members | length }}
           {% endfor %}
           {% else %}
           No Anycast RP configuration found
