@@ -86,8 +86,8 @@
         msg: |
           Static Route Reachability:
           {% for result in static_route_ping.results | default([]) %}
-          - >: >-
-        {{ static_routes[loop.index0].ipprefix }}: {{ 'REACHABLE' if result.stdout[0] |
+          - >-
+            Route {{ loop.index }}: {{ 'REACHABLE' if result.stdout[0] |
               regex_search('Success rate is [^0]') else 'UNREACHABLE' }}
           {% endfor %}
       when: static_route_ping is defined
@@ -96,9 +96,9 @@
   block:
     - name: Check for default route presence
       set_fact:
-        has_default_route: >
-"{{ default_route.TABLE_vrf is defined and default_route.TABLE_vrf.ROW_vrf |
-            length > 0 }}"
+        has_default_route: >-
+          {{ default_route.TABLE_vrf is defined and default_route.TABLE_vrf.ROW_vrf |
+            length > 0 }}
       when: ansible_network_os == "cisco.nxos.nxos" and default_route is defined
 
     - name: Extract default route information
@@ -222,8 +222,8 @@
       - Total Routes: {{ routing_baseline.total_routes }}
       - Static Routes: {{ routing_baseline.static_routes_count }}
       - Connected Routes: {{ routing_baseline.connected_routes_count }}
-      - >
-Default Route: {{ 'Present' if routing_baseline.default_route_present else
+      - >-
+        Default Route: {{ 'Present' if routing_baseline.default_route_present else
           'Missing' }}
       - Default Next-Hop: {{ routing_baseline.default_route_next_hop }}
       - Default Route Reachable:
@@ -231,6 +231,6 @@ Default Route: {{ 'Present' if routing_baseline.default_route_present else
           regex_search('Success rate is [^0]') else 'UNTESTED' }}
       - OSPF Neighbors: {{ routing_baseline.ospf_neighbors }}
       - EIGRP Neighbors: {{ routing_baseline.eigrp_neighbors }}
-      - >
-Status: {{ 'HEALTHY' if routing_baseline.total_routes > 0 else
+      - >-
+        Status: {{ 'HEALTHY' if routing_baseline.total_routes > 0 else
           'CHECK REQUIRED' }}

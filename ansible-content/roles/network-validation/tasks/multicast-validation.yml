@@ -143,8 +143,8 @@
         msg: |
           RP Reachability Test Results:
           {% for result in rp_reachability.results | default([]) %}
-          - >: >-
-        {{ pim_rp_info[loop.index0].rp_addr }}: {{ 'REACHABLE' if result.stdout[0] |
+          - >-
+            RP {{ loop.index }}: {{ 'REACHABLE' if result.stdout[0] |
               regex_search('Success rate is [^0]') else 'UNREACHABLE' }}
           {% endfor %}
       when: rp_reachability is defined
@@ -208,8 +208,8 @@
           Total Entries: {{ mroute_summary.total_entries | default(0) }}
           Active Entries: {{ mroute_entries | length }}
           {% for route in mroute_entries[:5] %}
-          - >
-({{ route.source }}, {{ route.group }}): {{ route.incoming_intf }} -> {{ route.outgoing_intf_list |
+          - >-
+            ({{ route.source }}, {{ route.group }}): {{ route.incoming_intf }} -> {{ route.outgoing_intf_list |
               join(', ') }}
           {% endfor %}
           {% else %}
@@ -248,6 +248,6 @@
       - Configured RPs: {{ multicast_baseline.rp_count }}
       - Anycast RP Sets: {{ multicast_baseline.anycast_rp_sets }}
       - Active Multicast Routes: {{ multicast_baseline.mroute_entries }}
-      - >
-Overall Status: {{ 'CONFIGURED' if multicast_baseline.pim_neighbors_total > 0 or
+      - >-
+        Overall Status: {{ 'CONFIGURED' if multicast_baseline.pim_neighbors_total > 0 or
           multicast_baseline.igmp_groups_total > 0 else 'NOT CONFIGURED' }}

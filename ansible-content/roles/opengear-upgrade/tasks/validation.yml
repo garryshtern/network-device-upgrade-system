@@ -273,14 +273,14 @@
           Environmental Monitoring:
           {% if environmental_sensors_check.json is defined
             and environmental_sensors_check.json | length > 0 %}
-          - >
-Temperature Sensors: {{ environmental_sensors_check.json |
+          - >-
+            Temperature Sensors: {{ environmental_sensors_check.json |
               selectattr('type', 'equalto', 'temperature') | list | length }}
-          - >
-Humidity Sensors: {{ environmental_sensors_check.json |
+          - >-
+            Humidity Sensors: {{ environmental_sensors_check.json |
               selectattr('type', 'equalto', 'humidity') | list | length }}
-          - All Sensors Normal:
-      {{ 'YES' if environmental_sensors_check.json |
+          - >-
+            All Sensors Normal: {{ 'YES' if environmental_sensors_check.json |
               selectattr('status', 'ne', 'normal') | list | length == 0 else 'CHECK REQUIRED' }}
           {% else %}
           - Environmental Sensors: Not Available
@@ -293,14 +293,14 @@ Humidity Sensors: {{ environmental_sensors_check.json |
       Opengear Validation Results:
       - Device Model: {{ opengear_upgrade_state.device_model }}
       - Device Type: {{ opengear_upgrade_state.device_type | title }}
-      - >
-Version: {{ 'PASS' if opengear_upgrade_state.target_version in system_info_validation.json.version else
+      - >-
+        Version: {{ 'PASS' if opengear_upgrade_state.target_version in system_info_validation.json.version else
           'FAIL' }}
-      - >
-System Health: {{ system_health_validation.json.status if
+      - >-
+        System Health: {{ system_health_validation.json.status if
           system_health_validation.json is defined else 'Unknown' }}
-      - >
-Network Connectivity: {{ 'PASS' if network_connectivity_test.json.success |
+      - >-
+        Network Connectivity: {{ 'PASS' if network_connectivity_test.json.success |
           default(false) else 'CHECK' }}
       {% if opengear_upgrade_state.device_type == 'console_server' %}
       - Serial Ports:
@@ -322,12 +322,12 @@ Network Connectivity: {{ 'PASS' if network_connectivity_test.json.success |
           round(1) if overall_power_status.json is defined else 'Unknown' }}
         %
       {% endif %}
-      - >
-Configuration: {{ 'VALID' if config_validation.json.status == 'valid' else
+      - >-
+        Configuration: {{ 'VALID' if config_validation.json.status == 'valid' else
           'CHECK' if config_validation.json is defined else 'Not Tested' }}
-      - >
-Backups Available: {{ backup_availability.json |
+      - >-
+        Backups Available: {{ backup_availability.json |
           length if backup_availability.json is defined else 'Unknown' }}
-      - >
-Overall Status: {{ 'VALIDATION COMPLETE' if
+      - >-
+        Overall Status: {{ 'VALIDATION COMPLETE' if
           opengear_upgrade_state.target_version in system_info_validation.json.version else 'CHECK REQUIRED' }}

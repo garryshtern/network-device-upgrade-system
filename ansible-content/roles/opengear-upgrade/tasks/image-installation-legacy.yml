@@ -60,7 +60,7 @@
   block:
     - name: Final pre-installation checksum verification
       ansible.builtin.raw: |
-sha512sum /usr/local/upgrade/{{ target_firmware_filename }} |
+        sha512sum /usr/local/upgrade/{{ target_firmware_filename }} |
           awk '{print $1}'
       register: final_checksum_check
       delegate_to: "{{ inventory_hostname }}"
@@ -73,7 +73,7 @@ sha512sum /usr/local/upgrade/{{ target_firmware_filename }} |
 
     - name: Initiate firmware installation via CLI
       ansible.builtin.raw: |
-echo "upgrade firmware /usr/local/upgrade/{{ target_firmware_filename }}" |
+        echo "upgrade firmware /usr/local/upgrade/{{ target_firmware_filename }}" |
           /bin/cli
       register: upgrade_initiation
       delegate_to: "{{ inventory_hostname }}"
@@ -144,9 +144,9 @@ echo "upgrade firmware /usr/local/upgrade/{{ target_firmware_filename }}" |
 
     - name: Parse new version information
       ansible.builtin.set_fact:
-        installed_version: >
-"{{ post_install_version.stdout |
-            regex_search('Version:\\s+([\\d\\.]+)', '\\1') | first }}"
+        installed_version: >-
+          {{ post_install_version.stdout |
+            regex_search('Version:\\s+([\\d\\.]+)', '\\1') | first }}
 
     - name: Confirm target firmware version is active
       ansible.builtin.assert:
@@ -183,7 +183,7 @@ echo "upgrade firmware /usr/local/upgrade/{{ target_firmware_filename }}" |
           delegate_to: "{{ inventory_hostname }}"
 
         - name: Parse serial port count
-          set_fact:
+          ansible.builtin.set_fact:
             active_serial_ports: >
               "{{ post_serial_status.stdout |
                 regex_findall('Serial\\d+') | length }}"

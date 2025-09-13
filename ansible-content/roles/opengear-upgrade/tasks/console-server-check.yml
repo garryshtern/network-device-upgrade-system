@@ -98,6 +98,6 @@
       - Detection Method: {{ 'API' if api_available else 'CLI' }}
       - Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}
       - Active Sessions: {{ active_sessions | default(0) }}
-      - >
-Ready for Upgrade: {{ 'Yes' if active_sessions |
+      - >-
+        Ready for Upgrade: {{ 'Yes' if active_sessions |
           default(0) | int == 0 else 'Caution - Active Sessions' }}

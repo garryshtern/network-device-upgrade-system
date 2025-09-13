@@ -83,6 +83,6 @@
       - Previous Version: {{ nxos_upgrade_state.current_version }}
       - New Version: {{ nxos_upgrade_state.target_version }}
       - Method: Non-disruptive ISSU
-      - >
-Supervisors: {{ 'Synchronized' if 'Active' in post_issu_redundancy.stdout[0] and
+      - >-
+        Supervisors: {{ 'Synchronized' if 'Active' in post_issu_redundancy.stdout[0] and
           'Standby' in post_issu_redundancy.stdout[0] else 'Check Required' }}

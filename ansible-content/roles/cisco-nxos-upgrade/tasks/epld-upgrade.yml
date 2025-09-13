@@ -167,11 +167,11 @@
       - Upgrade Method: {{ epld_upgrade_summary.upgrade_method }}
       - Success: {{ epld_upgrade_summary.success }}
       - Pre-upgrade Modules: {{ epld_modules | length }}
-      - >
-Post-upgrade Modules: {{ updated_epld_modules |
+      - >-
+        Post-upgrade Modules: {{ updated_epld_modules |
           length if updated_epld_modules is defined else 'Unknown' }}
-      - >
-System Stable: {{ 'YES' if post_epld_stability is defined else
+      - >-
+        System Stable: {{ 'YES' if post_epld_stability is defined else
           'CHECK REQUIRED' }}
       - Timestamp: {{ epld_upgrade_summary.timestamp }}
 

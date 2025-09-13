@@ -126,8 +126,8 @@
     msg: |-
       IOS-XE Validation Results:
       ==========================
-      - >
-Version: {{ 'PASS' if target_firmware_version in version_check.stdout[0] else
+      - >-
+        Version: {{ 'PASS' if target_firmware_version in version_check.stdout[0] else
           'FAIL' }}
       - >
         Interfaces: {{ 'PASS' if 'up' in interface_status.stdout[0] else 'CHECK' }}
@@ -135,13 +135,13 @@ Version: {{ 'PASS' if target_firmware_version in version_check.stdout[0] else
       - >
         ARP Table: {{ 'PASS' if arp_table.stdout[0] | length > 100 else 'CHECK' }}
       - BGP: {{ 'PASS' if bgp_status.rc == 0 else 'N/A' }}
-      - >
-IPSec: {{ 'VALIDATED' if (validate_ipsec is defined and validate_ipsec |
+      - >-
+        IPSec: {{ 'VALIDATED' if (validate_ipsec is defined and validate_ipsec |
           bool) else 'SKIPPED' }}
-      - >
-BFD: {{ 'VALIDATED' if (validate_bfd is defined and validate_bfd |
+      - >-
+        BFD: {{ 'VALIDATED' if (validate_bfd is defined and validate_bfd |
           bool) else 'SKIPPED' }}
-      - >
-Optics: {{ 'VALIDATED' if (validate_optics is defined and validate_optics |
+      - >-
+        Optics: {{ 'VALIDATED' if (validate_optics is defined and validate_optics |
           bool) else 'SKIPPED' }}
       - Errors: {{ 'NONE' if error_logs.stdout[0] == '' else 'CHECK LOGS' }}

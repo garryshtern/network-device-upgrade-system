@@ -94,8 +94,8 @@
       - Local Source: {{ local_image_path }}
       - >
         Remote Destination: {{ ansible_host }}:bootflash:{{ target_image_filename }}
-      - >
-Transfer Method: {{ 'SCP (synchronize)' if
+      - >-
+        Transfer Method: {{ 'SCP (synchronize)' if
           scp_result is succeeded else 'SCP (fallback)' }}
       - Size: {{ target_image_size }} bytes
       - >

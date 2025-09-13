@@ -82,12 +82,12 @@
       - Model: {{ opengear_upgrade_state.device_model }}
       - Power Outlets: {{ opengear_upgrade_state.power_ports | length }}
       - Active Outlets: {{ active_outlets | default(0) }}
-      - >
-Power Usage: {{ total_power_usage |
+      - >-
+        Power Usage: {{ total_power_usage |
           default(0) }}W ({{ power_utilization | default(0) }}%)
-      - >
-Environmental Sensors: {{ environmental_sensors.json |
+      - >-
+        Environmental Sensors: {{ environmental_sensors.json |
           length if environmental_sensors.json is defined else 0 }}
-      - >
-Ready for Upgrade: {{ 'Yes' if power_utilization |
+      - >-
+        Ready for Upgrade: {{ 'Yes' if power_utilization |
           default(0) | float < 90 else 'Caution - High Load' }}

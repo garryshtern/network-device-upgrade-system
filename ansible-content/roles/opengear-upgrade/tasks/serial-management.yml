@@ -107,9 +107,9 @@
       Serial Port Management Summary:
       - Total Ports: {{ opengear_upgrade_state.serial_ports | length }}
       - Active Sessions (Pre): {{ active_sessions.json | length }}
-      - >
-Ports Tested: {{ port_connectivity_test.results |
+      - >-
+        Ports Tested: {{ port_connectivity_test.results |
           selectattr('json.status', 'equalto', 'ok') | list | length | default(0) }}
-      - >
-Status: {{ 'All Operational' if post_upgrade_port_status.results |
+      - >-
+        Status: {{ 'All Operational' if post_upgrade_port_status.results |
           length == opengear_upgrade_state.serial_ports | length else 'Check Required' }}

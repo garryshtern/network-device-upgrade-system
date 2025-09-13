@@ -70,15 +70,15 @@
           Firmware transfer completed:
           - Source: {{ local_firmware_path }}/{{ target_firmware_filename }}
           - Destination: /usr/local/upgrade/{{ target_firmware_filename }}
-          - >
-Size: {{ firmware_transfer.size if
+          - >-
+            Size: {{ firmware_transfer.size if
               firmware_transfer.size is defined else 'Unknown' }} bytes
 
 - name: Verify firmware integrity (Legacy)
   block:
     - name: Calculate firmware checksum on device
       ansible.builtin.raw: |
-sha512sum /usr/local/upgrade/{{ target_firmware_filename }} |
+        sha512sum /usr/local/upgrade/{{ target_firmware_filename }} |
           awk '{print $1}'
       register: device_checksum
       delegate_to: "{{ inventory_hostname }}"
@@ -91,9 +91,9 @@ sha512sum /usr/local/upgrade/{{ target_firmware_filename }} |
 
     - name: Parse expected checksum
       ansible.builtin.set_fact:
-        expected_checksum: >
-"{{ expected_checksum_file.content |
-            b64decode | trim | split(' ') | first }}"
+        expected_checksum: >-
+          {{ expected_checksum_file.content |
+            b64decode | trim | split(' ') | first }}
         device_calculated_checksum: "{{ device_checksum.stdout | trim }}"
 
     - name: Validate checksum match
