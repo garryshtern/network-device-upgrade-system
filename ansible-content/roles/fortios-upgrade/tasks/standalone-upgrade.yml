@@ -127,20 +127,16 @@
       - New Version: {{ post_reboot_status.meta.results.version }}
       - >
         System Health: >
-{{ 'OK' if post_upgrade_resources.meta.results.cpu_usage |
-            int < 50 else 'High Load' }}
+          {{ 'OK' if post_upgrade_resources.meta.results.cpu_usage | int < 50 else 'High Load' }}
       - >
         Active Policies: {{ policy_stats.meta.results.total_policies | default(0) }}
       - >
         Interface Status: >
-{{ interface_status.meta.results |
-            selectattr('status', 'equalto', 'up') | list | length }} up
+          {{ interface_status.meta.results | selectattr('status', 'equalto', 'up') | list | length }} up
       - >
         VPN Tunnels: >
-{{ post_vpn_status.meta.results.active_sessions |
-            default(0) if post_vpn_status.meta is defined else 'N/A' }}
+          {{ post_vpn_status.meta.results.active_sessions | default(0) if post_vpn_status.meta is defined else 'N/A' }}
       - Upgrade Method: Standalone
       - >
         Status: >
-{{ 'Success' if fortios_upgrade_state.target_version in post_reboot_status.meta.results.version else
-            'Verification Required' }}
+          {{ 'Success' if fortios_upgrade_state.target_version in post_reboot_status.meta.results.version else 'Verification Required' }}

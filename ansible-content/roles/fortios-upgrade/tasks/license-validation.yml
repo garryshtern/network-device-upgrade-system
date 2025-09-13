@@ -91,6 +91,5 @@
       - Days Until Expiry: {{ days_until_expiry | default('N/A') }}
       - >
         Firmware Access: >
-{{ 'Validated' if firmware_entitlement.meta is defined else
-            'Not Checked' }}
+          {{ 'Validated' if firmware_entitlement.meta is defined else 'Not Checked' }}
       - Overall Status: {{ fortios_upgrade_state.license_status }}

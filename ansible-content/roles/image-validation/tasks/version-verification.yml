@@ -48,15 +48,13 @@
   ansible.builtin.set_fact:
     actual_firmware_version: |-
       {%- if ansible_network_os == 'nxos' -%}
-{{ (nxos_version_output.stdout[0] |
-          from_json).sys_ver_str | default('unknown') }}
+      {{ (nxos_version_output.stdout[0] | from_json).sys_ver_str | default('unknown') }}
       {%- elif ansible_network_os == 'ios' -%}
-{{ ios_version_output.stdout[0] |
-          regex_search('Cisco IOS XE Software, Version ([0-9\\.]+)', '\\1') | first | default('unknown') }}
+      {{ ios_version_output.stdout[0] | regex_search('Cisco IOS XE Software, Version ([0-9\\.]+)', '\\1') | first | default('unknown') }}
       {%- elif ansible_network_os == 'fortios' -%}
         {{ fortios_version_output.meta.results.version | default('unknown') }}
       {%- elif ansible_network_os == 'opengear' -%}
-{{ opengear_version_output.stdout |
+      {{ opengear_version_output.stdout |
           regex_search('([0-9\\.]+)', '\\1') | first | default('unknown') }}
       {%- elif ansible_network_os == 'mos' -%}
         {{ mos_version_output.stdout | regex_search('VERSION=([0-9\\.]+)',
@@ -67,9 +65,9 @@
 
 - name: Compare expected vs actual version
   ansible.builtin.set_fact:
-    version_matches: >
-"{{ expected_firmware_version in actual_firmware_version or
-        actual_firmware_version in expected_firmware_version }}"
+    version_matches: >-
+      {{ expected_firmware_version in actual_firmware_version or
+        actual_firmware_version in expected_firmware_version }}
 
 - name: Validate firmware version compatibility
   ansible.builtin.assert:
