@@ -74,9 +74,9 @@
         that:
           - nxos_file_copy_result is succeeded
           - nxos_file_copy_result.transfer_status == 'Received'
-        fail_msg: >
-"Secure firmware file transfer failed: {{ nxos_file_copy_result.msg |
-            default('Unknown error') }}"
+        fail_msg: >-
+          Secure firmware file transfer failed: {{ nxos_file_copy_result.msg |
+            default('Unknown error') }}
 
 - name: Verify firmware file on device
   cisco.nxos.nxos_command:

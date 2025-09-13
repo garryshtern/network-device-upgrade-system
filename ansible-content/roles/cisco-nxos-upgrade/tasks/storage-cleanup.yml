@@ -10,9 +10,9 @@
 
 - name: Parse running image filename
   ansible.builtin.set_fact:
-    running_image_file: >
-"{{ running_image_result.stdout[0] |
-        regex_search('bootflash:///(.+\\.bin)', '\\1') | first }}"
+    running_image_file: >-
+      {{ running_image_result.stdout[0] |
+        regex_search('bootflash:///(.+\\.bin)', '\\1') | first }}
   when: running_image_result.stdout[0] is defined
 
 - name: Get bootflash directory listing

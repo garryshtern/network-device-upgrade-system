@@ -9,6 +9,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ansible-content/playbooks/compliance-audit.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/playbooks/compliance-audit.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/main.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/main.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/validation.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/cisco-nxos-upgrade/tasks/validation.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/ha-cluster-upgrade.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/ha-cluster-upgrade.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/main.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/fortios-upgrade/tasks/main.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-loading.yml" beforeDir="false" afterPath="$PROJECT_DIR$/ansible-content/roles/opengear-upgrade/tasks/image-loading.yml" afterDir="false" />
@@ -97,7 +98,7 @@
       <workItem from="1756951775422" duration="9763000" />
       <workItem from="1757115228585" duration="72241000" />
       <workItem from="1757551344727" duration="70000" />
-      <workItem from="1757554781068" duration="26744000" />
+      <workItem from="1757554781068" duration="27758000" />
     </task>
     <task id="LOCAL-00001" summary="Added implementations">
       <option name="closed" value="true" />
