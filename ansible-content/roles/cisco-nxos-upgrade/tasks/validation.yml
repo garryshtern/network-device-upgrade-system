@@ -101,9 +101,9 @@
 
 - name: Check for critical log messages
   ansible.builtin.set_fact:
-    critical_logs: >
-"{{ nxos_health_check.stdout[0] |
-        regex_findall('.*CRITICAL.*|.*ERROR.*|.*FAIL.*') }}"
+    critical_logs: >-
+      {{ nxos_health_check.stdout[0] |
+        regex_findall('.*CRITICAL.*|.*ERROR.*|.*FAIL.*') }}
 
 - name: Display critical log messages if found
   ansible.builtin.debug:
@@ -132,9 +132,9 @@
 - name: Set validation results
   ansible.builtin.set_fact:
     nxos_validation_results:
-      device_healthy: >
-"{{ nxos_resources.cpu_usage_kernel < 80 and
-          nxos_resources.memory_usage_kernel < 85 }}"
+      device_healthy: >-
+        {{ nxos_resources.cpu_usage_kernel < 80 and
+          nxos_resources.memory_usage_kernel < 85 }}
       interfaces_up: "{{ interfaces_down | int == 0 }}"
       bgp_neighbors_up: "{{ (bgp_neighbors_down | default(0)) | int == 0 }}"
       critical_logs_present: "{{ critical_logs | length > 0 }}"

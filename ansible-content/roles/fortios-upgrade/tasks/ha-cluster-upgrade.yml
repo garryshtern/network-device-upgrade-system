@@ -154,7 +154,6 @@
       - >
         Cluster Members: {{ final_cluster_status.meta.results.members | length }}
       - Upgrade Method: {{ 'Coordinated HA Upgrade' }}
-      - >
-        Status: >
-{{ 'Success' if final_cluster_status.meta.results.sync_status == 'synchronized' else
-            'Check Required' }}
+      - >-
+        Status: {{ 'Success' if final_cluster_status.meta.results.sync_status == 'synchronized' else
+          'Check Required' }}

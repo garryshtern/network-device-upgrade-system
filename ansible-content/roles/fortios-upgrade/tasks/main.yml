@@ -77,7 +77,7 @@
   when: fortios_upgrade_state.multi_step_required | bool
 
 - name: Execute single-step upgrade based on HA mode
-  ansible.builtin.include_tasks: >
-"{{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode != 'standalone' else
-      'standalone-upgrade.yml' }}"
+  ansible.builtin.include_tasks: >-
+    {{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode != 'standalone' else
+      'standalone-upgrade.yml' }}
   when: not (fortios_upgrade_state.multi_step_required | bool)
