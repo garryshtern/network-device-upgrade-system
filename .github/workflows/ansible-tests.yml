@@ -224,7 +224,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade ansible molecule[docker] docker
+          pip install --upgrade ansible molecule molecule-plugins[docker] docker
           ansible-galaxy collection install \
             -r ansible-content/collections/requirements.yml \
             --force --ignore-certs
