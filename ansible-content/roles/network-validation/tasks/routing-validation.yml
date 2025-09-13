@@ -63,8 +63,8 @@
         msg: |
           Static Routes Found: {{ static_routes | length }}
           {% for route in static_routes %}
-          - >: >-
-        {{ route.ipprefix }}: via {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
+          - >-
+            {{ route.ipprefix }}: via {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
               default('N/A') }}
           {% endfor %}
       when: static_routes is defined
