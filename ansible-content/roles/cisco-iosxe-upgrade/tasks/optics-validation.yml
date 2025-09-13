@@ -260,8 +260,8 @@
       {{ 'PASS' if (active_transceivers is defined and active_transceivers |
           length > 0) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-    dest: >
-"/tmp/optics_validation_{{ inventory_hostname }}_{{ ansible_play_batch |
-        hash('md5') }}.txt"
+    dest: >-
+      /tmp/optics_validation_{{ inventory_hostname }}_{{ ansible_play_batch |
+        hash('md5') }}.txt
     mode: "0644"
   delegate_to: localhost

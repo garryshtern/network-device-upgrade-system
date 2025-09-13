@@ -95,9 +95,9 @@
 
     - name: Count total IGMP groups
       ansible.builtin.set_fact:
-        total_igmp_groups: >
-"{{ (igmp_active_groups | length) +
-            (igmp_snooping_active_groups | length) }}"
+        total_igmp_groups: >-
+          {{ (igmp_active_groups | length) +
+            (igmp_snooping_active_groups | length) }}
       when:
         - igmp_active_groups is defined
         - igmp_snooping_active_groups is defined
@@ -292,8 +292,8 @@
       {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans |
           int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-    dest: >
-"/tmp/igmp_validation_{{ inventory_hostname }}_{{ ansible_play_batch |
-        hash('md5') }}.txt"
+    dest: >-
+      /tmp/igmp_validation_{{ inventory_hostname }}_{{ ansible_play_batch |
+        hash('md5') }}.txt
     mode: "0644"
   delegate_to: localhost
