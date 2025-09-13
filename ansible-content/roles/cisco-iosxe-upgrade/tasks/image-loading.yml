@@ -13,18 +13,17 @@
 
     - name: Parse available space
       ansible.builtin.set_fact:
-        available_bytes: >
-          "{{ space_check.stdout[0] | regex_search('(\\d+) bytes
-            free') | regex_replace(' bytes free', '') | int }}"
+        available_bytes: >-
+          {{ space_check.stdout[0] | regex_search('(\\d+) bytes free') | regex_replace(' bytes free', '') | int }}
 
     - name: Verify sufficient space
       ansible.builtin.assert:
         that:
           - available_bytes | int >
             (target_image_size | default(1000000000) | int)
-        fail_msg: >
-"Insufficient space: {{ available_bytes }} bytes available, {{ target_image_size |
-            default(1000000000) }} required"
+        fail_msg: >-
+          Insufficient space: {{ available_bytes }} bytes available, {{ target_image_size |
+            default(1000000000) }} required
 
 - name: Transfer image file (Server-Initiated PUSH)
   block:
@@ -49,10 +48,9 @@
 
     - name: Alternative SCP transfer method (if synchronize fails)
       ansible.builtin.command:
-        cmd: >
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null: >-
-        {{ '-i ' + ansible_ssh_private_key_file if
-            ansible_ssh_private_key_file is defined else '' }}
+        cmd: >-
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          {{ '-i ' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined else '' }}
           "{{ local_image_path }}"
           "{{ ansible_user }}@{{ ansible_host }}:{{ target_image_filename }}"
         timeout: 3600
