@@ -86,7 +86,22 @@ class MockDeviceEngine:
     
     def _init_database(self):
         """Initialize SQLite database for state persistence"""
-        self.db_path = f"tests/mock-devices/state/{self.config.device_id}.db"
+        import os
+        import tempfile
+        
+        # Create state directory if it doesn't exist or use temp directory for CI
+        state_dir = "tests/mock-devices/state"
+        if not os.path.exists(state_dir):
+            try:
+                os.makedirs(state_dir, exist_ok=True)
+                self.db_path = f"{state_dir}/{self.config.device_id}.db"
+            except (OSError, PermissionError):
+                # Fall back to temp directory for CI environments
+                temp_dir = tempfile.gettempdir()
+                self.db_path = f"{temp_dir}/mock_device_{self.config.device_id}.db"
+        else:
+            self.db_path = f"{state_dir}/{self.config.device_id}.db"
+        
         conn = sqlite3.connect(self.db_path)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS device_state (
