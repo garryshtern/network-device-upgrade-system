@@ -83,7 +83,8 @@
                 compliance_results | combine({
                   'compliance_checks': {
                     'failed': >
-                      compliance_results.compliance_checks.failed + ['security_baseline_audit_error']
+                      compliance_results.compliance_checks.failed +
+                        ['security_baseline_audit_error']
                   }
                 })
               }}

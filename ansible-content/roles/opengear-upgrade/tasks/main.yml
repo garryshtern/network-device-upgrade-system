@@ -9,7 +9,7 @@
       device_model: ""
       current_version: ""
       target_version: "{{ target_firmware_version }}"
-      device_type: "console_server" # console_server or smart_pdu
+      device_type: "console_server"  # console_server or smart_pdu
       serial_ports: []
       power_ports: []
       web_session: ""

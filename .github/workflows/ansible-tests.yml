@@ -234,15 +234,15 @@ jobs:
 
       - name: Run molecule tests for network upgrade
         run: |
-          cd tests/molecule-tests/network-upgrade-test
-          molecule test
+          cd tests/molecule-tests
+          molecule test -s network-upgrade-test
         env:
           MOLECULE_NO_LOG: false
 
-      - name: Run default molecule tests
+      - name: Run default molecule tests  
         run: |
-          cd tests/molecule-tests/molecule/default
-          molecule test
+          cd tests/molecule-tests
+          molecule test -s default
         env:
           MOLECULE_NO_LOG: false
 

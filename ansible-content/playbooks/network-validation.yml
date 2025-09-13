@@ -204,7 +204,7 @@
         - name: Mark multicast validation as skipped
           ansible.builtin.set_fact:
             validation_results: >-
-              {{ validation_results | combine({'tests_skipped': 
+              {{ validation_results | combine({'tests_skipped':
                 validation_results.tests_skipped + ['multicast_validation']}) }}
           when: >
             not (ansible_network_os in ['nxos', 'ios']
@@ -334,8 +334,8 @@
           - "Tests Skipped: {{ validation_results.tests_skipped | length }}"
           - "Validation Score: {{ validation_score | default('N/A') }}%"
           - "Overall Status: {{ 'PASS' if validation_passed else 'FAIL' }}"
-          - >
-            "Results Location: {{ validation_results_path }}/{{ inventory_hostname }}/"
+          - >-
+            Results Location: {{ validation_results_path }}/{{ inventory_hostname }}/
           - "=================================="
 
     - name: Fail if validation failed

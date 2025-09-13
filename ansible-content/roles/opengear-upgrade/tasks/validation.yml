@@ -87,7 +87,7 @@
           Authorization: "Token {{ validation_api_token }}"
         validate_certs: false
       register: serial_port_status_check
-      loop: "{{ serial_ports_validation.json[:5] }}" # Check first 5 ports
+      loop: "{{ serial_ports_validation.json[:5] }}"  # Check first 5 ports
       failed_when: false
 
     - name: Test serial port connectivity
@@ -98,7 +98,7 @@
           Authorization: "Token {{ validation_api_token }}"
         validate_certs: false
       register: serial_connectivity_test
-      loop: "{{ serial_ports_validation.json[:3] }}" # Test first 3 ports
+      loop: "{{ serial_ports_validation.json[:3] }}"  # Test first 3 ports
       failed_when: false
       when: serial_ports_validation.json | length > 0
 
@@ -146,7 +146,7 @@
           Authorization: "Token {{ validation_api_token }}"
         validate_certs: false
       register: power_outlet_status_check
-      loop: "{{ power_outlets_validation.json[:8] }}" # Check first 8 outlets
+      loop: "{{ power_outlets_validation.json[:8] }}"  # Check first 8 outlets
       failed_when: false
 
     - name: Check overall power status

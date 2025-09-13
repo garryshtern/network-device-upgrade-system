@@ -36,13 +36,13 @@ nxos_validate_interfaces_after_upgrade: true
 nxos_validate_bgp_after_upgrade: true
 
 # Enhanced validation modules
-validate_igmp: true # Enable IGMP/multicast validation
-validate_bfd: true # Enable enhanced BFD validation
+validate_igmp: true  # Enable IGMP/multicast validation
+validate_bfd: true  # Enable enhanced BFD validation
 
 # Validation thresholds and parameters
 igmp_validation_timeout: 120
 bfd_validation_timeout: 120
-bfd_success_threshold: 0.8 # 80% of BFD sessions must be UP
+bfd_success_threshold: 0.8  # 80% of BFD sessions must be UP
 
 # Rollback settings
 nxos_enable_rollback: true
