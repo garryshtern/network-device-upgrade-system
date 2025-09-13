@@ -12,9 +12,9 @@
 
     - name: Parse EPLD information
       ansible.builtin.set_fact:
-        epld_modules: >
-"{{ current_epld_versions.stdout[0] |
-            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
+        epld_modules: >-
+          {{ current_epld_versions.stdout[0] |
+            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}
 
     - name: Display current EPLD status
       ansible.builtin.debug:

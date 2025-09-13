@@ -81,9 +81,8 @@
   when: arp_entries is defined
 - name: Check for excessive incomplete entries
   ansible.builtin.debug:
-    msg: >
-'WARNING: {{ incomplete_arp_entries |
-        length }} incomplete ARP entries found'
+    msg: >-
+      WARNING: {{ incomplete_arp_entries | length }} incomplete ARP entries found
   when: >
     incomplete_arp_entries is defined and incomplete_arp_entries | length > 10
 - name: Check default gateway ARP entry
