@@ -22,7 +22,9 @@
 
 - name: Set current firmware version
   ansible.builtin.set_fact:
-    nxos_upgrade_state: "{{ nxos_upgrade_state | combine({'current_version': nxos_facts.ansible_facts.ansible_net_version}) }}"
+    nxos_upgrade_state: >
+      "{{ nxos_upgrade_state | combine({'current_version':
+        nxos_facts.ansible_facts.ansible_net_version}) }}"
 
 - name: Check ISSU compatibility
   ansible.builtin.include_tasks: check-issu-capability.yml
@@ -48,4 +50,6 @@
   when: upgrade_epld | default(false) and target_epld_image is defined
 
 - name: Execute upgrade based on ISSU capability
-  ansible.builtin.include_tasks: "{{ 'issu-procedures.yml' if nxos_upgrade_state.issu_capable else 'image-installation.yml' }}"
+  ansible.builtin.include_tasks: >
+"{{ 'issu-procedures.yml' if nxos_upgrade_state.issu_capable else
+      'image-installation.yml' }}"

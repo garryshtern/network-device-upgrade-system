@@ -13,7 +13,8 @@
     - name: Verify sufficient space for install mode
       ansible.builtin.assert:
         that:
-          - iosxe_upgrade_state.available_space | int > 2000000000  # 2GB minimum
+          - iosxe_upgrade_state.available_space
+            | int > 2000000000 # 2GB minimum
         fail_msg: "Insufficient space for install mode upgrade"
 
 - name: Install mode upgrade process
@@ -21,13 +22,17 @@
     - name: Add new image to install repository
       cisco.ios.ios_command:
         commands:
-          - request platform software package install switch all file {{ target_image_path }} new clean
+          - >
+            request platform software package install
+              switch all file {{ target_image_path }} new clean
       register: install_add_result
 
     - name: Activate new software
       cisco.ios.ios_command:
         commands:
-          - request platform software package install switch all file {{ target_image_path }} activate
+          - >
+            request platform software package install
+              switch all file {{ target_image_path }} activate
       register: install_activate_result
 
     - name: Commit new installation
@@ -63,4 +68,6 @@
       - Previous Version: {{ iosxe_upgrade_state.current_version }}
       - New Version: {{ iosxe_upgrade_state.target_version }}
       - Method: Install Mode
-      - Status: {{ 'Success' if iosxe_upgrade_state.target_version in post_install_version.stdout[0] else 'Verification Required' }}
+      - >
+Status: {{ 'Success' if iosxe_upgrade_state.target_version in post_install_version.stdout[0] else
+          'Verification Required' }}

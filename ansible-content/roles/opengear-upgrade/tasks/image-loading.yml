@@ -34,8 +34,12 @@
     - name: Validate sufficient storage space
       ansible.builtin.assert:
         that:
-          - storage_info.json.available_mb | int > (target_firmware_size_mb | default(100) | int)
-        fail_msg: "Insufficient storage space: {{ storage_info.json.available_mb }}MB available, {{ target_firmware_size_mb | default(100) }}MB required"
+          - >
+            storage_info.json.available_mb | int >
+              (target_firmware_size_mb | default(100) | int)
+        fail_msg: >
+"Insufficient storage space: {{ storage_info.json.available_mb }}MB available, {{ target_firmware_size_mb |
+            default(100) }}MB required"
 
 - name: Prepare firmware image for upload
   block:
@@ -75,19 +79,26 @@
         body_format: json
         body:
           filename: "{{ target_firmware_filename }}"
-          size: "{{ firmware_checksum.stat.size if firmware_checksum is defined else target_firmware_size_mb | default(100) * 1024 * 1024 }}"
-          checksum: "{{ firmware_checksum.stat.checksum if firmware_checksum is defined else omit }}"
+          size: >
+"{{ firmware_checksum.stat.size if firmware_checksum is defined else target_firmware_size_mb |
+              default(100) * 1024 * 1024 }}"
+          checksum: >
+"{{ firmware_checksum.stat.checksum if
+              firmware_checksum is defined else omit }}"
         validate_certs: false
       register: upload_session
 
     - name: Push firmware file from server via API (Server-Initiated PUSH)
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{ upload_session.json.session_id }}/chunk"
+        url: >
+          "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{
+            upload_session.json.session_id }}/chunk"
         method: POST
         headers:
           Authorization: "Token {{ opengear_api_token }}"
           Content-Type: "application/octet-stream"
-        body: "{{ lookup('file', local_firmware_path, rstrip=False) | b64decode }}"
+        body: >
+          "{{ lookup('file', local_firmware_path, rstrip=False) | b64decode }}"
         timeout: 3600
         validate_certs: false
       register: secure_chunk_upload
@@ -98,7 +109,9 @@
 
     - name: Complete firmware upload
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{ upload_session.json.session_id }}/complete"
+        url: >
+          "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{
+            upload_session.json.session_id }}/complete"
         method: POST
         headers:
           Authorization: "Token {{ opengear_api_token }}"
@@ -118,18 +131,24 @@
     - name: Verify target firmware is available
       ansible.builtin.assert:
         that:
-          - firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | list | length > 0
+          - >
+            firmware_list.json | selectattr('filename', 'equalto',
+              target_firmware_filename) | list | length > 0
         fail_msg: "Target firmware file not found in device storage"
 
     - name: Extract firmware information
       ansible.builtin.set_fact:
-        uploaded_firmware_info: "{{ firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | first }}"
+        uploaded_firmware_info: >
+          "{{ firmware_list.json | selectattr('filename',
+            'equalto', target_firmware_filename) | first }}"
 
     - name: Validate firmware integrity
       ansible.builtin.assert:
         that:
           - uploaded_firmware_info.status == 'ready'
-          - uploaded_firmware_info.checksum == firmware_checksum.stat.checksum if firmware_checksum is defined else true
+          - >
+            uploaded_firmware_info.checksum == firmware_checksum.stat.checksum
+              if firmware_checksum is defined else true
         fail_msg: "Firmware integrity validation failed"
 
 - name: Log image loading completion

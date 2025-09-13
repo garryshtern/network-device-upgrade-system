@@ -10,8 +10,12 @@
 
 - name: Parse current boot variables
   ansible.builtin.set_fact:
-    current_boot_image: "{{ current_boot_config.stdout[0] | from_json | json_query('sys_img_name') }}"
-    current_kickstart: "{{ current_boot_config.stdout[0] | from_json | json_query('kick_img_name') }}"
+    current_boot_image: >
+"{{ current_boot_config.stdout[0] |
+        from_json | json_query('sys_img_name') }}"
+    current_kickstart: >
+"{{ current_boot_config.stdout[0] |
+        from_json | json_query('kick_img_name') }}"
 
 - name: Display current boot configuration
   ansible.builtin.debug:
@@ -27,13 +31,15 @@
     - name: Check ISSU compatibility
       cisco.nxos.nxos_command:
         commands:
-          - show install all impact system bootflash:{{ target_firmware_version }}
+          - >
+            show install all impact system bootflash:{{ target_firmware_version }}
       register: issu_compatibility_check
       failed_when: false
 
     - name: Set ISSU capability flag
       ansible.builtin.set_fact:
-        issu_supported: "{{ 'compatible' in issu_compatibility_check.stdout[0] | lower }}"
+        issu_supported: >
+          "{{ 'compatible' in issu_compatibility_check.stdout[0] | lower }}"
       when: issu_compatibility_check is succeeded
 
     - name: Set ISSU not supported
@@ -92,7 +98,8 @@
 
     - name: Validate boot variable update
       ansible.builtin.set_fact:
-        boot_update_successful: "{{ target_firmware_version in updated_boot_config.stdout[0] }}"
+        boot_update_successful: >
+          "{{ target_firmware_version in updated_boot_config.stdout[0] }}"
 
     - name: Assert boot configuration was updated
       ansible.builtin.assert:
@@ -116,7 +123,8 @@
       boot_variables_updated: "{{ boot_update_successful | default(false) }}"
       issu_performed: "{{ installation_method == 'issu' }}"
       reboot_required: "{{ installation_method == 'disruptive' }}"
-      installation_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      installation_timestamp: >
+        "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display installation results
   ansible.builtin.debug:

@@ -90,7 +90,8 @@
     - name: Confirm target version is active
       ansible.builtin.assert:
         that:
-          - fortios_upgrade_state.target_version in post_reboot_status.meta.results.version
+          - >
+            fortios_upgrade_state.target_version in post_reboot_status.meta.results.version
         fail_msg: "Standalone upgrade failed - target version not active"
 
     - name: Check system health
@@ -124,9 +125,22 @@
       FortiOS Standalone Upgrade Completed:
       - Previous Version: {{ fortios_upgrade_state.current_version }}
       - New Version: {{ post_reboot_status.meta.results.version }}
-      - System Health: {{ 'OK' if post_upgrade_resources.meta.results.cpu_usage | int < 50 else 'High Load' }}
-      - Active Policies: {{ policy_stats.meta.results.total_policies | default(0) }}
-      - Interface Status: {{ interface_status.meta.results | selectattr('status', 'equalto', 'up') | list | length }} up
-      - VPN Tunnels: {{ post_vpn_status.meta.results.active_sessions | default(0) if post_vpn_status.meta is defined else 'N/A' }}
+      - >
+        System Health: >
+{{ 'OK' if post_upgrade_resources.meta.results.cpu_usage |
+            int < 50 else 'High Load' }}
+      - >
+        Active Policies: {{ policy_stats.meta.results.total_policies | default(0) }}
+      - >
+        Interface Status: >
+{{ interface_status.meta.results |
+            selectattr('status', 'equalto', 'up') | list | length }} up
+      - >
+        VPN Tunnels: >
+{{ post_vpn_status.meta.results.active_sessions |
+            default(0) if post_vpn_status.meta is defined else 'N/A' }}
       - Upgrade Method: Standalone
-      - Status: {{ 'Success' if fortios_upgrade_state.target_version in post_reboot_status.meta.results.version else 'Verification Required' }}
+      - >
+        Status: >
+{{ 'Success' if fortios_upgrade_state.target_version in post_reboot_status.meta.results.version else
+            'Verification Required' }}

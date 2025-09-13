@@ -36,13 +36,17 @@
     - name: Warn about active sessions
       ansible.builtin.debug:
         msg: |
-          WARNING: {{ active_sessions_check.stdout | default('0') }} active console sessions detected.
+          WARNING: >
+{{ active_sessions_check.stdout |
+              default('0') }} active console sessions detected.
           These sessions will be disconnected during the upgrade.
       when: active_sessions_check.stdout | default('0') | int > 0
 
     - name: Send maintenance message to active sessions
       ansible.builtin.raw: |
-        echo "send message all 'MAINTENANCE: Firmware upgrade starting in 60 seconds. Console sessions will be disconnected.'" | /bin/cli
+        echo "send message all 'MAINTENANCE: >
+          Firmware upgrade starting in 60 seconds. Console
+            sessions will be disconnected.'" | /bin/cli
       delegate_to: "{{ inventory_hostname }}"
       when: active_sessions_check.stdout | default('0') | int > 0
 
@@ -56,7 +60,8 @@
   block:
     - name: Final pre-installation checksum verification
       ansible.builtin.raw: |
-        sha512sum /usr/local/upgrade/{{ target_firmware_filename }} | awk '{print $1}'
+sha512sum /usr/local/upgrade/{{ target_firmware_filename }} |
+          awk '{print $1}'
       register: final_checksum_check
       delegate_to: "{{ inventory_hostname }}"
 
@@ -68,7 +73,8 @@
 
     - name: Initiate firmware installation via CLI
       ansible.builtin.raw: |
-        echo "upgrade firmware /usr/local/upgrade/{{ target_firmware_filename }}" | /bin/cli
+echo "upgrade firmware /usr/local/upgrade/{{ target_firmware_filename }}" |
+          /bin/cli
       register: upgrade_initiation
       delegate_to: "{{ inventory_hostname }}"
       async: 1800  # 30 minutes timeout
@@ -79,10 +85,14 @@
         echo "show upgrade status" | /bin/cli
       register: upgrade_status
       delegate_to: "{{ inventory_hostname }}"
-      until: upgrade_status.stdout is search("Installation complete|Upgrade complete|Ready to reboot")
+      until: >
+        upgrade_status.stdout is search("Installation
+          complete|Upgrade complete|Ready to reboot")
       retries: 60
       delay: 30
-      failed_when: upgrade_status.stdout is search("Installation failed|Upgrade failed|Error")
+      failed_when: >
+        upgrade_status.stdout is search("Installation
+          failed|Upgrade failed|Error")
 
 - name: Handle legacy device reboot
   block:
@@ -134,13 +144,17 @@
 
     - name: Parse new version information
       ansible.builtin.set_fact:
-        installed_version: "{{ post_install_version.stdout | regex_search('Version:\\s+([\\d\\.]+)', '\\1') | first }}"
+        installed_version: >
+"{{ post_install_version.stdout |
+            regex_search('Version:\\s+([\\d\\.]+)', '\\1') | first }}"
 
     - name: Confirm target firmware version is active
       ansible.builtin.assert:
         that:
           - opengear_upgrade_state.target_version in installed_version
-        fail_msg: "Installation completed but target version not active: {{ installed_version }}"
+        fail_msg: >
+          "Installation completed but target
+            version not active: {{ installed_version }}"
 
     - name: Verify system functionality
       block:
@@ -153,8 +167,10 @@
         - name: Validate system is operational
           ansible.builtin.assert:
             that:
-              - not (system_status_check.stdout is search("Error|Failed|Critical"))
-            fail_msg: "System status check indicates problems after installation"
+              - not (system_status_check.stdout
+                is search("Error|Failed|Critical"))
+            fail_msg: >
+              "System status check indicates problems after installation"
 
 - name: Post-installation device-specific validation (Legacy)
   block:
@@ -168,7 +184,9 @@
 
         - name: Parse serial port count
           set_fact:
-            active_serial_ports: "{{ post_serial_status.stdout | regex_findall('Serial\\d+') | length }}"
+            active_serial_ports: >
+              "{{ post_serial_status.stdout |
+                regex_findall('Serial\\d+') | length }}"
 
         - name: Validate serial port functionality
           ansible.builtin.assert:

@@ -33,8 +33,10 @@
     - name: Confirm target version is active
       ansible.builtin.assert:
         that:
-          - opengear_upgrade_state.target_version in system_info_validation.json.version
-        fail_msg: "Target version not active: {{ system_info_validation.json.version }}"
+          - opengear_upgrade_state.target_version
+            in system_info_validation.json.version
+        fail_msg: >
+          "Target version not active: {{ system_info_validation.json.version }}"
 
 - name: System health validation
   block:
@@ -51,7 +53,9 @@
       ansible.builtin.assert:
         that:
           - system_health_validation.json.status in ['healthy', 'ok', 'normal']
-        fail_msg: "System health check failed: {{ system_health_validation.json.status }}"
+        fail_msg: >
+          "System health check failed: {{
+            system_health_validation.json.status }}"
 
     - name: Check system resources
       ansible.builtin.uri:
@@ -76,7 +80,8 @@
 
     - name: Check serial port operational status
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
+        url: >
+          "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
         method: GET
         headers:
           Authorization: "Token {{ validation_api_token }}"
@@ -106,13 +111,15 @@
             Operational Ports: {{
               serial_port_status_check.results |
               selectattr('json.status', 'equalto', 'available') |
-              list | length if serial_port_status_check.results is defined else 0
+              list | length if serial_port_status_check.results is
+                defined else 0
             }}
           - >-
             Connectivity Tests: {{
               serial_connectivity_test.results |
               selectattr('json.status', 'equalto', 'ok') |
-              list | length if serial_connectivity_test.results is defined else 'N/A'
+              list | length if serial_connectivity_test.results is
+                defined else 'N/A'
             }}/{{
               serial_connectivity_test.results |
               length if serial_connectivity_test.results is defined else 0
@@ -132,7 +139,8 @@
 
     - name: Check power outlet status
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/power/outlets/{{ item.id }}/status"
+        url: >
+          "https://{{ ansible_host }}/api/v1/power/outlets/{{ item.id }}/status"
         method: GET
         headers:
           Authorization: "Token {{ validation_api_token }}"
@@ -152,7 +160,8 @@
 
     - name: Test power outlet control (non-critical outlets only)
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/power/outlets/{{ item.id }}/test"
+        url: >
+          "https://{{ ansible_host }}/api/v1/power/outlets/{{ item.id }}/test"
         method: POST
         headers:
           Authorization: "Token {{ validation_api_token }}"
@@ -178,7 +187,8 @@
             Operational Outlets: {{
               power_outlet_status_check.results |
               selectattr('json.status', 'equalto', 'on') |
-              list | length if power_outlet_status_check.results is defined else 0
+              list | length if power_outlet_status_check.results is
+                defined else 0
             }}
           - Power Capacity: {{ overall_power_status.json.max_capacity }}W
           - >-
@@ -261,11 +271,17 @@
       ansible.builtin.debug:
         msg: |
           Environmental Monitoring:
-          {% if environmental_sensors_check.json is defined and environmental_sensors_check.json | length > 0 %}
-          - Temperature Sensors: {{ environmental_sensors_check.json | selectattr('type', 'equalto', 'temperature') | list | length }}
-          - Humidity Sensors: {{ environmental_sensors_check.json | selectattr('type', 'equalto', 'humidity') | list | length }}
+          {% if environmental_sensors_check.json is defined
+            and environmental_sensors_check.json | length > 0 %}
+          - >
+Temperature Sensors: {{ environmental_sensors_check.json |
+              selectattr('type', 'equalto', 'temperature') | list | length }}
+          - >
+Humidity Sensors: {{ environmental_sensors_check.json |
+              selectattr('type', 'equalto', 'humidity') | list | length }}
           - All Sensors Normal:
-            {{ 'YES' if environmental_sensors_check.json | selectattr('status', 'ne', 'normal') | list | length == 0 else 'CHECK REQUIRED' }}
+{{ 'YES' if environmental_sensors_check.json |
+              selectattr('status', 'ne', 'normal') | list | length == 0 else 'CHECK REQUIRED' }}
           {% else %}
           - Environmental Sensors: Not Available
           {% endif %}
@@ -277,26 +293,41 @@
       Opengear Validation Results:
       - Device Model: {{ opengear_upgrade_state.device_model }}
       - Device Type: {{ opengear_upgrade_state.device_type | title }}
-      - Version: {{ 'PASS' if opengear_upgrade_state.target_version in system_info_validation.json.version else 'FAIL' }}
-      - System Health: {{ system_health_validation.json.status if system_health_validation.json is defined else 'Unknown' }}
-      - Network Connectivity: {{ 'PASS' if network_connectivity_test.json.success | default(false) else 'CHECK' }}
+      - >
+Version: {{ 'PASS' if opengear_upgrade_state.target_version in system_info_validation.json.version else
+          'FAIL' }}
+      - >
+System Health: {{ system_health_validation.json.status if
+          system_health_validation.json is defined else 'Unknown' }}
+      - >
+Network Connectivity: {{ 'PASS' if network_connectivity_test.json.success |
+          default(false) else 'CHECK' }}
       {% if opengear_upgrade_state.device_type == 'console_server' %}
       - Serial Ports:
         {{ serial_ports_validation.json | length }}
          total,
-        {{ serial_port_status_check.results | selectattr('json.status', 'equalto', 'available') | list | length if serial_port_status_check.results is defined else 'Unknown' }}
+{{ serial_port_status_check.results |
+          selectattr('json.status', 'equalto', 'available') | list | length if serial_port_status_check.results is defined else 'Unknown' }}
          operational
       {% endif %}
       {% if opengear_upgrade_state.device_type == 'smart_pdu' %}
       - Power Outlets:
         {{ power_outlets_validation.json | length }}
          total,
-        {{ power_outlet_status_check.results | selectattr('json.status', 'defined') | list | length if power_outlet_status_check.results is defined else 'Unknown' }}
+{{ power_outlet_status_check.results |
+          selectattr('json.status', 'defined') | list | length if power_outlet_status_check.results is defined else 'Unknown' }}
          responsive
       - Power Usage:
-        {{ (overall_power_status.json.current_usage / overall_power_status.json.max_capacity * 100) | round(1) if overall_power_status.json is defined else 'Unknown' }}
+{{ (overall_power_status.json.current_usage / overall_power_status.json.max_capacity * 100) |
+          round(1) if overall_power_status.json is defined else 'Unknown' }}
         %
       {% endif %}
-      - Configuration: {{ 'VALID' if config_validation.json.status == 'valid' else 'CHECK' if config_validation.json is defined else 'Not Tested' }}
-      - Backups Available: {{ backup_availability.json | length if backup_availability.json is defined else 'Unknown' }}
-      - Overall Status: {{ 'VALIDATION COMPLETE' if opengear_upgrade_state.target_version in system_info_validation.json.version else 'CHECK REQUIRED' }}
+      - >
+Configuration: {{ 'VALID' if config_validation.json.status == 'valid' else
+          'CHECK' if config_validation.json is defined else 'Not Tested' }}
+      - >
+Backups Available: {{ backup_availability.json |
+          length if backup_availability.json is defined else 'Unknown' }}
+      - >
+Overall Status: {{ 'VALIDATION COMPLETE' if
+          opengear_upgrade_state.target_version in system_info_validation.json.version else 'CHECK REQUIRED' }}

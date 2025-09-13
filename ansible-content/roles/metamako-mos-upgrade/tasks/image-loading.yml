@@ -11,7 +11,7 @@
 - name: Verify sufficient space
   ansible.builtin.assert:
     that:
-    - '''available'' in storage_status.stdout | lower'
+      - "'available' in storage_status.stdout | lower"
     fail_msg: Insufficient storage space for image loading
 - name: Verify upgrade server connectivity (from server side)
   ansible.builtin.wait_for:
@@ -27,9 +27,12 @@
   failed_when: false
 - name: Push firmware image from server to device (SCP)
   ansible.builtin.command:
-    cmd: 'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
-      '' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined
-      else '''' }} "{{ local_image_path }}" "{{ ansible_user }}@{{ ansible_host }}:/flash/{{
+    cmd: >
+      'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
+      '' + ansible_ssh_private_key_file
+        if ansible_ssh_private_key_file is defined
+      else '''' }} "{{ local_image_path }}" "{{
+        ansible_user }}@{{ ansible_host }}:/flash/{{
       target_image_filename }}"
 
       '
@@ -40,9 +43,12 @@
     ansible_connection: local
 - name: Alternative - Use SFTP for secure transfer
   ansible.builtin.command:
-    cmd: 'sftp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
-      '' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined
-      else '''' }} {{ ansible_user }}@{{ ansible_host }} <<< $''put {{ local_image_path
+    cmd: >
+      'sftp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
+      '' + ansible_ssh_private_key_file
+        if ansible_ssh_private_key_file is defined
+      else '''' }} {{ ansible_user }}@{{
+        ansible_host }} <<< $''put {{ local_image_path
       }} /flash/{{ target_image_filename }}''
 
       '
@@ -60,8 +66,8 @@
 - name: Validate image integrity
   ansible.builtin.assert:
     that:
-    - '''valid'' in image_verification.stdout | lower'
-    - target_image_filename in image_verification.stdout
+      - "'valid' in image_verification.stdout | lower"
+      - target_image_filename in image_verification.stdout
     fail_msg: Image download or validation failed
 - name: Stage image for installation
   ansible.netcommon.cli_command:
@@ -76,7 +82,7 @@
 - name: Confirm image is staged
   ansible.builtin.assert:
     that:
-    - target_image_filename in staged_verification.stdout
+      - target_image_filename in staged_verification.stdout
     fail_msg: Image staging failed
 - name: Calculate image checksum
   ansible.netcommon.cli_command:
@@ -87,7 +93,7 @@
 - name: Verify checksum matches expected
   ansible.builtin.assert:
     that:
-    - expected_checksum in image_checksum.stdout
+      - expected_checksum in image_checksum.stdout
     fail_msg: Image checksum validation failed
   when: expected_checksum is defined
 - name: Log loading completion
@@ -96,18 +102,25 @@
 
       - Local Source: {{ local_image_path }}
 
-      - Remote Destination: {{ ansible_host }}:/flash/{{ target_image_filename }}
+      - Remote Destination:
+        {{ ansible_host }}:/flash/{{ target_image_filename }}
 
-      - Transfer Method: {{ ''SCP (server-initiated PUSH)'' if scp_push_result is
+      - Transfer Method: {{ ''SCP
+        (server-initiated PUSH)'' if scp_push_result is
       succeeded else ''SFTP (server-initiated PUSH)'' }}
 
-      - Size: {{ image_verification.stdout | regex_search(''Size: ([\\d]+)'', ''\\1'')
+      - Size: {{ image_verification.stdout |
+        regex_search(''Size: ([\\d]+)'', ''\\1'')
       | first | default(''Unknown'') }} bytes
 
-      - Checksum: {{ ''Verified'' if expected_checksum is defined else ''Skipped''
+      - Checksum: {{ ''Verified'' if
+        expected_checksum is defined else ''Skipped''
       }}
 
       - Security: Server-initiated PUSH transfer
 
-      - Status: {{ ''Staged and Ready'' if target_image_filename in staged_verification.stdout
+      - >
+        Status: >
+          {{ ''Staged and Ready'' if target_image_filename
+            in staged_verification.stdout
       else ''Check Required'' }}'

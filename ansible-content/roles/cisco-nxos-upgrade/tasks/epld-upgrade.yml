@@ -12,7 +12,9 @@
 
     - name: Parse EPLD information
       ansible.builtin.set_fact:
-        epld_modules: "{{ current_epld_versions.stdout[0] | regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
+        epld_modules: >
+"{{ current_epld_versions.stdout[0] |
+            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
 
     - name: Display current EPLD status
       ansible.builtin.debug:
@@ -42,13 +44,17 @@
 
     - name: Check for dual supervisor setup
       ansible.builtin.set_fact:
-        has_dual_sup_for_epld: "{{ 'Supervisor' in system_compatibility.stdout[0] and system_compatibility.stdout[0].count('Supervisor') >= 2 }}"
+        has_dual_sup_for_epld: >
+"{{ 'Supervisor' in system_compatibility.stdout[0] and
+            system_compatibility.stdout[0].count('Supervisor') >= 2 }}"
 
     - name: Validate EPLD upgrade feasibility
       ansible.builtin.assert:
         that:
           - has_dual_sup_for_epld or allow_disruptive_epld | default(false)
-        fail_msg: "EPLD upgrade requires dual supervisors or explicit approval for disruptive upgrade"
+        fail_msg: >
+          "EPLD upgrade requires dual supervisors or
+            explicit approval for disruptive upgrade"
 
 - name: EPLD upgrade execution
   block:
@@ -88,7 +94,9 @@
         commands:
           - show install all status
       register: epld_upgrade_status
-      until: "'Success' in epld_upgrade_status.stdout[0] or 'Failed' in epld_upgrade_status.stdout[0]"
+      until: >
+        "'Success' in epld_upgrade_status.stdout[0]
+          or 'Failed' in epld_upgrade_status.stdout[0]"
       retries: 60
       delay: 30
       when: epld_upgrade_result is defined
@@ -110,7 +118,9 @@
 
     - name: Parse updated EPLD information
       ansible.builtin.set_fact:
-        updated_epld_modules: "{{ updated_epld_versions.stdout[0] | regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
+        updated_epld_modules: >
+"{{ updated_epld_versions.stdout[0] |
+            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}"
 
     - name: Verify EPLD version updates
       ansible.builtin.debug:
@@ -120,7 +130,8 @@
           - Module
             {{ module_info[0] }}
             :
-            {{ 'UPDATED' if module_info[1] != (epld_modules | selectattr('0', 'equalto', module_info[0]) | map(attribute='1') | first | default('unknown')) else 'UNCHANGED' }}
+{{ 'UPDATED' if module_info[1] != (epld_modules |
+              selectattr('0', 'equalto', module_info[0]) | map(attribute='1') | first | default('unknown')) else 'UNCHANGED' }}
              (
             {{ module_info[1] }}
             )
@@ -141,7 +152,8 @@
       cisco.nxos.nxos_command:
         commands:
           - "delete bootflash:{{ target_epld_image }}"
-      when: cleanup_epld_images | default(false) and target_epld_image is defined
+      when: >
+        cleanup_epld_images | default(false) and target_epld_image is defined
       failed_when: false
 
     - name: Document EPLD upgrade completion
@@ -149,19 +161,27 @@
         epld_upgrade_summary:
           timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
           modules_upgraded: "{{ epld_modules_to_upgrade | default(['all']) }}"
-          upgrade_method: "{{ 'Non-disruptive' if has_dual_sup_for_epld else 'Disruptive' }}"
-          success: "{{ epld_upgrade_status is defined and 'Success' in epld_upgrade_status.stdout[0] }}"
+          upgrade_method: >
+            "{{ 'Non-disruptive' if has_dual_sup_for_epld else 'Disruptive' }}"
+          success: >
+"{{ epld_upgrade_status is defined and
+              'Success' in epld_upgrade_status.stdout[0] }}"
 
 - name: EPLD upgrade completion log
   ansible.builtin.debug:
     msg: |
       EPLD Upgrade Completion Summary:
-      - Modules Processed: {{ epld_upgrade_summary.modules_upgraded | join(', ') }}
+      - >
+        Modules Processed: {{ epld_upgrade_summary.modules_upgraded | join(', ') }}
       - Upgrade Method: {{ epld_upgrade_summary.upgrade_method }}
       - Success: {{ epld_upgrade_summary.success }}
       - Pre-upgrade Modules: {{ epld_modules | length }}
-      - Post-upgrade Modules: {{ updated_epld_modules | length if updated_epld_modules is defined else 'Unknown' }}
-      - System Stable: {{ 'YES' if post_epld_stability is defined else 'CHECK REQUIRED' }}
+      - >
+Post-upgrade Modules: {{ updated_epld_modules |
+          length if updated_epld_modules is defined else 'Unknown' }}
+      - >
+System Stable: {{ 'YES' if post_epld_stability is defined else
+          'CHECK REQUIRED' }}
       - Timestamp: {{ epld_upgrade_summary.timestamp }}
 
   when: epld_upgrade_summary is defined

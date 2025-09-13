@@ -16,7 +16,9 @@
 
     - name: Update API token if refreshed
       ansible.builtin.set_fact:
-        opengear_api_token: "{{ token_refresh.json.token if token_refresh.json is defined else opengear_api_token }}"
+        opengear_api_token: >
+"{{ token_refresh.json.token if token_refresh.json is defined else
+            opengear_api_token }}"
 
     - name: Verify firmware image is ready for installation
       ansible.builtin.uri:
@@ -29,7 +31,9 @@
 
     - name: Confirm target firmware availability
       ansible.builtin.set_fact:
-        target_firmware_ready: "{{ pre_install_firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | selectattr('status', 'equalto',
+        target_firmware_ready: >
+          "{{ pre_install_firmware_list.json | selectattr('filename',
+            'equalto', target_firmware_filename) | selectattr('status', 'equalto',
           'ready') | list | length > 0 }}"
 
     - name: Validate firmware is ready
@@ -54,7 +58,9 @@
         body_format: json
         body:
           enabled: true
-          message: "Firmware upgrade in progress - console access temporarily unavailable"
+          message: >
+            "Firmware upgrade in progress -
+              console access temporarily unavailable"
         validate_certs: false
       register: maintenance_mode
       when: opengear_upgrade_state.device_type == "console_server"
@@ -75,9 +81,13 @@
     - name: Warn about critical power outlets
       ansible.builtin.debug:
         msg: |
-          WARNING: {{ critical_power_check.json | length if critical_power_check.json is defined else 0 }} critical power outlets detected.
+          WARNING: >
+{{ critical_power_check.json | length if
+              critical_power_check.json is defined else 0 }} critical power outlets detected.
           Firmware upgrade may cause brief power interruption.
-      when: opengear_upgrade_state.device_type == "smart_pdu" and critical_power_check.json is defined
+      when: >
+        opengear_upgrade_state.device_type == "smart_pdu"
+          and critical_power_check.json is defined
 
 - name: Execute firmware installation
   block:
@@ -90,7 +100,9 @@
           Content-Type: "application/json"
         body_format: json
         body:
-          description: "Pre-upgrade backup - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          description: >
+            "Pre-upgrade backup - {{ lookup('pipe',
+              'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
         validate_certs: false
       register: config_backup
 
@@ -106,19 +118,25 @@
           filename: "{{ target_firmware_filename }}"
           reboot: true
           preserve_config: true
-          backup_id: "{{ config_backup.json.backup_id if config_backup.json is defined else omit }}"
+          backup_id: >
+"{{ config_backup.json.backup_id if
+              config_backup.json is defined else omit }}"
         validate_certs: false
       register: firmware_install
 
     - name: Monitor installation progress (before reboot)
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/firmware/install/{{ firmware_install.json.install_id }}/status"
+        url: >
+          "https://{{ ansible_host }}/api/v1/system/firmware/install/{{
+            firmware_install.json.install_id }}/status"
         method: GET
         headers:
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: install_progress
-      until: install_progress.json.status in ['installing', 'rebooting', 'completed', 'failed']
+      until: >
+        install_progress.json.status in ['installing',
+          'rebooting', 'completed', 'failed']
       retries: 30
       delay: 10
       failed_when: install_progress.json.status == 'failed'
@@ -184,8 +202,11 @@
     - name: Confirm target firmware version
       ansible.builtin.assert:
         that:
-          - opengear_upgrade_state.target_version in post_install_info.json.version
-        fail_msg: "Installation completed but target version not active: {{ post_install_info.json.version }}"
+          - opengear_upgrade_state.target_version
+            in post_install_info.json.version
+        fail_msg: >
+          "Installation completed but target version not
+            active: {{ post_install_info.json.version }}"
 
     - name: Verify system health after installation
       ansible.builtin.uri:
@@ -255,8 +276,16 @@
       - Previous Version: {{ opengear_upgrade_state.current_version }}
       - New Version: {{ post_install_info.json.version }}
       - Installation Method: Web API
-      - Config Backup: {{ config_backup.json.backup_id if config_backup.json is defined else 'Not Created' }}
-      - System Health: {{ post_install_health.json.status if post_install_health.json is defined else 'Not Checked' }}
-      - Serial Ports: {{ post_serial_status.json | length if post_serial_status is defined else 'N/A' }} operational
-      - Power Outlets: {{ post_power_status.json | length if post_power_status is defined else 'N/A' }} operational
+      - >
+Config Backup: {{ config_backup.json.backup_id if
+          config_backup.json is defined else 'Not Created' }}
+      - >
+System Health: {{ post_install_health.json.status if
+          post_install_health.json is defined else 'Not Checked' }}
+      - >
+Serial Ports: {{ post_serial_status.json |
+          length if post_serial_status is defined else 'N/A' }} operational
+      - >
+Power Outlets: {{ post_power_status.json |
+          length if post_power_status is defined else 'N/A' }} operational
       - Status: SUCCESS

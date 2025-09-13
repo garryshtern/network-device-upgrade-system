@@ -29,7 +29,8 @@
 
     - name: Set architecture type based on API availability
       ansible.builtin.set_fact:
-        opengear_architecture: "{{ 'modern' if api_test.status == 200 else 'legacy' }}"
+        opengear_architecture: >
+          "{{ 'modern' if api_test.status == 200 else 'legacy' }}"
         api_available: "{{ api_test.status == 200 }}"
   rescue:
     - name: API unavailable, assume legacy architecture
@@ -52,8 +53,12 @@
 
     - name: Parse API device information
       ansible.builtin.set_fact:
-        opengear_upgrade_state: "{{ opengear_upgrade_state | combine({'device_model': device_info_api.json.model, 'current_version': device_info_api.json.version,
-          'device_type': 'smart_pdu' if 'CM8100' in device_info_api.json.model else 'console_server', 'architecture': 'modern', 'upgrade_method': 'api'}) }}"
+        opengear_upgrade_state: >
+          "{{ opengear_upgrade_state | combine({'device_model':
+            device_info_api.json.model, 'current_version': device_info_api.json.version,
+          'device_type': >
+            'smart_pdu' if 'CM8100' in device_info_api.json.model else
+              'console_server', 'architecture': 'modern', 'upgrade_method': 'api'}) }}"
 - name: Detect device information (Legacy CLI)
   when: not api_available
 
@@ -67,8 +72,12 @@
 
     - name: Parse CLI device information
       ansible.builtin.set_fact:
-        device_model_parsed: "{{ device_info_cli.stdout | regex_search('Model:\\s+(\\S+)', '\\1') | first }}"
-        current_version_parsed: "{{ device_info_cli.stdout | regex_search('Version:\\s+([\\d\\.]+)', '\\1') | first }}"
+        device_model_parsed: >
+          "{{ device_info_cli.stdout |
+            regex_search('Model:\\s+(\\S+)', '\\1') | first }}"
+        current_version_parsed: >
+          "{{ device_info_cli.stdout |
+            regex_search('Version:\\s+([\\d\\.]+)', '\\1') | first }}"
       when: not api_available
 
     - name: Set legacy device information
@@ -82,7 +91,9 @@
         }) }}"
       when: not api_available
 - name: Check device-specific capabilities
-  ansible.builtin.include_tasks: "{{ 'smart-pdu-check.yml' if opengear_upgrade_state.device_type == 'smart_pdu' else 'console-server-check.yml' }}"
+  ansible.builtin.include_tasks: >
+"{{ 'smart-pdu-check.yml' if opengear_upgrade_state.device_type == 'smart_pdu' else
+      'console-server-check.yml' }}"
 
 - name: Display upgrade plan
   ansible.builtin.debug:
@@ -101,7 +112,8 @@
 - name: Validate upgrade path
   ansible.builtin.assert:
     that:
-      - opengear_upgrade_state.current_version != opengear_upgrade_state.target_version
+      - >
+        opengear_upgrade_state.current_version != opengear_upgrade_state.target_version
       - opengear_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+")
     fail_msg: "Invalid upgrade path or target version format"
 

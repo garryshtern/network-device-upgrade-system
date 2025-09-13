@@ -13,13 +13,15 @@
     license_details:
       status: "{{ license_info.meta.results.status }}"
       expiry: "{{ license_info.meta.results.expiry_date | default('unknown') }}"
-      support_contract: "{{ license_info.meta.results.support | default('unknown') }}"
+      support_contract: >
+        "{{ license_info.meta.results.support | default('unknown') }}"
 
 - name: Check license expiry
   block:
     - name: Parse expiry date
       ansible.builtin.set_fact:
-        license_expires: "{{ license_details.expiry | to_datetime('%Y-%m-%d') }}"
+        license_expires: >
+          "{{ license_details.expiry | to_datetime('%Y-%m-%d') }}"
         current_date: "{{ ansible_date_time.date | to_datetime('%Y-%m-%d') }}"
       when: license_details.expiry != "unknown"
 
@@ -46,7 +48,10 @@
 
     - name: Update license status
       ansible.builtin.set_fact:
-        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({'license_status': 'valid' if license_details.status in ['valid', 'registered'] else 'invalid'})
+        fortios_upgrade_state: >
+          "{{ fortios_upgrade_state | combine({'license_status': >
+            'valid' if license_details.status in
+              ['valid', 'registered'] else 'invalid'})
           }}"
 
 - name: Check firmware download entitlement
@@ -60,15 +65,21 @@
   block:
     - name: Check available firmware versions
       ansible.builtin.debug:
-        msg: "Available firmware versions: {{ firmware_entitlement.meta.results.available | default([]) }}"
+        msg: >
+          "Available firmware versions: >
+            {{ firmware_entitlement.meta.results.available | default([]) }}"
       when: firmware_entitlement.meta is defined
 
     - name: Verify target version availability
       ansible.builtin.assert:
         that:
-          - fortios_upgrade_state.target_version in (firmware_entitlement.meta.results.available | map(attribute='version') | list)
+          - >
+            fortios_upgrade_state.target_version in
+              (firmware_entitlement.meta.results.available | map(attribute='version') | list)
         fail_msg: "Target firmware version not available with current license"
-      when: firmware_entitlement.meta is defined and firmware_entitlement.meta.results.available is defined
+      when: >
+        firmware_entitlement.meta is defined and
+          firmware_entitlement.meta.results.available is defined
 
 - name: Log license validation results
   ansible.builtin.debug:
@@ -78,5 +89,8 @@
       - Support Contract: {{ license_details.support_contract }}
       - Expiry Date: {{ license_details.expiry }}
       - Days Until Expiry: {{ days_until_expiry | default('N/A') }}
-      - Firmware Access: {{ 'Validated' if firmware_entitlement.meta is defined else 'Not Checked' }}
+      - >
+        Firmware Access: >
+{{ 'Validated' if firmware_entitlement.meta is defined else
+            'Not Checked' }}
       - Overall Status: {{ fortios_upgrade_state.license_status }}

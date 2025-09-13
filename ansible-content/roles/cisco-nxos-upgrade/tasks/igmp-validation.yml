@@ -1,5 +1,6 @@
 ---
-# IGMP (Internet Group Management Protocol) Validation Tasks for Cisco NX-OS Devices
+# IGMP (Internet Group Management Protocol) Validation Tasks for Cisco NX-OS
+# Devices
 # Validates IGMP snooping, groups, and multicast forwarding post-upgrade
 
 - name: IGMP configuration and status validation
@@ -38,7 +39,8 @@
       ansible.builtin.set_fact:
         igmp_snooping_vlans: >-
           {{ igmp_snooping_status.stdout[0] | from_json |
-             json_query('TABLE_vlan.ROW_vlan[*].{vlan: vlan_id, enabled: snooping_enabled}') }}
+             json_query('TABLE_vlan.ROW_vlan[*].{vlan:
+               vlan_id, enabled: snooping_enabled}') }}
       when:
         - igmp_snooping_status.rc == 0
         - igmp_snooping_status.stdout[0] | length > 10
@@ -46,7 +48,8 @@
     - name: Count enabled IGMP snooping VLANs
       ansible.builtin.set_fact:
         igmp_enabled_vlans: >-
-          {{ igmp_snooping_vlans | selectattr('enabled', 'equalto', 'true') | list | length }}
+          {{ igmp_snooping_vlans | selectattr('enabled',
+            'equalto', 'true') | list | length }}
         igmp_total_vlans: >-
           {{ igmp_snooping_vlans | length }}
       when: igmp_snooping_vlans is defined
@@ -57,7 +60,8 @@
       ansible.builtin.set_fact:
         igmp_interfaces: >-
           {{ igmp_interface_config.stdout[0] | from_json |
-             json_query('TABLE_intf.ROW_intf[*].{interface: intf_name, version: version, querier: querier_addr}') }}
+             json_query('TABLE_intf.ROW_intf[*].{interface: >
+               intf_name, version: version, querier: querier_addr}') }}
       when:
         - igmp_interface_config.rc == 0
         - igmp_interface_config.stdout[0] | length > 10
@@ -73,7 +77,8 @@
       ansible.builtin.set_fact:
         igmp_active_groups: >-
           {{ igmp_groups.stdout[0] | from_json |
-             json_query('TABLE_group.ROW_group[*].{group: grp_addr, interface: intf_name, mode: mode, uptime: uptime}') }}
+             json_query('TABLE_group.ROW_group[*].{group: >
+               grp_addr, interface: intf_name, mode: mode, uptime: uptime}') }}
       when:
         - igmp_groups.rc == 0
         - igmp_groups.stdout[0] | length > 10
@@ -82,14 +87,17 @@
       ansible.builtin.set_fact:
         igmp_snooping_active_groups: >-
           {{ igmp_snooping_groups.stdout[0] | from_json |
-             json_query('TABLE_group.ROW_group[*].{group: grp_addr, vlan: vlan_id, ports: port_list}') }}
+             json_query('TABLE_group.ROW_group[*].{group: >
+               grp_addr, vlan: vlan_id, ports: port_list}') }}
       when:
         - igmp_snooping_groups.rc == 0
         - igmp_snooping_groups.stdout[0] | length > 10
 
     - name: Count total IGMP groups
       ansible.builtin.set_fact:
-        total_igmp_groups: "{{ (igmp_active_groups | length) + (igmp_snooping_active_groups | length) }}"
+        total_igmp_groups: >
+"{{ (igmp_active_groups | length) +
+            (igmp_snooping_active_groups | length) }}"
       when:
         - igmp_active_groups is defined
         - igmp_snooping_active_groups is defined
@@ -102,7 +110,9 @@
           - igmp_enabled_vlans is defined
           - igmp_enabled_vlans | int > 0
         fail_msg: "No VLANs have IGMP snooping enabled"
-        success_msg: "{{ igmp_enabled_vlans }} VLAN(s) have IGMP snooping enabled out of {{ igmp_total_vlans }} total"
+        success_msg: >
+          "{{ igmp_enabled_vlans }} VLAN(s) have IGMP
+            snooping enabled out of {{ igmp_total_vlans }} total"
       when: igmp_snooping_vlans is defined
 
     - name: Verify IGMP is configured on interfaces
@@ -111,7 +121,8 @@
           - igmp_active_interfaces is defined
           - igmp_active_interfaces | int > 0
         fail_msg: "No interfaces have IGMP enabled"
-        success_msg: "{{ igmp_active_interfaces }} interface(s) have IGMP enabled"
+        success_msg: >
+          "{{ igmp_active_interfaces }} interface(s) have IGMP enabled"
       when: igmp_interfaces is defined
 
     - name: Verify IGMP groups are present (if expected)
@@ -120,7 +131,8 @@
           - total_igmp_groups is defined
           - total_igmp_groups | int >= 0
         fail_msg: "IGMP group validation failed"
-        success_msg: "{{ total_igmp_groups }} total IGMP group memberships found"
+        success_msg: >
+          "{{ total_igmp_groups }} total IGMP group memberships found"
       when: total_igmp_groups is defined
 
 - name: Check IGMP querier functionality
@@ -163,7 +175,8 @@
     - name: Parse IGMP error conditions
       ansible.builtin.set_fact:
         igmp_errors: >-
-          {{ igmp_logs.stdout[0] | regex_findall('.*ERROR.*igmp.*|.*WARN.*igmp.*', ignorecase=True) }}
+          {{ igmp_logs.stdout[0] |
+            regex_findall('.*ERROR.*igmp.*|.*WARN.*igmp.*', ignorecase=True) }}
       when:
         - igmp_logs.rc == 0
         - igmp_logs.stdout[0] | length > 0
@@ -172,7 +185,9 @@
       ansible.builtin.assert:
         that:
           - igmp_errors | length == 0
-        fail_msg: "IGMP errors found in logs: {{ igmp_errors[:3] }}"  # Show first 3 errors
+        fail_msg: >
+          "IGMP errors found in logs: {{
+            igmp_errors[:3] }}" # Show first 3 errors
         success_msg: "No IGMP errors found in recent logs"
       when: igmp_errors is defined
 
@@ -181,15 +196,22 @@
     msg: |
       IGMP Validation Summary:
       ========================
-      IGMP Snooping VLANs: {{ igmp_enabled_vlans if igmp_enabled_vlans is defined else 'N/A' }}/{{ igmp_total_vlans if igmp_total_vlans is defined else 'N/A' }}
-      IGMP Interfaces: {{ igmp_active_interfaces if igmp_active_interfaces is defined else 'N/A' }}
-      Total IGMP Groups: {{ total_igmp_groups if total_igmp_groups is defined else 'N/A' }}
-      Active Queriers: {{ igmp_queriers | length if igmp_queriers is defined else 'N/A' }}
+      IGMP Snooping VLANs: >
+{{ igmp_enabled_vlans if igmp_enabled_vlans is defined else
+          'N/A' }}/{{ igmp_total_vlans if igmp_total_vlans is defined else 'N/A' }}
+      IGMP Interfaces: >
+{{ igmp_active_interfaces if igmp_active_interfaces is defined else
+          'N/A' }}
+      Total IGMP Groups: >
+        {{ total_igmp_groups if total_igmp_groups is defined else 'N/A' }}
+      Active Queriers: >
+        {{ igmp_queriers | length if igmp_queriers is defined else 'N/A' }}
 
       {% if igmp_interfaces is defined %}
       IGMP Interface Details:
       {% for intf in igmp_interfaces %}
-      - {{ intf.interface }}: Version {{ intf.version }}, Querier {{ intf.querier }}
+      - >
+        {{ intf.interface }}: Version {{ intf.version }}, Querier {{ intf.querier }}
       {% endfor %}
       {% endif %}
 
@@ -200,7 +222,8 @@
       {% endfor %}
       {% endif %}
 
-      {% if igmp_snooping_active_groups is defined and igmp_snooping_active_groups | length > 0 %}
+      {% if igmp_snooping_active_groups is defined
+        and igmp_snooping_active_groups | length > 0 %}
       IGMP Snooping Groups (first 5):
       {% for group in igmp_snooping_active_groups[:5] %}
       - {{ group.group }} in VLAN {{ group.vlan }}
@@ -208,19 +231,26 @@
       {% endif %}
 
       Health Status:
-        {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans | int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
+{{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans |
+          int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
 
 - name: Store IGMP validation baseline
   ansible.builtin.copy:
     content: |
-      \t# IGMP Validation Baseline - {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
+      \t# IGMP Validation Baseline - {{
+        lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
       \t# Generated during firmware upgrade validation
 
-      IGMP_Snooping_Enabled_VLANs: {{ igmp_enabled_vlans if igmp_enabled_vlans is defined else 0 }}
-      IGMP_Total_VLANs: {{ igmp_total_vlans if igmp_total_vlans is defined else 0 }}
-      IGMP_Active_Interfaces: {{ igmp_active_interfaces if igmp_active_interfaces is defined else 0 }}
-      Total_IGMP_Groups: {{ total_igmp_groups if total_igmp_groups is defined else 0 }}
-      Active_Queriers: {{ igmp_queriers | length if igmp_queriers is defined else 0 }}
+      IGMP_Snooping_Enabled_VLANs: >
+        {{ igmp_enabled_vlans if igmp_enabled_vlans is defined else 0 }}
+      IGMP_Total_VLANs: >
+        {{ igmp_total_vlans if igmp_total_vlans is defined else 0 }}
+      IGMP_Active_Interfaces: >
+        {{ igmp_active_interfaces if igmp_active_interfaces is defined else 0 }}
+      Total_IGMP_Groups: >
+        {{ total_igmp_groups if total_igmp_groups is defined else 0 }}
+      Active_Queriers: >
+        {{ igmp_queriers | length if igmp_queriers is defined else 0 }}
 
       {% if igmp_interfaces is defined %}
       IGMP_Interface_Details:
@@ -259,8 +289,11 @@
       {% endif %}
 
       Validation_Status:
-        {{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans | int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
+{{ 'PASS' if (igmp_enabled_vlans is defined and igmp_enabled_vlans |
+          int > 0) or (igmp_active_interfaces is defined and igmp_active_interfaces | int > 0) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-    dest: "/tmp/igmp_validation_{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}.txt"
+    dest: >
+"/tmp/igmp_validation_{{ inventory_hostname }}_{{ ansible_play_batch |
+        hash('md5') }}.txt"
     mode: "0644"
   delegate_to: localhost

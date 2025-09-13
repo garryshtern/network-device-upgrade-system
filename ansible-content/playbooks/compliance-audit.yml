@@ -11,7 +11,8 @@
     audit_timestamp: "{{ ansible_date_time.iso8601 }}"
     audit_results_path: "/var/lib/network-upgrade/compliance"
     compliance_standards: >
-      {{ compliance_standards | default(['security_baseline', 'network_hardening']) }}
+      {{ compliance_standards |
+        default(['security_baseline', 'network_hardening']) }}
     generate_report: "{{ generate_report | default(true) }}"
   pre_tasks:
     - name: Create compliance audit directory
@@ -47,7 +48,8 @@
             tasks_from: security-baseline
           vars:
             audit_output: >
-              {{ audit_results_path }}/{{ inventory_hostname }}/security_baseline_{{ audit_timestamp }}.json
+              {{ audit_results_path }}/{{ inventory_hostname
+                }}/security_baseline_{{ audit_timestamp }}.json
 
         - name: Update compliance results - security baseline
           ansible.builtin.set_fact:
@@ -80,7 +82,8 @@
               {{
                 compliance_results | combine({
                   'compliance_checks': {
-                    'failed': compliance_results.compliance_checks.failed + ['security_baseline_audit_error']
+                    'failed': >
+                      compliance_results.compliance_checks.failed + ['security_baseline_audit_error']
                   }
                 })
               }}
@@ -92,19 +95,26 @@
             name: compliance-validation
             tasks_from: network-hardening
           vars:
-            audit_output: "{{ audit_results_path }}/{{ inventory_hostname }}/network_hardening_{{ audit_timestamp }}.json"
+            audit_output: >
+              "{{ audit_results_path }}/{{ inventory_hostname
+                }}/network_hardening_{{ audit_timestamp }}.json"
 
         - name: Update compliance results - network hardening
           ansible.builtin.set_fact:
             compliance_results: >
               {{
                 compliance_results | combine({
-                  'standards_tested': compliance_results.standards_tested + ['network_hardening'],
+                  'standards_tested': >
+                    compliance_results.standards_tested + ['network_hardening'],
                   'compliance_checks': {
-                    'passed': compliance_results.compliance_checks.passed + network_hardening_results.passed,
-                    'failed': compliance_results.compliance_checks.failed + network_hardening_results.failed,
-                    'skipped': compliance_results.compliance_checks.skipped + network_hardening_results.skipped,
-                    'warnings': compliance_results.compliance_checks.warnings + network_hardening_results.warnings
+                    'passed': >
+                      compliance_results.compliance_checks.passed + network_hardening_results.passed,
+                    'failed': >
+                      compliance_results.compliance_checks.failed + network_hardening_results.failed,
+                    'skipped': >
+                      compliance_results.compliance_checks.skipped + network_hardening_results.skipped,
+                    'warnings': >
+                      compliance_results.compliance_checks.warnings + network_hardening_results.warnings
                   }
                 })
               }}
@@ -116,7 +126,8 @@
               {{
                 compliance_results | combine({
                   'compliance_checks': {
-                    'failed': compliance_results.compliance_checks.failed + ['network_hardening_audit_error']
+                    'failed': >
+                      compliance_results.compliance_checks.failed + ['network_hardening_audit_error']
                   }
                 })
               }}
@@ -128,7 +139,9 @@
             name: cisco-nxos-upgrade
             tasks_from: compliance-audit
           vars:
-            audit_output: "{{ audit_results_path }}/{{ inventory_hostname }}/nxos_compliance_{{ audit_timestamp }}.json"
+            audit_output: >
+              "{{ audit_results_path }}/{{ inventory_hostname
+                }}/nxos_compliance_{{ audit_timestamp }}.json"
           when: ansible_network_os == 'nxos'
 
         # Cisco IOS-XE Compliance
@@ -137,7 +150,9 @@
             name: cisco-iosxe-upgrade
             tasks_from: compliance-audit
           vars:
-            audit_output: "{{ audit_results_path }}/{{ inventory_hostname }}/iosxe_compliance_{{ audit_timestamp }}.json"
+            audit_output: >
+              "{{ audit_results_path }}/{{ inventory_hostname
+                }}/iosxe_compliance_{{ audit_timestamp }}.json"
           when: ansible_network_os == 'ios'
 
         # Metamako MOS Compliance
@@ -146,7 +161,9 @@
             name: metamako-mos-upgrade
             tasks_from: compliance-audit
           vars:
-            audit_output: "{{ audit_results_path }}/{{ inventory_hostname }}/mos_compliance_{{ audit_timestamp }}.json"
+            audit_output: >
+              "{{ audit_results_path }}/{{ inventory_hostname
+                }}/mos_compliance_{{ audit_timestamp }}.json"
           when: ansible_network_os == 'mos'
 
         # Opengear Compliance
@@ -155,7 +172,9 @@
             name: opengear-upgrade
             tasks_from: compliance-audit
           vars:
-            audit_output: "{{ audit_results_path }}/{{ inventory_hostname }}/opengear_compliance_{{ audit_timestamp }}.json"
+            audit_output: >
+              "{{ audit_results_path }}/{{ inventory_hostname
+                }}/opengear_compliance_{{ audit_timestamp }}.json"
           when: ansible_network_os == 'opengear'
 
         # FortiOS Compliance
@@ -164,7 +183,9 @@
             name: fortios-upgrade
             tasks_from: compliance-audit
           vars:
-            audit_output: "{{ audit_results_path }}/{{ inventory_hostname }}/fortios_compliance_{{ audit_timestamp }}.json"
+            audit_output: >
+              "{{ audit_results_path }}/{{ inventory_hostname
+                }}/fortios_compliance_{{ audit_timestamp }}.json"
           when: ansible_network_os == 'fortios'
 
         - name: Update compliance results - platform specific
@@ -172,12 +193,17 @@
             compliance_results: >
               {{
                 compliance_results | combine({
-                  'standards_tested': compliance_results.standards_tested + ['platform_specific'],
+                  'standards_tested': >
+                    compliance_results.standards_tested + ['platform_specific'],
                   'compliance_checks': {
-                    'passed': compliance_results.compliance_checks.passed + platform_compliance_results.passed,
-                    'failed': compliance_results.compliance_checks.failed + platform_compliance_results.failed,
-                    'skipped': compliance_results.compliance_checks.skipped + platform_compliance_results.skipped,
-                    'warnings': compliance_results.compliance_checks.warnings + platform_compliance_results.warnings
+                    'passed': >
+                      compliance_results.compliance_checks.passed + platform_compliance_results.passed,
+                    'failed': >
+                      compliance_results.compliance_checks.failed + platform_compliance_results.failed,
+                    'skipped': >
+                      compliance_results.compliance_checks.skipped + platform_compliance_results.skipped,
+                    'warnings': >
+                      compliance_results.compliance_checks.warnings + platform_compliance_results.warnings
                   }
                 })
               }}
@@ -190,7 +216,8 @@
               {{
                 compliance_results | combine({
                   'compliance_checks': {
-                    'failed': compliance_results.compliance_checks.failed + ['platform_compliance_audit_error']
+                    'failed': >
+                      compliance_results.compliance_checks.failed + ['platform_compliance_audit_error']
                   }
                 })
               }}
@@ -198,13 +225,19 @@
   post_tasks:
     - name: Calculate compliance metrics
       ansible.builtin.set_fact:
-        total_checks: "{{ (compliance_results.compliance_checks.passed | length + compliance_results.compliance_checks.failed | length) }}"
-        compliance_percentage: "{{ (compliance_results.compliance_checks.passed | length / total_checks * 100) | round(2) if total_checks | int > 0 else 0 }}"
+        total_checks: >-
+          {{ (compliance_results.compliance_checks.passed |
+            length + compliance_results.compliance_checks.failed | length) }}
+        compliance_percentage: >-
+          {{ (compliance_results.compliance_checks.passed |
+            length / total_checks * 100) | round(2) if total_checks | int > 0 else 0 }}
 
     - name: Generate compliance report
       ansible.builtin.template:
         src: "templates/compliance-report.j2"
-        dest: "{{ audit_results_path }}/{{ inventory_hostname }}/compliance_report_{{ audit_timestamp }}.json"
+        dest: >
+          "{{ audit_results_path }}/{{ inventory_hostname
+            }}/compliance_report_{{ audit_timestamp }}.json"
         mode: "0644"
       vars:
         report_data: "{{ compliance_results }}"
@@ -216,7 +249,9 @@
     - name: Generate human-readable compliance report
       ansible.builtin.template:
         src: "templates/compliance-report.html.j2"
-        dest: "{{ audit_results_path }}/{{ inventory_hostname }}/compliance_report_{{ audit_timestamp }}.html"
+        dest: >
+          "{{ audit_results_path }}/{{ inventory_hostname
+            }}/compliance_report_{{ audit_timestamp }}.html"
         mode: "0644"
       vars:
         report_data: "{{ compliance_results }}"
@@ -227,13 +262,17 @@
 
     - name: Record compliance metrics to InfluxDB
       ansible.builtin.uri:
-        url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
+        url: >
+          "{{ influxdb_url }}/api/v2/write?bucket={{
+            influxdb_bucket }}&org={{ influxdb_org }}"
         method: POST
         headers:
           Authorization: "Token {{ influxdb_token }}"
-        body: >
-          compliance_audit,device_id={{ inventory_hostname }},device_type={{ ansible_network_os }},
-          site_location={{ site_name | default('unknown') }},vendor={{ vendor | default('unknown') }},
+        body: >-
+          compliance_audit,device_id={{ inventory_hostname }},
+          device_type={{ ansible_network_os }},
+          site_location={{ site_name | default('unknown') }},
+          vendor={{ vendor | default('unknown') }},
           platform={{ ansible_network_os }}
           compliance_score={{ compliance_percentage }},
           checks_passed={{ compliance_results.compliance_checks.passed | length }},
@@ -259,7 +298,8 @@
           custom_fields:
             compliance_score: "{{ compliance_percentage }}"
             last_compliance_audit: "{{ audit_timestamp }}"
-            compliance_status: "{{ 'compliant' if compliance_percentage >= 90 else 'non_compliant' }}"
+            compliance_status: >-
+              {{ 'compliant' if compliance_percentage >= 90 else 'non_compliant' }}
       when:
         - netbox_url is defined
         - netbox_token is defined
@@ -273,15 +313,24 @@
           - "Platform: {{ ansible_network_os }}"
           - "Firmware Version: {{ compliance_results.firmware_version }}"
           - "Audit Timestamp: {{ audit_timestamp }}"
-          - "Standards Tested: {{ compliance_results.standards_tested | join(', ') }}"
-          - "Checks Passed: {{ compliance_results.compliance_checks.passed | length }}"
-          - "Checks Failed: {{ compliance_results.compliance_checks.failed | length }}"
-          - "Warnings: {{ compliance_results.compliance_checks.warnings | length }}"
+          - >
+            "Standards Tested: {{ compliance_results.standards_tested | join(', ') }}"
+          - >
+            "Checks Passed: {{ compliance_results.compliance_checks.passed | length }}"
+          - >
+            "Checks Failed: {{ compliance_results.compliance_checks.failed | length }}"
+          - >
+            "Warnings: {{ compliance_results.compliance_checks.warnings | length }}"
           - "Compliance Score: {{ compliance_percentage }}%"
-          - "Overall Status: {{ 'COMPLIANT' if compliance_percentage >= 90 else 'NON-COMPLIANT' }}"
-          - "Report Location: {{ audit_results_path }}/{{ inventory_hostname }}/"
+          - >
+"Overall Status: {{ 'COMPLIANT' if
+              compliance_percentage >= 90 else 'NON-COMPLIANT' }}"
+          - >
+            "Report Location: {{ audit_results_path }}/{{ inventory_hostname }}/"
           - "==============================="
 
     - name: Compliance audit completion
       ansible.builtin.debug:
-        msg: "Compliance audit completed for {{ inventory_hostname }} - Score: {{ compliance_percentage }}%"
+        msg: >
+          "Compliance audit completed for {{ inventory_hostname
+            }} - Score: {{ compliance_percentage }}%"

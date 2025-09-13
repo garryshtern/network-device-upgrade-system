@@ -24,8 +24,10 @@
           - show ip bgp summary | json
       register: bgp_convergence_check
       until: >
-        bgp_convergence_check.stdout[0] | from_json | json_query('TABLE_vrf.ROW_vrf[0].TABLE_saf.ROW_saf[0].TABLE_neighbor.ROW_neighbor[?state==`Established`]') | length ==
-        bgp_initial_state.stdout[0] | from_json | json_query('TABLE_vrf.ROW_vrf[0].TABLE_saf.ROW_saf[0].TABLE_neighbor.ROW_neighbor') | length
+        bgp_convergence_check.stdout[0] | from_json |
+          json_query('TABLE_vrf.ROW_vrf[0].TABLE_saf.ROW_saf[0].TABLE_neighbor.ROW_neighbor[?state==`Established`]') | length ==
+        bgp_initial_state.stdout[0] | from_json |
+          json_query('TABLE_vrf.ROW_vrf[0].TABLE_saf.ROW_saf[0].TABLE_neighbor.ROW_neighbor') | length
       retries: 30
       delay: 10
       when: bgp_initial_state is defined and bgp_initial_state.rc == 0
@@ -33,15 +35,21 @@
 
     - name: Calculate BGP convergence time
       set_fact:
-        bgp_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
+        bgp_convergence_time: >
+          "{{ ansible_play_batch | hash('md5') |
+            int - convergence_start_time | int }}"
       when: bgp_convergence_check is defined
 
     - name: Store BGP convergence results
       set_fact:
         convergence_results: "{{ convergence_results | combine({'bgp': {
-          'converged': bgp_convergence_check is defined and bgp_convergence_check is not failed,
+          'converged': >
+            bgp_convergence_check is defined
+              and bgp_convergence_check is not failed,
           'time_seconds': bgp_convergence_time | default(-1) | int,
-          'neighbors_established': bgp_convergence_check.stdout[0] | from_json | json_query('TABLE_vrf.ROW_vrf[0].TABLE_saf.ROW_saf[0].TABLE_neighbor.ROW_neighbor[?state==`Established`]') | length if bgp_convergence_check is defined else 0
+          'neighbors_established': >
+            bgp_convergence_check.stdout[0] | from_json | json_query('TABLE_vrf.ROW_vrf[0].TABLE_saf.ROW_saf[0].TABLE_neighbor.ROW_neighbor[?state==`Established`]') | length if bgp_convergence_check
+              is defined else 0
         }}) }}"
       when: bgp_initial_state is defined
 
@@ -61,8 +69,10 @@
           - show ip ospf neighbor | json
       register: ospf_convergence_check
       until: >
-        ospf_convergence_check.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor[?state==`Full`]') | length ==
-        ospf_initial_state.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length
+        ospf_convergence_check.stdout[0] | from_json |
+          json_query('TABLE_neighbor.ROW_neighbor[?state==`Full`]') | length ==
+        ospf_initial_state.stdout[0] | from_json |
+          json_query('TABLE_neighbor.ROW_neighbor') | length
       retries: 20
       delay: 5
       when: ospf_initial_state is defined and ospf_initial_state.rc == 0
@@ -70,15 +80,21 @@
 
     - name: Calculate OSPF convergence time
       set_fact:
-        ospf_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
+        ospf_convergence_time: >
+          "{{ ansible_play_batch | hash('md5') |
+            int - convergence_start_time | int }}"
       when: ospf_convergence_check is defined
 
     - name: Store OSPF convergence results
       set_fact:
         convergence_results: "{{ convergence_results | combine({'ospf': {
-          'converged': ospf_convergence_check is defined and ospf_convergence_check is not failed,
+          'converged': >
+            ospf_convergence_check is defined
+              and ospf_convergence_check is not failed,
           'time_seconds': ospf_convergence_time | default(-1) | int,
-          'neighbors_full': ospf_convergence_check.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor[?state==`Full`]') | length if ospf_convergence_check is defined else 0
+          'neighbors_full': >
+            ospf_convergence_check.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor[?state==`Full`]') |
+              length if ospf_convergence_check is defined else 0
         }}) }}"
       when: ospf_initial_state is defined
 
@@ -98,8 +114,10 @@
           - show ip eigrp neighbors | json
       register: eigrp_convergence_check
       until: >
-        eigrp_convergence_check.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length ==
-        eigrp_initial_state.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length
+        eigrp_convergence_check.stdout[0] | from_json |
+          json_query('TABLE_neighbor.ROW_neighbor') | length ==
+        eigrp_initial_state.stdout[0] | from_json |
+          json_query('TABLE_neighbor.ROW_neighbor') | length
       retries: 15
       delay: 5
       when: eigrp_initial_state is defined and eigrp_initial_state.rc == 0
@@ -107,15 +125,21 @@
 
     - name: Calculate EIGRP convergence time
       set_fact:
-        eigrp_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
+        eigrp_convergence_time: >
+          "{{ ansible_play_batch | hash('md5') |
+            int - convergence_start_time | int }}"
       when: eigrp_convergence_check is defined
 
     - name: Store EIGRP convergence results
       set_fact:
         convergence_results: "{{ convergence_results | combine({'eigrp': {
-          'converged': eigrp_convergence_check is defined and eigrp_convergence_check is not failed,
+          'converged': >
+            eigrp_convergence_check is defined
+              and eigrp_convergence_check is not failed,
           'time_seconds': eigrp_convergence_time | default(-1) | int,
-          'neighbors_up': eigrp_convergence_check.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length if eigrp_convergence_check is defined else 0
+          'neighbors_up': >
+            eigrp_convergence_check.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') |
+              length if eigrp_convergence_check is defined else 0
         }}) }}"
       when: eigrp_initial_state is defined
 
@@ -133,7 +157,8 @@
           - show interface brief | json
       register: interface_stability_check
       until: >
-        interface_stability_check.stdout[0] | from_json | json_query('TABLE_interface.ROW_interface[?state==`up`]') | length ==
+        interface_stability_check.stdout[0] | from_json |
+          json_query('TABLE_interface.ROW_interface[?state==`up`]') | length ==
         (interface_baseline.up_interfaces | default(0) | int)
       retries: 20
       delay: 5
@@ -142,15 +167,21 @@
 
     - name: Calculate interface convergence time
       set_fact:
-        interface_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
+        interface_convergence_time: >
+          "{{ ansible_play_batch | hash('md5') |
+            int - convergence_start_time | int }}"
       when: interface_stability_check is defined
 
     - name: Store interface convergence results
       set_fact:
         convergence_results: "{{ convergence_results | combine({'interfaces': {
-          'converged': interface_stability_check is defined and interface_stability_check is not failed,
+          'converged': >
+            interface_stability_check is defined
+              and interface_stability_check is not failed,
           'time_seconds': interface_convergence_time | default(-1) | int,
-          'interfaces_up': interface_stability_check.stdout[0] | from_json | json_query('TABLE_interface.ROW_interface[?state==`up`]') | length if interface_stability_check is defined else 0,
+          'interfaces_up': >
+            interface_stability_check.stdout[0] | from_json | json_query('TABLE_interface.ROW_interface[?state==`up`]') |
+              length if interface_stability_check is defined else 0,
           'expected_up': interface_baseline.up_interfaces | default(0)
         }}) }}"
 
@@ -177,15 +208,21 @@
 
     - name: Calculate routing convergence time
       set_fact:
-        routing_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
+        routing_convergence_time: >
+          "{{ ansible_play_batch | hash('md5') |
+            int - convergence_start_time | int }}"
       when: route_stability_check is defined
 
     - name: Store routing convergence results
       set_fact:
         convergence_results: "{{ convergence_results | combine({'routing': {
-          'converged': route_stability_check is defined and route_stability_check is not failed,
+          'converged': >
+            route_stability_check is defined
+              and route_stability_check is not failed,
           'time_seconds': routing_convergence_time | default(-1) | int,
-          'current_routes': (route_stability_check.stdout[0] | from_json).total_routes | default(0) if route_stability_check is defined else 0,
+          'current_routes': >
+            (route_stability_check.stdout[0] | from_json).total_routes |
+              default(0) if route_stability_check is defined else 0,
           'expected_routes': routing_baseline.total_routes | default(0)
         }}) }}"
 
@@ -193,7 +230,9 @@
   block:
     - name: Calculate total convergence time
       set_fact:
-        total_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
+        total_convergence_time: >
+          "{{ ansible_play_batch | hash('md5') |
+            int - convergence_start_time | int }}"
 
     - name: Determine convergence success
       set_fact:
@@ -211,7 +250,8 @@
     msg: |
       Protocol Convergence Validation Results:
 
-      Overall Status: {{ 'CONVERGED' if overall_convergence_success else 'PARTIAL/FAILED' }}
+      Overall Status: >
+        {{ 'CONVERGED' if overall_convergence_success else 'PARTIAL/FAILED' }}
       Total Time: {{ total_convergence_time }} seconds
 
       Per-Protocol Results:
@@ -244,7 +284,8 @@
       {% endif %}
       {% if 'interfaces' in convergence_results %}
       - Interfaces:
-        {{ 'CONVERGED' if convergence_results.interfaces.converged else 'FAILED' }}
+{{ 'CONVERGED' if convergence_results.interfaces.converged else
+          'FAILED' }}
          (
         {{ convergence_results.interfaces.time_seconds }}
         s,

@@ -10,7 +10,9 @@
 
 - name: Parse running image filename
   ansible.builtin.set_fact:
-    running_image_file: "{{ running_image_result.stdout[0] | regex_search('bootflash:///(.+\\.bin)', '\\1') | first }}"
+    running_image_file: >
+"{{ running_image_result.stdout[0] |
+        regex_search('bootflash:///(.+\\.bin)', '\\1') | first }}"
   when: running_image_result.stdout[0] is defined
 
 - name: Get bootflash directory listing
@@ -21,13 +23,18 @@
 
 - name: Parse bootflash directory for image files
   ansible.builtin.set_fact:
-    bootflash_images: "{{ bootflash_dir.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+\\.bin)') }}"
-    bootflash_files: "{{ bootflash_dir.stdout[0] | regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+)') }}"
+    bootflash_images: >
+      "{{ bootflash_dir.stdout[0] |
+        regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+\\.bin)') }}"
+    bootflash_files: >
+      "{{ bootflash_dir.stdout[0] |
+        regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+)') }}"
 
 - name: Calculate current storage usage
   ansible.builtin.set_fact:
     total_files_size: "{{ bootflash_files | map('first') | map('int') | sum }}"
-    cleanup_candidates: "{{ bootflash_images | difference([running_image_file]) | list }}"
+    cleanup_candidates: >
+      "{{ bootflash_images | difference([running_image_file]) | list }}"
 
 - name: Get bootflash free space
   cisco.nxos.nxos_command:
@@ -37,8 +44,12 @@
 
 - name: Parse free space information
   ansible.builtin.set_fact:
-    current_free_bytes: "{{ free_space_result.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
-    current_free_gb: "{{ ((free_space_result.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}"
+    current_free_bytes: >
+"{{ free_space_result.stdout[0] |
+        regex_search('(\\d+) bytes free', '\\1') | first | int }}"
+    current_free_gb: >
+"{{ ((free_space_result.stdout[0] |
+        regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}"
 
 - name: Check if cleanup is needed
   ansible.builtin.set_fact:
@@ -65,14 +76,22 @@
 
 - name: Calculate post-cleanup storage metrics
   ansible.builtin.set_fact:
-    post_cleanup_free_bytes: "{{ post_cleanup_space.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
-    post_cleanup_free_gb: "{{ ((post_cleanup_space.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}"
+    post_cleanup_free_bytes: >
+"{{ post_cleanup_space.stdout[0] |
+        regex_search('(\\d+) bytes free', '\\1') | first | int }}"
+    post_cleanup_free_gb: >
+"{{ ((post_cleanup_space.stdout[0] |
+        regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}"
 
 - name: Set storage cleanup results
   ansible.builtin.set_fact:
     storage_cleanup_results:
       platform: "nxos"
-      files_removed: "{{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }}"
-      space_freed_gb: "{{ (post_cleanup_free_gb - current_free_gb) | round(2) }}"
+      files_removed: >
+        "{{ cleanup_result.results | selectattr('changed',
+          'equalto', true) | list | length }}"
+      space_freed_gb: >
+        "{{ (post_cleanup_free_gb - current_free_gb) | round(2) }}"
       final_free_space_gb: "{{ post_cleanup_free_gb }}"
-      cleanup_successful: "{{ post_cleanup_free_gb >= (target_free_space | default(4)) }}"
+      cleanup_successful: >
+        "{{ post_cleanup_free_gb >= (target_free_space | default(4)) }}"

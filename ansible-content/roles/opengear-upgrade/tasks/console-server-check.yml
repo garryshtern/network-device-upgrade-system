@@ -21,12 +21,16 @@
 
 - name: Parse serial port information (API)
   ansible.builtin.set_fact:
-    opengear_upgrade_state: "{{ opengear_upgrade_state | combine({'serial_ports': serial_ports_info_api.json}) }}"
+    opengear_upgrade_state: >
+      "{{ opengear_upgrade_state | combine({'serial_ports':
+        serial_ports_info_api.json}) }}"
   when: api_available and serial_ports_info_api.json is defined
 
 - name: Parse serial port information (CLI)
   ansible.builtin.set_fact:
-    opengear_upgrade_state: "{{ opengear_upgrade_state | combine({'serial_ports': serial_ports_info_cli.stdout | regex_findall('Serial\\d+') | list}) }}"
+    opengear_upgrade_state: >
+      "{{ opengear_upgrade_state | combine({'serial_ports':
+        serial_ports_info_cli.stdout | regex_findall('Serial\\d+') | list}) }}"
   when: not api_available and serial_ports_info_cli.stdout is defined
 
 - name: Check active serial connections (Modern API)
@@ -52,7 +56,9 @@
   block:
     - name: Check for active console sessions (API)
       ansible.builtin.set_fact:
-        active_sessions: "{{ port_status_api.results | selectattr('json.connected', 'equalto', true) | list | length | default(0) }}"
+        active_sessions: >
+          "{{ port_status_api.results | selectattr('json.connected',
+            'equalto', true) | list | length | default(0) }}"
       when: api_available and port_status_api is defined
 
     - name: Check for active console sessions (CLI)
@@ -63,7 +69,8 @@
     - name: Warn about active sessions
       ansible.builtin.debug:
         msg: |
-          WARNING: {{ active_sessions | default(0) }} active console sessions detected.
+          WARNING: >
+            {{ active_sessions | default(0) }} active console sessions detected.
           These may be disconnected during the upgrade process.
       when: active_sessions | default(0) | int > 0
 
@@ -91,4 +98,6 @@
       - Detection Method: {{ 'API' if api_available else 'CLI' }}
       - Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}
       - Active Sessions: {{ active_sessions | default(0) }}
-      - Ready for Upgrade: {{ 'Yes' if active_sessions | default(0) | int == 0 else 'Caution - Active Sessions' }}
+      - >
+Ready for Upgrade: {{ 'Yes' if active_sessions |
+          default(0) | int == 0 else 'Caution - Active Sessions' }}

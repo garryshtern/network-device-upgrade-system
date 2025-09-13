@@ -12,7 +12,8 @@
   ansible.builtin.assert:
     that:
       - metamako_upgrade_state.target_version in mos_version_check.stdout
-    fail_msg: 'Target firmware version not active: {{ mos_version_check.stdout }}'
+    fail_msg: >
+      'Target firmware version not active: {{ mos_version_check.stdout }}'
 
 - name: Check system uptime
   ansible.netcommon.cli_command:
@@ -134,7 +135,9 @@
   ansible.builtin.debug:
     msg: |
       Performance Benchmark Results:
-      {{ benchmark_results.stdout if benchmark_results is defined else 'Benchmark not available' }}
+      >
+        {{ benchmark_results.stdout if benchmark_results is defined else
+          'Benchmark not available' }}
   when: benchmark_results is defined
 
 - name: Test basic network connectivity
@@ -146,7 +149,9 @@
 - name: Validate network reachability
   ansible.builtin.assert:
     that:
-      - "'3 packets transmitted, 3 received' in connectivity_test.stdout or 'Success rate is 100' in connectivity_test.stdout"
+      - >
+        "'3 packets transmitted, 3 received' in connectivity_test.stdout
+          or 'Success rate is 100' in connectivity_test.stdout"
     fail_msg: "Network connectivity test failed"
   when: connectivity_test.rc == 0
   failed_when: false
@@ -176,21 +181,56 @@
   ansible.builtin.debug:
     msg: |
       Environmental Status:
-      - Temperature: {{ 'OK' if system_temperature is defined and 'alarm' not in system_temperature.stdout | lower else 'CHECK' }}
-      - Power: {{ 'OK' if power_status is defined and 'ok' in power_status.stdout | lower else 'CHECK' }}
-      - Fans: {{ 'OK' if fan_status is defined and 'ok' in fan_status.stdout | lower else 'CHECK' }}
+      - >
+        Temperature: >
+          {{ 'OK' if system_temperature is defined and
+            'alarm' not in system_temperature.stdout | lower else 'CHECK' }}
+      - >
+        Power: >
+          {{ 'OK' if power_status is defined and
+            'ok' in power_status.stdout | lower else 'CHECK' }}
+      - >
+        Fans: >
+          {{ 'OK' if fan_status is defined and
+            'ok' in fan_status.stdout | lower else 'CHECK' }}
 
 - name: Validation summary
   ansible.builtin.debug:
     msg: |
       Metamako MOS Validation Results:
-      - Version: {{ 'PASS' if metamako_upgrade_state.target_version in mos_version_check.stdout else 'FAIL' }}
+      - >-
+        Version:
+        {{ 'PASS' if metamako_upgrade_state.target_version in
+          mos_version_check.stdout else 'FAIL' }}
       - Average Latency: {{ post_upgrade_latency.avg_latency }}ns
       - Maximum Latency: {{ post_upgrade_latency.max_latency }}ns
-      - Latency Performance: {{ 'PASS' if post_upgrade_latency.avg_latency | float < (max_allowed_latency_ns | default(100) | float) else 'DEGRADED' }}
-      - Interfaces: {{ 'PASS' if 'up' in mos_interface_status.stdout else 'CHECK' }}
-      - Metawatch: {{ 'OPERATIONAL' if metamako_upgrade_state.metawatch_enabled and post_upgrade_metawatch is defined and 'enabled' in post_upgrade_metawatch.stdout | lower else 'N/A' }}
-      - Metamux: {{ 'OPERATIONAL' if metamako_upgrade_state.metamux_enabled and post_upgrade_metamux is defined and 'enabled' in post_upgrade_metamux.stdout | lower else 'N/A' }}
-      - Network Connectivity: {{ 'PASS' if connectivity_test.rc == 0 and ('Success rate is 100' in connectivity_test.stdout or '3 received' in connectivity_test.stdout) else 'CHECK' }}
-      - Environmental: {{ 'OK' if system_temperature is defined and power_status is defined else 'PARTIAL' }}
-      - Overall Status: {{ 'VALIDATION COMPLETE' if metamako_upgrade_state.target_version in mos_version_check.stdout else 'CHECK REQUIRED' }}
+      - >-
+        Latency Performance:
+        {{ 'PASS' if post_upgrade_latency.avg_latency | float <
+          (max_allowed_latency_ns | default(100) | float) else 'DEGRADED' }}
+      - Interfaces:
+        {{ 'PASS' if 'up' in mos_interface_status.stdout else 'CHECK' }}
+      - >-
+        Metawatch:
+        {{ 'OPERATIONAL' if metamako_upgrade_state.metawatch_enabled and
+          post_upgrade_metawatch is defined and
+          'enabled' in post_upgrade_metawatch.stdout | lower else 'N/A' }}
+      - >-
+        Metamux:
+        {{ 'OPERATIONAL' if metamako_upgrade_state.metamux_enabled and
+          post_upgrade_metamux is defined and
+          'enabled' in post_upgrade_metamux.stdout | lower else 'N/A' }}
+      - >-
+        Network Connectivity:
+        {{ 'PASS' if connectivity_test.rc == 0 and
+          ('Success rate is 100' in connectivity_test.stdout or
+          '3 received' in connectivity_test.stdout) else 'CHECK' }}
+      - >-
+        Environmental:
+        {{ 'OK' if system_temperature is defined and
+          power_status is defined else 'PARTIAL' }}
+      - >-
+        Overall Status:
+        {{ 'VALIDATION COMPLETE' if
+          metamako_upgrade_state.target_version in
+          mos_version_check.stdout else 'CHECK REQUIRED' }}

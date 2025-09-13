@@ -57,7 +57,8 @@
       ssh_connectivity: "{{ ssh_connectivity | default(true) }}"
       cli_connectivity: "{{ cli_connectivity | default(true) }}"
       overall_status: "
-        {{ (connectivity_test is succeeded) and (ping_result is succeeded) and (ssh_connectivity | default(true)) and (cli_connectivity | default(true)) }}
+{{ (connectivity_test is succeeded) and (ping_result is succeeded) and (ssh_connectivity |
+          default(true)) and (cli_connectivity | default(true)) }}
         "
 
 - name: Display connectivity results
@@ -65,14 +66,25 @@
     msg:
       - "=== Connectivity Check Results ==="
       - "Device: {{ inventory_hostname }}"
-      - "Basic Connectivity: {{ 'PASS' if device_connectivity.basic_connectivity else 'FAIL' }}"
-      - "Ping Test: {{ 'PASS' if device_connectivity.ping_successful else 'FAIL' }}"
-      - "SSH Connectivity: {{ 'PASS' if device_connectivity.ssh_connectivity else 'FAIL' }}"
-      - "CLI Connectivity: {{ 'PASS' if device_connectivity.cli_connectivity else 'FAIL' }}"
-      - "Overall Status: {{ 'CONNECTED' if device_connectivity.overall_status else 'CONNECTION FAILED' }}"
+      - >
+"Basic Connectivity: {{ 'PASS' if device_connectivity.basic_connectivity else
+          'FAIL' }}"
+      - >
+        "Ping Test: {{ 'PASS' if device_connectivity.ping_successful else 'FAIL' }}"
+      - >
+"SSH Connectivity: {{ 'PASS' if device_connectivity.ssh_connectivity else
+          'FAIL' }}"
+      - >
+"CLI Connectivity: {{ 'PASS' if device_connectivity.cli_connectivity else
+          'FAIL' }}"
+      - >
+"Overall Status: {{ 'CONNECTED' if
+          device_connectivity.overall_status else 'CONNECTION FAILED' }}"
       - "================================="
 
 - name: Fail if device is not reachable
   ansible.builtin.fail:
-    msg: "Device {{ inventory_hostname }} is not reachable - connectivity check failed"
+    msg: >
+      "Device {{ inventory_hostname }} is not
+        reachable - connectivity check failed"
   when: not device_connectivity.overall_status

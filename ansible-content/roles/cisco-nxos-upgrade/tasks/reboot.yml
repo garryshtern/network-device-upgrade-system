@@ -57,14 +57,17 @@
 
 - name: Parse post-reboot information
   ansible.builtin.set_fact:
-    post_reboot_version: "{{ post_reboot_verification.stdout[0] | regex_search('system:\\s+version\\s+([0-9\\.\\(\\)]+)', '\\1') | first }}"
+    post_reboot_version: >
+"{{ post_reboot_verification.stdout[0] |
+        regex_search('system:\\s+version\\s+([0-9\\.\\(\\)]+)', '\\1') | first }}"
     post_reboot_uptime: "{{ post_reboot_verification.stdout[1] }}"
 
 - name: Validate system came up with new firmware
   ansible.builtin.assert:
     that:
       - target_firmware_version is defined
-      - target_firmware_version | regex_replace('\\.bin$', '') in post_reboot_version
+      - target_firmware_version | regex_replace('\\.bin$', '')
+        in post_reboot_version
     fail_msg: |
       Device did not boot with target firmware version
       Expected: {{ target_firmware_version }}
@@ -93,7 +96,9 @@
 
 - name: Parse interface status
   ansible.builtin.set_fact:
-    interfaces_down_post_reboot: "{{ post_reboot_interfaces.stdout[0] | from_json | json_query('TABLE_interface.ROW_interface[?state != `up`]') | length }}"
+    interfaces_down_post_reboot: >
+"{{ post_reboot_interfaces.stdout[0] |
+        from_json | json_query('TABLE_interface.ROW_interface[?state != `up`]') | length }}"
 
 - name: Set reboot completion status
   ansible.builtin.set_fact:
@@ -102,7 +107,8 @@
       new_firmware_version: "{{ post_reboot_version }}"
       uptime_after_reboot: "{{ post_reboot_uptime }}"
       interfaces_down_count: "{{ interfaces_down_post_reboot }}"
-      boot_warnings_present: "{{ (boot_log_check.stdout[0] | default('') | length) > 0 }}"
+      boot_warnings_present: >
+        "{{ (boot_log_check.stdout[0] | default('') | length) > 0 }}"
       reboot_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display reboot completion status

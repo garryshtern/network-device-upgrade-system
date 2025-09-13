@@ -47,14 +47,24 @@
               }}
 
         - name: Test device connectivity
-          ansible.builtin.include_tasks: >
-            ../roles/common/tasks/connectivity-check.yml
-          failed_when: false
+          block:
+            - name: Include connectivity check tasks
+              ansible.builtin.include_tasks: >
+                ../roles/common/tasks/connectivity-check.yml
+          rescue:
+            - name: Log connectivity check failure
+              ansible.builtin.debug:
+                msg: "Connectivity check failed - continuing with rollback"
 
         - name: Gather current device state
-          ansible.builtin.include_tasks: >
-            ../roles/common/tasks/device-status.yml
-          failed_when: false
+          block:
+            - name: Include device status tasks
+              ansible.builtin.include_tasks: >
+                ../roles/common/tasks/device-status.yml
+          rescue:
+            - name: Log device status check failure
+              ansible.builtin.debug:
+                msg: "Device status check failed - continuing with rollback"
 
         - name: Mark status assessment complete
           ansible.builtin.set_fact:

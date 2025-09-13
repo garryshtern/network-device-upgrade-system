@@ -4,7 +4,9 @@
 
 - name: Set default metric timestamp
   ansible.builtin.set_fact:
-    metric_timestamp: "{{ ansible_play_batch | hash('md5') }}000000000"  # InfluxDB nanosecond format
+    metric_timestamp: >
+      "{{ ansible_play_batch | hash('md5')
+        }}000000000" # InfluxDB nanosecond format
 
 - name: Prepare InfluxDB line protocol data
   ansible.builtin.set_fact:
@@ -19,17 +21,22 @@
 
 - name: Convert metric data to InfluxDB field format
   ansible.builtin.set_fact:
-    influx_field_string: "{{ influx_fields | dict2items | map('join', '=') | join(',') }}"
+    influx_field_string: >
+      "{{ influx_fields | dict2items | map('join', '=') | join(',') }}"
   when: influx_fields | length > 0
 
 - name: Build InfluxDB line protocol string
   ansible.builtin.set_fact:
-    influx_line: "{{ influx_measurement }},{{ influx_tags }} {{ influx_field_string }} {{ metric_timestamp }}"
+    influx_line: >
+      "{{ influx_measurement }},{{ influx_tags }} {{
+        influx_field_string }} {{ metric_timestamp }}"
   when: influx_field_string is defined
 
 - name: Export metrics to InfluxDB
   ansible.builtin.uri:
-    url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
+    url: >
+      "{{ influxdb_url }}/api/v2/write?bucket={{
+        influxdb_bucket }}&org={{ influxdb_org }}"
     method: POST
     headers:
       Authorization: "Token {{ influxdb_token }}"
@@ -46,7 +53,9 @@
 
 - name: Log InfluxDB export status
   ansible.builtin.debug:
-    msg: "Metrics exported to InfluxDB: {{ 'SUCCESS' if influx_export_result is succeeded else 'FAILED' }}"
+    msg: >
+"Metrics exported to InfluxDB: {{ 'SUCCESS' if
+        influx_export_result is succeeded else 'FAILED' }}"
   when: influx_export_result is defined
 
 - name: Export metrics to local file (backup/debugging)
@@ -110,8 +119,12 @@
   ansible.builtin.set_fact:
     metrics_export_results:
       metric_type: "{{ metric_type | default('unknown') }}"
-      influxdb_export: "{{ 'success' if influx_export_result is succeeded else 'failed' if influx_export_result is defined else 'skipped' }}"
-      webhook_export: "{{ 'success' if webhook_export_result is succeeded else 'failed' if webhook_export_result is defined else 'skipped' }}"
+      influxdb_export: >
+"{{ 'success' if influx_export_result is succeeded else
+          'failed' if influx_export_result is defined else 'skipped' }}"
+      webhook_export: >
+"{{ 'success' if webhook_export_result is succeeded else
+          'failed' if webhook_export_result is defined else 'skipped' }}"
       local_log: "{{ log_metrics_locally | default(false) }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 

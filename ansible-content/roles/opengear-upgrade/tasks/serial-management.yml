@@ -15,13 +15,17 @@
 
     - name: Notify users of impending maintenance
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.port_id }}/send"
+        url: >
+          "https://{{ ansible_host
+            }}/api/v1/serialports/{{ item.port_id }}/send"
         method: POST
         headers:
           Authorization: "Token {{ opengear_api_token }}"
         body_format: json
         body:
-          message: "\r\n*** MAINTENANCE NOTICE: Console server upgrade in progress - connection may be interrupted ***\r\n"
+          message: >
+            "\r\n*** MAINTENANCE NOTICE: Console server upgrade
+              in progress - connection may be interrupted ***\r\n"
         validate_certs: false
       loop: "{{ active_sessions.json }}"
       when: active_sessions.json | length > 0
@@ -31,7 +35,8 @@
   block:
     - name: Backup serial port configurations
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/config"
+        url: >
+          "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/config"
         method: GET
         headers:
           Authorization: "Token {{ opengear_api_token }}"
@@ -41,11 +46,14 @@
 
     - name: Store configuration backup
       ansible.builtin.set_fact:
-        serial_port_backup: "{{ port_configs.results | map(attribute='json') | list }}"
+        serial_port_backup: >
+          "{{ port_configs.results | map(attribute='json') | list }}"
 
     - name: Gracefully close active sessions
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/serialports/sessions/{{ item.session_id }}/close"
+        url: >
+          "https://{{ ansible_host
+            }}/api/v1/serialports/sessions/{{ item.session_id }}/close"
         method: POST
         headers:
           Authorization: "Token {{ opengear_api_token }}"
@@ -65,7 +73,8 @@
 
     - name: Verify all serial ports are operational
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
+        url: >
+          "https://{{ ansible_host }}/api/v1/serialports/{{ item.id }}/status"
         method: GET
         headers:
           Authorization: "Token {{ opengear_api_token }}"
@@ -87,7 +96,9 @@
     - name: Validate port configurations restored
       ansible.builtin.assert:
         that:
-          - post_upgrade_port_status.results | length == opengear_upgrade_state.serial_ports | length
+          - >
+            post_upgrade_port_status.results | length ==
+              opengear_upgrade_state.serial_ports | length
         fail_msg: "Not all serial ports are operational after upgrade"
 
 - name: Serial management summary
@@ -96,5 +107,9 @@
       Serial Port Management Summary:
       - Total Ports: {{ opengear_upgrade_state.serial_ports | length }}
       - Active Sessions (Pre): {{ active_sessions.json | length }}
-      - Ports Tested: {{ port_connectivity_test.results | selectattr('json.status', 'equalto', 'ok') | list | length | default(0) }}
-      - Status: {{ 'All Operational' if post_upgrade_port_status.results | length == opengear_upgrade_state.serial_ports | length else 'Check Required' }}
+      - >
+Ports Tested: {{ port_connectivity_test.results |
+          selectattr('json.status', 'equalto', 'ok') | list | length | default(0) }}
+      - >
+Status: {{ 'All Operational' if post_upgrade_port_status.results |
+          length == opengear_upgrade_state.serial_ports | length else 'Check Required' }}

@@ -24,7 +24,8 @@
 
 - name: Extract expected hash value
   ansible.builtin.set_fact:
-    expected_hash: "{{ (expected_hash_content.content | b64decode).split()[0] | trim }}"
+    expected_hash: >
+      "{{ (expected_hash_content.content | b64decode).split()[0] | trim }}"
   when: hash_file_stat.stat.exists
 
 - name: Use provided hash if no hash file exists
@@ -37,7 +38,9 @@
     that:
       - expected_hash | length > 0
       - firmware_file_hash.stat.checksum == expected_hash
-    fail_msg: "Hash verification failed for {{ target_firmware }}: calculated {{ firmware_file_hash.stat.checksum }} != expected {{ expected_hash }}"
+    fail_msg: >
+      "Hash verification failed for {{ target_firmware }}: calculated {{
+        firmware_file_hash.stat.checksum }} != expected {{ expected_hash }}"
     success_msg: "Hash verification passed for {{ target_firmware }}"
   when: expected_hash is defined and expected_hash | length > 0
 

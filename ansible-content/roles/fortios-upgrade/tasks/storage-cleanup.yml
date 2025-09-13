@@ -16,7 +16,8 @@
 
 - name: Parse current version information
   ansible.builtin.set_fact:
-    fortios_current_version: "{{ fortios_status.ansible_facts.system_status.version }}"
+    fortios_current_version: >
+      "{{ fortios_status.ansible_facts.system_status.version }}"
     fortios_build: "{{ fortios_status.ansible_facts.system_status.build }}"
 
 - name: Get disk usage information
@@ -27,7 +28,8 @@
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:
-    total_storage_mb: "{{ storage_info.meta.results.total_disk | default(8192) }}"
+    total_storage_mb: >
+      "{{ storage_info.meta.results.total_disk | default(8192) }}"
     used_storage_mb: "{{ storage_info.meta.results.used_disk | default(2048) }}"
     free_storage_mb: "{{ total_storage_mb - used_storage_mb }}"
     current_free_gb: "{{ (free_storage_mb / 1024) | round(2) }}"
@@ -41,7 +43,9 @@
 
 - name: List obsolete firmware images (keep current and backup)
   ansible.builtin.set_fact:
-    cleanup_candidates: "{{ firmware_info.meta.results | selectattr('current', 'equalto', false) | selectattr('backup', 'equalto', false) | map(attribute='filename')
+    cleanup_candidates: >
+      "{{ firmware_info.meta.results | selectattr('current', 'equalto',
+        false) | selectattr('backup', 'equalto', false) | map(attribute='filename')
       | list }}"
 
 - name: Check if cleanup is needed
@@ -86,14 +90,22 @@
 
 - name: Calculate post-cleanup storage metrics
   ansible.builtin.set_fact:
-    post_cleanup_free_mb: "{{ post_cleanup_storage_info.meta.results.total_disk - post_cleanup_storage_info.meta.results.used_disk }}"
-    post_cleanup_free_gb: "{{ ((post_cleanup_storage_info.meta.results.total_disk - post_cleanup_storage_info.meta.results.used_disk) / 1024) | round(2) }}"
+    post_cleanup_free_mb: >
+      "{{ post_cleanup_storage_info.meta.results.total_disk
+        - post_cleanup_storage_info.meta.results.used_disk }}"
+    post_cleanup_free_gb: >
+"{{ ((post_cleanup_storage_info.meta.results.total_disk - post_cleanup_storage_info.meta.results.used_disk) / 1024) |
+        round(2) }}"
 
 - name: Set storage cleanup results
   ansible.builtin.set_fact:
     storage_cleanup_results:
       platform: "fortios"
-      files_removed: "{{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }}"
-      space_freed_gb: "{{ (post_cleanup_free_gb - current_free_gb) | round(2) }}"
+      files_removed: >
+        "{{ cleanup_result.results | selectattr('changed',
+          'equalto', true) | list | length }}"
+      space_freed_gb: >
+        "{{ (post_cleanup_free_gb - current_free_gb) | round(2) }}"
       final_free_space_gb: "{{ post_cleanup_free_gb }}"
-      cleanup_successful: "{{ post_cleanup_free_gb >= (target_free_space | default(4)) }}"
+      cleanup_successful: >
+        "{{ post_cleanup_free_gb >= (target_free_space | default(4)) }}"

@@ -23,8 +23,13 @@
 
 - name: Parse device information
   ansible.builtin.set_fact:
-    metamako_upgrade_state: "{{ metamako_upgrade_state | combine({'current_version': metamako_version.stdout | regex_search('Version: ([0-9]+\\.[0-9]+\\.[0-9]+)',
-      '\\1') | first, 'device_type': metamako_version.stdout | regex_search('Model: ([\\w\\d-]+)', '\\1') | first}) }}"
+    metamako_upgrade_state: >-
+      {{ metamako_upgrade_state | combine({
+        'current_version': metamako_version.stdout |
+          regex_search('Version: ([0-9]+\.[0-9]+\.[0-9]+)', '\1') | first,
+        'device_type': metamako_version.stdout |
+          regex_search('Model: ([\w\d-]+)', '\1') | first
+      }) }}
 
 - name: Check Metamako-specific components
   ansible.builtin.include_tasks: check-metawatch-metamux.yml
@@ -42,8 +47,12 @@
 - name: Validate upgrade path
   ansible.builtin.assert:
     that:
-      - metamako_upgrade_state.current_version != metamako_upgrade_state.target_version
-      - metamako_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+\\.[0-9]+")
+      - >-
+        metamako_upgrade_state.current_version !=
+        metamako_upgrade_state.target_version
+      - >-
+        metamako_upgrade_state.target_version is
+        match("^[0-9]+\.[0-9]+\.[0-9]+")
     fail_msg: "Invalid upgrade path or target version format (expected: x.y.z)"
 
 - name: Execute latency-sensitive upgrade

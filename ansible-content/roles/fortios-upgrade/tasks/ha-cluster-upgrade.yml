@@ -7,7 +7,7 @@
     - name: Final HA health check
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
-        selector: "system_ha-statistics"
+        selector: "system_ha_status"
       register: final_ha_check
 
     - name: Ensure cluster is stable
@@ -54,7 +54,8 @@
     - name: Confirm secondary version
       ansible.builtin.assert:
         that:
-          - fortios_upgrade_state.target_version in secondary_post_upgrade.meta.results.version
+          - >
+            fortios_upgrade_state.target_version in secondary_post_upgrade.meta.results.version
         fail_msg: "Secondary unit upgrade failed"
 
 - name: Primary unit upgrade (if this is primary)
@@ -74,7 +75,9 @@
     - name: Verify secondary is ready
       ansible.builtin.assert:
         that:
-          - secondary_readiness.meta.results | selectattr('status', 'equalto', 'up') | list | length > 0
+          - >
+            secondary_readiness.meta.results | selectattr('status',
+              'equalto', 'up') | list | length > 0
         fail_msg: "Secondary unit not ready after upgrade"
 
     - name: Backup primary configuration
@@ -110,7 +113,8 @@
     - name: Confirm primary version
       ansible.builtin.assert:
         that:
-          - fortios_upgrade_state.target_version in primary_post_upgrade.meta.results.version
+          - >
+            fortios_upgrade_state.target_version in primary_post_upgrade.meta.results.version
         fail_msg: "Primary unit upgrade failed"
 
 - name: Post-upgrade HA cluster validation
@@ -122,7 +126,7 @@
     - name: Check final HA status
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
-        selector: "system_ha-statistics"
+        selector: "system_ha_status"
       register: final_cluster_status
 
     - name: Verify cluster health
@@ -147,6 +151,10 @@
       - Unit Role: {{ fortios_upgrade_state.ha_role }}
       - New Version: {{ fortios_upgrade_state.target_version }}
       - HA Sync Status: {{ final_cluster_status.meta.results.sync_status }}
-      - Cluster Members: {{ final_cluster_status.meta.results.members | length }}
+      - >
+        Cluster Members: {{ final_cluster_status.meta.results.members | length }}
       - Upgrade Method: {{ 'Coordinated HA Upgrade' }}
-      - Status: {{ 'Success' if final_cluster_status.meta.results.sync_status == 'synchronized' else 'Check Required' }}
+      - >
+        Status: >
+{{ 'Success' if final_cluster_status.meta.results.sync_status == 'synchronized' else
+            'Check Required' }}

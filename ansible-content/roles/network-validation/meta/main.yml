@@ -1,16 +1,15 @@
 ---
 galaxy_info:
-  role_name: network-validation
+  role_name: network_validation
   author: Network Operations
   description: Network state validation and comparison utilities
   company: Enterprise Network Management
   license: proprietary
-  min_ansible_version: 2.15
+  min_ansible_version: "2.15"
   platforms:
     - name: EL
       versions:
-        - 8
-        - 9
+        - "all"
   galaxy_tags:
     - networking
     - validation

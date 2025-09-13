@@ -15,14 +15,18 @@
 
 - name: Calculate free space
   ansible.builtin.set_fact:
-    available_space_mb: "{{ (nxos_storage_data.dir_size.free | int / 1024 / 1024) | int }}"
-    required_space_mb: "{{ firmware_size_mb | default(nxos_minimum_free_space_mb) }}"
+    available_space_mb: >
+      "{{ (nxos_storage_data.dir_size.free | int / 1024 / 1024) | int }}"
+    required_space_mb: >
+      "{{ firmware_size_mb | default(nxos_minimum_free_space_mb) }}"
 
 - name: Verify sufficient storage space
   ansible.builtin.assert:
     that:
       - available_space_mb | int >= required_space_mb | int
-    fail_msg: "Insufficient storage space. Available: {{ available_space_mb }}MB, Required: {{ required_space_mb }}MB"
+    fail_msg: >
+      "Insufficient storage space. Available: {{
+        available_space_mb }}MB, Required: {{ required_space_mb }}MB"
 
 - name: Check if target firmware already exists
   cisco.nxos.nxos_command:
@@ -33,11 +37,13 @@
 
 - name: Set firmware exists flag
   ansible.builtin.set_fact:
-    target_firmware_exists: "{{ 'No such file' not in firmware_exists_check.stdout[0] }}"
+    target_firmware_exists: >
+      "{{ 'No such file' not in firmware_exists_check.stdout[0] }}"
 
 - name: Skip download if firmware already exists
   ansible.builtin.debug:
-    msg: "Target firmware {{ target_firmware_version }} already exists on device"
+    msg: >
+      "Target firmware {{ target_firmware_version }} already exists on device"
   when: target_firmware_exists
 
 - name: Transfer firmware image to device (Server-Initiated PUSH)
@@ -68,7 +74,9 @@
         that:
           - nxos_file_copy_result is succeeded
           - nxos_file_copy_result.transfer_status == 'Received'
-        fail_msg: "Secure firmware file transfer failed: {{ nxos_file_copy_result.msg | default('Unknown error') }}"
+        fail_msg: >
+"Secure firmware file transfer failed: {{ nxos_file_copy_result.msg |
+            default('Unknown error') }}"
 
 - name: Verify firmware file on device
   cisco.nxos.nxos_command:
@@ -116,9 +124,15 @@
 - name: Display image loading results
   ansible.builtin.debug:
     msg:
-      - "Secure firmware image transfer completed successfully (Server-Initiated PUSH)"
+      - >
+        "Secure firmware image transfer completed
+          successfully (Server-Initiated PUSH)"
       - "Local Source: {{ local_firmware_path }}"
-      - "Remote Destination: {{ ansible_host }}:bootflash:{{ nxos_image_loading_results.firmware_file }}"
-      - "File Size: {{ (nxos_image_loading_results.file_size_bytes | int / 1024 / 1024) | round(2) }}MB"
+      - >
+        "Remote Destination: {{ ansible_host }}:bootflash:{{
+          nxos_image_loading_results.firmware_file }}"
+      - >
+"File Size: {{ (nxos_image_loading_results.file_size_bytes |
+          int / 1024 / 1024) | round(2) }}MB"
       - "Transfer Method: SCP (server-initiated)"
       - "Hash Verified: {{ nxos_image_loading_results.hash_verified }}"

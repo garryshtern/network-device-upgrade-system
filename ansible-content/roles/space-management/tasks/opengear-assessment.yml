@@ -7,28 +7,39 @@
   changed_when: false
 
 - name: Get firmware files
-  ansible.builtin.raw: "ls -la /tmp/*.img /tmp/*.bin 2>/dev/null || echo 'No firmware files found'"
+  ansible.builtin.raw: >
+    "ls -la /tmp/*.img /tmp/*.bin 2>/dev/null || echo 'No firmware files found'"
   register: opengear_firmware_files
   changed_when: false
 
 - name: Get temporary files
-  ansible.builtin.raw: "ls -la /tmp/upgrade_* /tmp/opengear_* 2>/dev/null || echo 'No temporary files found'"
+  ansible.builtin.raw: >
+    "ls -la /tmp/upgrade_* /tmp/opengear_*
+      2>/dev/null || echo 'No temporary files found'"
   register: opengear_temp_files
   changed_when: false
 
 - name: Parse storage information
   ansible.builtin.set_fact:
-    opengear_total_size: "{{ opengear_storage_info.stdout | regex_search('/tmp\\s+(\\S+)', '\\1') | first }}"
-    opengear_available_size: "{{ opengear_storage_info.stdout | regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
-    opengear_usage_percent: "{{ opengear_storage_info.stdout | regex_search('/tmp\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}"
+    opengear_total_size: >
+"{{ opengear_storage_info.stdout |
+        regex_search('/tmp\\s+(\\S+)', '\\1') | first }}"
+    opengear_available_size: >
+"{{ opengear_storage_info.stdout |
+        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
+    opengear_usage_percent: >
+"{{ opengear_storage_info.stdout |
+        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}"
 
 - name: Parse file listings
   ansible.builtin.set_fact:
     opengear_firmware_images: "
-      {{ opengear_firmware_files.stdout_lines | select('match', '.*(img|bin)$') | map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}
+{{ opengear_firmware_files.stdout_lines |
+        select('match', '.*(img|bin)$') | map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}
       "
     opengear_temp_file_list: "
-      {{ opengear_temp_files.stdout_lines | select('match', '.*(upgrade_|opengear_).*') | map('regex_replace', '.* ([^/]+)$', '\\1') | list }}
+{{ opengear_temp_files.stdout_lines |
+        select('match', '.*(upgrade_|opengear_).*') | map('regex_replace', '.* ([^/]+)$', '\\1') | list }}
       "
 
 - name: Convert storage sizes to GB

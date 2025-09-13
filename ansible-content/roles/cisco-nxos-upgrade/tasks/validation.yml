@@ -32,7 +32,9 @@
       - nxos_resources.cpu_usage_kernel < 80
       - nxos_resources.memory_usage_kernel < 85
       - nxos_resources.load_avg_1min < 5.0
-    fail_msg: "System resources are under stress - CPU: {{ nxos_resources.cpu_usage_kernel }}%, Memory: {{ nxos_resources.memory_usage_kernel }}%"
+    fail_msg: >
+      "System resources are under stress - CPU: {{ nxos_resources.cpu_usage_kernel
+        }}%, Memory: {{ nxos_resources.memory_usage_kernel }}%"
 
 - name: Check VPC consistency (if VPC is configured)
   when: nxos_vpc_consistency_check | default(true)
@@ -68,12 +70,16 @@
 
     - name: Check BGP neighbor states
       ansible.builtin.set_fact:
-        bgp_neighbors_down: "{{ bgp_status.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor[?state != `Established`]') | length }}"
+        bgp_neighbors_down: >
+          "{{ bgp_status.stdout[0] | from_json |
+            json_query('TABLE_neighbor.ROW_neighbor[?state != `Established`]') | length }}"
       when: bgp_status is succeeded and bgp_status.stdout[0] | length > 0
 
     - name: Warn about BGP neighbors down
       ansible.builtin.debug:
-        msg: "Warning: {{ bgp_neighbors_down }} BGP neighbors are not in Established state"
+        msg: >
+          "Warning: {{ bgp_neighbors_down }}
+            BGP neighbors are not in Established state"
       when:
         - bgp_neighbors_down is defined
         - bgp_neighbors_down | int > 0
@@ -85,7 +91,9 @@
 
 - name: Check interface status
   ansible.builtin.set_fact:
-    interfaces_down: "{{ nxos_interfaces | json_query('TABLE_interface.ROW_interface[?state != `up`]') | length }}"
+    interfaces_down: >
+      "{{ nxos_interfaces | json_query('TABLE_interface.ROW_interface[?state
+        != `up`]') | length }}"
 
 - name: Validate interface states
   ansible.builtin.debug:
@@ -93,7 +101,9 @@
 
 - name: Check for critical log messages
   ansible.builtin.set_fact:
-    critical_logs: "{{ nxos_health_check.stdout[0] | regex_findall('.*CRITICAL.*|.*ERROR.*|.*FAIL.*') }}"
+    critical_logs: >
+"{{ nxos_health_check.stdout[0] |
+        regex_findall('.*CRITICAL.*|.*ERROR.*|.*FAIL.*') }}"
 
 - name: Display critical log messages if found
   ansible.builtin.debug:
@@ -122,25 +132,39 @@
 - name: Set validation results
   ansible.builtin.set_fact:
     nxos_validation_results:
-      device_healthy: "{{ nxos_resources.cpu_usage_kernel < 80 and nxos_resources.memory_usage_kernel < 85 }}"
+      device_healthy: >
+"{{ nxos_resources.cpu_usage_kernel < 80 and
+          nxos_resources.memory_usage_kernel < 85 }}"
       interfaces_up: "{{ interfaces_down | int == 0 }}"
       bgp_neighbors_up: "{{ (bgp_neighbors_down | default(0)) | int == 0 }}"
       critical_logs_present: "{{ critical_logs | length > 0 }}"
-      igmp_validated: "{{ 'PASS' if (validate_igmp is defined and validate_igmp | bool) else 'SKIPPED' }}"
-      bfd_validated: "{{ 'PASS' if (validate_bfd is defined and validate_bfd | bool) else 'SKIPPED' }}"
-      validation_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      igmp_validated: >
+"{{ 'PASS' if (validate_igmp is defined and validate_igmp |
+          bool) else 'SKIPPED' }}"
+      bfd_validated: >
+"{{ 'PASS' if (validate_bfd is defined and validate_bfd |
+          bool) else 'SKIPPED' }}"
+      validation_timestamp: >
+        "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display comprehensive validation summary
   ansible.builtin.debug:
     msg: |-
       NX-OS Validation Summary:
       ========================
-      Device Health: {{ 'PASS' if nxos_validation_results.device_healthy else 'FAIL' }}
-      Interfaces: {{ 'PASS' if nxos_validation_results.interfaces_up else 'CHECK' }} ({{ interfaces_down }} down)
-      BGP Neighbors: {{ 'PASS' if nxos_validation_results.bgp_neighbors_up else 'CHECK' }}
-      Critical Logs: {{ 'PRESENT' if nxos_validation_results.critical_logs_present else 'NONE' }}
+      Device Health: >
+        {{ 'PASS' if nxos_validation_results.device_healthy else 'FAIL' }}
+      Interfaces: >
+{{ 'PASS' if nxos_validation_results.interfaces_up else
+          'CHECK' }} ({{ interfaces_down }} down)
+      BGP Neighbors: >
+        {{ 'PASS' if nxos_validation_results.bgp_neighbors_up else 'CHECK' }}
+      Critical Logs: >
+{{ 'PRESENT' if nxos_validation_results.critical_logs_present else
+          'NONE' }}
       IGMP Validation: {{ nxos_validation_results.igmp_validated }}
       BFD Validation: {{ nxos_validation_results.bfd_validated }}
 
       Overall Status:
-        {{ 'PASS' if (nxos_validation_results.device_healthy and nxos_validation_results.interfaces_up and nxos_validation_results.bgp_neighbors_up and not nxos_validation_results.critical_logs_present) else 'CHECK REQUIRED' }}
+{{ 'PASS' if (nxos_validation_results.device_healthy and
+          nxos_validation_results.interfaces_up and nxos_validation_results.bgp_neighbors_up and not nxos_validation_results.critical_logs_present) else 'CHECK REQUIRED' }}

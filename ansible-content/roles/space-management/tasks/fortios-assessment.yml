@@ -22,10 +22,14 @@
 
 - name: Parse storage and firmware information
   ansible.builtin.set_fact:
-    fortios_total_mb: "{{ fortios_storage_info.meta.results.total_disk | default(8192) }}"
-    fortios_used_mb: "{{ fortios_storage_info.meta.results.used_disk | default(2048) }}"
+    fortios_total_mb: >
+      "{{ fortios_storage_info.meta.results.total_disk | default(8192) }}"
+    fortios_used_mb: >
+      "{{ fortios_storage_info.meta.results.used_disk | default(2048) }}"
     fortios_free_mb: "{{ fortios_total_mb - fortios_used_mb }}"
-    fortios_firmware_list: "{{ fortios_firmware_info.meta.results | map(attribute='filename') | list }}"
+    fortios_firmware_list: >
+"{{ fortios_firmware_info.meta.results |
+        map(attribute='filename') | list }}"
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:

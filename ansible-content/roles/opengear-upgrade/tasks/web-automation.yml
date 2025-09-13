@@ -19,7 +19,9 @@
 
     - name: Store authentication token
       ansible.builtin.set_fact:
-        opengear_upgrade_state: "{{ opengear_upgrade_state | combine({'web_session': web_auth.json.token}) }}"
+        opengear_upgrade_state: >
+          "{{ opengear_upgrade_state |
+            combine({'web_session': web_auth.json.token}) }}"
 
     - name: Verify API access
       ansible.builtin.uri:
@@ -54,13 +56,17 @@
 
     - name: Verify firmware upload
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/status"
+        url: >
+          "https://{{ ansible_host }}/api/v1/system/firmware/{{
+            firmware_upload.json.upload_id }}/status"
         method: GET
         headers:
           Authorization: "Token {{ opengear_upgrade_state.web_session }}"
         validate_certs: false
       register: upload_status
-      until: upload_status.json.status == 'completed' or upload_status.json.status == 'failed'
+      until: >
+        upload_status.json.status == 'completed'
+          or upload_status.json.status == 'failed'
       retries: 60
       delay: 10
 
@@ -68,7 +74,9 @@
   block:
     - name: Validate uploaded firmware
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/validate"
+        url: >
+          "https://{{ ansible_host }}/api/v1/system/firmware/{{
+            firmware_upload.json.upload_id }}/validate"
         method: POST
         headers:
           Authorization: "Token {{ opengear_upgrade_state.web_session }}"
@@ -79,11 +87,15 @@
       ansible.builtin.assert:
         that:
           - firmware_validation.json.valid == true
-        fail_msg: "Firmware validation failed: {{ firmware_validation.json.message | default('Unknown error') }}"
+        fail_msg: >
+"Firmware validation failed: {{ firmware_validation.json.message |
+            default('Unknown error') }}"
 
     - name: Install firmware
       ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/firmware/{{ firmware_upload.json.upload_id }}/install"
+        url: >
+          "https://{{ ansible_host }}/api/v1/system/firmware/{{
+            firmware_upload.json.upload_id }}/install"
         method: POST
         headers:
           Authorization: "Token {{ opengear_upgrade_state.web_session }}"
@@ -102,7 +114,9 @@
           Authorization: "Token {{ opengear_upgrade_state.web_session }}"
         validate_certs: false
       register: install_progress
-      until: install_progress.json.status == 'completed' or install_progress.json.status == 'failed'
+      until: >
+        install_progress.json.status == 'completed'
+          or install_progress.json.status == 'failed'
       retries: 60
       delay: 15
       failed_when: install_progress.json.status == 'failed'
@@ -141,7 +155,8 @@
     - name: Confirm target version is active
       ansible.builtin.assert:
         that:
-          - opengear_upgrade_state.target_version in post_upgrade_info.json.version
+          - opengear_upgrade_state.target_version
+            in post_upgrade_info.json.version
         fail_msg: "Web upgrade completed but target version not active"
 
 - name: Log web automation completion
@@ -153,4 +168,6 @@
       - New Version: {{ post_upgrade_info.json.version }}
       - Type: {{ opengear_upgrade_state.device_type | title }}
       - Method: Web Interface API
-      - Status: {{ 'Success' if opengear_upgrade_state.target_version in post_upgrade_info.json.version else 'Verification Required' }}
+      - >
+Status: {{ 'Success' if opengear_upgrade_state.target_version in post_upgrade_info.json.version else
+          'Verification Required' }}

@@ -47,7 +47,9 @@
 
       changed_when: false
       register: install_progress
-      until: "'complete' in install_progress.stdout | lower or 'failed' in install_progress.stdout | lower"
+      until: >
+        "'complete' in install_progress.stdout | lower
+          or 'failed' in install_progress.stdout | lower"
       retries: 30
       delay: 10
       failed_when: "'failed' in install_progress.stdout | lower"
@@ -79,7 +81,9 @@
     - name: Validate system is healthy
       ansible.builtin.assert:
         that:
-          - "'healthy' in system_health_check.stdout | lower or 'ok' in system_health_check.stdout | lower"
+          - >
+            "'healthy' in system_health_check.stdout | lower
+              or 'ok' in system_health_check.stdout | lower"
         fail_msg: "System health check failed after installation"
 
 - name: Specialized component validation
@@ -107,16 +111,24 @@
     - name: Validate component functionality
       ansible.builtin.assert:
         that:
-          - "not metamako_upgrade_state.metawatch_enabled or 'enabled' in post_metawatch_status.stdout | lower"
-          - "not metamako_upgrade_state.metamux_enabled or 'enabled' in post_metamux_status.stdout | lower"
-        fail_msg: "Specialized components not functioning correctly after upgrade"
+          - >
+            "not metamako_upgrade_state.metawatch_enabled or
+              'enabled' in post_metawatch_status.stdout | lower"
+          - >
+            "not metamako_upgrade_state.metamux_enabled or
+              'enabled' in post_metamux_status.stdout | lower"
+        fail_msg: >
+          "Specialized components not functioning correctly after upgrade"
 
 - name: Log installation completion
   ansible.builtin.debug:
-    msg: |-
+    msg: |
       Metamako Installation Completed:
       - Previous Version: {{ metamako_upgrade_state.current_version }}
       - New Version: {{ metamako_upgrade_state.target_version }}
-      - System Health: {{ 'OK' if 'healthy' in system_health_check.stdout | lower else 'CHECK' }}
-      - Metawatch: {{ 'OK' if not metamako_upgrade_state.metawatch_enabled or 'enabled' in post_metawatch_status.stdout | lower else 'CHECK' }}
-      - Metamux: {{ 'OK' if not metamako_upgrade_state.metamux_enabled or 'enabled' in post_metamux_status.stdout | lower else 'CHECK' }}
+      - System Health: {{ 'OK' if 'healthy' in system_health_check.stdout |
+          lower else 'CHECK' }}
+      - Metawatch: {{ 'OK' if not metamako_upgrade_state.metawatch_enabled or
+          'enabled' in post_metawatch_status.stdout | lower else 'CHECK' }}
+      - Metamux: {{ 'OK' if not metamako_upgrade_state.metamux_enabled or
+          'enabled' in post_metamux_status.stdout | lower else 'CHECK' }}

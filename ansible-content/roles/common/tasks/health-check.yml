@@ -6,7 +6,8 @@
 
 - name: Set health check timestamp
   ansible.builtin.set_fact:
-    health_check_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+    health_check_timestamp: >
+      "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
     baseline_data_path: "/var/lib/network-upgrade/baselines"
     validation_timeout: 300
 
@@ -64,7 +65,9 @@
   rescue:
     - name: Health check failure
       ansible.builtin.fail:
-        msg: "Health check failed for {{ inventory_hostname }} ({{ ansible_network_os }})"
+        msg: >
+          "Health check failed for {{ inventory_hostname
+            }} ({{ ansible_network_os }})"
 
 - name: Capture network state baseline
   ansible.builtin.include_role:
@@ -72,7 +75,9 @@
     tasks_from: bgp-validation
   vars:
     capture_mode: "baseline"
-    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/bgp_baseline_{{ health_check_timestamp }}.json"
+    output_file: >
+      "{{ baseline_data_path }}/{{ inventory_hostname
+        }}/bgp_baseline_{{ health_check_timestamp }}.json"
 
 - name: Capture interface states
   ansible.builtin.include_role:
@@ -80,7 +85,9 @@
     tasks_from: interface-validation
   vars:
     capture_mode: "baseline"
-    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/interfaces_baseline_{{ health_check_timestamp }}.json"
+    output_file: >
+      "{{ baseline_data_path }}/{{ inventory_hostname
+        }}/interfaces_baseline_{{ health_check_timestamp }}.json"
 
 - name: Capture routing information
   ansible.builtin.include_role:
@@ -88,7 +95,9 @@
     tasks_from: routing-validation
   vars:
     capture_mode: "baseline"
-    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/routing_baseline_{{ health_check_timestamp }}.json"
+    output_file: >
+      "{{ baseline_data_path }}/{{ inventory_hostname
+        }}/routing_baseline_{{ health_check_timestamp }}.json"
 
 - name: Capture multicast state (if applicable)
   ansible.builtin.include_role:
@@ -96,7 +105,9 @@
     tasks_from: multicast-validation
   vars:
     capture_mode: "baseline"
-    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/multicast_baseline_{{ health_check_timestamp }}.json"
+    output_file: >
+      "{{ baseline_data_path }}/{{ inventory_hostname
+        }}/multicast_baseline_{{ health_check_timestamp }}.json"
   when:
     - ansible_network_os in ['nxos', 'ios']
     - multicast_enabled | default(true) | bool
@@ -107,17 +118,22 @@
     tasks_from: arp-validation
   vars:
     capture_mode: "baseline"
-    output_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/arp_baseline_{{ health_check_timestamp }}.json"
+    output_file: >
+      "{{ baseline_data_path }}/{{ inventory_hostname
+        }}/arp_baseline_{{ health_check_timestamp }}.json"
 
 - name: Create health check summary
   ansible.builtin.template:
     src: ../validation-templates/health-summary.j2
-    dest: "{{ baseline_data_path }}/{{ inventory_hostname }}/health_summary_{{ health_check_timestamp }}.json"
+    dest: >
+      "{{ baseline_data_path }}/{{ inventory_hostname
+        }}/health_summary_{{ health_check_timestamp }}.json"
   vars:
     check_timestamp: "{{ health_check_timestamp }}"
     device_name: "{{ inventory_hostname }}"
     platform: "{{ ansible_network_os }}"
-    connectivity_status: "{{ 'success' if connectivity_result is succeeded else 'failed' }}"
+    connectivity_status: >
+      "{{ 'success' if connectivity_result is succeeded else 'failed' }}"
     baseline_files:
       - "bgp_baseline_{{ health_check_timestamp }}.json"
       - "interfaces_baseline_{{ health_check_timestamp }}.json"

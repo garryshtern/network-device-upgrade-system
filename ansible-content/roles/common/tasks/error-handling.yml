@@ -17,11 +17,14 @@
     task_failed: true
     failure_details:
       failed_task: "{{ ansible_failed_task.name | default('Unknown task') }}"
-      error_message: "{{ ansible_failed_result.msg | default('Unknown error') }}"
+      error_message: >
+        "{{ ansible_failed_result.msg | default('Unknown error') }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       host: "{{ inventory_hostname }}"
 
 - name: Send failure notification
   ansible.builtin.debug:
-    msg: "ALERT: Task failure on {{ inventory_hostname }} - {{ ansible_failed_task.name | default('Unknown task') }}"
+    msg: >
+"ALERT: Task failure on {{ inventory_hostname }} - {{ ansible_failed_task.name |
+        default('Unknown task') }}"
   when: task_failed is defined and task_failed

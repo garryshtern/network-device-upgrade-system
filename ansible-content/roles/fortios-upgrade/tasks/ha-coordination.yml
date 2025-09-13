@@ -5,7 +5,7 @@
 - name: Get HA cluster status
   fortinet.fortios.fortios_monitor_fact:
     vdom: "root"
-    selector: "system_ha-statistics"
+    selector: "system_ha_status"
   register: ha_status
 
 - name: Parse HA cluster information
@@ -20,7 +20,10 @@
 
 - name: Update HA information in upgrade state
   ansible.builtin.set_fact:
-    fortios_upgrade_state: "{{ fortios_upgrade_state | combine({'ha_mode': ha_cluster_info.mode, 'ha_role': ha_cluster_info.role, 'cluster_member': ha_cluster_info.members
+    fortios_upgrade_state: >
+      "{{ fortios_upgrade_state | combine({'ha_mode': >
+        ha_cluster_info.mode, 'ha_role': ha_cluster_info.role,
+          'cluster_member': ha_cluster_info.members
       | length}) }}"
 
 - name: Validate HA cluster health
@@ -40,7 +43,9 @@
     - name: Check peer connectivity
       ansible.builtin.assert:
         that:
-          - ha_peers.meta.results | selectattr('status', 'equalto', 'up') | list | length == (ha_cluster_info.members | length - 1)
+          - >
+            ha_peers.meta.results | selectattr('status', 'equalto',
+              'up') | list | length == (ha_cluster_info.members | length - 1)
         fail_msg: "Not all HA cluster members are reachable"
 
 - name: Determine upgrade sequence
@@ -65,7 +70,9 @@
 
     - name: Determine current device upgrade priority
       ansible.builtin.set_fact:
-        current_upgrade_priority: "{{ upgrade_sequence | selectattr('role', 'equalto', ha_cluster_info.role) | map(attribute='priority') | first }}"
+        current_upgrade_priority: >
+          "{{ upgrade_sequence | selectattr('role', 'equalto',
+            ha_cluster_info.role) | map(attribute='priority') | first }}"
 
 - name: Check for cluster-wide upgrade coordination
   block:
@@ -80,7 +87,7 @@
     - name: Wait for cluster upgrade readiness
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
-        selector: "system_ha-statistics"
+        selector: "system_ha_status"
       register: ha_readiness_check
       until: ha_readiness_check.meta.results.upgrade_ready | default(false)
       retries: 30
@@ -96,4 +103,6 @@
       - Sync Status: {{ ha_cluster_info.sync_status }}
       - Cluster Members: {{ ha_cluster_info.members | length }}
       - Upgrade Priority: {{ current_upgrade_priority }}
-      - Ready for Upgrade: {{ 'Yes' if ha_cluster_info.sync_status == 'synchronized' else 'No' }}
+      - >
+        Ready for Upgrade: >
+          {{ 'Yes' if ha_cluster_info.sync_status == 'synchronized' else 'No' }}

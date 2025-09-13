@@ -10,7 +10,8 @@
   register: current_applications
 - name: Parse application information
   ansible.builtin.set_fact:
-    mos_applications: '{{ current_applications.stdout_lines | select(''match'', ''^\s*\w+'')
+    mos_applications: >
+      '{{ current_applications.stdout_lines | select(''match'', ''^\s*\w+'')
       | list }}'
 - name: Display current applications
   ansible.builtin.debug:
@@ -27,10 +28,14 @@
   when: application_action == 'install'
 - name: Upload application to device (Server-Initiated Transfer)
   ansible.builtin.command:
-    cmd: 'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
-      '' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined
-      else '''' }} "{{ application_source }}" "{{ ansible_user }}@{{ ansible_host
-      }}:/flash/{{ application_filename | default(application_source | basename) }}"
+    cmd: >
+      'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
+      '' + ansible_ssh_private_key_file
+        if ansible_ssh_private_key_file is defined
+      else '''' }} "{{ application_source
+        }}" "{{ ansible_user }}@{{ ansible_host
+}}:/flash/{{ application_filename |
+        default(application_source | basename) }}"
 
       '
     timeout: 1800
@@ -43,14 +48,17 @@
   - application_source is defined
 - name: Verify application file exists
   ansible.netcommon.cli_command:
-    command: dir flash:{{ application_filename | default(application_source | basename)
+    command: >
+      dir flash:{{ application_filename | default(application_source | basename)
       }}
   changed_when: false
   register: app_file_check
   when: application_action == 'install'
 - name: Install application from flash
   ansible.netcommon.cli_config:
-    config: 'install application flash:{{ application_filename | default(application_source
+    config: >
+      'install application flash:{{
+        application_filename | default(application_source
       | basename) }}
 
       '
@@ -97,10 +105,14 @@
   when: application_name is defined
 - name: Upload EOS extension (Server-Initiated Transfer)
   ansible.builtin.command:
-    cmd: 'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
-      '' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined
-      else '''' }} "{{ eos_extension_source }}" "{{ ansible_user }}@{{ ansible_host
-      }}:/flash/{{ eos_extension_filename | default(eos_extension_source | basename)
+    cmd: >
+      'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
+      '' + ansible_ssh_private_key_file
+        if ansible_ssh_private_key_file is defined
+      else '''' }} "{{ eos_extension_source
+        }}" "{{ ansible_user }}@{{ ansible_host
+}}:/flash/{{ eos_extension_filename |
+        default(eos_extension_source | basename)
       }}"
 
       '
@@ -114,13 +126,16 @@
   - eos_extension_source is defined
 - name: Verify EOS extension file exists
   ansible.netcommon.cli_command:
-    ansible.builtin.command: dir flash:{{ eos_extension_filename | default(eos_extension_source
+    ansible.builtin.command: >
+      dir flash:{{ eos_extension_filename | default(eos_extension_source
       | basename) }}
   register: eos_file_check
   when: eos_extension_action == 'install'
 - name: Install EOS extension from flash
   ansible.netcommon.cli_config:
-    config: 'install eos-extension flash:{{ eos_extension_filename | default(eos_extension_source
+    config: >
+      'install eos-extension flash:{{
+        eos_extension_filename | default(eos_extension_source
       | basename) }}
 
       '

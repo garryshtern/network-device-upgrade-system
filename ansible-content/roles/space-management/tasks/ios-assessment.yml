@@ -15,13 +15,21 @@
 
 - name: Parse bootflash directory listing
   ansible.builtin.set_fact:
-    ios_files: "{{ ios_bootflash_dir.stdout[0] | regex_findall('\\s+(\\d+)\\s+.+\\s+(.+)') }}"
-    ios_images: "{{ ios_bootflash_dir.stdout[0] | regex_findall('\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}"
+    ios_files: >
+"{{ ios_bootflash_dir.stdout[0] |
+        regex_findall('\\s+(\\d+)\\s+.+\\s+(.+)') }}"
+    ios_images: >
+"{{ ios_bootflash_dir.stdout[0] |
+        regex_findall('\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}"
 
 - name: Parse free space information
   ansible.builtin.set_fact:
-    ios_total_bytes: "{{ ios_free_space.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
-    ios_free_bytes: "{{ ios_free_space.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
+    ios_total_bytes: >
+      "{{ ios_free_space.stdout[0] | regex_search('(\\d+)
+        bytes total', '\\1') | first | int }}"
+    ios_free_bytes: >
+      "{{ ios_free_space.stdout[0] | regex_search('(\\d+)
+        bytes free', '\\1') | first | int }}"
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:

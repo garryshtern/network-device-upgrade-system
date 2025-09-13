@@ -23,7 +23,9 @@
 
 - name: Set current firmware version
   ansible.builtin.set_fact:
-    iosxe_upgrade_state: "{{ iosxe_upgrade_state | combine({'current_version': iosxe_facts.ansible_facts.ansible_net_version}) }}"
+    iosxe_upgrade_state: >
+      "{{ iosxe_upgrade_state | combine({'current_version':
+        iosxe_facts.ansible_facts.ansible_net_version}) }}"
 
 - name: Check install mode capability
   ansible.builtin.include_tasks: check-install-mode.yml
@@ -40,9 +42,12 @@
 - name: Validate upgrade path
   ansible.builtin.assert:
     that:
-      - iosxe_upgrade_state.current_version != iosxe_upgrade_state.target_version
+      - iosxe_upgrade_state.current_version
+        != iosxe_upgrade_state.target_version
       - iosxe_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+\\.[0-9]+")
     fail_msg: "Invalid upgrade path or target version format"
 
 - name: Execute upgrade based on mode
-  ansible.builtin.include_tasks: "{{ 'install-mode.yml' if iosxe_upgrade_state.install_mode else 'bundle-mode.yml' }}"
+  ansible.builtin.include_tasks: >
+"{{ 'install-mode.yml' if iosxe_upgrade_state.install_mode else
+      'bundle-mode.yml' }}"

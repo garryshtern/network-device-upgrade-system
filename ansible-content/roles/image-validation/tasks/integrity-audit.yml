@@ -12,15 +12,22 @@
     that:
       - firmware_file_stat.stat.exists
       - firmware_file_stat.stat.isreg
-    fail_msg: "Firmware file {{ firmware_base_path }}/{{ target_firmware }} does not exist or is not a regular file"
-    success_msg: "Firmware file found: {{ firmware_base_path }}/{{ target_firmware }}"
+    fail_msg: >
+"Firmware file {{ firmware_base_path }}/{{ target_firmware }} does not exist or
+        is not a regular file"
+    success_msg: >
+      "Firmware file found: {{ firmware_base_path }}/{{ target_firmware }}"
 
 - name: Check minimum file size (prevent empty/corrupt files)
   ansible.builtin.assert:
     that:
       - firmware_file_stat.stat.size > 1048576  # 1MB minimum
-    fail_msg: "Firmware file {{ target_firmware }} is too small ({{ firmware_file_stat.stat.size }} bytes). Minimum 1MB required."
-    success_msg: "Firmware file size validation passed: {{ (firmware_file_stat.stat.size / 1024 / 1024) | round(2) }} MB"
+    fail_msg: >
+      "Firmware file {{ target_firmware }} is too small ({{
+        firmware_file_stat.stat.size }} bytes). Minimum 1MB required."
+    success_msg: >
+"Firmware file size validation passed: {{ (firmware_file_stat.stat.size / 1024 / 1024) |
+        round(2) }} MB"
 
 - name: Check file permissions are readable
   ansible.builtin.assert:
@@ -32,13 +39,22 @@
 - name: Validate file extension for platform
   ansible.builtin.assert:
     that:
-      - (ansible_network_os == 'nxos' and target_firmware.endswith(('.bin', '.nxos'))) or
-        (ansible_network_os == 'ios' and target_firmware.endswith(('.bin', '.spa', '.pkg'))) or
-        (ansible_network_os == 'fortios' and target_firmware.endswith('.out')) or
-        (ansible_network_os == 'mos' and target_firmware.endswith(('.mos', '.tar.gz'))) or
-        (ansible_network_os == 'opengear' and target_firmware.endswith(('.dgz', '.bin')))
-    fail_msg: "Firmware file extension not valid for platform {{ ansible_network_os }}: {{ target_firmware }}"
-    success_msg: "Firmware file extension validation passed for {{ ansible_network_os }}"
+      - >
+        (ansible_network_os == 'nxos' and
+          target_firmware.endswith(('.bin', '.nxos'))) or
+        (ansible_network_os == 'ios' and
+          target_firmware.endswith(('.bin', '.spa', '.pkg'))) or
+        (ansible_network_os == 'fortios' and
+          target_firmware.endswith('.out')) or
+        (ansible_network_os == 'mos' and
+          target_firmware.endswith(('.mos', '.tar.gz'))) or
+        (ansible_network_os == 'opengear' and
+          target_firmware.endswith(('.dgz', '.bin')))
+    fail_msg: >
+      "Firmware file extension not valid for platform
+        {{ ansible_network_os }}: {{ target_firmware }}"
+    success_msg: >
+      "Firmware file extension validation passed for {{ ansible_network_os }}"
 
 - name: Set integrity check result
   ansible.builtin.set_fact:
