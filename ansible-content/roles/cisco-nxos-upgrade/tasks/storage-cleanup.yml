@@ -44,9 +44,9 @@
 
 - name: Parse free space information
   ansible.builtin.set_fact:
-    current_free_bytes: >
-"{{ free_space_result.stdout[0] |
-        regex_search('(\\d+) bytes free', '\\1') | first | int }}"
+    current_free_bytes: >-
+      {{ free_space_result.stdout[0] |
+        regex_search('(\\d+) bytes free', '\\1') | first | int }}
     current_free_gb: >
 "{{ ((free_space_result.stdout[0] |
         regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}"

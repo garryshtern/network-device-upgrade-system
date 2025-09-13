@@ -28,16 +28,11 @@
   when: application_action == 'install'
 - name: Upload application to device (Server-Initiated Transfer)
   ansible.builtin.command:
-    cmd: >
-      'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
-      '' + ansible_ssh_private_key_file
-        if ansible_ssh_private_key_file is defined
-      else '''' }} "{{ application_source
-        }}" "{{ ansible_user }}@{{ ansible_host
-}}:/flash/{{ application_filename |
-        default(application_source | basename) }}"
-
-      '
+    cmd: >-
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+      {{ '-i ' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined else '' }}
+      "{{ application_source }}"
+      "{{ ansible_user }}@{{ ansible_host }}:/flash/{{ application_filename | default(application_source | basename) }}"
     timeout: 1800
   delegate_to: localhost
   register: app_upload_result
@@ -74,48 +69,34 @@
   when: application_name is defined and application_action == 'install'
 - name: Enable installed application
   ansible.netcommon.cli_config:
-    config: 'app {{ application_name }}
-
+    config: |
+      app {{ application_name }}
       no shutdown
-
-      '
   when: application_name is defined and application_action == 'install'
 - name: Shutdown application before removal
   ansible.netcommon.cli_config:
-    config: 'app {{ application_name }}
-
+    config: |
+      app {{ application_name }}
       shutdown force
-
-      '
   when: application_name is defined
 - name: Remove application state
   ansible.netcommon.cli_config:
-    config: 'app {{ application_name }}
-
+    config: |
+      app {{ application_name }}
       default app state
-
-      '
   when: application_name is defined
 - name: Uninstall application
   ansible.netcommon.cli_config:
-    config: 'remove application {{ application_name }}
-
-      '
+    config: "remove application {{ application_name }}"
   register: app_remove_result
   when: application_name is defined
 - name: Upload EOS extension (Server-Initiated Transfer)
   ansible.builtin.command:
-    cmd: >
-      'scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ ''-i
-      '' + ansible_ssh_private_key_file
-        if ansible_ssh_private_key_file is defined
-      else '''' }} "{{ eos_extension_source
-        }}" "{{ ansible_user }}@{{ ansible_host
-}}:/flash/{{ eos_extension_filename |
-        default(eos_extension_source | basename)
-      }}"
-
-      '
+    cmd: >-
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+      {{ '-i ' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined else '' }}
+      "{{ eos_extension_source }}"
+      "{{ ansible_user }}@{{ ansible_host }}:/flash/{{ eos_extension_filename | default(eos_extension_source | basename) }}"
     timeout: 1800
   delegate_to: localhost
   register: eos_upload_result
