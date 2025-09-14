@@ -1,0 +1,174 @@
+---
+# Chaos Engineering Test Suite
+# Advanced failure injection and resilience testing for production readiness
+# Implements recommendations from Comprehensive Test Coverage Analysis
+
+- name: Chaos Engineering Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars:
+    chaos_scenarios:
+      # Network Chaos
+      - name: "Random Network Partitions"
+        type: "network_chaos"
+        duration: 120
+        severity: "moderate"
+        target_percentage: 25
+        recovery_expected: true
+
+      - name: "DNS Resolution Chaos"
+        type: "dns_chaos"
+        duration: 60
+        affected_services: ["netbox", "awx"]
+        recovery_expected: true
+
+      - name: "Bandwidth Throttling Storm"
+        type: "bandwidth_chaos"
+        duration: 180
+        throttle_percentage: 80
+        target_devices: "random_subset"
+        recovery_expected: true
+
+      # Service Chaos
+      - name: "Database Connection Pool Exhaustion"
+        type: "service_chaos"
+        service: "postgresql"
+        failure_mode: "connection_exhaustion"
+        duration: 90
+        recovery_expected: true
+
+      - name: "Memory Pressure Injection"
+        type: "resource_chaos"
+        resource: "memory"
+        pressure_level: 90
+        duration: 150
+        recovery_expected: true
+
+      - name: "Disk Space Starvation"
+        type: "storage_chaos"
+        target_path: "/var/lib/network-upgrade"
+        fill_percentage: 95
+        duration: 120
+        recovery_expected: true
+
+      # Time-Based Chaos
+      - name: "Clock Skew Injection"
+        type: "temporal_chaos"
+        time_drift: 300  # 5 minutes
+        affected_nodes: "upgrade_coordinators"
+        duration: 180
+        recovery_expected: true
+
+      - name: "Certificate Expiry Simulation"
+        type: "crypto_chaos"
+        expire_certificates: ["device_ssh", "api_tls"]
+        during_operation: true
+        recovery_expected: false  # Should trigger proper error handling
+
+      # Advanced Scenarios
+      - name: "Cascading Failure Chain"
+        type: "compound_chaos"
+        failure_sequence:
+          - "network_partition"
+          - "service_degradation"
+          - "resource_exhaustion"
+        propagation_delay: 30
+        recovery_expected: true
+
+  tasks:
+    - name: Initialize chaos engineering environment
+      ansible.builtin.set_fact:
+        chaos_results: {}
+        chaos_start_time: "{{ ansible_date_time.epoch }}"
+
+    - name: Execute chaos scenarios
+      block:
+        - name: "Deploy chaos scenario: {{ item.name }}"
+          ansible.builtin.shell: |
+            python3 {{ playbook_dir }}/../mock-devices/chaos_engine.py \
+              --scenario="{{ item.type }}" \
+              --duration="{{ item.duration }}" \
+              --severity="{{ item.severity | default('moderate') }}" \
+              --target="{{ item.target_percentage | default(25) }}" \
+              --recovery-expected="{{ item.recovery_expected }}"
+          register: chaos_execution
+          failed_when: false
+          loop: "{{ chaos_scenarios }}"
+
+        - name: Wait for chaos scenario completion
+          ansible.builtin.pause:
+            seconds: "{{ item.duration }}"
+          loop: "{{ chaos_scenarios }}"
+
+        - name: Validate system recovery
+          ansible.builtin.shell: |
+            python3 {{ playbook_dir }}/../validation-scripts/system-health-check.py \
+              --comprehensive \
+              --timeout=300
+          register: recovery_validation
+
+        - name: Record chaos test results
+          ansible.builtin.set_fact:
+            chaos_results: "{{ chaos_results | combine({
+              item.item.name: {
+                'scenario_type': item.item.type,
+                'duration': item.item.duration,
+                'recovery_expected': item.item.recovery_expected,
+                'actual_result': 'SUCCESS' if item.rc == 0 else 'FAILED',
+                'system_recovery_time': recovery_validation.stdout | from_json | json_query('recovery_time_seconds'),
+                'impact_severity': recovery_validation.stdout | from_json | json_query('impact_level')
+              }
+            }) }}"
+          loop: "{{ chaos_execution.results }}"
+
+      rescue:
+        - name: Emergency system recovery
+          ansible.builtin.shell: |
+            python3 {{ playbook_dir }}/../emergency-scripts/system-recovery.py --force-recovery
+
+        - name: Log chaos testing emergency stop
+          ansible.builtin.debug:
+            msg: "Chaos testing stopped due to unrecoverable system state"
+
+      always:
+        - name: Cleanup chaos engineering artifacts
+          ansible.builtin.shell: |
+            python3 {{ playbook_dir }}/../mock-devices/chaos_engine.py --cleanup-all
+
+    - name: Analyze chaos engineering results
+      ansible.builtin.debug:
+        msg: |
+          Chaos Engineering Test Results:
+          ===============================
+
+          {% for scenario_name, result in chaos_results.items() %}
+          {{ scenario_name }}:
+            Scenario Type: {{ result.scenario_type }}
+            Duration: {{ result.duration }}s
+            Recovery Expected: {{ result.recovery_expected }}
+            Actual Result: {{ result.actual_result }}
+            System Recovery Time: {{ result.system_recovery_time }}s
+            Impact Severity: {{ result.impact_severity }}
+
+          {% endfor %}
+
+          Resilience Summary:
+          - Total Scenarios: {{ chaos_scenarios | length }}
+          - Successful Recoveries: {{ chaos_results.values() | selectattr('actual_result', 'equalto', 'SUCCESS') | list | length }}
+          - Failed Recoveries: {{ chaos_results.values() | selectattr('actual_result', 'equalto', 'FAILED') | list | length }}
+          - Average Recovery Time: {{ (chaos_results.values() | map(attribute='system_recovery_time') | list | average) | round(2) }}s
+
+          Overall System Resilience Score: {{ (chaos_results.values() | selectattr('actual_result', 'equalto', 'SUCCESS') | list | length * 100 / chaos_scenarios | length) | round(1) }}%
+
+    - name: Generate chaos engineering report
+      ansible.builtin.template:
+        src: chaos_report_template.j2
+        dest: "{{ playbook_dir }}/../reports/chaos_engineering_report_{{ ansible_date_time.date }}.html"
+      vars:
+        test_results: "{{ chaos_results }}"
+        test_duration: "{{ ansible_date_time.epoch | int - chaos_start_time | int }}"
+
+    - name: Fail if system resilience is below threshold
+      ansible.builtin.fail:
+        msg: "System resilience below acceptable threshold (80%). Consider infrastructure hardening."
+      when: (chaos_results.values() | selectattr('actual_result', 'equalto', 'SUCCESS') | list | length * 100 / chaos_scenarios | length) < 80
