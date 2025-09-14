@@ -5,7 +5,7 @@
 
 - name: Conditional Logic Coverage Test Suite
   hosts: localhost
-  gather_facts: false
+  gather_facts: true
   vars:
     # ISSU Capability Detection Matrix
     issu_test_matrix:
@@ -149,7 +149,7 @@
             }
 
             expected = {
-                "issu_capable": {{ item.expected_issu | lower }},
+                "issu_capable": {{ item.expected_issu | string | title }},
                 "upgrade_method": "{{ item.expected_method }}"
             }
 
@@ -212,8 +212,8 @@
             }
 
             expected = {
-                "epld_upgrade_required": {{ item.expected_required | lower }},
-                "epld_images_valid": {{ item.expected_valid | lower }}
+                "epld_upgrade_required": {{ item.expected_required | string | title }},
+                "epld_images_valid": {{ item.expected_valid | string | title }}
             }
 
             test_passed = (
@@ -274,9 +274,9 @@
             }
 
             expected = {
-                "ha_cluster_detected": {{ item.expected_detected | lower }},
-                "ha_coordination_required": {{ item.expected_coordination | lower }},
-                "sequential_upgrade": {{ item.expected_sequential | lower }}
+                "ha_cluster_detected": {{ item.expected_detected | string | title }},
+                "ha_coordination_required": {{ item.expected_coordination | string | title }},
+                "sequential_upgrade": {{ item.expected_sequential | string | title }}
             }
 
             test_passed = all(result[k] == expected[k] for k in expected.keys())
@@ -340,8 +340,8 @@
             }
 
             expected = {
-                "install_mode_supported": {{ item.expected_install | lower }},
-                "bundle_mode_supported": {{ item.expected_bundle | lower }},
+                "install_mode_supported": {{ item.expected_install | string | title }},
+                "bundle_mode_supported": {{ item.expected_bundle | string | title }},
                 "preferred_mode": "{{ item.expected_preferred }}"
             }
 
