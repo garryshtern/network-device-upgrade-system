@@ -237,9 +237,9 @@
 - name: Store IGMP validation baseline
   ansible.builtin.copy:
     content: |
-      \t# IGMP Validation Baseline - {{
+      # IGMP Validation Baseline - {{
         lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-      \t# Generated during firmware upgrade validation
+      # Generated during firmware upgrade validation
 
       IGMP_Snooping_Enabled_VLANs: >
         {{ igmp_enabled_vlans if igmp_enabled_vlans is defined else 0 }}

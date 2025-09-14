@@ -174,9 +174,9 @@
     - name: Check BFD session timing consistency
       ansible.builtin.assert:
         that:
-          - item.tx_interval | int <= 1000 \t# Less than 1 second
-          - item.rx_interval | int <= 1000 \t# Less than 1 second
-          - item.multiplier | int >= 3 \t# At least 3x multiplier
+          - item.tx_interval | int <= 1000  # Less than 1 second
+          - item.rx_interval | int <= 1000  # Less than 1 second
+          - item.multiplier | int >= 3  # At least 3x multiplier
         fail_msg: >
           "BFD session {{ item.neighbor }} has suboptimal timing: TX={{
             item.tx_interval }}ms, RX={{ item.rx_interval }}ms, Mult={{ item.multiplier }}"
@@ -185,7 +185,7 @@
       when:
         - bfd_session_metrics is defined
         - bfd_session_metrics | length > 0
-      failed_when: false \t# Don't fail upgrade for timing warnings
+      failed_when: false  # Don't fail upgrade for timing warnings
 
     - name: Verify BFD echo function status
       ansible.builtin.debug:
@@ -295,9 +295,9 @@
 - name: Store detailed BFD validation report
   ansible.builtin.copy:
     content: |
-      \t# BFD Validation Report - {{ lookup('pipe',
+      # BFD Validation Report - {{ lookup('pipe',
         'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-      \t# Generated during NX-OS firmware upgrade validation
+      # Generated during NX-OS firmware upgrade validation
 
       BFD_Feature_Enabled: >
         {{ bfd_feature_enabled if bfd_feature_enabled is defined else false }}
