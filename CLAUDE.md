@@ -108,6 +108,7 @@ Comprehensive testing for Mac/Linux development without physical devices:
 
 ## Code Standards
 
+- **Code Quality**: MUST generate code without any syntactical and logical errors
 - **Ansible Best Practices**: Follow official guidelines
 - **Idempotency**: All tasks must be idempotent and support check mode
 - **YAML Standards**: Consistent formatting and structure

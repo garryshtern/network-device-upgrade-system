@@ -26,10 +26,10 @@
     - name: Run concurrent upgrade simulation
       ansible.builtin.shell: |
         cd {{ playbook_dir }}/../mock-devices
-        python3 -c "
+        python3 -c '
         from mock_device_engine import MockDeviceManager, ConcurrentUpgradeSimulator
         import json
-        import sys
+        import sys'
         
         manager = MockDeviceManager()
         simulator = ConcurrentUpgradeSimulator(manager)
@@ -69,7 +69,7 @@
         else:
             print('FAIL')
             sys.exit(1)
-        "
+        '
       register: concurrent_test_result
       failed_when: false
 
