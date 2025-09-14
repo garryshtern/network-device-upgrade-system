@@ -53,9 +53,11 @@ Build support for the following network device platforms:
 
 ### 4. Opengear (Console Servers/Smart PDUs)
 - **Collection**: `ansible.netcommon`
-- **Features**: Web interface automation, serial port management
-- **Models**: OM2200, CM8100, CM7100, IM7200
-- **Validation**: Port status, connectivity, power management
+- **Architecture**: All devices use CLI-based upgrades (SSH connection)
+- **Legacy Devices**: CM7100, OM7200 (netflash command, .flash files, 5.x.x versions)
+- **Modern Devices**: CM8100, OM2200 (puginstall command, .raucb files, YY.MM.x versions)
+- **Storage Paths**: Legacy (/var/mnt/storage.*), Modern (/tmp)
+- **Validation**: Port status, connectivity, power management, upgrade command validation
 
 ### 5. FortiOS (Fortinet Firewalls)
 - **Collection**: `fortinet.fortios`
@@ -332,7 +334,7 @@ collections:
 #### Opengear Role
 - **Console Server**: Serial port and console management during upgrades
 - **Web Interface**: Automation of web-based upgrade procedures
-- **Power Management**: Smart PDU upgrade coordination
+net
 - **Port Status**: Validate serial and network port states
 
 #### FortiOS Role
@@ -595,7 +597,7 @@ network-upgrade-system/
 │   │   ├── cisco-nxos-tests.yml      # NX-OS: ISSU, EPLD, Enhanced BFD, IGMP testing
 │   │   ├── cisco-iosxe-tests.yml     # IOS-XE: Install/Bundle mode, IPSec, Optics testing
 │   │   ├── fortios-tests.yml         # FortiOS: Multi-step upgrades, HA, VDOM testing
-│   │   ├── opengear-tests.yml        # Opengear: API vs SSH, Console vs PDU testing
+│   │   ├── opengear-tests.yml        # Opengear: CLI upgrades, Legacy vs Modern devices
 │   │   ├── metamako-tests.yml        # Metamako: MetaWatch/MetaMux, Ultra-low latency testing
 │   │   ├── validate_nxos_scenario.yml     # NX-OS scenario validation tasks
 │   │   ├── validate_iosxe_scenario.yml    # IOS-XE scenario validation tasks
@@ -624,13 +626,13 @@ network-upgrade-system/
 │   │   │                             # - NX-OS: 3 devices (ISSU/non-ISSU, EPLD scenarios)
 │   │   │                             # - IOS-XE: 3 devices (install/bundle mode scenarios)  
 │   │   │                             # - FortiOS: 4 devices (HA, standalone, multi-step upgrades)
-│   │   │                             # - Opengear: 4 devices (API vs SSH, console vs PDU)
+│   │   │                             # - Opengear: 4 devices (Legacy CLI vs Modern CLI)
 │   │   │                             # - Metamako: 4 devices (all metawatch/metamux combinations)
 │   │   ├── single-platform.yml       # Single platform testing
 │   │   ├── cisco-nxos-mock.yml       # NX-OS realistic mock devices with EPLD
 │   │   ├── cisco-iosxe-mock.yml      # IOS-XE realistic mock devices with install/bundle
 │   │   ├── fortios-mock.yml          # FortiOS realistic mock devices with multi-step
-│   │   ├── opengear-mock.yml         # Opengear realistic mock devices with API/SSH
+│   │   ├── opengear-mock.yml         # Opengear realistic mock devices with Legacy/Modern CLI
 │   │   └── metamako-mock.yml         # Metamako realistic mock devices with 2.x versions
 │   ├── validation-scripts/           # Validation and syntax checking
 │   │   ├── yaml-validator.py         # YAML/JSON structure validation
@@ -754,13 +756,14 @@ yamllint ansible-content/ awx-config/ tests/
 - **Mock Devices Required**: Minimum 4 FortiOS devices covering HA, standalone, multi-step scenarios
 
 ###### **Opengear Testing Requirements**
-- **API vs SSH Differentiation**: MANDATORY testing of both modern API and legacy SSH methods
-- **Web Interface Automation**: Modern devices (IM7200, CM8100) with HTTPS API
-- **Legacy CLI Support**: Older devices (OM2200, CM7100) with SSH CLI automation
-- **Console Server vs PDU**: Different device types with appropriate upgrade methods
-- **Connection Method Validation**: ansible_connection: local vs ssh differentiation
-- **Version-Specific Methods**: API-capable (4.8+) vs Legacy (3.x) firmware handling
-- **Mock Devices Required**: Minimum 4 Opengear devices covering API/SSH and console/PDU types
+- **CLI-Based Architecture**: All Opengear devices use SSH CLI-based upgrades
+- **Legacy Device Support**: CM7100, OM7200 with netflash command, .flash files, 5.x.x versions
+- **Modern Device Support**: CM8100, OM2200 with puginstall command, .raucb files, YY.MM.x versions
+- **Storage Path Validation**: Legacy (/var/mnt/storage.*) vs Modern (/tmp) storage handling
+- **Version Format Validation**: 5.x.x semantic versioning vs YY.MM.x date-based versioning
+- **Upgrade Command Testing**: netflash vs puginstall command validation
+- **Firmware Extension Testing**: .flash vs .raucb file format handling
+- **Mock Devices Required**: Minimum 4 Opengear devices covering Legacy/Modern CLI architectures
 
 ###### **Metamako MOS Testing Requirements**
 - **Ultra-Low Latency Handling**: Latency-sensitive upgrade procedures for critical devices
@@ -1031,7 +1034,7 @@ metamako: # Minimum 4 devices
 - **Realistic Mock Inventories**: Platform-accurate mock devices with proper configurations
 - **EPLD Testing**: NX-OS EPLD upgrade scenarios with multiple image support
 - **Multi-Step Upgrades**: FortiOS multi-version upgrade path testing
-- **API/SSH Differentiation**: Opengear modern API vs legacy SSH testing
+- **CLI Architecture Testing**: Opengear legacy vs modern CLI upgrade testing
 - **MetaWatch/MetaMux**: Metamako application testing with MetaWatch 4.2.0 and MetaMux 3.8.0 versions
 - **Automated CI/CD Testing**: All tests must be integrated into continuous integration pipeline
 - **Performance Validation**: Memory usage and execution time validation

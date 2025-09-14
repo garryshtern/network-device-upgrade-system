@@ -42,12 +42,18 @@
           model: "ISR4431"
           expected_features: ["Install Mode", "IPSec", "BFD"]
       opengear:
-        - hostname: "opengear-om2200-01"
-          model: "OM2200"
-          expected_architecture: "legacy"
+        - hostname: "opengear-cm7100-01"
+          model: "CM7100"
+          expected_architecture: "legacy_cli"
+        - hostname: "opengear-om7200-01"
+          model: "OM7200"
+          expected_architecture: "legacy_cli"
         - hostname: "opengear-cm8100-01"
           model: "CM8100"
-          expected_architecture: "modern"
+          expected_architecture: "current_cli"
+        - hostname: "opengear-om2200-01"
+          model: "OM2200"
+          expected_architecture: "current_cli"
 
   tasks:
     - name: Multi-Platform Integration Test Suite Information

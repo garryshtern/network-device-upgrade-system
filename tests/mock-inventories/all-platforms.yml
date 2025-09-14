@@ -156,62 +156,62 @@ all:
 
     opengear:
       hosts:
-        opengear-im7200-api:
+        opengear-cm7100-legacy:
           ansible_host: 127.0.0.7
-          ansible_connection: local
+          ansible_connection: ssh
           platform_type: opengear
-          firmware_version: "4.8.2"
-          target_version: "4.12.1"
-          device_model: "IM7200-2-DAC"
+          firmware_version: "5.16.8"
+          target_version: "5.18.2"
+          device_model: "CM7100"
           device_type: "console_server"
-          api_capable: true
-          upgrade_method: "web_api"
-          api_port: 443
-          api_protocol: "https"
-          web_interface_enabled: true
-          cli_legacy_support: false
-        opengear-cm8100-api:
+          device_architecture: "legacy_cli"
+          upgrade_method: "cli"
+          upgrade_command: "netflash"
+          firmware_extension: ".flash"
+          storage_paths: ["/var/mnt/storage.nvlog", "/var/mnt/storage.usb"]
+          web_interface_enabled: false
+        opengear-om7200-legacy:
           ansible_host: 127.0.0.8
-          ansible_connection: local
+          ansible_connection: ssh
           platform_type: opengear
-          firmware_version: "4.9.1"
-          target_version: "4.12.1"
-          device_model: "CM8100"
+          firmware_version: "5.14.2"
+          target_version: "5.18.2"
+          device_model: "OM7200"
           device_type: "console_server"
-          api_capable: true
-          upgrade_method: "web_api"
-          api_port: 443
-          api_protocol: "https"
-          web_interface_enabled: true
-          cli_legacy_support: true
-        opengear-om2200-legacy:
+          device_architecture: "legacy_cli"
+          upgrade_method: "cli"
+          upgrade_command: "netflash"
+          firmware_extension: ".flash"
+          storage_paths: ["/var/mnt/storage.nvlog", "/var/mnt/storage.usb"]
+          web_interface_enabled: false
+        opengear-cm8100-modern:
           ansible_host: 127.0.0.9
           ansible_connection: ssh
           platform_type: opengear
-          firmware_version: "3.14.2"
-          target_version: "4.12.1"
-          device_model: "OM2200"
-          device_type: "smart_pdu"
-          api_capable: false
-          upgrade_method: "ssh_cli"
-          api_port: null
-          api_protocol: null
-          web_interface_enabled: false
-          cli_legacy_support: true
-        opengear-cm7100-legacy:
+          firmware_version: "24.11.0"
+          target_version: "25.07.0"
+          device_model: "CM8100"
+          device_type: "console_server"
+          device_architecture: "current_cli"
+          upgrade_method: "cli"
+          upgrade_command: "puginstall"
+          firmware_extension: ".raucb"
+          storage_paths: ["/tmp"]
+          web_interface_enabled: true
+        opengear-om2200-modern:
           ansible_host: 127.0.0.10
           ansible_connection: ssh
           platform_type: opengear
-          firmware_version: "3.16.8"
-          target_version: "4.12.1"
-          device_model: "CM7100"
+          firmware_version: "24.09.1"
+          target_version: "25.07.0"
+          device_model: "OM2200"
           device_type: "console_server"
-          api_capable: false
-          upgrade_method: "ssh_cli"
-          api_port: null
-          api_protocol: null
-          web_interface_enabled: false
-          cli_legacy_support: true
+          device_architecture: "current_cli"
+          upgrade_method: "cli"
+          upgrade_command: "puginstall"
+          firmware_extension: ".raucb"
+          storage_paths: ["/tmp"]
+          web_interface_enabled: true
       vars:
         ansible_user: root
         ansible_password: "{{ vault_opengear_password | default('mock_password') }}"

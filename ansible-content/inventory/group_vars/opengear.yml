@@ -27,14 +27,12 @@ auto_detect_device_type: true
 supported_models:
   legacy_cli:
     console_servers:
-      - "OM2200"    # Legacy console server - CLI only
       - "CM7100"    # Legacy console server - CLI only
-  modern_api:
+      - "OM7200"    # Legacy operations manager - CLI only
+  current_cli:
     console_servers:
-      - "CM8100"    # Modern console server - Full API + CLI
-      - "IM7200"    # Modern infrastructure manager - Full API + CLI
-    smart_pdus:
-      - "CM8100"    # Can be both console server and PDU
+      - "CM8100"    # Current console server - CLI upgrades
+      - "OM2200"    # Current operations manager - CLI upgrades
 
 # Architecture detection settings
 architecture_detection:
@@ -51,6 +49,38 @@ firmware_upload_timeout: 3600
 firmware_chunk_size: 1048576  # 1MB chunks
 verify_firmware_checksum: true
 local_firmware_path: "{{ firmware_base_path }}/opengear"
+
+# Firmware filename patterns by device model
+firmware_filename_patterns:
+  legacy_cli:
+    # Legacy devices use 3.x.x version format (e.g., 3.16.4)
+    CM7100: "cm71xx-{{ target_version }}.flash"
+    OM7200: "im72xx-{{ target_version }}.flash"
+  current_cli:
+    # Modern devices use YY.MM.x format (e.g., 25.07.0)
+    CM8100: "console_manager-{{ target_version }}-*.raucb"
+    OM2200: "operations_manager-{{ target_version }}-*.raucb"
+
+# Version format validation by device architecture
+version_formats:
+  legacy_cli:
+    pattern: "^5\\.[0-9]+\\.[0-9]+$"
+    description: "Legacy 5.x.x semantic versioning (e.g., 5.16.4)"
+    example: "5.16.4"
+  current_cli:
+    pattern: "^[0-9]{2}\\.[0-9]{2}\\.[0-9]+$"
+    description: "Modern YY.MM.x date-based versioning (e.g., 25.07.0)"
+    example: "25.07.0"
+
+# Upgrade command by device architecture
+upgrade_commands:
+  legacy_cli:
+    command: "netflash"
+    storage_paths: ["/var/mnt/storage.nvlog", "/var/mnt/storage.usb"]
+  current_cli:
+    command: "puginstall"
+    storage_paths: ["/tmp"]
+    options: "--reboot-after"
 
 # Console server specific settings
 console_server:

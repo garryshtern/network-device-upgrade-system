@@ -1,20 +1,39 @@
 ---
 # Opengear Storage Assessment
 
+- name: Detect Opengear storage mount points
+  ansible.builtin.raw: >
+    "df -h | grep -E '(/var/mnt/storage\.(usb|nvlog)|/var/nvlog)' ||
+    echo '/var/mnt/storage.nvlog not mounted'"
+  register: opengear_mount_check
+  changed_when: false
+
+- name: Determine primary storage location
+  ansible.builtin.set_fact:
+    opengear_storage_path: >
+      {%- if '/var/mnt/storage.nvlog' in opengear_mount_check.stdout -%}
+      /var/mnt/storage.nvlog
+      {%- elif '/var/mnt/storage.usb' in opengear_mount_check.stdout -%}
+      /var/mnt/storage.usb
+      {%- else -%}
+      /var/nvlog
+      {%- endif %}
+
 - name: Get Opengear storage information
-  ansible.builtin.raw: "df -h /tmp"
+  ansible.builtin.raw: "df -h {{ opengear_storage_path }}"
   register: opengear_storage_info
   changed_when: false
 
-- name: Get firmware files
+- name: Get firmware files in storage location
   ansible.builtin.raw: >
-    "ls -la /tmp/*.img /tmp/*.bin 2>/dev/null || echo 'No firmware files found'"
+    "ls -la {{ opengear_storage_path }}/*.flash {{ opengear_storage_path }}/*.raucb {{ opengear_storage_path }}/*.img {{ opengear_storage_path }}/*.bin
+    2>/dev/null || echo 'No firmware files found'"
   register: opengear_firmware_files
   changed_when: false
 
-- name: Get temporary files
+- name: Get temporary files in storage location
   ansible.builtin.raw: >
-    "ls -la /tmp/upgrade_* /tmp/opengear_*
+    "ls -la {{ opengear_storage_path }}/upgrade_* {{ opengear_storage_path }}/opengear_*
       2>/dev/null || echo 'No temporary files found'"
   register: opengear_temp_files
   changed_when: false
@@ -23,19 +42,19 @@
   ansible.builtin.set_fact:
     opengear_total_size: >-
       {{ opengear_storage_info.stdout |
-        regex_search('/tmp\\s+(\\S+)', '\\1') | first }}
+        regex_search('{{ opengear_storage_path | regex_escape }}\\s+(\\S+)', '\\1') | first }}
     opengear_available_size: >-
       {{ opengear_storage_info.stdout |
-        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}
+        regex_search('{{ opengear_storage_path | regex_escape }}\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}
     opengear_usage_percent: >-
       {{ opengear_storage_info.stdout |
-        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}
+        regex_search('{{ opengear_storage_path | regex_escape }}\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}
 
 - name: Parse file listings
   ansible.builtin.set_fact:
     opengear_firmware_images: "
       {{ opengear_firmware_files.stdout_lines |
-        select('match', '.*(img|bin)$') | map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}
+        select('match', '.*(flash|raucb|img|bin)$') | map('regex_replace', '.* ([^/]+\\.(flash|raucb|img|bin))$', '\\1') | list }}
       "
     opengear_temp_file_list: "
       {{ opengear_temp_files.stdout_lines |
