@@ -220,4 +220,4 @@ dev_config.yaml
 test_config.yaml
 
 # Documentation artifacts  
-*.pdf
+*.pdftests/reports/
