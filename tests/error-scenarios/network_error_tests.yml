@@ -63,7 +63,7 @@
 
     - name: Test network error scenarios
       block:
-        - name: "Execute error scenario: {{ item.name }}"
+        - name: "Execute network error scenario"
           ansible.builtin.shell: |
             cd {{ playbook_dir }}/../mock-devices
             python3 -c "
@@ -128,7 +128,9 @@
       always:
         - name: Stop mock device server
           ansible.builtin.shell: |
-            pkill -f "mock_device_engine.py" || true
+            pkill -f "mock_device_engine.py" > /dev/null 2>&1 || true
+          failed_when: false
+          changed_when: false
 
     - name: Generate network error test report
       ansible.builtin.debug:

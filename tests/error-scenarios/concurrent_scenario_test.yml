@@ -91,6 +91,7 @@
     - name: Cleanup mock devices for this scenario
       ansible.builtin.shell: |
         {% for device in scenario.devices %}
-        pkill -f "port {{ device.port }}" || true
+        pkill -f "port {{ device.port }}" > /dev/null 2>&1 || true
         {% endfor %}
       failed_when: false
+      changed_when: false
