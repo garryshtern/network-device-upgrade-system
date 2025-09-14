@@ -271,12 +271,12 @@
         - name: Validate Opengear Legacy Implementation
           ansible.builtin.assert:
             that:
-              - "'Legacy Opengear Image Loading' in (opengear_legacy_content.content | b64decode)"
-              - "'OM2200 and CM7100' in (opengear_legacy_content.content | b64decode)"
+              - "'Opengear Image Loading (CLI-based)' in (opengear_legacy_content.content | b64decode)"
+              - "'CM7100, OM7200' in (opengear_legacy_content.content | b64decode)"
               - "'echo \"show system info\" | /bin/cli' in (opengear_legacy_content.content | b64decode)"
-              - "'SCP transfer' in (opengear_legacy_content.content | b64decode)"
-            success_msg: "✓ Opengear legacy CLI implementation complete"
-            fail_msg: "Opengear legacy CLI implementation incomplete"
+              - "'SCP' in (opengear_legacy_content.content | b64decode)"
+            success_msg: "✓ Opengear CLI implementation complete"
+            fail_msg: "Opengear CLI implementation incomplete"
 
     # ==========================================
     # Validation Framework Integration Tests

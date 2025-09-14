@@ -90,7 +90,7 @@
     - name: Start mock device servers for each platform
       ansible.builtin.shell: |
         cd {{ playbook_dir }}/../mock-devices
-        python3 mock_device_engine.py --platform {{ item }} --port {{ mock_device_port|int + loop.index0 }} --daemon
+        python3 mock_device_engine.py --platform {{ item }} --port {{ mock_device_port|int + ansible_loop.index0 }} --daemon
       loop: "{{ test_platforms }}"
       async: 600
       poll: 0

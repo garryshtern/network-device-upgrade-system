@@ -176,10 +176,10 @@
 
     - name: Analyze edge case test patterns
       ansible.builtin.shell: |
-        python3 -c "
+        python3 -c '
         import json
-        
-        results = {{ edge_case_results | to_json }}
+
+        results = {{ edge_case_results | to_json }}'
         
         # Analyze patterns
         scenario_types = {}
@@ -201,7 +201,7 @@
         print('Edge Case Analysis:')
         for scenario, passed_count in scenario_types.items():
             print(f'  {scenario}: {passed_count} passed')
-        "
+        '
       register: edge_case_analysis
 
     - name: Generate comprehensive edge case report

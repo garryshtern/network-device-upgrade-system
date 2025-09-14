@@ -93,16 +93,16 @@
         - name: Create large-scale mock device inventory
           ansible.builtin.shell: |
             cd {{ playbook_dir }}/../mock-devices
-            python3 -c "
+            python3 -c '
             from mock_device_engine import MockDeviceManager
             import json
-            
+
             manager = MockDeviceManager()
             devices = {}
-            
+
             # Create enterprise-scale device inventory
             platforms = {{ production_scenarios.enterprise_scale.platforms | to_json }}
-            device_count = {{ production_scenarios.enterprise_scale.device_count }}
+            device_count = {{ production_scenarios.enterprise_scale.device_count }}'
             
             devices_per_platform = device_count // len(platforms)
             
@@ -123,7 +123,7 @@
                 json.dump(devices, f, indent=2)
             
             print('SUCCESS')
-            "
+            '
           register: enterprise_scale_setup
           
         - name: Simulate concurrent upgrade scenario
