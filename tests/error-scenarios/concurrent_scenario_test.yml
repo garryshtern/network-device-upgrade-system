@@ -26,11 +26,11 @@
     - name: Run concurrent upgrade simulation
       ansible.builtin.shell: |
         cd {{ playbook_dir }}/../mock-devices
-        python3 -c '
+        python3 -c "
         from mock_device_engine import MockDeviceManager, ConcurrentUpgradeSimulator
         import json
-        import sys'
-        
+        import sys
+
         manager = MockDeviceManager()
         simulator = ConcurrentUpgradeSimulator(manager)
         
@@ -49,11 +49,15 @@
         }
         
         {% if scenario.resource_limits is defined %}
-        scenario_config['resource_limits'] = {{ scenario.resource_limits | to_json }}
+        import os
+        resource_limits_json = os.environ.get('RESOURCE_LIMITS_JSON', '{}')
+        scenario_config['resource_limits'] = json.loads(resource_limits_json)
         {% endif %}
-        
+
         {% if scenario.failure_injection is defined %}
-        scenario_config['failure_injection'] = {{ scenario.failure_injection | to_json }}
+        import os
+        failure_injection_json = os.environ.get('FAILURE_INJECTION_JSON', '{}')
+        scenario_config['failure_injection'] = json.loads(failure_injection_json)
         {% endif %}
         
         # Execute scenario
@@ -69,9 +73,18 @@
         else:
             print('FAIL')
             sys.exit(1)
-        '
+        "
       register: concurrent_test_result
       failed_when: false
+      environment: >-
+        {%- set env = {} -%}
+        {%- if scenario.resource_limits is defined -%}
+          {%- set _ = env.update({'RESOURCE_LIMITS_JSON': scenario.resource_limits | to_json}) -%}
+        {%- endif -%}
+        {%- if scenario.failure_injection is defined -%}
+          {%- set _ = env.update({'FAILURE_INJECTION_JSON': scenario.failure_injection | to_json}) -%}
+        {%- endif -%}
+        {{ env }}
 
     - name: Record scenario completion time
       ansible.builtin.set_fact:

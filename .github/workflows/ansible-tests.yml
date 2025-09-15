@@ -322,9 +322,64 @@ jobs:
             ls -la tests/reports/ || echo "Reports directory not found"
           fi
 
+  comprehensive-test-suite:
+    name: Comprehensive Test Suite (All 14 Tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.7'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade ansible psutil
+          pip install yamllint ansible-lint
+
+      - name: Install Ansible collections
+        run: |
+          ansible-galaxy collection install \
+            -r ansible-content/collections/requirements.yml \
+            --force --ignore-certs
+
+      - name: Create results directory
+        run: mkdir -p tests/results
+
+      - name: Run comprehensive test suite
+        run: |
+          cd tests
+          chmod +x run-all-tests.sh
+          ./run-all-tests.sh
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-test-results-${{ github.run_number }}
+          path: |
+            tests/results/test_report_*.txt
+            tests/results/*_*.log
+          retention-days: 30
+
+      - name: Fail if any tests failed
+        run: |
+          # Check if comprehensive tests passed
+          if ! grep -q "🎉 All tests passed!" tests/results/test_report_*.txt; then
+            echo "❌ Comprehensive test suite failed"
+            exit 1
+          else
+            echo "✅ All 14 test suites passed successfully"
+          fi
+
   call-container-build:
     name: Build Container Image
-    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests, molecule-tests, critical-gap-tests]
+    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests, molecule-tests, critical-gap-tests, comprehensive-test-suite]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/build-container.yml
     with:

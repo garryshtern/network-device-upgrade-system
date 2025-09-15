@@ -77,14 +77,14 @@
             
             {% if item.scenario_type == 'interruption_recovery' %}
             # Simulate upgrade interruption
-            device.state.current_phase = device.state.UpgradePhase.{{ item.interruption_phase.upper() }}
+            device.current_phase = '{{ item.interruption_phase.upper() }}'
             device.inject_error('power_interruption', {{ item.interruption_duration }})
-            
+
             # Wait for interruption
             time.sleep(2)
-            
+
             # Attempt recovery
-            device.state.current_phase = device.state.UpgradePhase.RECOVERY
+            device.current_phase = 'RECOVERY'
             recovery_result = device.process_command('show upgrade status')
             success = 'recovery' in recovery_result.get('output', '').lower()
             
@@ -117,27 +117,27 @@
                 
                 if reboot_count >= {{ item.loop_detection_threshold }}:
                     loop_detected = True
-                    device.state.current_phase = device.state.UpgradePhase.ERROR
+                    device.current_phase = 'ERROR'
                     break
             
-            success = loop_detected and {{ item.intervention_expected | lower }}
+            success = loop_detected and {{ item.intervention_expected | bool | title }}
             
             {% elif item.scenario_type == 'version_mismatch' %}
             # Test version compatibility checking
-            device.state.current_firmware = '{{ item.current_version }}'
+            device.current_firmware = '{{ item.current_version }}'
             target_version = '{{ item.target_version }}'
             
             # Simulate version compatibility check
             version_check = device.process_command(f'validate upgrade path {target_version}')
             if 'intermediate versions required' in version_check.get('output', ''):
                 # This should trigger conflict resolution
-                success = {{ item.conflict_resolution_expected | lower }}
+                success = {{ item.conflict_resolution_expected | bool | title }}
             else:
                 success = False
             
             {% elif item.scenario_type == 'power_loss_rollback' %}
             # Simulate power loss during upgrade
-            device.state.current_phase = device.state.UpgradePhase.POST_UPGRADE_VALIDATION
+            device.current_phase = 'POST_UPGRADE_VALIDATION'
             device.inject_error('power_loss', 0)  # Immediate power loss
             
             # Simulate boot-up and rollback detection
@@ -148,7 +148,7 @@
             {% elif item.scenario_type == 'cert_rotation' %}
             # Simulate certificate expiry during HA upgrade
             device.inject_error('certificate_expired', 0)
-            device.state.custom_data = {'ha_enabled': True, 'ha_role': 'primary'}
+            device.session_data = {'ha_enabled': True, 'ha_role': 'primary'}
             
             cert_handling = device.process_command('renew certificates')
             success = 'certificate renewed' in cert_handling.get('output', '').lower()
@@ -178,30 +178,34 @@
       ansible.builtin.shell: |
         python3 -c '
         import json
+        import os
 
-        results = {{ edge_case_results | to_json }}'
-        
+        results_json = os.environ.get("RESULTS_JSON", "{}")
+        results = json.loads(results_json)
+
         # Analyze patterns
         scenario_types = {}
         for test_name, result in results.items():
             # Extract scenario type from test name
-            if 'Interruption' in test_name:
-                scenario_types['interruption_recovery'] = scenario_types.get('interruption_recovery', 0) + (1 if result == 'PASS' else 0)
-            elif 'Retry' in test_name:
-                scenario_types['retry_logic'] = scenario_types.get('retry_logic', 0) + (1 if result == 'PASS' else 0)
-            elif 'Reboot Loop' in test_name:
-                scenario_types['reboot_loop'] = scenario_types.get('reboot_loop', 0) + (1 if result == 'PASS' else 0)
-            elif 'Version Mismatch' in test_name:
-                scenario_types['version_mismatch'] = scenario_types.get('version_mismatch', 0) + (1 if result == 'PASS' else 0)
-            elif 'Power Loss' in test_name:
-                scenario_types['power_loss_rollback'] = scenario_types.get('power_loss_rollback', 0) + (1 if result == 'PASS' else 0)
-            elif 'Certificate' in test_name:
-                scenario_types['cert_rotation'] = scenario_types.get('cert_rotation', 0) + (1 if result == 'PASS' else 0)
-        
-        print('Edge Case Analysis:')
+            if "Interruption" in test_name:
+                scenario_types["interruption_recovery"] = scenario_types.get("interruption_recovery", 0) + (1 if result == "PASS" else 0)
+            elif "Retry" in test_name:
+                scenario_types["retry_logic"] = scenario_types.get("retry_logic", 0) + (1 if result == "PASS" else 0)
+            elif "Reboot Loop" in test_name:
+                scenario_types["reboot_loop"] = scenario_types.get("reboot_loop", 0) + (1 if result == "PASS" else 0)
+            elif "Version Mismatch" in test_name:
+                scenario_types["version_mismatch"] = scenario_types.get("version_mismatch", 0) + (1 if result == "PASS" else 0)
+            elif "Power Loss" in test_name:
+                scenario_types["power_loss_rollback"] = scenario_types.get("power_loss_rollback", 0) + (1 if result == "PASS" else 0)
+            elif "Certificate" in test_name:
+                scenario_types["cert_rotation"] = scenario_types.get("cert_rotation", 0) + (1 if result == "PASS" else 0)
+
+        print("Edge Case Analysis:")
         for scenario, passed_count in scenario_types.items():
-            print(f'  {scenario}: {passed_count} passed')
+            print(f"  {scenario}: {passed_count} passed")
         '
+      environment:
+        RESULTS_JSON: "{{ edge_case_results | to_json }}"
       register: edge_case_analysis
 
     - name: Generate comprehensive edge case report

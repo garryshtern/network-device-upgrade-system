@@ -93,19 +93,20 @@
         - name: Create large-scale mock device inventory
           ansible.builtin.shell: |
             cd {{ playbook_dir }}/../mock-devices
-            python3 -c '
+            python3 -c "
             from mock_device_engine import MockDeviceManager
             import json
+            import os
 
             manager = MockDeviceManager()
             devices = {}
 
             # Create enterprise-scale device inventory
-            platforms = {{ production_scenarios.enterprise_scale.platforms | to_json }}
-            device_count = {{ production_scenarios.enterprise_scale.device_count }}'
-            
-            devices_per_platform = device_count // len(platforms)
-            
+            platforms = json.loads(os.environ.get('PLATFORMS_JSON', '[]'))
+            device_count = int(os.environ.get('DEVICE_COUNT', '0'))
+
+            devices_per_platform = device_count // len(platforms) if platforms else 0
+
             for platform in platforms:
                 for i in range(devices_per_platform):
                     device_name = f'{platform}-{i+1:04d}'
@@ -115,16 +116,19 @@
                         'device_id': device_id,
                         'status': 'ready'
                     }
-            
+
             print(f'Created {len(devices)} mock devices')
-            
+
             # Save device inventory for other tests
             with open('/tmp/uat_device_inventory.json', 'w') as f:
                 json.dump(devices, f, indent=2)
-            
+
             print('SUCCESS')
-            '
+            "
           register: enterprise_scale_setup
+          environment:
+            PLATFORMS_JSON: "{{ production_scenarios.enterprise_scale.platforms | to_json }}"
+            DEVICE_COUNT: "{{ production_scenarios.enterprise_scale.device_count }}"
           
         - name: Simulate concurrent upgrade scenario
           ansible.builtin.shell: |
@@ -245,10 +249,11 @@
             for scenario_id in range(rollback_scenarios):
                 device_id = manager.create_device('cisco_nxos', f'test-rollback-{scenario_id}')
                 device = manager.devices[device_id]
-                
+
                 # Simulate upgrade failure requiring rollback
                 device.inject_error('upgrade_failure', 0)
-                device.state.current_phase = device.state.UpgradePhase.ERROR
+                from mock_device_engine import UpgradePhase
+                device.upgrade_phase = UpgradePhase.FAILED
                 
                 # Test rollback capability
                 rollback_result = device.process_command('rollback to previous version')
@@ -301,6 +306,10 @@
             
             passed_scenarios = 0
             for scenario in scenarios:
+                # Clear any previous error state
+                device.error_state = None
+                device.error_conditions = []
+
                 if scenario == 'expired_certificate':
                     device.inject_error('certificate_expired', 0)
                     result = device.process_command('connect')

@@ -81,11 +81,24 @@
 
     - name: Build test combinations for each platform
       ansible.builtin.set_fact:
-        test_matrix: "{{ test_matrix + [{'platform': item.0, 'error_category': item.1.key, 'scenario': item.1.value}] }}"
-      loop: "{{ test_platforms | product(device_error_scenarios | dict2items) | list }}"
-      loop_control:
-        label: "{{ item.0 }} - {{ item.1.key }}"
-      when: item.1.value.platforms is not defined or item.0 in item.1.value.platforms
+        test_matrix: "{{ test_matrix + combinations }}"
+      vars:
+        combinations: >-
+          {%- set result = [] -%}
+          {%- for platform in test_platforms -%}
+            {%- for category_name, scenarios in device_error_scenarios.items() -%}
+              {%- for scenario in scenarios -%}
+                {%- if scenario.platforms is not defined or platform in scenario.platforms -%}
+                  {%- set _ = result.append({
+                      'platform': platform,
+                      'error_category': category_name,
+                      'scenario': scenario
+                  }) -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endfor -%}
+          {%- endfor -%}
+          {{ result }}
 
     - name: Start mock device servers for each platform
       ansible.builtin.shell: |
@@ -124,7 +137,7 @@
                 'error_code': '{{ item.scenario.error_code }}',
                 'trigger_phase': '{{ item.scenario.trigger_phase }}',
                 'platform': '{{ item.platform }}',
-                'recovery_expected': {{ item.scenario.recovery_expected | lower }}
+                'recovery_expected': {{ item.scenario.recovery_expected | bool | title }}
             }
             
             # Execute error scenario
@@ -132,7 +145,7 @@
             
             print(f'Testing {{ item.scenario.name }} on {{ item.platform }}...')
             
-            if result['success'] == {{ item.scenario.recovery_expected | lower }}:
+            if result['success'] == {{ item.scenario.recovery_expected | bool | title }}:
                 print('PASS')
                 sys.exit(0)
             else:
