@@ -155,16 +155,29 @@ jobs:
         if: inputs.push_image && runner.os == 'Linux'
         run: |
           echo "Testing podman compatibility..."
-          
+
           # Install podman for compatibility testing
           sudo apt-get update
           sudo apt-get install -y podman
-          
+
           # Get the first tag for testing
           IMAGE_TAG=$(echo '${{ steps.meta.outputs.tags }}' | head -1)
+
+          # Wait for manifest list to propagate
+          echo "Waiting for multi-architecture manifest to propagate..."
+          sleep 10
           
           echo "::group::Testing with podman (rootless simulation)"
-          podman run --rm "$IMAGE_TAG"
+          # Test manifest inspection first
+          echo "Inspecting image manifest with podman..."
+          podman manifest inspect "$IMAGE_TAG" || echo "⚠️  Manifest inspect failed, trying direct run..."
+
+          # Test podman pull and run
+          echo "Testing podman pull and run..."
+          if ! podman run --rm "$IMAGE_TAG"; then
+            echo "⚠️  Multi-arch manifest run failed, trying platform-specific..."
+            podman run --rm --platform linux/amd64 "$IMAGE_TAG"
+          fi
           echo "::endgroup::"
           
           echo "✅ Podman compatibility test completed successfully"

@@ -386,5 +386,5 @@ jobs:
     uses: ./.github/workflows/build-container.yml
     with:
       push_image: true
-      platforms: 'linux/amd64'
+      platforms: 'linux/amd64,linux/arm64'
     secrets: inherit
