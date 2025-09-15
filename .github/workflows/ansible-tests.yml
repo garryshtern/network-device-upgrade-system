@@ -369,14 +369,14 @@ jobs:
 
       - name: Fail if any tests failed
         run: |
-          # Check if comprehensive tests passed by looking for the success message
-          if ! grep -q "All tests passed!" tests/results/test_report_*.txt; then
+          # Check if comprehensive tests passed by checking passed count and success rate
+          if grep -q "- Passed: 14" tests/results/test_report_*.txt && grep -q "- Failed: 0" tests/results/test_report_*.txt; then
+            echo "✅ All 14 test suites passed successfully"
+          else
             echo "❌ Comprehensive test suite failed"
             echo "Test report contents:"
             cat tests/results/test_report_*.txt || echo "No test report found"
             exit 1
-          else
-            echo "✅ All 14 test suites passed successfully"
           fi
 
   call-container-build:
