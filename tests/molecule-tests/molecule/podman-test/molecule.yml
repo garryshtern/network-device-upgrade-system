@@ -21,8 +21,8 @@ platforms:
     privileged: false
     systemd: false
     tmpfs:
-      - /tmp
-      - /run
+      /tmp: ""
+      /run: ""
     env:
       PODMAN_VERSION: "4.9.4"
 
