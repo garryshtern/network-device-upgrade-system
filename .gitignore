@@ -175,7 +175,7 @@ firmware/
 # IDE and editor files
 .vscode/
 .idea/
-.claude/
+.claude/settings.local.json
 .ansible/
 *.swp
 *.swo
