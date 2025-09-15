@@ -5,16 +5,16 @@
 - name: Get ARP table (NX-OS)
   cisco.nxos.nxos_command:
     commands:
-    - show ip arp | json
-    - show ip arp summary | json
-    - show ip arp statistics | json
+      - show ip arp | json
+      - show ip arp summary | json
+      - show ip arp statistics | json
   register: nxos_arp_info
   when: ansible_network_os == "cisco.nxos.nxos"
 - name: Get ARP table (IOS-XE)
   cisco.ios.ios_command:
     commands:
-    - show ip arp
-    - show arp summary
+      - show ip arp
+      - show arp summary
   register: ios_arp_info
   when: ansible_network_os == "cisco.ios.ios"
 - name: Get ARP table (Generic)

@@ -7,20 +7,20 @@
   gather_facts: false
   tasks:
     - name: Verify mock firmware file exists
-      stat:
+      ansible.builtin.stat:
         path: "/tmp/nxos.10.1.2.bin"
       register: firmware_file
       delegate_to: localhost
 
     - name: Assert firmware file was created
-      assert:
+      ansible.builtin.assert:
         that:
           - firmware_file.stat.exists
         fail_msg: "Mock firmware file should exist"
         success_msg: "✓ Mock firmware file verified"
 
     - name: Verify ISSU logic variables are set
-      assert:
+      ansible.builtin.assert:
         that:
           - issu_supported is defined
           - current_version is defined
@@ -30,7 +30,7 @@
         success_msg: "✓ ISSU variables properly configured"
 
     - name: Verify EPLD upgrade logic
-      assert:
+      ansible.builtin.assert:
         that:
           - epld_upgrade_needed is defined
           - epld_modules is defined
@@ -39,7 +39,7 @@
         success_msg: "✓ EPLD upgrade logic verified"
 
     - name: Verify error handling scenarios
-      assert:
+      ansible.builtin.assert:
         that:
           - storage_sufficient is defined
           - not storage_sufficient  # Should be false in test
@@ -49,7 +49,7 @@
         success_msg: "✓ Error handling scenarios verified"
 
     - name: Verify device states
-      assert:
+      ansible.builtin.assert:
         that:
           - device_states is defined
           - device_states.pre_upgrade == "ready"
@@ -58,7 +58,7 @@
         success_msg: "✓ Device state management verified"
 
     - name: Final verification summary
-      debug:
+      ansible.builtin.debug:
         msg:
           - "=== NX-OS ISSU Molecule Test Verification Complete ==="
           - "✅ ISSU capability detection: VERIFIED"
