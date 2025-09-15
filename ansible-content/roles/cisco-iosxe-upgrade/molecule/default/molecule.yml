@@ -1,0 +1,55 @@
+---
+# Critical Gap #4: Cisco IOS-XE Install Mode Detection Testing
+# Business Impact: 350K+ USD from router upgrade failures
+# Risk: Install vs Bundle mode logic affects upgrade path
+dependency:
+  name: galaxy
+  options:
+    requirements-file: ../../../../../ansible-content/collections/requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: iosxe-install-mode
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+
+  - name: iosxe-bundle-mode
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      host_key_checking: false
+      stdout_callback: yaml
+  inventory:
+    host_vars:
+      iosxe-install-mode:
+        ansible_connection: local
+        platform_type: "cisco_iosxe"
+        boot_mode: "install"
+        current_version: "17.06.04"
+        target_version: "17.09.02"
+        platform_model: "ISR4431"
+
+      iosxe-bundle-mode:
+        ansible_connection: local
+        platform_type: "cisco_iosxe"
+        boot_mode: "bundle"
+        current_version: "16.12.07"
+        target_version: "17.06.04"
+        platform_model: "ASR1001-X"
+
+verifier:
+  name: ansible

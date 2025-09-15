@@ -1,6 +1,7 @@
 ---
 galaxy_info:
   role_name: cisco_nxos_upgrade
+  namespace: enterprise
   author: Network Operations
   description: Cisco NX-OS firmware upgrade automation
   company: Enterprise Network Management

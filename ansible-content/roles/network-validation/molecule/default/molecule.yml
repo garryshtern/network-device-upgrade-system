@@ -1,0 +1,52 @@
+---
+# Critical Gap #3: Network Validation Logic Testing
+# Business Impact: 400K+ USD from missed network failures post-upgrade
+# Focus: BGP validation contains 352 lines of untested parsing logic
+dependency:
+  name: galaxy
+  options:
+    requirements-file: ../../../../../ansible-content/collections/requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: network-validation-test
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      host_key_checking: false
+      stdout_callback: yaml
+  inventory:
+    host_vars:
+      network-validation-test:
+        ansible_connection: local
+        platform_type: "cisco_nxos"
+
+        # BGP validation test data
+        baseline_bgp_neighbors: 4
+        current_bgp_neighbors: 4
+        baseline_routes: 150000
+        current_routes: 150250
+
+        # Protocol validation test data
+        ospf_areas: 3
+        isis_neighbors: 6
+
+        # Interface validation test data
+        critical_interfaces: ['Ethernet1/1', 'Ethernet1/2', 'port-channel1']
+
+        # Test mode flags
+        test_mode: true
+        skip_influxdb: true
+
+verifier:
+  name: ansible

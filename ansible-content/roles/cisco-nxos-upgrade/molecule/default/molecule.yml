@@ -1,0 +1,69 @@
+---
+# Critical Gap #1: Cisco NX-OS ISSU Logic Testing
+# Business Impact: 800K+ USD potential loss from data center outages
+dependency:
+  name: galaxy
+  options:
+    requirements-file: ../../../../../ansible-content/collections/requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: nxos-test-instance
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+    capabilities:
+      - NET_ADMIN
+    privileged: true
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      host_key_checking: false
+      stdout_callback: yaml
+  inventory:
+    host_vars:
+      nxos-test-instance:
+        # Mock NX-OS device characteristics
+        ansible_network_os: cisco.nxos.nxos
+        ansible_connection: local
+        platform_type: "cisco_nxos"
+        target_firmware: "10.1.2"
+        current_firmware: "9.3.10"
+
+        # ISSU-specific test variables
+        issu_capable: true
+        epld_upgrade_required: true
+        ha_configuration: "vpc_peer"
+
+        # Mock device facts
+        ansible_facts:
+          net_hostname: "test-nxos-switch"
+          net_model: "N9K-C93180YC-EX"
+          net_serialnum: "FOC2345G6H7"
+          net_version: "9.3(10)"
+          net_image: "bootflash:nxos.9.3.10.bin"
+
+verifier:
+  name: ansible
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

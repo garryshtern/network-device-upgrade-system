@@ -145,15 +145,16 @@
     - name: Check for existing baseline
       ansible.builtin.stat:
         path: >
-          "/var/log/network-upgrade/baselines/{{ inventory_hostname }}_bgp_baseline.json"
+          "/var/log/network-upgrade/baselines/
+          {{ inventory_hostname }}_bgp_baseline.json"
       register: baseline_file
       delegate_to: localhost
 
     - name: Load baseline data
       ansible.builtin.set_fact:
         bgp_baseline: >-
-          {{ lookup('file', '/var/log/network-upgrade/baselines/' + inventory_hostname + '_bgp_baseline.json') |
-            from_json }}
+          {{ lookup('file', '/var/log/network-upgrade/baselines/' +
+             inventory_hostname + '_bgp_baseline.json') | from_json }}
       when:
         - baseline_file.stat.exists
         - validation_mode == 'post_upgrade'
@@ -193,17 +194,21 @@
               bgp_validation.current.analysis.total_neighbors | default(0) }}
             "
           established_count_match: "
-      {{ bgp_validation.baseline.analysis.established_neighbors | default(0) ==
-              bgp_validation.current.analysis.established_neighbors | default(0) }}
+      {{ bgp_validation.baseline.analysis.established_neighbors |
+         default(0) == bgp_validation.current.analysis.
+         established_neighbors | default(0) }}
             "
           prefix_count_variance: "
-      {{ ((bgp_validation.current.analysis.total_received_prefixes | default(0) -
-              bgp_validation.baseline.analysis.total_received_prefixes | default(0)) | abs) }}
+      {{ ((bgp_validation.current.analysis.total_received_prefixes |
+         default(0) - bgp_validation.baseline.analysis.
+         total_received_prefixes | default(0)) | abs) }}
             "
           prefix_variance_percentage: "
-      {{ ((bgp_validation.current.analysis.total_received_prefixes | default(1) -
-              bgp_validation.baseline.analysis.total_received_prefixes | default(1)) /
-              (bgp_validation.baseline.analysis.total_received_prefixes | default(1)) * 100) | abs }}
+      {{ ((bgp_validation.current.analysis.total_received_prefixes |
+         default(1) - bgp_validation.baseline.analysis.
+         total_received_prefixes | default(1)) /
+         (bgp_validation.baseline.analysis.total_received_prefixes |
+         default(1)) * 100) | abs }}
             "
           new_down_neighbors: []
           recovered_neighbors: []

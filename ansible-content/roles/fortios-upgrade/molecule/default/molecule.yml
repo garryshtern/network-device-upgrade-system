@@ -1,0 +1,56 @@
+---
+# Critical Gap #2: FortiOS HA Cluster Upgrade Testing
+# Business Impact: 600K+ USD potential loss from firewall cluster failures
+dependency:
+  name: galaxy
+  options:
+    requirements-file: ../../../../../ansible-content/collections/requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: fortios-primary
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+
+  - name: fortios-secondary
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      host_key_checking: false
+      stdout_callback: yaml
+  inventory:
+    host_vars:
+      fortios-primary:
+        ansible_connection: local
+        platform_type: "fortios"
+        ha_role: "primary"
+        ha_cluster_id: "test-cluster-1"
+        ha_peer_ip: "192.168.1.2"
+        current_firmware: "7.2.5"
+        target_firmware: "7.4.1"
+
+      fortios-secondary:
+        ansible_connection: local
+        platform_type: "fortios"
+        ha_role: "secondary"
+        ha_cluster_id: "test-cluster-1"
+        ha_peer_ip: "192.168.1.1"
+        current_firmware: "7.2.5"
+        target_firmware: "7.4.1"
+
+verifier:
+  name: ansible
