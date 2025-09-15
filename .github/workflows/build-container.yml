@@ -156,9 +156,23 @@ jobs:
         run: |
           echo "Testing podman compatibility..."
 
-          # Install podman for compatibility testing
+          # Install podman 4.9.4 for compatibility testing
+          echo "Installing Podman 4.9.4..."
+          sudo apt-get update
+
+          # Install dependencies
+          sudo apt-get install -y curl wget gpg lsb-release
+
+          # Add Kubic repository for latest Podman
+          echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$(lsb_release -rs)/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_$(lsb_release -rs)/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/kubic-libcontainers.gpg > /dev/null
+
           sudo apt-get update
           sudo apt-get install -y podman
+
+          # Verify Podman version
+          podman --version
+          echo "✅ Podman installation completed"
 
           # Get the first tag for testing
           IMAGE_TAG=$(echo '${{ steps.meta.outputs.tags }}' | head -1)

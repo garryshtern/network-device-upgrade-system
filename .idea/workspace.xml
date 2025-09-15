@@ -5,14 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="87629bf4-cfe3-439f-a321-a3033a721acb" name="Changes" comment="Fix the failure in workflow">
+      <change beforePath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/ansible-tests.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/build-container.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/build-container.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/network-device-upgrade-system.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/test-role/tests/molecule-tests/molecule/default/converge.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ansible-content/roles/test-role/tests/molecule-tests/molecule/default/molecule.yml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/error-scenarios/concurrent_scenario_test.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/error-scenarios/concurrent_scenario_test.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/error-scenarios/device_error_tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/error-scenarios/device_error_tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/error-scenarios/edge_case_tests.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/error-scenarios/edge_case_tests.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/mock-devices/mock_device_engine.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/mock-devices/mock_device_engine.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/uat-tests/production_readiness_suite.yml" beforeDir="false" afterPath="$PROJECT_DIR$/tests/uat-tests/production_readiness_suite.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MOLECULE_TESTS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/DOCUMENTATION_ANALYSIS_REPORT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/PLATFORM_IMPLEMENTATION_STATUS.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/PLATFORM_IMPLEMENTATION_STATUS.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/PROJECT_REQUIREMENTS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/TESTING_AND_QA_COMPREHENSIVE_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/WORKFLOW_INTEGRATION_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/container-deployment.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/container-deployment.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/TESTING_IMPLEMENTATION_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/TEST_FRAMEWORK_GUIDE.md" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -96,7 +107,7 @@
       <workItem from="1756951775422" duration="9763000" />
       <workItem from="1757115228585" duration="72241000" />
       <workItem from="1757551344727" duration="70000" />
-      <workItem from="1757554781068" duration="57951000" />
+      <workItem from="1757554781068" duration="65703000" />
     </task>
     <task id="LOCAL-00001" summary="Added implementations">
       <option name="closed" value="true" />

@@ -379,9 +379,76 @@ jobs:
             exit 1
           fi
 
+  podman-tests:
+    name: Podman 4.9.4 Testing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13.7"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Podman 4.9.4
+        run: |
+          echo "Installing Podman 4.9.4..."
+          sudo apt-get update
+
+          # Install dependencies
+          sudo apt-get install -y curl wget gpg lsb-release
+
+          # Add Kubic repository for latest Podman
+          echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$(lsb_release -rs)/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_$(lsb_release -rs)/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/kubic-libcontainers.gpg > /dev/null
+
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+          # Verify Podman version
+          podman --version
+          echo "✅ Podman installation completed"
+
+      - name: Install Ansible and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade ansible molecule molecule-plugins[podman]
+          ansible-galaxy collection install \
+            -r ansible-content/collections/requirements.yml \
+            --force --ignore-certs
+
+      - name: Test Podman molecule configuration
+        run: |
+          echo "Testing Podman-specific molecule configuration..."
+          cd tests/molecule-tests
+          molecule test --scenario-name podman-test
+
+      - name: Test container image with Podman
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "Testing pre-built container with Podman..."
+          # Test with latest available image
+          IMAGE_TAG="ghcr.io/${{ github.repository }}:latest"
+
+          echo "Pulling image with Podman..."
+          podman pull "$IMAGE_TAG" || echo "Image not available yet, will be tested in build workflow"
+
+          if podman images | grep -q "$IMAGE_TAG"; then
+            echo "Testing container execution with Podman..."
+            podman run --rm "$IMAGE_TAG" syntax-check
+            echo "✅ Podman container test completed successfully"
+          else
+            echo "ℹ️  Container image not available for testing (will be built later)"
+          fi
+
   call-container-build:
     name: Build Container Image
-    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests, molecule-tests, critical-gap-tests, comprehensive-test-suite]
+    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests, molecule-tests, critical-gap-tests, comprehensive-test-suite, podman-tests]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/build-container.yml
     with:

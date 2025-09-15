@@ -53,3 +53,4 @@ provisioner:
 
 verifier:
   name: ansible
+

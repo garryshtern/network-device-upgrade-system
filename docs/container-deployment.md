@@ -10,7 +10,7 @@ The Network Device Upgrade System is available as a production-ready container i
 
 - ✅ **Minimal Size**: Alpine-based image (~200MB)
 - ✅ **Security**: Non-root execution (UID/GID 1000)
-- ✅ **Compatibility**: RHEL8/9, Docker, Podman, Kubernetes
+- ✅ **Compatibility**: RHEL8/9, Docker, Podman 4.9.4+, Kubernetes
 - ✅ **Multi-Architecture**: AMD64 and ARM64 support
 - ✅ **Latest Stack**: Ansible 12.0.0, Python 3.13.7
 - ✅ **Pre-installed Collections**: All required Ansible collections included
@@ -128,6 +128,64 @@ docker run --rm \
   ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 ```
 
+### 5. Device Inventory and Firmware Management
+
+```bash
+# Create device inventory file
+cat > device-inventory.yml << 'EOF'
+all:
+  children:
+    cisco_nxos:
+      hosts:
+        nx-core-01:
+          ansible_host: 10.1.1.10
+          ansible_network_os: nxos
+          platform_type: cisco_nxos
+          firmware_version: "9.3.10"
+          target_version: "10.1.2"
+          device_model: "N9K-C93180YC-EX"
+          issu_capable: true
+        nx-core-02:
+          ansible_host: 10.1.1.11
+          ansible_network_os: nxos
+          platform_type: cisco_nxos
+          firmware_version: "9.3.10"
+          target_version: "10.1.2"
+          device_model: "N9K-C93180YC-EX"
+          issu_capable: true
+      vars:
+        ansible_user: admin
+        ansible_password: "{{ vault_cisco_password }}"
+
+    cisco_iosxe:
+      hosts:
+        cat9k-01:
+          ansible_host: 10.1.2.10
+          ansible_network_os: ios
+          platform_type: cisco_iosxe
+          firmware_version: "17.09.04a"
+          target_version: "17.12.01"
+          device_model: "C9300-48P"
+          install_mode_capable: true
+      vars:
+        ansible_user: admin
+        ansible_password: "{{ vault_cisco_password }}"
+EOF
+
+# Run upgrade with device inventory and firmware images
+docker run --rm \
+  -v ./device-inventory.yml:/opt/inventory/devices.yml:ro \
+  -v ./firmware-images:/opt/firmware:ro \
+  -v ./vault-password:/opt/vault-key:ro \
+  -e ANSIBLE_INVENTORY="/opt/inventory/devices.yml" \
+  -e ANSIBLE_VAULT_PASSWORD_FILE="/opt/vault-key" \
+  -e TARGET_FIRMWARE="10.1.2" \
+  -e TARGET_HOSTS="cisco_nxos" \
+  -e UPGRADE_PHASE="loading" \
+  -e firmware_base_path="/opt/firmware" \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
 ## RHEL8/9 with Podman
 
 ### Rootless Podman Setup
@@ -140,9 +198,25 @@ sudo sysctl -p /etc/sysctl.d/userns.conf
 # Configure subuid and subgid for your user (if not already configured)
 sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 $(whoami)
 
-# Pull and run with podman
+# Pull and run with podman (multi-architecture manifest support)
 podman pull ghcr.io/garryshtern/network-device-upgrade-system:latest
 podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
+
+# Verify multi-architecture manifest
+podman manifest inspect ghcr.io/garryshtern/network-device-upgrade-system:latest
+
+# Example with device inventory and firmware images
+podman run --rm \
+  -v ./device-inventory.yml:/opt/inventory/devices.yml:Z \
+  -v ./firmware-images:/opt/firmware:Z \
+  -v ./vault-password:/opt/vault-key:Z \
+  -e ANSIBLE_INVENTORY="/opt/inventory/devices.yml" \
+  -e ANSIBLE_VAULT_PASSWORD_FILE="/opt/vault-key" \
+  -e TARGET_FIRMWARE="10.1.2" \
+  -e TARGET_HOSTS="cisco_nxos" \
+  -e UPGRADE_PHASE="loading" \
+  -e firmware_base_path="/opt/firmware" \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
 
 ### SELinux Considerations

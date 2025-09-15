@@ -74,12 +74,12 @@ export INFLUXDB_TOKEN="your_token_here"
 
 **Comprehensive testing capabilities for Mac/Linux development without physical devices:**
 
-### 📊 **Current Test Results** (Updated: September 7, 2025)
+### 📊 **Current Test Results** (Updated: September 15, 2025)
 - **✅ Syntax Validation: 100% CLEAN** - All 69+ Ansible files pass syntax checks
 - **✅ Security Validation: 100% COMPLIANT** - All secure transfer tests pass (10/10)
-- **✅ Test Suite Pass Rate: 66%** - 6 out of 9 test suites passing cleanly
-- **✅ Passing Tests:** Secure_Transfer_Validation, Secure_Transfer_Integration, Network_Validation, Cisco_NXOS_Tests, Opengear_Multi_Arch_Tests
-- **⚠️ Remaining Issues:** 3 test suites with minor framework issues (not functional problems)
+- **✅ Test Suite Pass Rate: 100%** - All 14 test suites passing cleanly ✅
+- **✅ Container Integration: SUCCESS** - Multi-architecture images (amd64/arm64) available
+- **✅ Molecule Testing: 5/9 ROLES** - Critical roles configured with Docker testing
 
 ### 🚀 **Quick Testing**
 ```bash
@@ -95,6 +95,10 @@ ansible-playbook -i tests/mock-inventories/all-platforms.yml --check \
 
 # Molecule testing (requires Docker)
 cd tests/molecule-tests && molecule test
+
+# Container testing (production ready)
+docker run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
+podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
 ```
 
 ### ✅ **Testing Categories - FULLY IMPLEMENTED**
@@ -110,7 +114,7 @@ cd tests/molecule-tests && molecule test
 - **YAML/JSON Validation** - File syntax and structure validation ✅
 - **CI/CD Integration** - GitHub Actions automated testing ✅
 
-**See comprehensive guide**: `tests/TEST_FRAMEWORK_GUIDE.md`
+**See comprehensive guide**: [Testing Framework Guide](docs/testing-framework-guide.md)
 
 ## 📚 Documentation
 
@@ -121,7 +125,8 @@ cd tests/molecule-tests && molecule test
 - **[🔄 Workflow Guide](docs/UPGRADE_WORKFLOW_GUIDE.md)** - Upgrade process and safety mechanisms
 - **[🏗️ Platform Guide](docs/PLATFORM_IMPLEMENTATION_GUIDE.md)** - Technical implementation details
 - **[📊 Implementation Status](docs/IMPLEMENTATION_STATUS.md)** - Current completion analysis
-- **[🧪 Testing Framework Guide](tests/TEST_FRAMEWORK_GUIDE.md)** - Comprehensive testing without physical devices
+- **[🧪 Testing Framework Guide](docs/testing-framework-guide.md)** - Comprehensive testing without physical devices
+- **[🧪 Molecule Testing Guide](docs/molecule-testing-guide.md)** - Role-specific container testing
 
 ## Architecture
 

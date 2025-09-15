@@ -9,43 +9,47 @@ This directory contains comprehensive documentation for the Network Device Upgra
 ```
 docs/
 ├── README.md                               # This documentation index
-├── DOCUMENTATION_ANALYSIS_REPORT.md       # Documentation analysis and consolidation report
-├── IMPLEMENTATION_STATUS.md                # Current platform implementation status
-├── PROJECT_REQUIREMENTS.md                # Complete system requirements
-├── TESTING_AND_QA_COMPREHENSIVE_GUIDE.md  # Consolidated testing & QA guide
+├── PLATFORM_IMPLEMENTATION_STATUS.md      # Current platform implementation status
+├── testing-framework-guide.md             # Comprehensive testing guide (consolidated)
+├── molecule-testing-guide.md              # Role-specific container testing
 ├── installation-guide.md                  # Complete installation procedures
 ├── container-deployment.md                # Container deployment guide
 ├── UPGRADE_WORKFLOW_GUIDE.md               # Comprehensive workflow diagrams
-├── PLATFORM_IMPLEMENTATION_GUIDE.md       # Platform-specific details
-├── WORKFLOW_ARCHITECTURE.md               # GitHub Actions workflow architecture
-├── WORKFLOW_INTEGRATION_SUMMARY.md        # Workflow integration details
-└── ../tests/TEST_FRAMEWORK_GUIDE.md       # Testing implementation guide
+└── WORKFLOW_ARCHITECTURE.md               # GitHub Actions workflow architecture
 ```
 
 ## 📖 Quick Start Documentation
 
 ### For System Administrators
 1. **[Installation Guide](installation-guide.md)** - Start here for system deployment
-   - System requirements and pre-installation checklist  
+   - System requirements and pre-installation checklist
    - Step-by-step installation with time estimates
    - Native systemd service deployment procedures
    - SSL certificate and security configuration
    - **NEW**: Development and testing setup without devices
 
-### For Developers and Testing
-2. **[Testing & QA Comprehensive Guide](TESTING_AND_QA_COMPREHENSIVE_GUIDE.md)** - Complete testing ecosystem overview
-   - Test coverage analysis and critical gap identification
-   - Business impact assessment and ROI analysis
-   - Implementation roadmap and priority matrix
-   - Sample test case implementations for critical gaps
-   - Quality assurance framework and success metrics
+1.1. **[Container Deployment Guide](container-deployment.md)** - Production-ready container deployment
+   - Docker and Podman deployment examples
+   - Multi-architecture support (amd64/arm64)
+   - Device inventory and firmware image mounting
+   - RHEL8/9 rootless podman compatibility
+   - Production scenarios with vault management
 
-3. **[Testing Implementation Guide](../tests/TEST_FRAMEWORK_GUIDE.md)** - Technical testing procedures
+### For Developers and Testing
+2. **[Testing Framework Guide](testing-framework-guide.md)** - Complete testing ecosystem overview
+   - 14/14 test suites passing (100% success rate)
    - Mock inventory testing for all 5 platforms
    - Unit testing, integration testing, performance testing
    - Template rendering and workflow logic validation
+   - Container testing with Docker/Podman
    - CI/CD integration with GitHub Actions
    - Mac/Linux development environment setup
+
+3. **[Molecule Testing Guide](molecule-testing-guide.md)** - Role-specific container testing
+   - 5/9 roles configured with Docker testing
+   - Business impact assessment and critical role testing
+   - Implementation status and remaining work
+   - ISSU logic, HA coordination, and validation testing
 
 ### For Network Engineers
 4. **[Upgrade Workflow Guide](UPGRADE_WORKFLOW_GUIDE.md)** - Understand the upgrade process
@@ -81,8 +85,8 @@ The system follows a native service architecture with AWX orchestrating Ansible 
 |------|------------|---------------|-------------|
 | **🔧 System Administrator** | [Installation Guide](installation-guide.md) | System setup, SSL, monitoring | Deployment & maintenance |
 | **👨‍💻 Network Engineer** | [Workflow Guide](UPGRADE_WORKFLOW_GUIDE.md) | Process flows, validation | Operations & troubleshooting |
-| **🛠️ Developer/Integrator** | [Platform Guide](PLATFORM_IMPLEMENTATION_GUIDE.md) | Architecture, status | Integration & customization |
-| **🧪 QA/Testing** | [Testing & QA Guide](TESTING_AND_QA_COMPREHENSIVE_GUIDE.md) | Test coverage, gap analysis | Quality assurance |
+| **🛠️ Developer/Integrator** | [Platform Status](PLATFORM_IMPLEMENTATION_STATUS.md) | Architecture, status | Integration & customization |
+| **🧪 QA/Testing** | [Testing Framework Guide](testing-framework-guide.md) | Test coverage, 14/14 success | Quality assurance |
 
 ## 📊 Current Implementation Status
 
@@ -91,21 +95,21 @@ The system follows a native service architecture with AWX orchestrating Ansible 
 
 For detailed platform status and completion analysis, see:
 - **[README.md](../README.md)** - Current project status and overview
-- **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - Comprehensive platform analysis
+- **[Platform Implementation Status](PLATFORM_IMPLEMENTATION_STATUS.md)** - Comprehensive platform analysis
 
 ## 🎯 Documentation Quick Reference
 
 ### Essential Reading Order
 1. **[README.md](../README.md)** - Project overview and quick start
-2. **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - Current completion status
+2. **[Platform Implementation Status](PLATFORM_IMPLEMENTATION_STATUS.md)** - Current completion status
 3. **[Installation Guide](installation-guide.md)** - Deployment procedures
-4. **[Testing & QA Guide](TESTING_AND_QA_COMPREHENSIVE_GUIDE.md)** - Quality assurance overview
+4. **[Testing Framework Guide](testing-framework-guide.md)** - Quality assurance overview
 5. **[Workflow Guide](UPGRADE_WORKFLOW_GUIDE.md)** - Operational understanding
-6. **[Platform Guide](PLATFORM_IMPLEMENTATION_GUIDE.md)** - Technical deep dive
+6. **[Container Deployment Guide](container-deployment.md)** - Production container usage
 
 ### Reference Documents
 - **[CLAUDE.md](../CLAUDE.md)** - Developer guidance and testing procedures
-- **[PROJECT_REQUIREMENTS.md](PROJECT_REQUIREMENTS.md)** - System specifications
+- **[Workflow Architecture](WORKFLOW_ARCHITECTURE.md)** - CI/CD pipeline details
 
 ### Visual Learning Path
 
@@ -159,4 +163,4 @@ graph LR
 
 ---
 
-*This documentation is continuously updated to reflect the current implementation status and operational procedures. Last updated: September 13, 2025*
+*This documentation is continuously updated to reflect the current implementation status and operational procedures. Last updated: September 15, 2025*

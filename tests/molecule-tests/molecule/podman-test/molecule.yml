@@ -1,0 +1,66 @@
+---
+# Molecule configuration for Podman 4.9.4 testing
+dependency:
+  name: galaxy
+  options:
+    requirements-file: ../../../../ansible-content/collections/requirements.yml
+
+driver:
+  name: podman
+
+platforms:
+  - name: podman-test-instance
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+    capabilities:
+      - NET_ADMIN
+    privileged: false
+    systemd: false
+    tmpfs:
+      - /tmp
+      - /run
+    env:
+      PODMAN_VERSION: "4.9.4"
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      host_key_checking: false
+      stdout_callback: yaml
+      callbacks_enabled: profile_tasks
+  inventory:
+    host_vars:
+      podman-test-instance:
+        ansible_connection: local
+        target_firmware_version: "test-firmware-v1.0"
+        container_runtime: "podman"
+        container_runtime_version: "4.9.4"
+  playbooks:
+    converge: ../default/converge.yml
+    verify: ../default/verify.yml
+  env:
+    ANSIBLE_COLLECTIONS_PATH: ~/.ansible/collections:/usr/share/ansible/collections
+    ANSIBLE_ROLES_PATH: ../../../../ansible-content/roles
+
+verifier:
+  name: ansible
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy
