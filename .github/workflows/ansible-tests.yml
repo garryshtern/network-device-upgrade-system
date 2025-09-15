@@ -403,9 +403,21 @@ jobs:
           # Install dependencies
           sudo apt-get install -y curl wget gpg lsb-release
 
-          # Add Kubic repository for latest Podman
-          echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$(lsb_release -rs)/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
-          curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_$(lsb_release -rs)/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/kubic-libcontainers.gpg > /dev/null
+          # Use Ubuntu 22.04 repository for Ubuntu 24.04 compatibility
+          # or fallback to default Ubuntu packages
+          UBUNTU_VERSION=$(lsb_release -rs)
+          if [ "$UBUNTU_VERSION" = "24.04" ]; then
+            # Try Ubuntu 22.04 repository first
+            echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_22.04/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+            curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_22.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/kubic-libcontainers.gpg > /dev/null 2>&1 || {
+              echo "Kubic repository failed, using default Ubuntu packages..."
+              sudo rm -f /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+              sudo rm -f /etc/apt/trusted.gpg.d/kubic-libcontainers.gpg
+            }
+          else
+            echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$UBUNTU_VERSION/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
+            curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_$UBUNTU_VERSION/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/kubic-libcontainers.gpg > /dev/null
+          fi
 
           sudo apt-get update
           sudo apt-get install -y podman
