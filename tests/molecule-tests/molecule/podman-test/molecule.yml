@@ -21,8 +21,8 @@ platforms:
     privileged: false
     systemd: false
     tmpfs:
-      /tmp: ""
-      /run: ""
+      /tmp: "rw,noexec,nosuid,size=1G"
+      /run: "rw,noexec,nosuid,size=512m"
     env:
       PODMAN_VERSION: "4.9.4"
 
