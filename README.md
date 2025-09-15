@@ -238,18 +238,23 @@ flowchart TD
 
 ```
 network-upgrade-system/
-├── install/                    # Installation scripts
+├── deployment/                # Service-based deployment structure
+│   ├── system/                # Base system setup (SSL, system config)
+│   ├── services/              # Individual service deployments
+│   │   ├── awx/               # AWX automation platform
+│   │   ├── netbox/            # NetBox IPAM & device inventory
+│   │   ├── grafana/           # ✅ Complete dashboard automation
+│   │   ├── telegraf/          # Metrics collection
+│   │   └── redis/             # Caching & job queue
+│   └── scripts/               # General deployment scripts
 ├── ansible-content/           # Ansible automation content
 │   ├── playbooks/             # Main orchestration playbooks
 │   ├── roles/                 # Vendor-specific upgrade roles
-│   └── validation-templates/   # Network state validation
-├── awx-config/                # AWX configuration templates
-├── integration/               # External system integration
-│   └── grafana/               # ✅ Complete dashboard automation
-├── scripts/                   # Utility and maintenance scripts
+│   └── collections/           # Ansible collection requirements
 ├── tests/                     # Comprehensive test suites
 ├── docs/                      # Complete documentation
-└── examples/                  # Sample configurations
+├── tools/                     # Development and utility tools
+└── .claude/                   # Claude Code commands and workflows
 ```
 
 ## Documentation
@@ -257,7 +262,7 @@ network-upgrade-system/
 - 📘 [Installation Guide](docs/installation-guide.md) - Complete setup instructions
 - 🔄 [Upgrade Workflow Guide](docs/UPGRADE_WORKFLOW_GUIDE.md) - Upgrade process and safety mechanisms  
 - 🏗️ [Platform Implementation Guide](docs/PLATFORM_IMPLEMENTATION_GUIDE.md) - Technical implementation details
-- 📊 [Grafana Integration](integration/grafana/README.md) - Dashboard automation and monitoring  
+- 📊 [Grafana Integration](deployment/services/grafana/README.md) - Dashboard automation and monitoring  
 - 📖 [Documentation Hub](docs/README.md) - Complete documentation index
 
 ## Support
