@@ -33,6 +33,8 @@ jobs:
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.get_version.outputs.new_version }}
 
     steps:
       - name: Checkout code
@@ -201,3 +203,13 @@ jobs:
           echo "Version: ${{ steps.get_version.outputs.new_version }}"
           echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.get_version.outputs.new_version }}"
           echo "Container Image: ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.new_version }}"
+
+  build-versioned-container:
+    name: Build Versioned Container Image
+    needs: create-release
+    uses: ./.github/workflows/build-container.yml
+    with:
+      image_tag: ${{ needs.create-release.outputs.new_version }}
+      push_image: true
+      platforms: 'linux/amd64,linux/arm64'
+    secrets: inherit
