@@ -1,0 +1,100 @@
+---
+name: Cleanup Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deletion:
+        description: 'Type "DELETE" to confirm artifact deletion'
+        required: true
+        type: string
+      max_artifacts:
+        description: 'Maximum number of artifacts to delete (safety limit)'
+        required: false
+        default: '100'
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup-artifacts:
+    name: Delete All Workflow Artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE" ]; then
+            echo "❌ Confirmation failed. You must type 'DELETE' to proceed."
+            exit 1
+          fi
+          echo "✅ Confirmation validated"
+
+      - name: Delete artifacts
+        run: |
+          echo "🗑️  Starting artifact cleanup..."
+
+          # Fetch all artifacts
+          echo "📋 Fetching artifact list..."
+          gh api "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | .id' > /tmp/artifact_ids.txt
+
+          if [ ! -s /tmp/artifact_ids.txt ]; then
+            echo "📭 No artifacts found to delete"
+            exit 0
+          fi
+
+          TOTAL_ARTIFACTS=$(wc -l < /tmp/artifact_ids.txt)
+          MAX_LIMIT=${{ github.event.inputs.max_artifacts }}
+
+          if [ "$TOTAL_ARTIFACTS" -gt "$MAX_LIMIT" ]; then
+            echo "⚠️  Found $TOTAL_ARTIFACTS artifacts, but limit is $MAX_LIMIT"
+            echo "Truncating list to first $MAX_LIMIT artifacts for safety"
+            head -n "$MAX_LIMIT" /tmp/artifact_ids.txt > /tmp/artifact_ids_limited.txt
+            mv /tmp/artifact_ids_limited.txt /tmp/artifact_ids.txt
+            TOTAL_ARTIFACTS=$MAX_LIMIT
+          fi
+
+          echo "📦 Found $TOTAL_ARTIFACTS artifacts to delete"
+
+          # Delete each artifact
+          COUNT=0
+          DELETED=0
+          FAILED=0
+
+          while read -r artifact_id; do
+            if [ -n "$artifact_id" ]; then
+              COUNT=$((COUNT + 1))
+              echo -n "🗑️  Deleting artifact $artifact_id ($COUNT/$TOTAL_ARTIFACTS)... "
+
+              if gh api --method DELETE "repos/${{ github.repository }}/actions/artifacts/$artifact_id" --silent; then
+                echo "✅ Deleted"
+                DELETED=$((DELETED + 1))
+              else
+                echo "❌ Failed"
+                FAILED=$((FAILED + 1))
+              fi
+            fi
+          done < /tmp/artifact_ids.txt
+
+          echo ""
+          echo "🎉 Artifact cleanup completed!"
+          echo "   Total processed: $COUNT"
+          echo "   Successfully deleted: $DELETED"
+          echo "   Failed: $FAILED"
+
+          # Clean up temp files
+          rm -f /tmp/artifact_ids.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "### 🧹 Artifact Cleanup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Cleanup completed successfully**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All workflow artifacts have been removed from the repository." >> $GITHUB_STEP_SUMMARY
+          echo "Future workflow runs will create fresh artifacts as needed." >> $GITHUB_STEP_SUMMARY

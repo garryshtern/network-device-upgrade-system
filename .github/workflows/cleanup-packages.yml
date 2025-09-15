@@ -1,0 +1,125 @@
+---
+name: Cleanup Container Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_deletion:
+        description: 'Type "DELETE" to confirm package cleanup'
+        required: true
+        type: string
+      keep_latest:
+        description: 'Keep latest and main tagged versions'
+        required: false
+        default: true
+        type: boolean
+      max_deletions:
+        description: 'Maximum number of versions to delete (safety limit)'
+        required: false
+        default: '50'
+        type: string
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  cleanup-packages:
+    name: Delete Non-Release Container Versions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE" ]; then
+            echo "❌ Confirmation failed. You must type 'DELETE' to proceed."
+            exit 1
+          fi
+          echo "✅ Confirmation validated"
+
+      - name: Cleanup container package versions
+        run: |
+          echo "🗑️  Starting container package cleanup..."
+
+          PACKAGE_NAME="network-device-upgrade-system"
+          KEEP_LATEST="${{ github.event.inputs.keep_latest }}"
+          MAX_LIMIT=${{ github.event.inputs.max_deletions }}
+
+          # Get all package versions
+          echo "📋 Fetching package versions..."
+          gh api "user/packages/container/$PACKAGE_NAME/versions" \
+            --jq '.[] | {id: .id, tags: .metadata.container.tags}' > /tmp/package_versions.json
+
+          if [ ! -s /tmp/package_versions.json ]; then
+            echo "📭 No package versions found"
+            exit 0
+          fi
+
+          echo "📦 Analyzing package versions..."
+
+          # Create deletion list (exclude release versions and latest/main if requested)
+          DELETED=0
+          SKIPPED=0
+
+          while read -r version_data; do
+            if [ -n "$version_data" ]; then
+              VERSION_ID=$(echo "$version_data" | jq -r '.id')
+              TAGS=$(echo "$version_data" | jq -r '.tags[]?' 2>/dev/null || echo "")
+
+              SKIP_VERSION=false
+
+              # Skip if it has release tags (semantic versions)
+              if echo "$TAGS" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+                echo "🏷️  Skipping release version: $VERSION_ID (tags: $(echo $TAGS | tr '\n' ' '))"
+                SKIPPED=$((SKIPPED + 1))
+                SKIP_VERSION=true
+              fi
+
+              # Skip if keeping latest/main and this version has those tags
+              if [ "$KEEP_LATEST" = "true" ] && echo "$TAGS" | grep -qE '^(latest|main)$'; then
+                echo "📌 Keeping latest/main version: $VERSION_ID (tags: $(echo $TAGS | tr '\n' ' '))"
+                SKIPPED=$((SKIPPED + 1))
+                SKIP_VERSION=true
+              fi
+
+              # Delete if not skipped and under limit
+              if [ "$SKIP_VERSION" = "false" ] && [ "$DELETED" -lt "$MAX_LIMIT" ]; then
+                TAGS_DISPLAY=$(echo $TAGS | tr '\n' ' ' | sed 's/^$/untagged/')
+                echo -n "🗑️  Deleting version $VERSION_ID ($TAGS_DISPLAY)... "
+
+                if gh api --method DELETE "user/packages/container/$PACKAGE_NAME/versions/$VERSION_ID" --silent; then
+                  echo "✅ Deleted"
+                  DELETED=$((DELETED + 1))
+                else
+                  echo "❌ Failed"
+                fi
+              elif [ "$DELETED" -ge "$MAX_LIMIT" ]; then
+                echo "⚠️  Reached deletion limit ($MAX_LIMIT), stopping"
+                break
+              fi
+            fi
+          done < /tmp/package_versions.json
+
+          echo ""
+          echo "🎉 Package cleanup completed!"
+          echo "   Versions deleted: $DELETED"
+          echo "   Versions kept: $SKIPPED"
+
+          # Clean up temp files
+          rm -f /tmp/package_versions.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "### 🧹 Container Package Cleanup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Package cleanup completed successfully**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Deleted non-release container package versions" >> $GITHUB_STEP_SUMMARY
+          echo "- Kept semantic version releases (v1.0.0, etc.)" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.keep_latest }}" = "true" ]; then
+            echo "- Kept latest and main tagged versions" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Future builds will create fresh development versions as needed." >> $GITHUB_STEP_SUMMARY
