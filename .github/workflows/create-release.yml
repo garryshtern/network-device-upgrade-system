@@ -118,8 +118,9 @@ jobs:
           else
             # Auto-generate release notes
             previous_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-            
-            cat > release_notes.md << 'EOF'
+            build_date=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+            cat > release_notes.md << EOF
           ## 🚀 Network Device Upgrade System ${{ steps.get_version.outputs.new_version }}
           
           ### ✨ What's New
@@ -173,7 +174,7 @@ jobs:
           - Release Type: ${{ github.event.inputs.release_type }}
           - Previous Version: ${{ steps.get_version.outputs.current_version }}
           - Created by: ${{ github.actor }}
-          - Build Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          - Build Date: $build_date
           
           For detailed changes, see the [commit history](https://github.com/${{ github.repository }}/compare/${{ steps.get_version.outputs.current_version }}...${{ steps.get_version.outputs.new_version }}).
           
