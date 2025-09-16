@@ -221,7 +221,7 @@
       block:
         - name: Check AWX Configuration Templates
           find:
-            paths: "{{ playbook_dir }}/../../awx-config"
+            paths: "{{ playbook_dir }}/../../deployment/services/awx"
             patterns: "*.yml"
             recurse: yes
           register: awx_config_files
@@ -235,8 +235,8 @@
 
         - name: Test Job Template Configurations
           find:
-            paths: "{{ playbook_dir }}/../../awx-config/job-templates"
-            patterns: "*.yml"
+            paths: "{{ playbook_dir }}/../../deployment/services/awx"
+            patterns: "*templates.yml"
           register: job_templates
 
         - name: Validate Job Templates
@@ -330,7 +330,7 @@
 
         - name: Test SSL Configuration
           find:
-            paths: "../../install"
+            paths: "../../deployment/system"
             patterns: "*ssl*"
           register: ssl_config
 
