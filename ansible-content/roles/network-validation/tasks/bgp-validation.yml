@@ -37,7 +37,8 @@
       vars:
         bgp_neighbors_parser: >-
           {%- set neighbors = [] -%}
-          {%- for line in bgp_summary_raw.stdout[0].split('\n') -%}
+          {%- for line in bgp_summary_raw.stdout[0].split('
+') -%}
             {%- if line | regex_search('^\d+\.\d+\.\d+\.\d+') -%}
               {%- set parts = line.split() -%}
               {%- if parts | length >= 6 -%}

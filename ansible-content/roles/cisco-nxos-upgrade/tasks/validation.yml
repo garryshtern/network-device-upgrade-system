@@ -33,7 +33,8 @@
       - nxos_resources.memory_usage_kernel < 85
       - nxos_resources.load_avg_1min < 5.0
     fail_msg: >
-      "System resources are under stress - CPU: {{ nxos_resources.cpu_usage_kernel
+      "System resources are under stress - CPU:
+      {{ nxos_resources.cpu_usage_kernel
         }}%, Memory: {{ nxos_resources.memory_usage_kernel }}%"
 
 - name: Check VPC consistency (if VPC is configured)
@@ -72,7 +73,8 @@
       ansible.builtin.set_fact:
         bgp_neighbors_down: >
           "{{ bgp_status.stdout[0] | from_json |
-            json_query('TABLE_neighbor.ROW_neighbor[?state != `Established`]') | length }}"
+            json_query(
+            'TABLE_neighbor.ROW_neighbor[?state != `Established`]') | length }}"
       when: bgp_status is succeeded and bgp_status.stdout[0] | length > 0
 
     - name: Warn about BGP neighbors down
@@ -167,4 +169,7 @@
 
       Overall Status:
       {{ 'PASS' if (nxos_validation_results.device_healthy and
-          nxos_validation_results.interfaces_up and nxos_validation_results.bgp_neighbors_up and not nxos_validation_results.critical_logs_present) else 'CHECK REQUIRED' }}
+          nxos_validation_results.interfaces_up and
+          nxos_validation_results.bgp_neighbors_up and
+          not nxos_validation_results.critical_logs_present)
+          else 'CHECK REQUIRED' }}

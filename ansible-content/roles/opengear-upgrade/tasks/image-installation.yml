@@ -33,7 +33,8 @@
       ansible.builtin.set_fact:
         target_firmware_ready: >
           "{{ pre_install_firmware_list.json | selectattr('filename',
-            'equalto', target_firmware_filename) | selectattr('status', 'equalto',
+            'equalto', target_firmware_filename) |
+            selectattr('status', 'equalto',
           'ready') | list | length > 0 }}"
 
     - name: Validate firmware is ready
@@ -81,7 +82,9 @@
     - name: Warn about critical power outlets
       ansible.builtin.debug:
         msg: |
-          WARNING: {{ critical_power_check.json | length if critical_power_check.json is defined else 0 }} critical power outlets detected.
+          WARNING: {{ critical_power_check.json | length if
+          critical_power_check.json is defined else 0 }} critical power outlets
+          detected.
           Firmware upgrade may cause brief power interruption.
       when: >
         opengear_upgrade_state.device_type == "smart_pdu"

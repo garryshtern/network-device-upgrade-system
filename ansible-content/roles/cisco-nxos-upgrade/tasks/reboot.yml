@@ -59,7 +59,8 @@
   ansible.builtin.set_fact:
     post_reboot_version: >-
       {{ post_reboot_verification.stdout[0] |
-        regex_search('system:\\s+version\\s+([0-9\\.\\(\\)]+)', '\\1') | first }}
+        regex_search(
+        'system:\\s+version\\s+([0-9\\.\\(\\)]+)', '\\1') | first }}
     post_reboot_uptime: "{{ post_reboot_verification.stdout[1] }}"
 
 - name: Validate system came up with new firmware
@@ -98,7 +99,8 @@
   ansible.builtin.set_fact:
     interfaces_down_post_reboot: >-
       {{ post_reboot_interfaces.stdout[0] |
-        from_json | json_query('TABLE_interface.ROW_interface[?state != `up`]') | length }}
+        from_json | json_query(
+        'TABLE_interface.ROW_interface[?state != `up`]') | length }}
 
 - name: Set reboot completion status
   ansible.builtin.set_fact:

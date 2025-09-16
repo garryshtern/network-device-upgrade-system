@@ -38,7 +38,8 @@
       ansible.builtin.set_fact:
         active_transceivers: >-
           {{ interface_transceivers.stdout[0] |
-             regex_findall('(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)', multiline=True) }}
+             regex_findall('(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)',
+             multiline=True) }}
       when:
         - interface_transceivers.rc == 0
         - interface_transceivers.stdout[0] | length > 100
@@ -47,7 +48,8 @@
       ansible.builtin.set_fact:
         optical_power_levels: >-
           {{ transceiver_dom.stdout[0] |
-             regex_findall('(\S+)\s+.*?Tx Power\s+([-\d\.]+)\s+dBm.*?Rx Power\s+([-\d\.]+)\s+dBm',
+             regex_findall(
+             '(\S+)\s+.*?Tx Power\s+([-\d\.]+)\s+dBm.*?Rx Power\s+([-\d\.]+)\s+dBm',
              multiline=True, dotall=True) }}
       when:
         - transceiver_dom.rc == 0

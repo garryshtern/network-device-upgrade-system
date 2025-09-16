@@ -45,7 +45,8 @@
   ansible.builtin.set_fact:
     cleanup_candidates: >
       "{{ firmware_info.meta.results | selectattr('current', 'equalto',
-        false) | selectattr('backup', 'equalto', false) | map(attribute='filename')
+        false) | selectattr('backup', 'equalto', false) |
+        map(attribute='filename')
       | list }}"
 
 - name: Check if cleanup is needed
@@ -94,7 +95,8 @@
       "{{ post_cleanup_storage_info.meta.results.total_disk
         - post_cleanup_storage_info.meta.results.used_disk }}"
     post_cleanup_free_gb: >-
-      {{ ((post_cleanup_storage_info.meta.results.total_disk - post_cleanup_storage_info.meta.results.used_disk) / 1024) |
+      {{ ((post_cleanup_storage_info.meta.results.total_disk -
+        post_cleanup_storage_info.meta.results.used_disk) / 1024) |
         round(2) }}
 
 - name: Set storage cleanup results

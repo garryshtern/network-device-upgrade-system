@@ -75,7 +75,8 @@
         that:
           - >
             fortios_upgrade_state.target_version in
-              (firmware_entitlement.meta.results.available | map(attribute='version') | list)
+              (firmware_entitlement.meta.results.available |
+              map(attribute='version') | list)
         fail_msg: "Target firmware version not available with current license"
       when: >
         firmware_entitlement.meta is defined and
@@ -91,5 +92,6 @@
       - Days Until Expiry: {{ days_until_expiry | default('N/A') }}
       - >
         Firmware Access: >
-          {{ 'Validated' if firmware_entitlement.meta is defined else 'Not Checked' }}
+          {{ 'Validated' if firmware_entitlement.meta is defined
+          else 'Not Checked' }}
       - Overall Status: {{ fortios_upgrade_state.license_status }}

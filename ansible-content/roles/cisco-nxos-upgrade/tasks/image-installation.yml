@@ -32,7 +32,8 @@
       cisco.nxos.nxos_command:
         commands:
           - >
-            show install all impact system bootflash:{{ target_firmware_version }}
+            show install all impact system
+            bootflash:{{ target_firmware_version }}
       register: issu_compatibility_check
       failed_when: false
 

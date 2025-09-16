@@ -21,7 +21,7 @@
   when: fortios_upgrade_state.ha_role == "secondary"
 
   block:
-    - name: Backup secondary configuration  
+    - name: Backup secondary configuration
       fortinet.fortios.fortios_configuration:
         vdom: "root"
         action: "backup.system.config"
@@ -55,7 +55,8 @@
       ansible.builtin.assert:
         that:
           - >
-            fortios_upgrade_state.target_version in secondary_post_upgrade.meta.results.version
+            fortios_upgrade_state.target_version in
+            secondary_post_upgrade.meta.results.version
         fail_msg: "Secondary unit upgrade failed"
 
 - name: Primary unit upgrade (if this is primary)
@@ -114,7 +115,8 @@
       ansible.builtin.assert:
         that:
           - >
-            fortios_upgrade_state.target_version in primary_post_upgrade.meta.results.version
+            fortios_upgrade_state.target_version in
+            primary_post_upgrade.meta.results.version
         fail_msg: "Primary unit upgrade failed"
 
 - name: Post-upgrade HA cluster validation
@@ -152,8 +154,10 @@
       - New Version: {{ fortios_upgrade_state.target_version }}
       - HA Sync Status: {{ final_cluster_status.meta.results.sync_status }}
       - >
-        Cluster Members: {{ final_cluster_status.meta.results.members | length }}
+        Cluster Members:
+        {{ final_cluster_status.meta.results.members | length }}
       - Upgrade Method: {{ 'Coordinated HA Upgrade' }}
       - >-
-        Status: {{ 'Success' if final_cluster_status.meta.results.sync_status == 'synchronized' else
-          'Check Required' }}
+        Status:
+        {{ 'Success' if final_cluster_status.meta.results.sync_status ==
+        'synchronized' else 'Check Required' }}

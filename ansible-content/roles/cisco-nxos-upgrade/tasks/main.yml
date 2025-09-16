@@ -42,7 +42,8 @@
   ansible.builtin.assert:
     that:
       - nxos_upgrade_state.current_version != nxos_upgrade_state.target_version
-      - nxos_upgrade_state.target_version is match("^[0-9]+\\.[0-9]+\\([0-9]+\\)")
+      - nxos_upgrade_state.target_version is
+        match("^[0-9]+\\.[0-9]+\\([0-9]+\\)")
     fail_msg: "Invalid upgrade path or target version format"
 
 - name: Handle EPLD upgrade (if required)

@@ -169,5 +169,7 @@
       - Type: {{ opengear_upgrade_state.device_type | title }}
       - Method: Web Interface API
       - >-
-        Status: {{ 'Success' if opengear_upgrade_state.target_version in post_upgrade_info.json.version else
+        Status:
+        {{ 'Success' if opengear_upgrade_state.target_version in
+        post_upgrade_info.json.version else
           'Verification Required' }}

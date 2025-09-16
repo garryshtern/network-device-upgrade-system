@@ -27,7 +27,8 @@
   ansible.builtin.set_fact:
     fortios_upgrade_state: >
       "{{ fortios_upgrade_state | combine({'current_version': >
-        fortios_facts.meta.results.version, 'ha_mode': fortios_facts.meta.results.ha_mode,
+        fortios_facts.meta.results.version,
+        'ha_mode': fortios_facts.meta.results.ha_mode,
       'ha_role': >
         fortios_facts.meta.results.ha_group_name
           | default('standalone'), 'vdom_mode': >
@@ -49,7 +50,8 @@
       Multi-Step Required: {{ fortios_upgrade_state.multi_step_required }}
       Upgrade Path: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}
       Current Step: >-
-        {{ fortios_upgrade_state.current_step }}/{{ fortios_upgrade_state.upgrade_path |
+        {{ fortios_upgrade_state.current_step }}/
+        {{ fortios_upgrade_state.upgrade_path |
             length }}
       HA Mode: {{ fortios_upgrade_state.ha_mode }}
       HA Role: {{ fortios_upgrade_state.ha_role }}
@@ -78,6 +80,7 @@
 
 - name: Execute single-step upgrade based on HA mode
   ansible.builtin.include_tasks: >-
-    {{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode != 'standalone' else
+    {{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode !=
+    'standalone' else
       'standalone-upgrade.yml' }}
   when: not (fortios_upgrade_state.multi_step_required | bool)

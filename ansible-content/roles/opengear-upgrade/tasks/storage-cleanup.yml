@@ -28,7 +28,8 @@
         regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
     tmp_usage_percent: >
       "{{ opengear_storage_info |
-        regex_search('/tmp\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}"
+        regex_search(
+        '/tmp\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}"
 
 - name: Convert storage sizes to GB
   ansible.builtin.set_fact:
@@ -58,10 +59,12 @@
   ansible.builtin.set_fact:
     firmware_images: >-
       {{ firmware_files_list.stdout_lines |
-        select('match', '.*(img|bin)$') | map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}
+        select('match', '.*(img|bin)$') |
+        map('regex_replace', '.* ([^/]+\\.(img|bin))$', '\\1') | list }}
     temp_files: >-
       {{ temp_files_list.stdout_lines |
-        select('match', '.*(upgrade_|opengear_).*') | map('regex_replace', '.* ([^/]+)$', '\\1') | list }}
+        select('match', '.*(upgrade_|opengear_).*') |
+        map('regex_replace', '.* ([^/]+)$', '\\1') | list }}
 
 - name: Identify current running firmware
   ansible.builtin.set_fact:

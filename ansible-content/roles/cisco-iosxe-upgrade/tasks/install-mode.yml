@@ -69,5 +69,6 @@
       - New Version: {{ iosxe_upgrade_state.target_version }}
       - Method: Install Mode
       - >-
-        Status: {{ 'Success' if iosxe_upgrade_state.target_version in post_install_version.stdout[0] else
+        Status: {{ 'Success' if iosxe_upgrade_state.target_version
+        in post_install_version.stdout[0] else
           'Verification Required' }}

@@ -81,19 +81,27 @@
 - name: Latency validation report
   ansible.builtin.debug:
     msg: >
-      "Metamako Latency Validation Results:\nPre-Upgrade
+      "Metamako Latency Validation Results:
+Pre-Upgrade
         Average: {{ baseline_latency.system_latency\
-      \ }}ns\nPost-Upgrade Average: >
-        {{ post_latency.system_latency }}ns\nPre-Upgrade\
+      \ }}ns
+Post-Upgrade Average: >
+        {{ post_latency.system_latency }}ns
+Pre-Upgrade\
       \ Maximum: >
-        {{ baseline_latency.max_latency }}ns\nPost-Upgrade
+        {{ baseline_latency.max_latency }}ns
+Post-Upgrade
           Maximum: {{ post_latency.max_latency\
-      \ }}ns\nLatency Change: >
-        \n {{ ((post_latency.system_latency |
+      \ }}ns
+Latency Change: >
+        
+ {{ ((post_latency.system_latency |
           float - baseline_latency.system_latency\
       \ | float) / baseline_latency.system_latency | float
-        * 100) | round(2) }}\n\
-      \  %\nStatus: >
+        * 100) | round(2) }}
+\
+      \  %
+Status: >
         {{ 'PASS' if post_latency.system_latency
           | float <= baseline_latency.system_latency\
       \ | float * 1.1 else 'DEGRADED' }}"

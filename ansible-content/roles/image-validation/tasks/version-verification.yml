@@ -5,7 +5,9 @@
   ansible.builtin.set_fact:
     expected_firmware_version: >
       "{{ target_firmware |
-        regex_replace('.*[-_]([0-9]+[0-9\\.\\-a-zA-Z]*)\\.(bin|nxos|spa|pkg|out|mos|tar\\.gz|dgz)$', '\\1') }}"
+        regex_replace(
+        '.*[-_]([0-9]+[0-9\\.\\-a-zA-Z]*)\\.(bin|nxos|spa|pkg|out|mos|tar\\.gz|dgz)$',
+        '\\1') }}"
 
 - name: Gather device facts to get current version
   ansible.builtin.gather_facts:
@@ -48,15 +50,20 @@
   ansible.builtin.set_fact:
     actual_firmware_version: |-
       {%- if ansible_network_os == 'nxos' -%}
-        {{ (nxos_version_output.stdout[0] | from_json).sys_ver_str | default('unknown') }}
+        {{ (nxos_version_output.stdout[0] | from_json).sys_ver_str |
+        default('unknown') }}
       {%- elif ansible_network_os == 'ios' -%}
-        {{ ios_version_output.stdout[0] | regex_search('Cisco IOS XE Software, Version ([0-9\\.]+)', '\\1') | first | default('unknown') }}
+        {{ ios_version_output.stdout[0] |
+        regex_search('Cisco IOS XE Software, Version ([0-9\\.]+)', '\\1') |
+        first | default('unknown') }}
       {%- elif ansible_network_os == 'fortios' -%}
         {{ fortios_version_output.meta.results.version | default('unknown') }}
       {%- elif ansible_network_os == 'opengear' -%}
-        {{ opengear_version_output.stdout | regex_search('([0-9\\.]+)', '\\1') | first | default('unknown') }}
+        {{ opengear_version_output.stdout |
+        regex_search('([0-9\\.]+)', '\\1') | first | default('unknown') }}
       {%- elif ansible_network_os == 'mos' -%}
-        {{ mos_version_output.stdout | regex_search('VERSION=([0-9\\.]+)', '\\1') | first | default('unknown') }}
+        {{ mos_version_output.stdout |
+        regex_search('VERSION=([0-9\\.]+)', '\\1') | first | default('unknown') }}
       {%- else -%}
         unknown
       {%- endif -%}

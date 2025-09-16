@@ -25,10 +25,12 @@
   ansible.builtin.set_fact:
     bootflash_images: >
       "{{ bootflash_dir.stdout[0] |
-        regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+\\.bin)') }}"
+        regex_findall(
+        '\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+\\.bin)') }}"
     bootflash_files: >
       "{{ bootflash_dir.stdout[0] |
-        regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+)') }}"
+        regex_findall(
+        '\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+)') }}"
 
 - name: Calculate current storage usage
   ansible.builtin.set_fact:
@@ -49,7 +51,8 @@
         regex_search('(\\d+) bytes free', '\\1') | first | int }}
     current_free_gb: >-
       {{ ((free_space_result.stdout[0] |
-        regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}
+        regex_search('(\\d+) bytes free', '\\1') | first | int)
+        / 1024 / 1024 / 1024) | round(2) }}
 
 - name: Check if cleanup is needed
   ansible.builtin.set_fact:
@@ -81,7 +84,8 @@
         regex_search('(\\d+) bytes free', '\\1') | first | int }}
     post_cleanup_free_gb: >-
       {{ ((post_cleanup_space.stdout[0] |
-        regex_search('(\\d+) bytes free', '\\1') | first | int) / 1024 / 1024 / 1024) | round(2) }}
+        regex_search('(\\d+) bytes free', '\\1') | first | int)
+        / 1024 / 1024 / 1024) | round(2) }}
 
 - name: Set storage cleanup results
   ansible.builtin.set_fact:

@@ -13,7 +13,8 @@
       - firmware_file_stat.stat.exists
       - firmware_file_stat.stat.isreg
     fail_msg: >-
-      Firmware file {{ firmware_base_path }}/{{ target_firmware }} does not exist or
+      Firmware file {{ firmware_base_path }}/{{ target_firmware }}
+      does not exist or
         is not a regular file
     success_msg: >
       "Firmware file found: {{ firmware_base_path }}/{{ target_firmware }}"
@@ -26,7 +27,8 @@
       "Firmware file {{ target_firmware }} is too small ({{
         firmware_file_stat.stat.size }} bytes). Minimum 1MB required."
     success_msg: >-
-      Firmware file size validation passed: {{ (firmware_file_stat.stat.size / 1024 / 1024) |
+      Firmware file size validation passed:
+      {{ (firmware_file_stat.stat.size / 1024 / 1024) |
         round(2) }} MB
 
 - name: Check file permissions are readable

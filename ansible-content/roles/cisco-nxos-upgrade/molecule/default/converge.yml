@@ -125,21 +125,24 @@
             that:
               - not storage_sufficient
             fail_msg: "Storage check should fail in this test"
-            success_msg: "✓ Storage validation correctly identified insufficient space"
+            success_msg: >
+              ✓ Storage validation correctly identified insufficient space
 
         # Test invalid firmware scenario
         - name: Mock firmware validation
           ansible.builtin.set_fact:
             firmware_hash_expected: "abc123def456"
             firmware_hash_actual: "xyz789abc123"  # Mismatch
-            firmware_valid: "{{ firmware_hash_expected == firmware_hash_actual }}"
+            firmware_valid: >
+              {{ firmware_hash_expected == firmware_hash_actual }}
 
         - name: Test firmware validation
           ansible.builtin.assert:
             that:
               - not firmware_valid
             fail_msg: "Firmware validation should fail in this test"
-            success_msg: "✓ Firmware validation correctly identified hash mismatch"
+            success_msg: >
+              ✓ Firmware validation correctly identified hash mismatch
 
     - name: Display test results summary
       ansible.builtin.debug:

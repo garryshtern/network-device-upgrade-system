@@ -77,7 +77,8 @@
       - Transfer Method: Server-Initiated PUSH (Secure Upload)
       - >-
         File Size: {{ available_firmware.meta.results |
-          selectattr('version', 'equalto', fortios_upgrade_state.target_version) |
+          selectattr('version', 'equalto',
+          fortios_upgrade_state.target_version) |
           map(attribute='size_mb') | first | default('Unknown') }} MB
       - >-
         Integrity: {{ firmware_verification.meta.results.status |

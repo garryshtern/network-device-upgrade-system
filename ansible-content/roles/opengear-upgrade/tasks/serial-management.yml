@@ -24,8 +24,10 @@
         body_format: json
         body:
           message: >
-            "\r\n*** MAINTENANCE NOTICE: Console server upgrade
-              in progress - connection may be interrupted ***\r\n"
+            "\r
+*** MAINTENANCE NOTICE: Console server upgrade
+              in progress - connection may be interrupted ***\r
+"
         validate_certs: false
       loop: "{{ active_sessions.json }}"
       when: active_sessions.json | length > 0
@@ -108,8 +110,11 @@
       - Total Ports: {{ opengear_upgrade_state.serial_ports | length }}
       - Active Sessions (Pre): {{ active_sessions.json | length }}
       - >-
-        Ports Tested: {{ port_connectivity_test.results |
-          selectattr('json.status', 'equalto', 'ok') | list | length | default(0) }}
+        Ports Tested:
+        {{ port_connectivity_test.results |
+        selectattr('json.status', 'equalto', 'ok') | list | length | default(0) }}
       - >-
-        Status: {{ 'All Operational' if post_upgrade_port_status.results |
-          length == opengear_upgrade_state.serial_ports | length else 'Check Required' }}
+        Status:
+        {{ 'All Operational' if post_upgrade_port_status.results |
+        length == opengear_upgrade_state.serial_ports | length
+        else 'Check Required' }}
