@@ -262,7 +262,7 @@ network-upgrade-system/
 - 📘 [Installation Guide](docs/installation-guide.md) - Complete setup instructions
 - 🔄 [Upgrade Workflow Guide](docs/UPGRADE_WORKFLOW_GUIDE.md) - Upgrade process and safety mechanisms  
 - 🏗️ [Platform Implementation Guide](docs/PLATFORM_IMPLEMENTATION_GUIDE.md) - Technical implementation details
-- 📊 [Grafana Integration](deployment/services/grafana/README.md) - Dashboard automation and monitoring  
+- 📊 [Grafana Integration](docs/grafana-deployment.md) - Dashboard automation and monitoring  
 - 📖 [Documentation Hub](docs/README.md) - Complete documentation index
 
 ## Support

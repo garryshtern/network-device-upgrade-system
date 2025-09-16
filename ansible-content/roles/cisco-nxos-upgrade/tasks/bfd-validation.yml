@@ -162,7 +162,8 @@
           {% for session in bfd_neighbor_sessions %}
           {% if session.state == 'Down' %}
           - >: >-
-              {{ session.neighbor }} via {{ session.interface }} ({{ session.type }})
+              {{ session.neighbor }} via {{ session.interface }}
+              ({{ session.type }})
           {% endif %}
           {% endfor %}
       when:
@@ -179,7 +180,8 @@
           - item.multiplier | int >= 3  # At least 3x multiplier
         fail_msg: >
           "BFD session {{ item.neighbor }} has suboptimal timing: TX={{
-            item.tx_interval }}ms, RX={{ item.rx_interval }}ms, Mult={{ item.multiplier }}"
+            item.tx_interval }}ms, RX={{ item.rx_interval }}ms,
+            Mult={{ item.multiplier }}"
         success_msg: "BFD session {{ item.neighbor }} timing optimal"
       loop: "{{ bfd_session_metrics }}"
       when:
@@ -193,7 +195,8 @@
           BFD Echo Function Status:
           {% for session in bfd_session_metrics %}
           - >: >-
-              {{ session.neighbor }}: Echo {{ session.echo_function | default('Unknown') }}
+              {{ session.neighbor }}: Echo
+              {{ session.echo_function | default('Unknown') }}
           {% endfor %}
       when:
         - bfd_session_metrics is defined
@@ -262,8 +265,10 @@
       {% endif %}
 
       Health Status:
-      {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions |
-          int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
+      {{ 'PASS' if (bfd_up_sessions is defined and
+            bfd_total_sessions is defined and bfd_up_sessions |
+            int > 0 and (bfd_up_sessions | int / bfd_total_sessions |
+            int) >= 0.8) else 'CHECK' }}
 
 - name: Store BFD validation baseline
   ansible.builtin.copy:
@@ -283,10 +288,11 @@
         "neighbor_sessions": >
           {{ bfd_neighbor_sessions | default([]) | to_json }},
         "session_metrics": {{ bfd_session_metrics | default([]) | to_json }},
-        "validation_status": "
-      {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions |
-            int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
-          "
+        "validation_status":
+      "{{ 'PASS' if (bfd_up_sessions is defined and
+            bfd_total_sessions is defined and bfd_up_sessions |
+            int > 0 and (bfd_up_sessions | int / bfd_total_sessions |
+            int) >= 0.8) else 'CHECK' }}"
       }
     dest: "/tmp/bfd_baseline_{{ inventory_hostname }}.json"
     mode: "0644"
@@ -312,9 +318,10 @@
       {{ bfd_enabled_interfaces | length if
           bfd_enabled_interfaces is defined else 0 }}
       Success_Rate:
-      {{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) | round(1) if (bfd_up_sessions is defined and
-          bfd_total_sessions is defined and bfd_total_sessions | int > 0) else 0 }}
-        %
+      {{ ((bfd_up_sessions | int / bfd_total_sessions | int) * 100) |
+          round(1) if (bfd_up_sessions is defined and
+          bfd_total_sessions is defined and bfd_total_sessions |
+          int > 0) else 0 }}%
 
       {% if bfd_neighbor_sessions is defined %}
       Neighbor_Session_Details:
@@ -352,8 +359,10 @@
       {% endif %}
 
       Validation_Status:
-      {{ 'PASS' if (bfd_up_sessions is defined and bfd_total_sessions is defined and bfd_up_sessions |
-          int > 0 and (bfd_up_sessions | int / bfd_total_sessions | int) >= 0.8) else 'CHECK' }}
+      {{ 'PASS' if (bfd_up_sessions is defined and
+            bfd_total_sessions is defined and bfd_up_sessions |
+            int > 0 and (bfd_up_sessions | int / bfd_total_sessions |
+            int) >= 0.8) else 'CHECK' }}
       Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
     dest: >-
       /tmp/bfd_validation_{{ inventory_hostname }}_{{ ansible_play_batch |

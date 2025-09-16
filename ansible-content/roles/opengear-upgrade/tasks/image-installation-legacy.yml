@@ -8,7 +8,8 @@
   block:
     - name: Verify firmware staging marker exists
       ansible.builtin.raw: |
-        test -f {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
+        test -f {{ opengear_storage_path }}/.\
+          {{ target_firmware_filename }}.staged
       register: staging_marker_check
       delegate_to: "{{ inventory_hostname }}"
       failed_when: staging_marker_check.rc != 0
@@ -67,27 +68,33 @@
     - name: Warn about active sessions
       ansible.builtin.debug:
         msg: |
-          WARNING: {{ active_sessions_check.stdout | default('0') | trim }} active console sessions detected.
+          WARNING: >
+            {{ active_sessions_check.stdout | default('0') | trim }}
+            active console sessions detected.
           These sessions will be disconnected during the upgrade.
       when: active_sessions_check.stdout | default('0') | trim | int > 0
 
     - name: Send maintenance message to users
       ansible.builtin.raw: |
-        wall 'MAINTENANCE: Firmware upgrade starting in 60 seconds. All sessions will be disconnected.'
+        wall 'MAINTENANCE: Firmware upgrade starting in 60 seconds.
+          All sessions will be disconnected.'
       delegate_to: "{{ inventory_hostname }}"
       when: active_sessions_check.stdout | default('0') | trim | int > 0
 
     - name: Wait for users to prepare
       ansible.builtin.pause:
         seconds: 60
-        prompt: "Allowing time for active session users to prepare for disconnection"
+        prompt: >
+          Allowing time for active session users to prepare
+          for disconnection
       when: active_sessions_check.stdout | default('0') | trim | int > 0
 
 - name: Execute firmware installation based on device architecture
   block:
     - name: Create configuration backup before upgrade
       ansible.builtin.raw: |
-        config -s {{ opengear_storage_path }}/pre-{{ upgrade_config.command }}-backup-$(date +%Y%m%d_%H%M%S).xml
+        config -s {{ opengear_storage_path }}/pre-\
+          {{ upgrade_config.command }}-backup-$(date +%Y%m%d_%H%M%S).xml
       register: pre_upgrade_backup
       delegate_to: "{{ inventory_hostname }}"
 
@@ -102,7 +109,8 @@
 
     - name: Execute modern puginstall command for firmware installation
       ansible.builtin.raw: |
-        puginstall {{ upgrade_config.options | default('') }} {{ opengear_firmware_ready_path }}
+        puginstall {{ upgrade_config.options | default('') }}
+          {{ opengear_firmware_ready_path }}
       register: upgrade_execution
       delegate_to: "{{ inventory_hostname }}"
       failed_when: upgrade_execution.rc != 0
@@ -113,7 +121,11 @@
       ansible.builtin.debug:
         msg: |
           {{ upgrade_config.command | title }} Command Execution:
-          - Command: {{ upgrade_config.command }} {% if upgrade_config.options is defined %}{{ upgrade_config.options }} {% endif %}{{ opengear_firmware_ready_path }}
+          - Command: >
+            {{ upgrade_config.command }}
+            {% if upgrade_config.options is defined %}
+            {{ upgrade_config.options }}
+            {% endif %}{{ opengear_firmware_ready_path }}
           - Return Code: {{ upgrade_execution.rc }}
           - Output:
           {{ upgrade_execution.stdout }}
@@ -125,15 +137,23 @@
     - name: Check upgrade command output for success indicators
       ansible.builtin.assert:
         that:
-          - "'successful' in upgrade_execution.stdout.lower() or 'complete' in upgrade_execution.stdout.lower() or 'programming' in upgrade_execution.stdout.lower() or 'installed' in upgrade_execution.stdout.lower()"
-        fail_msg: "{{ upgrade_config.command }} command did not report successful completion"
+          - >
+            'successful' in upgrade_execution.stdout.lower() or
+            'complete' in upgrade_execution.stdout.lower() or
+            'programming' in upgrade_execution.stdout.lower() or
+            'installed' in upgrade_execution.stdout.lower()
+        fail_msg: >
+          {{ upgrade_config.command }} command did not report
+          successful completion
 
 - name: Handle device reboot and recovery
   block:
     - name: Wait for automatic reboot to begin
       ansible.builtin.pause:
         seconds: 45
-        prompt: "Waiting for {{ upgrade_config.command }} to complete and trigger automatic reboot"
+        prompt: >
+          Waiting for {{ upgrade_config.command }} to complete and
+          trigger automatic reboot
 
     - name: Wait for device to become unreachable (reboot confirmation)
       ansible.builtin.wait_for:
@@ -146,8 +166,10 @@
 
     - name: Set reboot wait time based on device architecture
       ansible.builtin.set_fact:
-        reboot_wait_time: "{{ boot_times[device_architecture].reboot_wait_time }}"
-        service_init_wait: "{{ boot_times[device_architecture].service_initialization_wait }}"
+        reboot_wait_time: >
+          {{ boot_times[device_architecture].reboot_wait_time }}
+        service_init_wait: >
+          {{ boot_times[device_architecture].service_initialization_wait }}
 
     - name: Wait for device to come back online after reboot
       ansible.builtin.wait_for:
@@ -164,7 +186,8 @@
 
     - name: Test SSH connectivity after reboot
       ansible.builtin.raw: |
-        echo 'SSH connectivity test - device online after {{ upgrade_config.command }}'
+        echo 'SSH connectivity test - device online after
+          {{ upgrade_config.command }}'
       register: ssh_connectivity_test
       delegate_to: "{{ inventory_hostname }}"
       retries: 10
@@ -232,7 +255,9 @@
 
     - name: Send completion message to indicate upgrade success
       ansible.builtin.raw: |
-        wall 'Console server firmware upgrade completed successfully using {{ upgrade_config.command }}. All services restored. New version: {{ post_upgrade_version }}'
+        wall 'Console server firmware upgrade completed successfully
+          using {{ upgrade_config.command }}. All services restored.
+          New version: {{ post_upgrade_version }}'
       delegate_to: "{{ inventory_hostname }}"
 
 - name: Cleanup and final logging
@@ -253,7 +278,8 @@
     - name: Log installation completion
       ansible.builtin.debug:
         msg: |-
-          Opengear {{ upgrade_config.command | title }} Installation Completed Successfully:
+          Opengear {{ upgrade_config.command | title }}
+          Installation Completed Successfully:
           - Device Model: {{ opengear_upgrade_state.device_model }}
           - Device Architecture: {{ device_architecture | title }}
           - Previous Version: {{ pre_upgrade_version }}

@@ -27,7 +27,8 @@
 - name: Extract ARP data
   set_fact:
     arp_entries: >
-      '{{ nxos_arp_info.stdout[0] | from_json | json_query(''TABLE_arp.ROW_arp'')
+      {{ nxos_arp_info.stdout[0] | from_json |
+         json_query('TABLE_arp.ROW_arp')
       | default([]) }}'
     arp_summary: '{{ nxos_arp_info.stdout[1] | from_json }}'
     arp_statistics: '{{ nxos_arp_info.stdout[2] | from_json }}'
@@ -48,7 +49,7 @@
 - name: Check ARP table completeness
   ansible.builtin.assert:
     that:
-    - arp_entries | length > 0
+      - arp_entries | length > 0
     fail_msg: ARP table appears to be empty
   when: arp_entries is defined
 - name: Validate ARP table size
@@ -82,20 +83,24 @@
 - name: Check for excessive incomplete entries
   ansible.builtin.debug:
     msg: >-
-      WARNING: {{ incomplete_arp_entries | length }} incomplete ARP entries found
+      WARNING: {{ incomplete_arp_entries | length }}
+      incomplete ARP entries found
   when: >
     incomplete_arp_entries is defined and incomplete_arp_entries | length > 10
 - name: Check default gateway ARP entry
   cisco.nxos.nxos_command:
     commands:
-    - show ip route 0.0.0.0/0 | json
+      - show ip route 0.0.0.0/0 | json
   register: default_route_info
   when: ansible_network_os == "cisco.nxos.nxos"
   failed_when: false
 - name: Extract default gateway
   set_fact:
     default_gateway: >
-      ' {{ default_route_info.stdout[0] | from_json | json_query(''TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.ROW_path.ipnexthop'')
+      {{ default_route_info.stdout[0] | from_json |
+         json_query('TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
+                     TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.
+                     ROW_path.ipnexthop')
       }} '
   when: >
     default_route_info is defined and default_route_info.rc
@@ -130,14 +135,15 @@
 - name: Get DHCP snooping binding table
   cisco.nxos.nxos_command:
     commands:
-    - show ip dhcp snooping binding | json
+      - show ip dhcp snooping binding | json
   register: dhcp_snooping_info
   when: ansible_network_os == "cisco.nxos.nxos"
   failed_when: false
 - name: Parse DHCP snooping bindings
   set_fact:
     dhcp_bindings: >
-      '{{ dhcp_snooping_info.stdout[0] | from_json | json_query(''TABLE_binding.ROW_binding'')
+      {{ dhcp_snooping_info.stdout[0] | from_json |
+         json_query('TABLE_binding.ROW_binding')
       | default([]) }}'
   when: dhcp_snooping_info is defined and dhcp_snooping_info.rc == 0
 - name: Validate DHCP snooping bindings
@@ -150,8 +156,9 @@
 
       {% for binding in dhcp_bindings[:10] %}
 
-      - >: >-
-          {{ binding.ip_addr }}: {{ binding.mac_addr }} ({{ binding.interface }}, VLAN
+      - >
+        {{ binding.ip_addr }}: {{ binding.mac_addr }}
+        ({{ binding.interface }}, VLAN
       {{ binding.vlan_id }})
 
       {% endfor %}
@@ -167,14 +174,15 @@
 - name: Get IPv6 neighbor table
   cisco.nxos.nxos_command:
     commands:
-    - show ipv6 neighbor | json
+      - show ipv6 neighbor | json
   register: ipv6_neighbor_info
   when: ansible_network_os == "cisco.nxos.nxos"
   failed_when: false
 - name: Parse IPv6 neighbors
   set_fact:
     ipv6_neighbors: >
-      '{{ ipv6_neighbor_info.stdout[0] | from_json | json_query(''TABLE_neighbor.ROW_neighbor'')
+      {{ ipv6_neighbor_info.stdout[0] | from_json |
+         json_query('TABLE_neighbor.ROW_neighbor')
       | default([]) }}'
   when: ipv6_neighbor_info is defined and ipv6_neighbor_info.rc == 0
 - name: Validate IPv6 neighbor discovery
@@ -205,14 +213,15 @@
 - name: Get MAC address table
   cisco.nxos.nxos_command:
     commands:
-    - show mac address-table | json
+      - show mac address-table | json
   register: mac_table_info
   when: ansible_network_os == "cisco.nxos.nxos"
   failed_when: false
 - name: Cross-reference ARP and MAC tables
   set_fact:
     mac_entries: >
-      '{{ mac_table_info.stdout[0] | from_json | json_query(''TABLE_mac_address.ROW_mac_address'')
+      {{ mac_table_info.stdout[0] | from_json |
+         json_query('TABLE_mac_address.ROW_mac_address')
       | default([]) }}'
   when: mac_table_info is defined and mac_table_info.rc == 0
 - name: Validate ARP-MAC correlation

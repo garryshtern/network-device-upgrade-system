@@ -44,14 +44,16 @@
     - name: Parse route counts
       set_fact:
         total_routes: "{{ routing_summary.total_routes | default(0) }}"
-        static_routes: "
-      {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix |
-            selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'static') | list | default([]) }}
-          "
-        connected_routes: "
-      {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix |
-            selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'direct') | list | default([]) }}
-          "
+        static_routes: >
+          {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
+             TABLE_prefix.ROW_prefix |
+             selectattr('ucast_nhops.TABLE_path.ROW_path.clientname',
+                        'equalto', 'static') | list | default([]) }}
+        connected_routes: >
+          {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
+             TABLE_prefix.ROW_prefix |
+             selectattr('ucast_nhops.TABLE_path.ROW_path.clientname',
+                        'equalto', 'direct') | list | default([]) }}
       when: >
         ansible_network_os == "cisco.nxos.nxos"
           and routing_table.TABLE_vrf is defined
@@ -64,8 +66,9 @@
           Static Routes Found: {{ static_routes | length }}
           {% for route in static_routes %}
           - >-
-            {{ route.ipprefix }}: via {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
-              default('N/A') }}
+            {{ route.ipprefix }}: via
+            {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
+               default('N/A') }}
           {% endfor %}
       when: static_routes is defined
 
@@ -73,7 +76,8 @@
       cisco.nxos.nxos_command:
         commands:
           - >
-            "ping {{ item.ucast_nhops.TABLE_path.ROW_path.ipnexthop }} count 3 timeout 5"
+            ping {{ item.ucast_nhops.TABLE_path.ROW_path.ipnexthop }}
+            count 3 timeout 5
       register: static_route_ping
       loop: "{{ static_routes[:5] }}"  # Test first 5 static routes
       when: >
@@ -96,23 +100,23 @@
   block:
     - name: Check for default route presence
       set_fact:
-        has_default_route: >-
-          {{ default_route.TABLE_vrf is defined and default_route.TABLE_vrf.ROW_vrf |
-            length > 0 }}
+        has_default_route: >
+          {{ default_route.TABLE_vrf is defined and
+             default_route.TABLE_vrf.ROW_vrf | length > 0 }}
       when: ansible_network_os == "cisco.nxos.nxos" and default_route is defined
 
     - name: Extract default route information
       set_fact:
         default_route_info:
           present: "{{ has_default_route | default(false) }}"
-          next_hop: "
-      {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
-              default('None') }}
-            "
-          interface: "
-      {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.ROW_path.ifname |
-              default('None') }}
-            "
+          next_hop: >
+            {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.
+               ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.
+               TABLE_path.ROW_path.ipnexthop | default('None') }}
+          interface: >
+            {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.
+               ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.
+               TABLE_path.ROW_path.ifname | default('None') }}
       when: >
         ansible_network_os == "cisco.nxos.nxos"
           and has_default_route | default(false)
@@ -123,8 +127,9 @@
           - "ping {{ default_route_info.next_hop }} count 3 timeout 5"
       register: default_route_ping
       when: >
-        ansible_network_os == "cisco.nxos.nxos" and default_route_info.next_hop is
-          defined and default_route_info.next_hop != 'None'
+        ansible_network_os == "cisco.nxos.nxos" and
+          default_route_info.next_hop is defined and
+          default_route_info.next_hop != 'None'
       failed_when: false
 
 - name: Route table health validation
@@ -141,8 +146,9 @@
         msg: |
           Connected Routes: {{ connected_routes | length }}
           {% for route in connected_routes[:10] %}
-          - >: >-
-              {{ route.ipprefix }} via {{ route.ucast_nhops.TABLE_path.ROW_path.ifname }}
+          - >
+            {{ route.ipprefix }} via
+            {{ route.ucast_nhops.TABLE_path.ROW_path.ifname }}
           {% endfor %}
       when: connected_routes is defined
 
@@ -206,14 +212,16 @@
       default_route_present: "{{ default_route_info.present | default(false) }}"
       default_route_next_hop: >
         "{{ default_route_info.next_hop | default('None') }}"
-      ospf_neighbors: "
-      {{ ospf_neighbors.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length if ospf_neighbors is defined and
-          ospf_neighbors.rc == 0 else 0 }}
-        "
-      eigrp_neighbors: "
-      {{ eigrp_neighbors.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length if eigrp_neighbors is defined and
-          eigrp_neighbors.rc == 0 else 0 }}
-        "
+      ospf_neighbors: >
+        {{ ospf_neighbors.stdout[0] | from_json |
+           json_query('TABLE_neighbor.ROW_neighbor') | length
+           if ospf_neighbors is defined and ospf_neighbors.rc == 0
+           else 0 }}
+      eigrp_neighbors: >
+        {{ eigrp_neighbors.stdout[0] | from_json |
+           json_query('TABLE_neighbor.ROW_neighbor') | length
+           if eigrp_neighbors is defined and eigrp_neighbors.rc == 0
+           else 0 }}
 
 - name: Routing validation summary
   ansible.builtin.debug:
@@ -223,12 +231,14 @@
       - Static Routes: {{ routing_baseline.static_routes_count }}
       - Connected Routes: {{ routing_baseline.connected_routes_count }}
       - >-
-        Default Route: {{ 'Present' if routing_baseline.default_route_present else
-          'Missing' }}
+        Default Route: >
+        {{ 'Present' if routing_baseline.default_route_present
+           else 'Missing' }}
       - Default Next-Hop: {{ routing_baseline.default_route_next_hop }}
       - Default Route Reachable:
-      {{ 'YES' if default_route_ping is defined and default_route_ping.stdout[0] |
-          regex_search('Success rate is [^0]') else 'UNTESTED' }}
+        {{ 'YES' if default_route_ping is defined and
+           default_route_ping.stdout[0] |
+           regex_search('Success rate is [^0]') else 'UNTESTED' }}
       - OSPF Neighbors: {{ routing_baseline.ospf_neighbors }}
       - EIGRP Neighbors: {{ routing_baseline.eigrp_neighbors }}
       - >-

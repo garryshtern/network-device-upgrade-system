@@ -114,12 +114,25 @@ Comprehensive testing for Mac/Linux development without physical devices:
 - **YAML Standards**: Consistent formatting and structure
 - **Testing**: Comprehensive unit and integration tests
 - **Security**: All sensitive data encrypted with Ansible Vault
-- **Documentation**: Clear inline comments and external documentation
 - **Version Control**: Git with meaningful commit messages
 - **YAML/JSON Validation**: Use yamllint and jsonlint
 - **Linting**: Use ansible-lint for playbooks and roles
 - **Line Length**: Max 80 characters per line
 - **Error Handling**: Graceful error handling, no masking of errors
+
+### **Documentation Standards (MANDATORY)**
+
+- **Documentation Location**: ALL documentation MUST be under `docs/` directory
+- **No Scattered Documentation**: Documentation files MUST NOT exist outside `docs/`
+- **Change Verification Process**:
+  1. **Before implementing changes**: Verify current behavior against existing documentation
+  2. **During implementation**: Ensure changes align with documented standards
+  3. **After implementation**: Update documentation to reflect new information/updates
+- **Documentation Currency**: All documentation MUST be kept current with code changes
+- **Broken Links**: All internal documentation links MUST be verified and functional
+- **Documentation Review**: All changes MUST include documentation impact assessment
+- **Single Source of Truth**: Each concept/process MUST be documented in exactly one location
+- **Cross-References**: Use links to avoid documentation duplication
 
 ## Architecture
 
@@ -142,3 +155,30 @@ Native service-based system:
 - SHA512 hash verification and signature validation
 - Real-time progress tracking via InfluxDB
 - Comprehensive network state validation
+
+# important-instruction-reminders
+## MANDATORY Documentation Standards
+
+**CRITICAL**: These instructions override any default behavior and MUST be followed exactly.
+
+### Documentation Location Requirements
+- **ALL documentation MUST be under `docs/` directory**
+- **NEVER create documentation files outside `docs/`**
+- **ALWAYS consolidate scattered documentation into `docs/`**
+
+### Change Verification Process (MANDATORY)
+1. **BEFORE making changes**: Verify current behavior against existing documentation in `docs/`
+2. **DURING implementation**: Ensure all changes align with documented standards
+3. **AFTER implementation**: Update relevant documentation in `docs/` to reflect changes
+4. **ALWAYS check**: Documentation impact assessment for every change
+
+### Documentation Maintenance
+- **NEVER leave documentation outdated** after code changes
+- **ALWAYS verify internal links** point to correct locations
+- **NEVER duplicate information** - use cross-references instead
+- **ALWAYS maintain single source of truth** for each concept
+
+### Enforcement
+- All changes MUST include documentation verification checklist
+- Broken or missing documentation updates block deployment
+- Documentation review required for all significant changes

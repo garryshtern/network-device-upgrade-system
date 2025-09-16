@@ -30,17 +30,19 @@
   ansible.builtin.command:
     cmd: >-
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-      {{ '-i ' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined else '' }}
+      {{ '-i ' + ansible_ssh_private_key_file if
+        ansible_ssh_private_key_file is defined else '' }}
       "{{ application_source }}"
-      "{{ ansible_user }}@{{ ansible_host }}:/flash/{{ application_filename | default(application_source | basename) }}"
+      "{{ ansible_user }}@{{ ansible_host }}:/flash/{{
+        application_filename | default(application_source | basename) }}"
     timeout: 1800
   delegate_to: localhost
   register: app_upload_result
   vars:
     ansible_connection: local
   when:
-  - application_action == 'install'
-  - application_source is defined
+    - application_action == 'install'
+    - application_source is defined
 - name: Verify application file exists
   ansible.netcommon.cli_command:
     command: >
@@ -59,8 +61,8 @@
       '
   register: app_install_result
   when:
-  - application_action == 'install'
-  - application_filename is defined or application_source is defined
+    - application_action == 'install'
+    - application_filename is defined or application_source is defined
 - name: Verify application installation
   ansible.netcommon.cli_command:
     command: show application {{ application_name }}
@@ -94,17 +96,19 @@
   ansible.builtin.command:
     cmd: >-
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-      {{ '-i ' + ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined else '' }}
+      {{ '-i ' + ansible_ssh_private_key_file if
+        ansible_ssh_private_key_file is defined else '' }}
       "{{ eos_extension_source }}"
-      "{{ ansible_user }}@{{ ansible_host }}:/flash/{{ eos_extension_filename | default(eos_extension_source | basename) }}"
+      "{{ ansible_user }}@{{ ansible_host }}:/flash/{{
+        eos_extension_filename | default(eos_extension_source | basename) }}"
     timeout: 1800
   delegate_to: localhost
   register: eos_upload_result
   vars:
     ansible_connection: local
   when:
-  - eos_extension_action == 'install'
-  - eos_extension_source is defined
+    - eos_extension_action == 'install'
+    - eos_extension_source is defined
 - name: Verify EOS extension file exists
   ansible.netcommon.cli_command:
     ansible.builtin.command: >
@@ -122,8 +126,8 @@
       '
   register: eos_install_result
   when:
-  - eos_extension_source is defined
-  - eos_extension_action == 'install'
+    - eos_extension_source is defined
+    - eos_extension_action == 'install'
 - name: Remove EOS extension
   ansible.netcommon.cli_config:
     config: 'remove eos-extension {{ eos_extension_name }}

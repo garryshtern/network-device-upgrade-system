@@ -11,7 +11,8 @@
         device_architecture: >-
           {%- if opengear_upgrade_state.device_model in ['CM7100', 'OM7200'] -%}
           legacy_cli
-          {%- elif opengear_upgrade_state.device_model in ['CM8100', 'OM2200'] -%}
+          {%- elif opengear_upgrade_state.device_model in
+               ['CM8100', 'OM2200'] -%}
           current_cli
           {%- else -%}
           unknown
@@ -21,12 +22,19 @@
       ansible.builtin.assert:
         that:
           - device_architecture != 'unknown'
-        fail_msg: "Unsupported Opengear device model: {{ opengear_upgrade_state.device_model }}"
+        fail_msg: >
+          Unsupported Opengear device model:
+          {{ opengear_upgrade_state.device_model }}
 
     - name: Set upgrade method configuration
       ansible.builtin.set_fact:
         upgrade_config: "{{ upgrade_commands[device_architecture] }}"
-        firmware_pattern: "{{ firmware_filename_patterns[device_architecture][opengear_upgrade_state.device_model] }}"
+        firmware_pattern: >
+          {{
+            firmware_filename_patterns[device_architecture][
+              opengear_upgrade_state.device_model
+            ]
+          }}
         version_pattern: "{{ version_formats[device_architecture] }}"
 
 - name: Validate version format
@@ -34,7 +42,9 @@
     - name: Validate target version matches expected format
       ansible.builtin.assert:
         that:
-          - opengear_upgrade_state.target_version is match(version_pattern.pattern)
+          - >
+            opengear_upgrade_state.target_version is
+            match(version_pattern.pattern)
         fail_msg: >
           Version format mismatch for {{ device_architecture }} devices.
           Expected: {{ version_pattern.description }}
@@ -43,7 +53,8 @@
 
     - name: Generate target firmware filename
       ansible.builtin.set_fact:
-        target_firmware_filename: "{{ firmware_pattern | replace('*', 'public') }}"
+        target_firmware_filename: >
+          {{ firmware_pattern | replace('*', 'public') }}
 
 - name: Pre-upload validation
   block:
@@ -56,7 +67,10 @@
     - name: Determine storage mount point dynamically
       ansible.builtin.raw: |
         {% for path in upgrade_config.storage_paths %}
-        if [ -d "{{ path }}" ]; then echo "{{ path }}"; break; fi{% if not loop.last %} && {% endif %}
+        if [ -d "{{ path }}" ]; then
+          echo "{{ path }}";
+          break;
+        fi{% if not loop.last %} && {% endif %}
         {% endfor %}
       register: mount_detection
       delegate_to: "{{ inventory_hostname }}"
@@ -69,7 +83,9 @@
       ansible.builtin.assert:
         that:
           - opengear_storage_path | length > 0
-        fail_msg: "No valid storage path found from: {{ upgrade_config.storage_paths }}"
+        fail_msg: >
+          No valid storage path found from:
+          {{ upgrade_config.storage_paths }}
 
     - name: Check available storage space in detected mount
       ansible.builtin.raw: |
@@ -80,45 +96,56 @@
     - name: Parse available space from df output
       ansible.builtin.set_fact:
         available_space_mb: >
-          {%- set avail_str = disk_usage_check.stdout | regex_search('\s+\S+\s+\S+\s+(\S+)\s+', '\1') | first -%}
+          {%- set avail_str = disk_usage_check.stdout |
+              regex_search('\s+\S+\s+\S+\s+(\S+)\s+', '\1') |
+              first -%}
           {%- if 'G' in avail_str -%}
           {{ (avail_str | regex_replace('G', '') | float * 1024) | int }}
           {%- elif 'M' in avail_str -%}
           {{ avail_str | regex_replace('M', '') | int }}
           {%- else -%}
-          {{ (avail_str | regex_replace('[KT]', '') | float / 1024) | int }}
+          {{ (avail_str | regex_replace('[KT]', '') |
+             float / 1024) | int }}
           {%- endif %}
-        required_space_mb: "{{ target_firmware_size_mb | default(100) | int + 50 }}"
+        required_space_mb: >
+          {{ target_firmware_size_mb | default(100) | int + 50 }}
 
     - name: Validate sufficient storage space
       ansible.builtin.assert:
         that:
           - available_space_mb | int > required_space_mb | int
         fail_msg: >
-          "Insufficient storage space. Available: {{
-            available_space_mb }}MB, Required: {{ required_space_mb }}MB"
+          Insufficient storage space.
+          Available: {{ available_space_mb }}MB,
+          Required: {{ required_space_mb }}MB
 
     - name: Validate firmware file extension for device architecture
       ansible.builtin.assert:
         that:
-          - (device_architecture == 'legacy_cli' and target_firmware_filename.endswith('.flash')) or
-            (device_architecture == 'current_cli' and target_firmware_filename.endswith('.raucb'))
+          - >
+            (device_architecture == 'legacy_cli' and
+             target_firmware_filename.endswith('.flash')) or
+            (device_architecture == 'current_cli' and
+             target_firmware_filename.endswith('.raucb'))
         fail_msg: >
-          Firmware file extension mismatch for {{ device_architecture }} devices:
+          Firmware file extension mismatch for
+          {{ device_architecture }} devices:
           {{ target_firmware_filename }}
 
 - name: Firmware transfer preparation
   block:
     - name: Check if firmware already exists in storage
       ansible.builtin.raw: |
-        ls {{ opengear_storage_path }}/{{ target_firmware_filename }}
+        ls {{ opengear_storage_path }}/\
+          {{ target_firmware_filename }}
       register: existing_firmware
       delegate_to: "{{ inventory_hostname }}"
       failed_when: false
 
     - name: Remove existing firmware if present
       ansible.builtin.raw: |
-        rm -f {{ opengear_storage_path }}/{{ target_firmware_filename }}
+        rm -f {{ opengear_storage_path }}/\
+          {{ target_firmware_filename }}
       delegate_to: "{{ inventory_hostname }}"
       when: existing_firmware.rc == 0
 
@@ -127,7 +154,8 @@
     - name: Start firmware transfer to storage location
       ansible.builtin.copy:
         src: "{{ local_firmware_path }}"
-        dest: "{{ opengear_storage_path }}/{{ target_firmware_filename }}"
+        dest: >
+          {{ opengear_storage_path }}/{{ target_firmware_filename }}
         mode: '0644'
       register: firmware_transfer
 
@@ -136,15 +164,22 @@
         msg: |
           Firmware transfer completed:
           - Source: {{ local_firmware_path }}
-          - Destination: {{ opengear_storage_path }}/{{ target_firmware_filename }}
+          - Destination:
+            {{ opengear_storage_path }}/{{ target_firmware_filename }}
           - Storage Mount: {{ opengear_storage_path }}
-          - Size: {{ firmware_transfer.size if firmware_transfer.size is defined else 'Unknown' }} bytes
+          - Size:
+            {{
+              firmware_transfer.size if
+              firmware_transfer.size is defined else
+              'Unknown'
+            }} bytes
 
 - name: Verify firmware integrity
   block:
     - name: Calculate firmware checksum on device using md5sum
       ansible.builtin.raw: |
-        md5sum {{ opengear_storage_path }}/{{ target_firmware_filename }} |
+        md5sum {{ opengear_storage_path }}/\
+          {{ target_firmware_filename }} |
           awk '{print $1}'
       register: device_checksum
       delegate_to: "{{ inventory_hostname }}"
@@ -182,22 +217,31 @@
   block:
     - name: Set firmware permissions
       ansible.builtin.raw: |
-        chmod 644 {{ opengear_storage_path }}/{{ target_firmware_filename }}
+        chmod 644 {{ opengear_storage_path }}/\
+          {{ target_firmware_filename }}
       delegate_to: "{{ inventory_hostname }}"
 
     - name: Create firmware staging marker
       ansible.builtin.raw: |
-        echo "Firmware staged: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}" > {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
-        echo "Source checksum: {{ expected_checksum }}" >> {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
-        echo "Device checksum: {{ device_calculated_checksum }}" >> {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
-        echo "Device architecture: {{ device_architecture }}" >> {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
-        echo "Upgrade command: {{ upgrade_config.command }}" >> {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
-        echo "Ready for {{ upgrade_config.command }}: YES" >> {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
+        echo "Firmware staged:
+          {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}" >
+          {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
+        echo "Source checksum: {{ expected_checksum }}" >>
+          {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
+        echo "Device checksum: {{ device_calculated_checksum }}" >>
+          {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
+        echo "Device architecture: {{ device_architecture }}" >>
+          {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
+        echo "Upgrade command: {{ upgrade_config.command }}" >>
+          {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
+        echo "Ready for {{ upgrade_config.command }}: YES" >>
+          {{ opengear_storage_path }}/.{{ target_firmware_filename }}.staged
       delegate_to: "{{ inventory_hostname }}"
 
     - name: Store firmware path for installation phase
       ansible.builtin.set_fact:
-        opengear_firmware_ready_path: "{{ opengear_storage_path }}/{{ target_firmware_filename }}"
+        opengear_firmware_ready_path: >
+          {{ opengear_storage_path }}/{{ target_firmware_filename }}
         opengear_firmware_verified: true
         opengear_device_architecture: "{{ device_architecture }}"
 
@@ -205,7 +249,8 @@
   block:
     - name: Create configuration backup in storage location
       ansible.builtin.raw: |
-        config -s {{ opengear_storage_path }}/config-backup-$(date +%Y%m%d-%H%M%S).xml
+        config -s {{ opengear_storage_path }}/\
+          config-backup-$(date +%Y%m%d-%H%M%S).xml
       register: config_backup_result
       delegate_to: "{{ inventory_hostname }}"
 
@@ -214,8 +259,11 @@
         msg: |
           Configuration backup completed:
           - Backup Location: {{ opengear_storage_path }}/
-          - Backup Time: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-          - CLI Result: {{ config_backup_result.stdout | default('Success') }}
+          - Backup Time:
+            {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
+          - CLI Result:
+            {{ config_backup_result.stdout | default('Success') }}
+
 
 - name: Log image loading completion
   ansible.builtin.debug:

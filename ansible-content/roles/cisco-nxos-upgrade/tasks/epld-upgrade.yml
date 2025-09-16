@@ -14,7 +14,8 @@
       ansible.builtin.set_fact:
         epld_modules: >-
           {{ current_epld_versions.stdout[0] |
-            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}
+            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)',
+              multiline=True) }}
 
     - name: Display current EPLD status
       ansible.builtin.debug:
@@ -53,7 +54,8 @@
         that:
           - has_dual_sup_for_epld or allow_disruptive_epld | default(false)
         fail_msg: >-
-          EPLD upgrade requires dual supervisors or explicit approval for disruptive upgrade
+          EPLD upgrade requires dual supervisors or explicit
+          approval for disruptive upgrade
 
 - name: EPLD upgrade execution
   block:
@@ -94,7 +96,8 @@
           - show install all status
       register: epld_upgrade_status
       until: >-
-        'Success' in epld_upgrade_status.stdout[0] or 'Failed' in epld_upgrade_status.stdout[0]
+        'Success' in epld_upgrade_status.stdout[0] or
+        'Failed' in epld_upgrade_status.stdout[0]
       retries: 60
       delay: 30
       when: epld_upgrade_result is defined
@@ -118,15 +121,19 @@
       ansible.builtin.set_fact:
         updated_epld_modules: >-
           {{ updated_epld_versions.stdout[0] |
-            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)', multiline=True) }}
+            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)',
+              multiline=True) }}
 
     - name: Verify EPLD version updates
       ansible.builtin.debug:
         msg: |
           EPLD Upgrade Results:
           {% for module_info in updated_epld_modules %}
-          - Module {{ module_info[0] }}: {{ 'UPDATED' if module_info[1] != (epld_modules |
-              selectattr('0', 'equalto', module_info[0]) | map(attribute='1') | first | default('unknown')) else 'UNCHANGED' }} ({{ module_info[1] }})
+          - Module {{ module_info[0] }}: {{
+              'UPDATED' if module_info[1] !=
+              (epld_modules | selectattr('0', 'equalto', module_info[0]) |
+               map(attribute='1') | first | default('unknown'))
+              else 'UNCHANGED' }} ({{ module_info[1] }})
           {% endfor %}
       when: updated_epld_modules | length > 0
 
@@ -163,16 +170,19 @@
   ansible.builtin.debug:
     msg: |
       EPLD Upgrade Completion Summary:
-      - Modules Processed: {{ epld_upgrade_summary.modules_upgraded | join(', ') }}
+      - Modules Processed: >
+        {{ epld_upgrade_summary.modules_upgraded | join(', ') }}
       - Upgrade Method: {{ epld_upgrade_summary.upgrade_method }}
       - Success: {{ epld_upgrade_summary.success }}
       - Pre-upgrade Modules: {{ epld_modules | length }}
       - >-
-        Post-upgrade Modules: {{ updated_epld_modules |
-          length if updated_epld_modules is defined else 'Unknown' }}
+        Post-upgrade Modules: >
+          {{ updated_epld_modules | length if
+            updated_epld_modules is defined else 'Unknown' }}
       - >-
-        System Stable: {{ 'YES' if post_epld_stability is defined else
-          'CHECK REQUIRED' }}
+        System Stable: >
+          {{ 'YES' if post_epld_stability is defined else
+            'CHECK REQUIRED' }}
       - Timestamp: {{ epld_upgrade_summary.timestamp }}
 
   when: epld_upgrade_summary is defined

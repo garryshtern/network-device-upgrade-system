@@ -280,8 +280,10 @@
             Humidity Sensors: {{ environmental_sensors_check.json |
               selectattr('type', 'equalto', 'humidity') | list | length }}
           - >-
-            All Sensors Normal: {{ 'YES' if environmental_sensors_check.json |
-              selectattr('status', 'ne', 'normal') | list | length == 0 else 'CHECK REQUIRED' }}
+            All Sensors Normal: >
+              {{ 'YES' if environmental_sensors_check.json |
+                selectattr('status', 'ne', 'normal') | list | length == 0
+                else 'CHECK REQUIRED' }}
           {% else %}
           - Environmental Sensors: Not Available
           {% endif %}
@@ -294,20 +296,24 @@
       - Device Model: {{ opengear_upgrade_state.device_model }}
       - Device Type: {{ opengear_upgrade_state.device_type | title }}
       - >-
-        Version: {{ 'PASS' if opengear_upgrade_state.target_version in system_info_validation.json.version else
-          'FAIL' }}
+        Version: >
+          {{ 'PASS' if opengear_upgrade_state.target_version in
+            system_info_validation.json.version else 'FAIL' }}
       - >-
         System Health: {{ system_health_validation.json.status if
           system_health_validation.json is defined else 'Unknown' }}
       - >-
-        Network Connectivity: {{ 'PASS' if network_connectivity_test.json.success |
-          default(false) else 'CHECK' }}
+        Network Connectivity: >
+          {{ 'PASS' if network_connectivity_test.json.success |
+            default(false) else 'CHECK' }}
       {% if opengear_upgrade_state.device_type == 'console_server' %}
       - Serial Ports:
         {{ serial_ports_validation.json | length }}
          total,: >-
         {{ serial_port_status_check.results |
-          selectattr('json.status', 'equalto', 'available') | list | length if serial_port_status_check.results is defined else 'Unknown' }}
+          selectattr('json.status', 'equalto', 'available') |
+          list | length if serial_port_status_check.results is
+          defined else 'Unknown' }}
          operational
       {% endif %}
       {% if opengear_upgrade_state.device_type == 'smart_pdu' %}
@@ -315,19 +321,29 @@
         {{ power_outlets_validation.json | length }}
          total,: >-
         {{ power_outlet_status_check.results |
-          selectattr('json.status', 'defined') | list | length if power_outlet_status_check.results is defined else 'Unknown' }}
+          selectattr('json.status', 'defined') | list | length
+          if power_outlet_status_check.results is defined
+          else 'Unknown' }}
          responsive
       - Power Usage:
-      {{ (overall_power_status.json.current_usage / overall_power_status.json.max_capacity * 100) |
-          round(1) if overall_power_status.json is defined else 'Unknown' }}
+      >
+        {{ (overall_power_status.json.current_usage /
+          overall_power_status.json.max_capacity * 100) |
+          round(1) if overall_power_status.json is defined
+          else 'Unknown' }}
         %
       {% endif %}
       - >-
-        Configuration: {{ 'VALID' if config_validation.json.status == 'valid' else
-          'CHECK' if config_validation.json is defined else 'Not Tested' }}
+        Configuration: >
+          {{ 'VALID' if config_validation.json.status == 'valid'
+            else 'CHECK' if config_validation.json is defined
+            else 'Not Tested' }}
       - >-
-        Backups Available: {{ backup_availability.json |
-          length if backup_availability.json is defined else 'Unknown' }}
+        Backups Available: >
+          {{ backup_availability.json | length
+            if backup_availability.json is defined else 'Unknown' }}
       - >-
-        Overall Status: {{ 'VALIDATION COMPLETE' if
-          opengear_upgrade_state.target_version in system_info_validation.json.version else 'CHECK REQUIRED' }}
+        Overall Status: >
+          {{ 'VALIDATION COMPLETE' if
+            opengear_upgrade_state.target_version in
+            system_info_validation.json.version else 'CHECK REQUIRED' }}

@@ -14,8 +14,14 @@ docs/
 ├── molecule-testing-guide.md              # Role-specific container testing
 ├── installation-guide.md                  # Complete installation procedures
 ├── container-deployment.md                # Container deployment guide
+├── deployment-guide.md                    # Service-based deployment structure
+├── grafana-deployment.md                  # Grafana integration and dashboards
+├── grafana-configuration-guide.md         # Grafana detailed configuration
+├── critical-gaps-testing.md               # Critical gap testing framework
 ├── UPGRADE_WORKFLOW_GUIDE.md               # Comprehensive workflow diagrams
-└── WORKFLOW_ARCHITECTURE.md               # GitHub Actions workflow architecture
+├── WORKFLOW_ARCHITECTURE.md               # GitHub Actions workflow architecture
+├── ai-code-reviews/                       # AI-generated code review reports
+└── github-templates/                      # GitHub issue and PR templates
 ```
 
 ## 📖 Quick Start Documentation
