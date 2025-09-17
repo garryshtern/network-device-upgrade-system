@@ -23,11 +23,10 @@
           Authorization: "Token {{ opengear_api_token }}"
         body_format: json
         body:
-          message: >
-            "\r
-*** MAINTENANCE NOTICE: Console server upgrade
+          message: |
+            \r
+            *** MAINTENANCE NOTICE: Console server upgrade
               in progress - connection may be interrupted ***\r
-"
         validate_certs: false
       loop: "{{ active_sessions.json }}"
       when: active_sessions.json | length > 0
@@ -112,7 +111,8 @@
       - >-
         Ports Tested:
         {{ port_connectivity_test.results |
-        selectattr('json.status', 'equalto', 'ok') | list | length | default(0) }}
+        selectattr('json.status', 'equalto', 'ok') |
+        list | length | default(0) }}
       - >-
         Status:
         {{ 'All Operational' if post_upgrade_port_status.results |

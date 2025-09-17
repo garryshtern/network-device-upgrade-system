@@ -63,7 +63,8 @@
         regex_search('([0-9\\.]+)', '\\1') | first | default('unknown') }}
       {%- elif ansible_network_os == 'mos' -%}
         {{ mos_version_output.stdout |
-        regex_search('VERSION=([0-9\\.]+)', '\\1') | first | default('unknown') }}
+        regex_search('VERSION=([0-9\\.]+)', '\\1') |
+        first | default('unknown') }}
       {%- else -%}
         unknown
       {%- endif -%}

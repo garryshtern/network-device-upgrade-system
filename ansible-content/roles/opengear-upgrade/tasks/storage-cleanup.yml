@@ -101,9 +101,9 @@
       {{ post_cleanup_storage.stdout |
         regex_search('/tmp\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}
     post_cleanup_free_gb: >
-      "{{ (post_cleanup_available | regex_replace('[KMG]', '') | float * (0.000001
-        if 'K' in post_cleanup_available else (0.001 if 'M' in post_cleanup_available
-      else 1))) | round(2) }}"
+      "{{ (post_cleanup_available | regex_replace('[KMG]', '') |
+        float * (0.000001 if 'K' in post_cleanup_available else
+        (0.001 if 'M' in post_cleanup_available else 1))) | round(2) }}"
 
 - name: Set storage cleanup results
   ansible.builtin.set_fact:

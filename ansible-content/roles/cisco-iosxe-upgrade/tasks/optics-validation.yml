@@ -49,7 +49,8 @@
         optical_power_levels: >-
           {{ transceiver_dom.stdout[0] |
              regex_findall(
-             '(\S+)\s+.*?Tx Power\s+([-\d\.]+)\s+dBm.*?Rx Power\s+([-\d\.]+)\s+dBm',
+             '(\S+)\s+.*?Tx Power\s+([-\d\.]+)\s+dBm.*?
+             Rx Power\s+([-\d\.]+)\s+dBm',
              multiline=True, dotall=True) }}
       when:
         - transceiver_dom.rc == 0

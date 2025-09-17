@@ -54,12 +54,13 @@
     - name: Parse API device information
       ansible.builtin.set_fact:
         opengear_upgrade_state: >
-          "{{ opengear_upgrade_state | combine({'device_model':
-            device_info_api.json.model,
+          "{{ opengear_upgrade_state | combine({
+            'device_model': device_info_api.json.model,
             'current_version': device_info_api.json.version,
-          'device_type': >
-            'smart_pdu' if 'CM8100' in device_info_api.json.model else
-              'console_server', 'architecture': 'modern', 'upgrade_method': 'api'}) }}"
+            'device_type': ('smart_pdu' if 'CM8100' in
+              device_info_api.json.model else 'console_server'),
+            'architecture': 'modern',
+            'upgrade_method': 'api'}) }}"
 - name: Detect device information (Legacy CLI)
   when: not api_available
 

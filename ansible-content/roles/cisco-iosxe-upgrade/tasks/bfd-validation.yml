@@ -42,7 +42,9 @@
       ansible.builtin.set_fact:
         bfd_active_neighbors: >-
           {{ bfd_neighbors.stdout[0] |
-             regex_findall('(\d+\.\d+\.\d+\.\d+)\s+(\S+)\s+(\S+)\s+(Up|Down)', multiline=True) }}
+             regex_findall(
+             '(\d+\.\d+\.\d+\.\d+)\s+(\S+)\s+(\S+)\s+(Up|Down)',
+             multiline=True) }}
       when: bfd_neighbors.rc == 0
 
     - name: Count UP BFD sessions

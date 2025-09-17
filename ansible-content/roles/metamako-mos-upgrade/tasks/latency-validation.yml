@@ -80,28 +80,14 @@
     fail_msg: Latency degradation detected after upgrade
 - name: Latency validation report
   ansible.builtin.debug:
-    msg: >
-      "Metamako Latency Validation Results:
-Pre-Upgrade
-        Average: {{ baseline_latency.system_latency\
-      \ }}ns
-Post-Upgrade Average: >
-        {{ post_latency.system_latency }}ns
-Pre-Upgrade\
-      \ Maximum: >
-        {{ baseline_latency.max_latency }}ns
-Post-Upgrade
-          Maximum: {{ post_latency.max_latency\
-      \ }}ns
-Latency Change: >
-        
- {{ ((post_latency.system_latency |
-          float - baseline_latency.system_latency\
-      \ | float) / baseline_latency.system_latency | float
-        * 100) | round(2) }}
-\
-      \  %
-Status: >
-        {{ 'PASS' if post_latency.system_latency
-          | float <= baseline_latency.system_latency\
-      \ | float * 1.1 else 'DEGRADED' }}"
+    msg: |
+      Metamako Latency Validation Results:
+      Pre-Upgrade Average: {{ baseline_latency.system_latency }}ns
+      Post-Upgrade Average: {{ post_latency.system_latency }}ns
+      Pre-Upgrade Maximum: {{ baseline_latency.max_latency }}ns
+      Post-Upgrade Maximum: {{ post_latency.max_latency }}ns
+      Latency Change: {{ ((post_latency.system_latency | float -
+        baseline_latency.system_latency | float) /
+        baseline_latency.system_latency | float * 100) | round(2) }}%
+      Status: {{ 'PASS' if post_latency.system_latency | float <=
+        baseline_latency.system_latency | float * 1.1 else 'DEGRADED' }}
