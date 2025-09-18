@@ -91,8 +91,7 @@
 
       rescue:
         - name: Pre-validation failure handling
-          ansible.builtin.include_tasks: >-
-            ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: "{{ common }}/error-handling.yml"
           vars:
             error_phase: "pre_validation"
             error_message: "Pre-upgrade validation failed"
@@ -209,7 +208,7 @@
           }}
 
     - name: Export final metrics
-      ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+      ansible.builtin.include_tasks: "{{ common }}/metrics-export.yml"
       vars:
         metric_type: "upgrade_summary"
         duration_seconds: "{{ upgrade_duration }}"
@@ -233,6 +232,6 @@
 
   handlers:
     - name: Emergency cleanup
-      ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+      ansible.builtin.include_tasks: "{{ common }}/error-handling.yml"
       vars:
         cleanup_required: true

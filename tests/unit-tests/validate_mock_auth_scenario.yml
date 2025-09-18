@@ -15,15 +15,15 @@
     - name: Load and validate mock inventory configuration
       block:
         - name: Parse mock inventory file
-          ansible.builtin.script:
-            cmd: |
-              #!/usr/bin/env python3
-              import yaml
-              import json
+          ansible.builtin.shell: |
+            python3 -c "
+            import yaml
+            import json
 
-              with open('{{ test_inventory_path }}', 'r') as f:
-                  inventory = yaml.safe_load(f)
-              print(json.dumps(inventory))
+            with open('tests/{{ test_inventory_path }}', 'r') as f:
+                inventory = yaml.safe_load(f)
+            print(json.dumps(inventory))
+            "
           register: mock_inventory_content
 
         - name: Load mock inventory YAML
@@ -76,49 +76,49 @@
     - name: Test mock device connectivity simulation
       block:
         - name: Create mock device for testing
-          ansible.builtin.script:
-            cmd: |
-              #!/usr/bin/env python3
-              import sys
-              import os
-              import json
-              sys.path.append('{{ playbook_dir }}/../mock-devices')
+          ansible.builtin.shell: |
+            python3 -c "
+            import sys
+            import os
+            import json
+            sys.path.append('{{ playbook_dir }}/../mock-devices')
 
-              try:
-                  from mock_device_engine import MockDeviceManager, MockDeviceConfig
+            try:
+                from mock_device_engine import MockDeviceManager, MockDeviceConfig
 
-                  # Create device manager
-                  manager = MockDeviceManager()
+                # Create device manager
+                manager = MockDeviceManager()
 
-                  # Create mock device for the platform
-                  platform = '{{ test_device_group }}'
-                  if platform == 'metamako':
-                      platform = 'metamako_mos'  # Adjust platform name
+                # Create mock device for the platform
+                platform = '{{ test_device_group }}'
+                if platform == 'metamako':
+                    platform = 'metamako_mos'  # Adjust platform name
 
-                  device_id = manager.create_device(platform, f'mock-{platform}-test')
-                  device = manager.devices[device_id]
+                device_id = manager.create_device(platform, f'mock-{platform}-test')
+                device = manager.devices[device_id]
 
-                  # Test basic connectivity
-                  response = device.process_command('show version')
+                # Test basic connectivity
+                response = device.process_command('show version')
 
-                  result = {
-                      'success': True,
-                      'device_id': device_id,
-                      'platform': platform,
-                      'response_status': response.get('status', 'unknown'),
-                      'mock_connectivity': True
-                  }
+                result = {
+                    'success': True,
+                    'device_id': device_id,
+                    'platform': platform,
+                    'response_status': response.get('status', 'unknown'),
+                    'mock_connectivity': True
+                }
 
-                  print(json.dumps(result))
+                print(json.dumps(result))
 
-              except Exception as e:
-                  error_result = {
-                      'success': False,
-                      'error': str(e),
-                      'platform': '{{ test_device_group }}',
-                      'mock_connectivity': False
-                  }
-                  print(json.dumps(error_result))
+            except Exception as e:
+                error_result = {
+                    'success': False,
+                    'error': str(e),
+                    'platform': '{{ test_device_group }}',
+                    'mock_connectivity': False
+                }
+                print(json.dumps(error_result))
+            "
           register: mock_device_test
 
         - name: Parse mock device test result
