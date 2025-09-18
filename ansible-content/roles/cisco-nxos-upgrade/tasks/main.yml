@@ -51,6 +51,8 @@
   when: upgrade_epld | default(false) and target_epld_image is defined
 
 - name: Execute upgrade based on ISSU capability
-  ansible.builtin.include_tasks: >-
-    {{ 'issu-procedures.yml' if nxos_upgrade_state.issu_capable else
-      'image-installation.yml' }}
+  ansible.builtin.include_tasks: "{{ upgrade_task_file }}"
+  vars:
+    upgrade_task_file: >-
+      {{ 'issu-procedures.yml' if nxos_upgrade_state.issu_capable
+         else 'image-installation.yml' }}

@@ -48,6 +48,8 @@
     fail_msg: "Invalid upgrade path or target version format"
 
 - name: Execute upgrade based on mode
-  ansible.builtin.include_tasks: >-
-    {{ 'install-mode.yml' if iosxe_upgrade_state.install_mode else
-      'bundle-mode.yml' }}
+  ansible.builtin.include_tasks: "{{ upgrade_task_file }}"
+  vars:
+    upgrade_task_file: >-
+      {{ 'install-mode.yml' if iosxe_upgrade_state.install_mode
+         else 'bundle-mode.yml' }}

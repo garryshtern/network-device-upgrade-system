@@ -93,10 +93,11 @@
         }) }}"
       when: not api_available
 - name: Check device-specific capabilities
-  ansible.builtin.include_tasks: >-
-    "{{ 'smart-pdu-check.yml' if opengear_upgrade_state.device_type ==
-    'smart_pdu' else
-        'console-server-check.yml' }}"
+  ansible.builtin.include_tasks: "{{ check_task_file }}"
+  vars:
+    check_task_file: >-
+      {{ 'smart-pdu-check.yml' if opengear_upgrade_state.device_type ==
+         'smart_pdu' else 'console-server-check.yml' }}
 
 - name: Display upgrade plan
   ansible.builtin.debug:

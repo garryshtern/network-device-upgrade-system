@@ -64,11 +64,11 @@
           }) }}
 
     - name: Execute step upgrade based on HA mode
-      ansible.builtin.include_tasks: >-
-        {{ 'ha-cluster-upgrade.yml'
-           if fortios_upgrade_state.ha_mode != 'standalone'
-           else 'standalone-upgrade.yml' }}
+      ansible.builtin.include_tasks: "{{ upgrade_task_file }}"
       vars:
+        upgrade_task_file: >-
+          {{ 'ha-cluster-upgrade.yml' if fortios_upgrade_state.ha_mode !=
+             'standalone' else 'standalone-upgrade.yml' }}
         # Override target version for this step
         target_firmware_version: "{{ current_step_target }}"
 

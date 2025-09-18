@@ -119,6 +119,12 @@ Comprehensive testing for Mac/Linux development without physical devices:
 - **Linting**: Use ansible-lint for playbooks and roles
 - **Line Length**: Max 80 characters per line
 - **Error Handling**: Graceful error handling, no masking of errors
+- **Systematic Code Review**: MANDATORY systematic and thorough approach for all code reviews and searches
+  - Use comprehensive search patterns to catch ALL variations of issues
+  - Verify fixes across ENTIRE codebase, not just obvious instances
+  - Use multiple search methods (grep, ripgrep, manual review) for critical issues
+  - Document search patterns used and verify completeness
+  - When fixing syntax issues like folded scalars, check ALL files systematically
 
 ### **Documentation Standards (MANDATORY)**
 
