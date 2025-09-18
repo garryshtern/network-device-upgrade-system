@@ -10,6 +10,7 @@ This directory contains comprehensive documentation for the Network Device Upgra
 docs/
 ├── README.md                               # This documentation index
 ├── PLATFORM_IMPLEMENTATION_STATUS.md      # Current platform implementation status
+├── PLATFORM_FILE_TRANSFER_GUIDE.md        # Platform-specific transfer methods and upgrade mechanisms
 ├── testing-framework-guide.md             # Comprehensive testing guide (consolidated)
 ├── molecule-testing-guide.md              # Role-specific container testing
 ├── installation-guide.md                  # Complete installation procedures
@@ -63,6 +64,12 @@ docs/
    - Safety mechanisms and rollback procedures
    - Platform-specific workflow variations
    - Validation framework and error handling
+
+4.1. **[Platform File Transfer Guide](PLATFORM_FILE_TRANSFER_GUIDE.md)** - Transfer methods and upgrade mechanisms
+   - API vs SCP transfer methods by vendor (FortiOS uses HTTPS API, others use SCP)
+   - Security implications of different transfer methods
+   - Platform-specific upgrade mechanisms and troubleshooting
+   - Implementation code references and diagnostic procedures
 
 ### For Developers & Integrators
 5. **[Platform Implementation Guide](PLATFORM_IMPLEMENTATION_GUIDE.md)** - Technical implementation details
