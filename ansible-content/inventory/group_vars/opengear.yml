@@ -2,13 +2,20 @@
 # Opengear Specific Configuration
 # For console servers and smart PDUs
 
-# Connection settings (auto-detected based on device architecture)
+# Connection settings - SSH key and API token auth preferred over passwords
 ansible_connection: ssh  # Default to SSH, overridden for modern API devices
 ansible_host: "{{ inventory_hostname }}"
 ansible_user: "{{ opengear_username }}"
-ansible_ssh_pass: "{{ opengear_password }}"
+# SSH key authentication (preferred for SSH connections)
+ansible_ssh_private_key_file: "{{ vault_opengear_ssh_key | default(omit) }}"
+# Password authentication (fallback for SSH connections)
+ansible_ssh_pass: "{{ opengear_password | default(omit) }}"
+ansible_ssh_common_args: >
+  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+  -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 opengear_username: "{{ vault_opengear_username | default('admin') }}"
-opengear_password: "{{ vault_opengear_password }}"
+opengear_password: "{{ vault_opengear_password | default(omit) }}"
+# API token authentication (preferred for API connections)
 opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
 
 # Platform specific settings

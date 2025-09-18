@@ -4,6 +4,8 @@
 
 This guide provides comprehensive documentation of file transfer methods and upgrade mechanisms used by each supported platform in the Network Device Upgrade System. Understanding these differences is crucial for troubleshooting, security assessment, and platform-specific customizations.
 
+> **🔐 Security First**: All platforms prioritize **SSH key authentication** and **API tokens** over password-based authentication. The system automatically prefers these secure methods when available, falling back to passwords only when necessary. This approach enhances security and enables automated operations without storing plaintext passwords.
+
 ## Table of Contents
 
 1. [File Transfer Methods Summary](#file-transfer-methods-summary)
@@ -14,13 +16,13 @@ This guide provides comprehensive documentation of file transfer methods and upg
 
 ## File Transfer Methods Summary
 
-| Platform | Primary Transfer Method | Secondary Method | Protocol | Authentication | File Size Limit |
-|----------|------------------------|------------------|----------|----------------|------------------|
-| **Cisco NX-OS** | SCP | SFTP | SSH | Username/Password | ~8GB |
-| **Cisco IOS-XE** | SCP | HTTP/HTTPS | SSH/HTTP | Username/Password | ~4GB |
-| **FortiOS** | **HTTPS API Upload** | **No SCP** | HTTPS | API Token/Session | ~2GB |
-| **Opengear** | CLI Commands + Local | SSH/SCP for staging | SSH | Username/Password | ~1GB |
-| **Metamako MOS** | SCP | HTTP | SSH/HTTP | Username/Password | ~500MB |
+| Platform | Primary Transfer Method | Secondary Method | Protocol | **Primary Authentication** | **Fallback Authentication** | File Size Limit |
+|----------|------------------------|------------------|----------|---------------------------|----------------------------|------------------|
+| **Cisco NX-OS** | SCP | SFTP | SSH | **SSH Key** | Username/Password | ~8GB |
+| **Cisco IOS-XE** | SCP | HTTP/HTTPS | SSH/HTTP | **SSH Key** | Username/Password | ~4GB |
+| **FortiOS** | **HTTPS API Upload** | **No SCP** | HTTPS | **API Token** | Username/Password | ~2GB |
+| **Opengear** | CLI Commands + Local | SSH/SCP for staging | SSH | **SSH Key + API Token** | Username/Password | ~1GB |
+| **Metamako MOS** | SCP | HTTP | SSH/HTTP | **SSH Key** | Username/Password | ~500MB |
 
 ## Platform-Specific Details
 
@@ -184,15 +186,44 @@ This guide provides comprehensive documentation of file transfer methods and upg
 - Additional protocol surface area
 - Potential for configuration errors
 
+### Authentication Configuration Examples
+
+#### SSH Key Configuration (Cisco Platforms, Metamako, Opengear)
+```yaml
+# In Ansible Vault (ansible-content/inventory/vault.yml)
+vault_cisco_nxos_ssh_key: "/path/to/nxos-device-key"
+vault_cisco_iosxe_ssh_key: "/path/to/iosxe-device-key"
+vault_metamako_ssh_key: "/path/to/metamako-device-key"
+vault_opengear_ssh_key: "/path/to/opengear-device-key"
+
+# Group vars automatically prefer SSH keys over passwords
+ansible_ssh_private_key_file: "{{ vault_cisco_nxos_ssh_key | default(omit) }}"
+ansible_password: "{{ vault_cisco_nxos_password | default(omit) }}"
+```
+
+#### API Token Configuration (FortiOS, Opengear)
+```yaml
+# In Ansible Vault
+vault_fortios_api_token: "your-fortios-api-token-here"
+vault_opengear_api_token: "your-opengear-api-token-here"
+
+# FortiOS HTTPS API configuration
+ansible_httpapi_key: "{{ vault_fortios_api_token | default(omit) }}"
+ansible_password: "{{ vault_fortios_password | default(omit) }}"
+
+# Opengear API token for REST API calls
+opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
+```
+
 ### Security Best Practices by Platform
 
-| Platform | Required Security Configuration |
-|----------|--------------------------------|
-| **Cisco NX-OS** | SSH enabled, secure ciphers, key-based auth preferred |
-| **Cisco IOS-XE** | SSH enabled, secure file transfer settings |
-| **FortiOS** | HTTPS admin access, secure API sessions |
-| **Opengear** | SSH enabled, secure CLI access |
-| **Metamako MOS** | SSH enabled, secure file transfer |
+| Platform | **Primary Security Configuration** | **Fallback Configuration** |
+|----------|-----------------------------------|---------------------------|
+| **Cisco NX-OS** | SSH keys, secure ciphers, public key authentication | Username/password with secure SSH |
+| **Cisco IOS-XE** | SSH keys, secure file transfer settings | Username/password with secure SSH |
+| **FortiOS** | API tokens, HTTPS admin access, secure API sessions | Username/password with HTTPS |
+| **Opengear** | SSH keys + API tokens, secure CLI/API access | Username/password authentication |
+| **Metamako MOS** | SSH keys, secure file transfer | Username/password with secure SSH |
 
 ## Implementation Code References
 

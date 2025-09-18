@@ -2,13 +2,17 @@
 # Cisco IOS-XE Specific Configuration
 # For enterprise routers and switches
 
-# Connection settings
+# Connection settings - SSH key authentication preferred over passwords
 ansible_network_os: cisco.ios.ios
 ansible_connection: ansible.netcommon.network_cli
 ansible_user: "{{ vault_cisco_iosxe_username | default('admin') }}"
-ansible_password: "{{ vault_cisco_iosxe_password }}"
+# SSH key authentication (preferred)
+ansible_ssh_private_key_file: "{{ vault_cisco_iosxe_ssh_key | default(omit) }}"
+# Password authentication (fallback)
+ansible_password: "{{ vault_cisco_iosxe_password | default(omit) }}"
 ansible_ssh_common_args: >
   -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+  -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 
 # Platform specific settings
 platform_type: "cisco_iosxe"

@@ -2,12 +2,15 @@
 # FortiOS Specific Configuration
 # For Fortinet FortiGate firewalls
 
-# Connection settings
+# Connection settings - API token authentication preferred over passwords
 ansible_network_os: fortinet.fortios.fortios
 ansible_connection: httpapi
 ansible_host: "{{ inventory_hostname }}"
 ansible_user: "{{ vault_fortios_username | default('admin') }}"
-ansible_password: "{{ vault_fortios_password }}"
+# API token authentication (preferred for FortiOS 6.0+)
+ansible_httpapi_key: "{{ vault_fortios_api_token | default(omit) }}"
+# Password authentication (fallback when no token available)
+ansible_password: "{{ vault_fortios_password | default(omit) }}"
 ansible_httpapi_use_ssl: true
 ansible_httpapi_validate_certs: false
 ansible_httpapi_port: 443
