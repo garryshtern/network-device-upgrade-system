@@ -16,14 +16,14 @@
       block:
         - name: Parse mock inventory file
           ansible.builtin.shell: |
-            python3 -c "
+            python3 -c '
             import yaml
             import json
 
-            with open('tests/{{ test_inventory_path }}', 'r') as f:
+            with open("{{ playbook_dir }}/../{{ test_inventory_path }}", "r") as f:
                 inventory = yaml.safe_load(f)
             print(json.dumps(inventory))
-            "
+            '
           register: mock_inventory_content
 
         - name: Load mock inventory YAML
