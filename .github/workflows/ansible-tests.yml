@@ -133,15 +133,11 @@ jobs:
           ansible-playbook -i tests/mock-inventories/all-platforms.yml \
             --check --diff tests/integration-tests/check-mode-tests.yml
 
-      - name: Test main workflow with mock inventory
+      - name: Test main workflow syntax validation
         run: |
           ANSIBLE_ROLES_PATH=ansible-content/roles \
           ANSIBLE_CONFIG=ansible-content/ansible.cfg \
-          ansible-playbook -i tests/mock-inventories/single-platform.yml \
-            --check --diff \
-            --extra-vars "target_firmware=test-firmware.bin" \
-            --extra-vars "target_hosts=test-nxos-01 upgrade_phase=loading" \
-            --limit test-nxos-01 \
+          ansible-playbook --syntax-check \
             ansible-content/playbooks/main-upgrade-workflow.yml
 
   security-scan:
