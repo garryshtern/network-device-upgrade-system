@@ -44,13 +44,37 @@
             - test_expected_auth_method in ["ssh_key", "ssh_key_and_api_token"]
             - test_expected_ssh_key is not none
 
+        - name: Load group_vars to resolve template values
+          ansible.builtin.shell: |
+            python3 -c '
+            import yaml
+            import json
+
+            with open("{{ playbook_dir }}/../mock-inventories/group_vars/all.yml", "r") as f:
+                group_vars = yaml.safe_load(f)
+            print(json.dumps(group_vars))
+            '
+          register: group_vars_content
+          when:
+            - test_expected_auth_method in ["api_token", "ssh_key_and_api_token"]
+            - test_expected_api_token is not none
+
+        - name: Parse group vars
+          set_fact:
+            group_vars_data: "{{ group_vars_content.stdout | from_json }}"
+          when:
+            - test_expected_auth_method in ["api_token", "ssh_key_and_api_token"]
+            - test_expected_api_token is not none
+
         - name: Validate API token configuration for mock devices
           assert:
             that:
               - >
-                (group_config.vars.ansible_httpapi_key is defined and test_expected_api_token in group_config.vars.ansible_httpapi_key) or
-                (group_config.vars.opengear_api_token is defined and test_expected_api_token in group_config.vars.opengear_api_token)
-            fail_msg: "Mock API token configuration not found for {{ test_device_group }}"
+                (test_device_group == "fortios" and group_config.vars.ansible_httpapi_key is defined
+                 and group_vars_data.vault_fortios_api_token == test_expected_api_token) or
+                (test_device_group == "opengear" and group_config.vars.opengear_api_token is defined
+                 and group_vars_data.vault_opengear_api_token == test_expected_api_token)
+            fail_msg: "Mock API token configuration not found for {{ test_device_group }}: expected={{ test_expected_api_token }}, fortios_token={{ group_vars_data.vault_fortios_api_token | default('N/A') }}, opengear_token={{ group_vars_data.vault_opengear_api_token | default('N/A') }}"
           when:
             - test_expected_auth_method in ["api_token", "ssh_key_and_api_token"]
             - test_expected_api_token is not none
@@ -97,8 +121,15 @@
                 device_id = manager.create_device(platform, f'mock-{platform}-test')
                 device = manager.devices[device_id]
 
-                # Test basic connectivity
-                response = device.process_command('show version')
+                # Test basic connectivity using platform-appropriate command
+                if platform == 'fortios':
+                    response = device.process_command('get system status')
+                elif platform == 'opengear':
+                    response = device.process_command('config -g config.system.version')
+                elif platform == 'metamako_mos':
+                    response = device.process_command('mdk-version')
+                else:
+                    response = device.process_command('show version')
 
                 result = {
                     'success': True,

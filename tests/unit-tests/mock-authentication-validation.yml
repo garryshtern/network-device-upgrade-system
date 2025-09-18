@@ -58,11 +58,12 @@
 
     - name: Create mock SSH keys for testing
       block:
-        - name: Create mock SSH key directory
+        - name: Ensure tmp directory is accessible for mock SSH keys
           ansible.builtin.file:
             path: "/tmp"
             state: directory
             mode: '0755'
+          ignore_errors: true
 
         - name: Create mock SSH keys
           ansible.builtin.copy:
@@ -107,57 +108,69 @@
         - name: Test each platform with mock device engine
           block:
             - name: Test mock device creation and authentication
-              ansible.builtin.script:
-                cmd: |
-                  #!/usr/bin/env python3
-                  import sys
-                  import os
-                  sys.path.append('{{ playbook_dir }}/../mock-devices')
-                  from mock_device_engine import MockDeviceManager, MockDeviceConfig
+              ansible.builtin.shell: |
+                python3 -c "
+                import sys
+                import os
+                import json
+                sys.path.append('{{ playbook_dir }}/../mock-devices')
 
-                  # Create device manager
-                  manager = MockDeviceManager()
+                try:
+                    from mock_device_engine import MockDeviceManager, MockDeviceConfig
 
-                  # Test platform configurations
-                  platforms = {
-                      'cisco_nxos': {'ssh_key': '/tmp/mock-nxos-key', 'api_token': None},
-                      'cisco_iosxe': {'ssh_key': '/tmp/mock-iosxe-key', 'api_token': None},
-                      'fortios': {'ssh_key': None, 'api_token': 'mock-api-token-fortios-12345'},
-                      'opengear': {'ssh_key': '/tmp/mock-opengear-key', 'api_token': 'mock-api-token-opengear-67890'},
-                      'metamako_mos': {'ssh_key': '/tmp/mock-metamako-key', 'api_token': None}
-                  }
+                    # Create device manager
+                    manager = MockDeviceManager()
 
-                  results = []
-                  for platform, auth in platforms.items():
-                      try:
-                          # Create device
-                          device_id = manager.create_device(platform, f'test-{platform}')
-                          device = manager.devices[device_id]
+                    # Test platform configurations
+                    platforms = {
+                        'cisco_nxos': {'ssh_key': '/tmp/mock-nxos-key', 'api_token': None},
+                        'cisco_iosxe': {'ssh_key': '/tmp/mock-iosxe-key', 'api_token': None},
+                        'fortios': {'ssh_key': None, 'api_token': 'mock-api-token-fortios-12345'},
+                        'opengear': {'ssh_key': '/tmp/mock-opengear-key', 'api_token': 'mock-api-token-opengear-67890'},
+                        'metamako_mos': {'ssh_key': '/tmp/mock-metamako-key', 'api_token': None}
+                    }
 
-                          # Test basic command
-                          response = device.process_command('show version')
+                    results = []
+                    for platform, auth in platforms.items():
+                        try:
+                            # Create device
+                            device_id = manager.create_device(platform, f'test-{platform}')
+                            device = manager.devices[device_id]
 
-                          # Test authentication simulation
-                          auth_test = {
-                              'platform': platform,
-                              'device_id': device_id,
-                              'ssh_key_configured': auth['ssh_key'] is not None,
-                              'api_token_configured': auth['api_token'] is not None,
-                              'command_response_status': response.get('status', 'unknown'),
-                              'success': response.get('status') == 'success'
-                          }
-                          results.append(auth_test)
+                            # Test basic command using platform-appropriate command
+                            if platform == 'fortios':
+                                response = device.process_command('get system status')
+                            elif platform == 'opengear':
+                                response = device.process_command('config -g config.system.version')
+                            elif platform == 'metamako_mos':
+                                response = device.process_command('mdk-version')
+                            else:
+                                response = device.process_command('show version')
 
-                      except Exception as e:
-                          results.append({
-                              'platform': platform,
-                              'error': str(e),
-                              'success': False
-                          })
+                            # Test authentication simulation
+                            auth_test = {
+                                'platform': platform,
+                                'device_id': device_id,
+                                'ssh_key_configured': auth['ssh_key'] is not None,
+                                'api_token_configured': auth['api_token'] is not None,
+                                'command_response_status': response.get('status', 'unknown'),
+                                'success': response.get('status') == 'success'
+                            }
+                            results.append(auth_test)
 
-                  # Output results for Ansible to capture
-                  import json
-                  print(json.dumps(results))
+                        except Exception as e:
+                            results.append({
+                                'platform': platform,
+                                'error': str(e),
+                                'success': False
+                            })
+
+                    # Output results for Ansible to capture
+                    print(json.dumps(results))
+
+                except Exception as e:
+                    print(json.dumps([{'error': str(e), 'success': False}]))
+                "
               register: mock_auth_test_result
 
         - name: Parse mock authentication test results
@@ -177,41 +190,42 @@
     - name: Test mock inventory parsing with authentication
       block:
         - name: Load mock inventory and extract authentication configs
-          ansible.builtin.script:
-            cmd: |
-              #!/usr/bin/env python3
-              import yaml
-              import json
+          ansible.builtin.shell: |
+            cd {{ playbook_dir }}/..
+            python3 -c "
+            import yaml
+            import json
 
-              # Load mock inventory
-              with open('mock-inventories/all-platforms.yml', 'r') as f:
-                  inventory = yaml.safe_load(f)
+            # Load mock inventory
+            with open('mock-inventories/all-platforms.yml', 'r') as f:
+                inventory = yaml.safe_load(f)
 
-              # Load group vars
-              with open('mock-inventories/group_vars/all.yml', 'r') as f:
-                  group_vars = yaml.safe_load(f)
+            # Load group vars
+            with open('mock-inventories/group_vars/all.yml', 'r') as f:
+                group_vars = yaml.safe_load(f)
 
-              auth_configs = {}
-              for group_name, group_data in inventory['all']['children'].items():
-                  if 'vars' in group_data:
-                      auth_config = {
-                          'group': group_name,
-                          'ssh_key_var': group_data['vars'].get('ansible_ssh_private_key_file'),
-                          'password_var': group_data['vars'].get('ansible_password'),
-                          'api_token_var': group_data['vars'].get('ansible_httpapi_key') or group_data['vars'].get('opengear_api_token'),
-                          'ssh_args': group_data['vars'].get('ansible_ssh_common_args')
-                      }
-                      auth_configs[group_name] = auth_config
+            auth_configs = {}
+            for group_name, group_data in inventory['all']['children'].items():
+                if 'vars' in group_data:
+                    auth_config = {
+                        'group': group_name,
+                        'ssh_key_var': group_data['vars'].get('ansible_ssh_private_key_file'),
+                        'password_var': group_data['vars'].get('ansible_password'),
+                        'api_token_var': group_data['vars'].get('ansible_httpapi_key') or group_data['vars'].get('opengear_api_token'),
+                        'ssh_args': group_data['vars'].get('ansible_ssh_common_args')
+                    }
+                    auth_configs[group_name] = auth_config
 
-              # Add group vars for validation
-              auth_configs['group_vars'] = {
-                  'vault_cisco_nxos_ssh_key': group_vars.get('vault_cisco_nxos_ssh_key'),
-                  'vault_fortios_api_token': group_vars.get('vault_fortios_api_token'),
-                  'vault_opengear_ssh_key': group_vars.get('vault_opengear_ssh_key'),
-                  'vault_opengear_api_token': group_vars.get('vault_opengear_api_token')
-              }
+            # Add group vars for validation
+            auth_configs['group_vars'] = {
+                'vault_cisco_nxos_ssh_key': group_vars.get('vault_cisco_nxos_ssh_key'),
+                'vault_fortios_api_token': group_vars.get('vault_fortios_api_token'),
+                'vault_opengear_ssh_key': group_vars.get('vault_opengear_ssh_key'),
+                'vault_opengear_api_token': group_vars.get('vault_opengear_api_token')
+            }
 
-              print(json.dumps(auth_configs, indent=2))
+            print(json.dumps(auth_configs, indent=2))
+            "
           register: mock_inventory_auth_config
 
         - name: Parse mock inventory authentication configuration
