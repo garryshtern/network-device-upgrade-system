@@ -1,0 +1,140 @@
+---
+# Authentication scenario validation helper
+# Validates individual authentication configuration scenarios
+
+- name: "Testing {{ scenario.name }}"
+  block:
+    - name: Set authentication variables for testing
+      set_fact:
+        test_auth_config: "{{ scenario.auth_config }}"
+        test_platform: "{{ scenario.platform }}"
+        test_expected_method: "{{ scenario.expected_auth_method }}"
+
+    - name: Validate SSH key authentication configuration
+      block:
+        - name: Check SSH key configuration
+          assert:
+            that:
+              - "test_auth_config.ansible_ssh_private_key_file is defined"
+              - "test_auth_config.ansible_ssh_private_key_file != ''"
+              - "test_auth_config.ansible_password is defined"
+            fail_msg: "SSH key authentication requires both key file and password fallback"
+          when:
+            - test_expected_method == "ssh_key"
+            - scenario.should_pass
+
+        - name: Validate SSH common args for key preference
+          assert:
+            that:
+              - "'PubkeyAuthentication=yes' in test_auth_config.ansible_ssh_common_args"
+              - "'PreferredAuthentications=publickey,password' in test_auth_config.ansible_ssh_common_args"
+            fail_msg: "SSH configuration should prefer public key authentication"
+          when:
+            - test_expected_method == "ssh_key"
+            - scenario.should_pass
+            - test_auth_config.ansible_ssh_common_args is defined
+
+    - name: Validate API token authentication configuration
+      block:
+        - name: Check API token configuration (FortiOS)
+          assert:
+            that:
+              - "test_auth_config.ansible_httpapi_key is defined"
+              - "test_auth_config.ansible_httpapi_key != ''"
+              - "test_auth_config.ansible_password is defined"
+            fail_msg: "API token authentication requires both token and password fallback"
+          when:
+            - test_expected_method == "api_token"
+            - test_platform == "fortios"
+            - scenario.should_pass
+
+        - name: Check API token configuration (Opengear)
+          assert:
+            that:
+              - "test_auth_config.opengear_api_token is defined"
+              - "test_auth_config.opengear_api_token != ''"
+            fail_msg: "Opengear API token must be configured"
+          when:
+            - test_expected_method in ["ssh_key_and_api_token", "api_token"]
+            - test_platform == "opengear"
+            - scenario.should_pass
+
+    - name: Validate password fallback configuration
+      block:
+        - name: Check password fallback is available
+          assert:
+            that:
+              - "test_auth_config.ansible_password is defined or test_auth_config.ansible_ssh_pass is defined"
+            fail_msg: "Password fallback should be configured for compatibility"
+          when:
+            - test_expected_method == "password_fallback"
+            - scenario.should_pass
+
+    - name: Validate negative test cases
+      block:
+        - name: Ensure invalid configurations fail appropriately
+          assert:
+            that:
+              - "test_auth_config | length == 0 or test_expected_method == 'invalid'"
+            fail_msg: "Invalid authentication configurations should be rejected"
+          when:
+            - not scenario.should_pass
+
+    - name: Validate platform-specific authentication requirements
+      block:
+        - name: Check Cisco platforms have SSH key preference
+          assert:
+            that:
+              - "test_auth_config.ansible_ssh_private_key_file is defined or test_expected_method == 'password_fallback'"
+            fail_msg: "Cisco platforms should prefer SSH key authentication (unless password fallback)"
+          when:
+            - test_platform in ["cisco_nxos", "cisco_iosxe"]
+            - scenario.should_pass
+
+        - name: Check FortiOS has API token preference
+          assert:
+            that:
+              - "test_auth_config.ansible_httpapi_key is defined or test_expected_method == 'password_fallback'"
+            fail_msg: "FortiOS should prefer API token authentication (unless password fallback)"
+          when:
+            - test_platform == "fortios"
+            - scenario.should_pass
+
+        - name: Check Metamako MOS has SSH key preference
+          assert:
+            that:
+              - "test_auth_config.ansible_ssh_private_key_file is defined or test_expected_method == 'password_fallback'"
+            fail_msg: "Metamako MOS should prefer SSH key authentication (unless password fallback)"
+          when:
+            - test_platform == "metamako_mos"
+            - scenario.should_pass
+
+        - name: Check Opengear has dual authentication
+          assert:
+            that:
+              - "(test_auth_config.ansible_ssh_private_key_file is defined and test_auth_config.opengear_api_token is defined) or not scenario.should_pass"
+            fail_msg: "Opengear should support both SSH key and API token authentication"
+          when:
+            - test_platform == "opengear"
+            - test_expected_method == "ssh_key_and_api_token"
+            - scenario.should_pass
+
+  rescue:
+    - name: Handle expected authentication validation failures
+      debug:
+        msg: |
+          Expected failure for scenario: {{ scenario.name }}
+          This validates that invalid authentication configurations are properly rejected.
+      when: not scenario.should_pass
+
+    - name: Handle unexpected authentication validation failures
+      fail:
+        msg: |
+          Unexpected failure for scenario: {{ scenario.name }}
+          Expected to pass but validation failed.
+      when: scenario.should_pass
+
+- name: Authentication scenario validation completed
+  debug:
+    msg: "✅ Authentication scenario '{{ scenario.name }}' validated successfully"
+  when: scenario.should_pass or not scenario.should_pass

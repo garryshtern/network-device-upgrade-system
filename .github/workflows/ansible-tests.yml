@@ -106,6 +106,14 @@ jobs:
         run: |
           ansible-playbook tests/unit-tests/error-handling.yml
 
+      - name: Run authentication validation tests
+        run: |
+          ansible-playbook tests/unit-tests/authentication-validation.yml
+
+      - name: Run mock authentication validation tests
+        run: |
+          ansible-playbook tests/unit-tests/mock-authentication-validation.yml
+
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest

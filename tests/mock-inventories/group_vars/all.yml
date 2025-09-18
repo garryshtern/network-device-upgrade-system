@@ -8,7 +8,20 @@ target_firmware_version: "test-firmware-v1.0"
 target_firmware: "test-firmware.bin"
 firmware_base_path: "/tmp/firmware-test"
 
-# Network device variables
+# Mock SSH keys and API tokens for testing authentication
+vault_cisco_nxos_ssh_key: "/tmp/mock-nxos-key"
+vault_cisco_nxos_password: "mock-nxos-password"
+vault_cisco_iosxe_ssh_key: "/tmp/mock-iosxe-key"
+vault_cisco_iosxe_password: "mock-iosxe-password"
+vault_fortios_api_token: "mock-api-token-fortios-12345"
+vault_fortios_password: "mock-fortios-password"
+vault_opengear_ssh_key: "/tmp/mock-opengear-key"
+vault_opengear_api_token: "mock-api-token-opengear-67890"
+vault_opengear_password: "mock-opengear-password"
+vault_metamako_ssh_key: "/tmp/mock-metamako-key"
+vault_metamako_password: "mock-metamako-password"
+
+# Legacy variables for backward compatibility
 cisco_nxos_username: "admin"
 cisco_nxos_password: "test-password"
 cisco_iosxe_username: "admin"
@@ -17,7 +30,7 @@ opengear_username: "admin"
 opengear_password: "test-password"
 fortios_username: "admin"
 fortios_password: "test-password"
-metamako_username: "admin" 
+metamako_username: "admin"
 metamako_password: "test-password"
 
 # Test settings

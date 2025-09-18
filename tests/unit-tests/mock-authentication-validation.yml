@@ -1,0 +1,242 @@
+---
+# Mock device authentication validation test playbook
+# Tests SSH key and API token authentication configurations with mock devices
+
+- name: Mock Device Authentication Configuration Validation Tests
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    mock_test_scenarios:
+      - name: "Mock NX-OS SSH Key Authentication"
+        inventory_path: "mock-inventories/all-platforms.yml"
+        device_group: "cisco_nxos"
+        expected_ssh_key: "/tmp/mock-nxos-key"
+        expected_api_token: null
+        expected_auth_method: "ssh_key"
+        should_pass: true
+
+      - name: "Mock IOS-XE SSH Key Authentication"
+        inventory_path: "mock-inventories/all-platforms.yml"
+        device_group: "cisco_iosxe"
+        expected_ssh_key: "/tmp/mock-iosxe-key"
+        expected_api_token: null
+        expected_auth_method: "ssh_key"
+        should_pass: true
+
+      - name: "Mock FortiOS API Token Authentication"
+        inventory_path: "mock-inventories/all-platforms.yml"
+        device_group: "fortios"
+        expected_ssh_key: null
+        expected_api_token: "mock-api-token-fortios-12345"
+        expected_auth_method: "api_token"
+        should_pass: true
+
+      - name: "Mock Opengear Dual Authentication"
+        inventory_path: "mock-inventories/all-platforms.yml"
+        device_group: "opengear"
+        expected_ssh_key: "/tmp/mock-opengear-key"
+        expected_api_token: "mock-api-token-opengear-67890"
+        expected_auth_method: "ssh_key_and_api_token"
+        should_pass: true
+
+      - name: "Mock Metamako SSH Key Authentication"
+        inventory_path: "mock-inventories/all-platforms.yml"
+        device_group: "metamako"
+        expected_ssh_key: "/tmp/mock-metamako-key"
+        expected_api_token: null
+        expected_auth_method: "ssh_key"
+        should_pass: true
+
+  tasks:
+    - name: Test mock device authentication scenarios
+      include_tasks: validate_mock_auth_scenario.yml
+      loop: "{{ mock_test_scenarios }}"
+      loop_control:
+        loop_var: scenario
+        label: "{{ scenario.name }}"
+
+    - name: Create mock SSH keys for testing
+      block:
+        - name: Create mock SSH key directory
+          ansible.builtin.file:
+            path: "/tmp"
+            state: directory
+            mode: '0755'
+
+        - name: Create mock SSH keys
+          ansible.builtin.copy:
+            content: |
+              -----BEGIN OPENSSH PRIVATE KEY-----
+              MOCK_SSH_KEY_FOR_TESTING_{{ item | upper | replace('-', '_') }}
+              -----END OPENSSH PRIVATE KEY-----
+            dest: "/tmp/mock-{{ item }}-key"
+            mode: '0600'
+          loop:
+            - "nxos"
+            - "iosxe"
+            - "opengear"
+            - "metamako"
+
+        - name: Verify mock SSH keys exist
+          ansible.builtin.stat:
+            path: "/tmp/mock-{{ item }}-key"
+          register: mock_key_stat
+          loop:
+            - "nxos"
+            - "iosxe"
+            - "opengear"
+            - "metamako"
+
+        - name: Assert mock SSH keys were created
+          assert:
+            that:
+              - item.stat.exists
+              - item.stat.mode == '0600'
+            fail_msg: "Mock SSH key {{ item.stat.path }} was not created properly"
+          loop: "{{ mock_key_stat.results }}"
+          loop_control:
+            label: "{{ item.item }}"
+
+    - name: Test mock device engine with authentication
+      block:
+        - name: Create mock device manager
+          ansible.builtin.set_fact:
+            mock_device_test_results: []
+
+        - name: Test each platform with mock device engine
+          block:
+            - name: Test mock device creation and authentication
+              ansible.builtin.script:
+                cmd: |
+                  #!/usr/bin/env python3
+                  import sys
+                  import os
+                  sys.path.append('{{ playbook_dir }}/../mock-devices')
+                  from mock_device_engine import MockDeviceManager, MockDeviceConfig
+
+                  # Create device manager
+                  manager = MockDeviceManager()
+
+                  # Test platform configurations
+                  platforms = {
+                      'cisco_nxos': {'ssh_key': '/tmp/mock-nxos-key', 'api_token': None},
+                      'cisco_iosxe': {'ssh_key': '/tmp/mock-iosxe-key', 'api_token': None},
+                      'fortios': {'ssh_key': None, 'api_token': 'mock-api-token-fortios-12345'},
+                      'opengear': {'ssh_key': '/tmp/mock-opengear-key', 'api_token': 'mock-api-token-opengear-67890'},
+                      'metamako_mos': {'ssh_key': '/tmp/mock-metamako-key', 'api_token': None}
+                  }
+
+                  results = []
+                  for platform, auth in platforms.items():
+                      try:
+                          # Create device
+                          device_id = manager.create_device(platform, f'test-{platform}')
+                          device = manager.devices[device_id]
+
+                          # Test basic command
+                          response = device.process_command('show version')
+
+                          # Test authentication simulation
+                          auth_test = {
+                              'platform': platform,
+                              'device_id': device_id,
+                              'ssh_key_configured': auth['ssh_key'] is not None,
+                              'api_token_configured': auth['api_token'] is not None,
+                              'command_response_status': response.get('status', 'unknown'),
+                              'success': response.get('status') == 'success'
+                          }
+                          results.append(auth_test)
+
+                      except Exception as e:
+                          results.append({
+                              'platform': platform,
+                              'error': str(e),
+                              'success': False
+                          })
+
+                  # Output results for Ansible to capture
+                  import json
+                  print(json.dumps(results))
+              register: mock_auth_test_result
+
+        - name: Parse mock authentication test results
+          ansible.builtin.set_fact:
+            mock_device_results: "{{ mock_auth_test_result.stdout | from_json }}"
+
+        - name: Validate mock device authentication results
+          assert:
+            that:
+              - item.success == true
+              - item.command_response_status == 'success'
+            fail_msg: "Mock device authentication test failed for {{ item.platform }}: {{ item.error | default('Command failed') }}"
+          loop: "{{ mock_device_results }}"
+          loop_control:
+            label: "{{ item.platform }}"
+
+    - name: Test mock inventory parsing with authentication
+      block:
+        - name: Load mock inventory and extract authentication configs
+          ansible.builtin.script:
+            cmd: |
+              #!/usr/bin/env python3
+              import yaml
+              import json
+
+              # Load mock inventory
+              with open('mock-inventories/all-platforms.yml', 'r') as f:
+                  inventory = yaml.safe_load(f)
+
+              # Load group vars
+              with open('mock-inventories/group_vars/all.yml', 'r') as f:
+                  group_vars = yaml.safe_load(f)
+
+              auth_configs = {}
+              for group_name, group_data in inventory['all']['children'].items():
+                  if 'vars' in group_data:
+                      auth_config = {
+                          'group': group_name,
+                          'ssh_key_var': group_data['vars'].get('ansible_ssh_private_key_file'),
+                          'password_var': group_data['vars'].get('ansible_password'),
+                          'api_token_var': group_data['vars'].get('ansible_httpapi_key') or group_data['vars'].get('opengear_api_token'),
+                          'ssh_args': group_data['vars'].get('ansible_ssh_common_args')
+                      }
+                      auth_configs[group_name] = auth_config
+
+              # Add group vars for validation
+              auth_configs['group_vars'] = {
+                  'vault_cisco_nxos_ssh_key': group_vars.get('vault_cisco_nxos_ssh_key'),
+                  'vault_fortios_api_token': group_vars.get('vault_fortios_api_token'),
+                  'vault_opengear_ssh_key': group_vars.get('vault_opengear_ssh_key'),
+                  'vault_opengear_api_token': group_vars.get('vault_opengear_api_token')
+              }
+
+              print(json.dumps(auth_configs, indent=2))
+          register: mock_inventory_auth_config
+
+        - name: Parse mock inventory authentication configuration
+          ansible.builtin.set_fact:
+            mock_auth_configs: "{{ mock_inventory_auth_config.stdout | from_json }}"
+
+        - name: Validate mock inventory authentication configuration
+          assert:
+            that:
+              - mock_auth_configs.cisco_nxos.ssh_key_var is not none
+              - mock_auth_configs.fortios.api_token_var is not none
+              - mock_auth_configs.opengear.ssh_key_var is not none
+              - mock_auth_configs.opengear.api_token_var is not none
+              - mock_auth_configs.metamako.ssh_key_var is not none
+              - mock_auth_configs.group_vars.vault_cisco_nxos_ssh_key == '/tmp/mock-nxos-key'
+              - mock_auth_configs.group_vars.vault_fortios_api_token == 'mock-api-token-fortios-12345'
+            fail_msg: "Mock inventory authentication configuration validation failed"
+
+    - name: Summary of mock authentication validation tests
+      debug:
+        msg: |
+          Mock authentication validation completed successfully:
+          ✅ Mock SSH keys created and configured for all SSH-based platforms
+          ✅ Mock API tokens configured for API-based platforms (FortiOS, Opengear)
+          ✅ Mock device engine authentication simulation successful
+          ✅ Mock inventory authentication configuration validated
+          ✅ Authentication preferences properly configured in mock inventories
+          ✅ Mock testing framework ready for authentication scenarios

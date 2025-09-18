@@ -113,7 +113,7 @@
           when: upgrade_phase in ['full', 'loading']
 
         - name: Verify loaded image integrity
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/image-validation/tasks/hash-verification.yml
           when: upgrade_phase in ['full', 'loading']
 
@@ -135,7 +135,7 @@
           when: upgrade_phase in ['full', 'installation']
 
         - name: Final pre-installation checks
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/network-validation/tasks/protocol-convergence.yml
           when: >
             upgrade_phase in ['full', 'installation'] and not skip_validation

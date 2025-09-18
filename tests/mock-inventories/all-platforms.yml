@@ -53,7 +53,13 @@ all:
           nxapi_enabled: true
       vars:
         ansible_user: admin
-        ansible_password: "{{ vault_cisco_password | default('mock_password') }}"
+        # SSH key authentication (preferred)
+        ansible_ssh_private_key_file: "{{ vault_cisco_nxos_ssh_key | default('/tmp/mock-nxos-key') }}"
+        # Password authentication (fallback)
+        ansible_password: "{{ vault_cisco_nxos_password | default('mock_password') }}"
+        ansible_ssh_common_args: >
+          -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 
     cisco_iosxe:
       hosts:
@@ -77,7 +83,13 @@ all:
           install_mode: false
       vars:
         ansible_user: admin
-        ansible_password: "{{ vault_cisco_password | default('mock_password') }}"
+        # SSH key authentication (preferred)
+        ansible_ssh_private_key_file: "{{ vault_cisco_iosxe_ssh_key | default('/tmp/mock-iosxe-key') }}"
+        # Password authentication (fallback)
+        ansible_password: "{{ vault_cisco_iosxe_password | default('mock_password') }}"
+        ansible_ssh_common_args: >
+          -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 
     fortios:
       hosts:
@@ -152,6 +164,9 @@ all:
           vdom_count: 1
       vars:
         ansible_user: admin
+        # API token authentication (preferred for FortiOS 6.0+)
+        ansible_httpapi_key: "{{ vault_fortios_api_token | default('mock-api-token-fortios') }}"
+        # Password authentication (fallback when no token available)
         ansible_password: "{{ vault_fortios_password | default('mock_password') }}"
 
     opengear:
@@ -214,7 +229,15 @@ all:
           web_interface_enabled: true
       vars:
         ansible_user: root
+        # SSH key authentication (preferred)
+        ansible_ssh_private_key_file: "{{ vault_opengear_ssh_key | default('/tmp/mock-opengear-key') }}"
+        # Password authentication (fallback)
         ansible_password: "{{ vault_opengear_password | default('mock_password') }}"
+        # API token for REST API calls
+        opengear_api_token: "{{ vault_opengear_api_token | default('mock-api-token-opengear') }}"
+        ansible_ssh_common_args: >
+          -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 
     metamako:
       hosts:
@@ -307,7 +330,13 @@ all:
           applications_to_disable: ["metamux"]
       vars:
         ansible_user: admin
+        # SSH key authentication (preferred)
+        ansible_ssh_private_key_file: "{{ vault_metamako_ssh_key | default('/tmp/mock-metamako-key') }}"
+        # Password authentication (fallback)
         ansible_password: "{{ vault_metamako_password | default('mock_password') }}"
+        ansible_ssh_common_args: >
+          -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 
   vars:
     # Global test variables

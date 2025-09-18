@@ -205,12 +205,29 @@ jobs:
           echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.get_version.outputs.new_version }}"
           echo "Container Image: ghcr.io/${{ github.repository }}:${{ steps.get_version.outputs.new_version }}"
 
-  build-versioned-container:
-    name: Build Versioned Container Image
+  tag-existing-container:
+    name: Tag Existing Container with Release Version
     needs: create-release
-    uses: ./.github/workflows/build-container.yml
-    with:
-      image_tag: ${{ needs.create-release.outputs.new_version }}
-      push_image: true
-      platforms: 'linux/amd64,linux/arm64'
-    secrets: inherit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag existing container with release version
+        run: |
+          # Pull the latest container (built by ansible-tests workflow)
+          docker pull ghcr.io/${{ github.repository }}:latest
+
+          # Tag it with the release version
+          docker tag ghcr.io/${{ github.repository }}:latest \
+            ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.new_version }}
+
+          # Push the tagged version
+          docker push ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.new_version }}
+
+          echo "✅ Tagged existing container with version ${{ needs.create-release.outputs.new_version }}"

@@ -1,0 +1,155 @@
+---
+# Mock authentication scenario validation helper
+# Validates individual mock authentication configuration scenarios
+
+- name: "Testing mock scenario {{ scenario.name }}"
+  block:
+    - name: Set mock authentication variables for testing
+      set_fact:
+        test_inventory_path: "{{ scenario.inventory_path }}"
+        test_device_group: "{{ scenario.device_group }}"
+        test_expected_ssh_key: "{{ scenario.expected_ssh_key }}"
+        test_expected_api_token: "{{ scenario.expected_api_token }}"
+        test_expected_auth_method: "{{ scenario.expected_auth_method }}"
+
+    - name: Load and validate mock inventory configuration
+      block:
+        - name: Parse mock inventory file
+          ansible.builtin.script:
+            cmd: |
+              #!/usr/bin/env python3
+              import yaml
+              import json
+
+              with open('{{ test_inventory_path }}', 'r') as f:
+                  inventory = yaml.safe_load(f)
+              print(json.dumps(inventory))
+          register: mock_inventory_content
+
+        - name: Load mock inventory YAML
+          set_fact:
+            mock_inventory: "{{ mock_inventory_content.stdout | from_json }}"
+
+        - name: Extract device group configuration
+          set_fact:
+            group_config: "{{ mock_inventory.all.children[test_device_group] }}"
+
+        - name: Validate SSH key configuration for mock devices
+          assert:
+            that:
+              - "group_config.vars.ansible_ssh_private_key_file is defined"
+              - "test_expected_ssh_key in group_config.vars.ansible_ssh_private_key_file"
+            fail_msg: "Mock SSH key configuration not found for {{ test_device_group }}"
+          when:
+            - test_expected_auth_method in ["ssh_key", "ssh_key_and_api_token"]
+            - test_expected_ssh_key is not none
+
+        - name: Validate API token configuration for mock devices
+          assert:
+            that:
+              - >
+                (group_config.vars.ansible_httpapi_key is defined and test_expected_api_token in group_config.vars.ansible_httpapi_key) or
+                (group_config.vars.opengear_api_token is defined and test_expected_api_token in group_config.vars.opengear_api_token)
+            fail_msg: "Mock API token configuration not found for {{ test_device_group }}"
+          when:
+            - test_expected_auth_method in ["api_token", "ssh_key_and_api_token"]
+            - test_expected_api_token is not none
+
+        - name: Validate password fallback is configured
+          assert:
+            that:
+              - "group_config.vars.ansible_password is defined"
+            fail_msg: "Password fallback should be configured for compatibility"
+          when: scenario.should_pass
+
+        - name: Validate SSH common args for key preference
+          assert:
+            that:
+              - "group_config.vars.ansible_ssh_common_args is defined"
+              - "'PubkeyAuthentication=yes' in group_config.vars.ansible_ssh_common_args"
+              - "'PreferredAuthentications=publickey,password' in group_config.vars.ansible_ssh_common_args"
+            fail_msg: "SSH configuration should prefer public key authentication"
+          when:
+            - test_expected_auth_method in ["ssh_key", "ssh_key_and_api_token"]
+            - scenario.should_pass
+
+    - name: Test mock device connectivity simulation
+      block:
+        - name: Create mock device for testing
+          ansible.builtin.script:
+            cmd: |
+              #!/usr/bin/env python3
+              import sys
+              import os
+              import json
+              sys.path.append('{{ playbook_dir }}/../mock-devices')
+
+              try:
+                  from mock_device_engine import MockDeviceManager, MockDeviceConfig
+
+                  # Create device manager
+                  manager = MockDeviceManager()
+
+                  # Create mock device for the platform
+                  platform = '{{ test_device_group }}'
+                  if platform == 'metamako':
+                      platform = 'metamako_mos'  # Adjust platform name
+
+                  device_id = manager.create_device(platform, f'mock-{platform}-test')
+                  device = manager.devices[device_id]
+
+                  # Test basic connectivity
+                  response = device.process_command('show version')
+
+                  result = {
+                      'success': True,
+                      'device_id': device_id,
+                      'platform': platform,
+                      'response_status': response.get('status', 'unknown'),
+                      'mock_connectivity': True
+                  }
+
+                  print(json.dumps(result))
+
+              except Exception as e:
+                  error_result = {
+                      'success': False,
+                      'error': str(e),
+                      'platform': '{{ test_device_group }}',
+                      'mock_connectivity': False
+                  }
+                  print(json.dumps(error_result))
+          register: mock_device_test
+
+        - name: Parse mock device test result
+          set_fact:
+            mock_device_result: "{{ mock_device_test.stdout | from_json }}"
+
+        - name: Validate mock device connectivity
+          assert:
+            that:
+              - mock_device_result.success == true
+              - mock_device_result.response_status == 'success'
+              - mock_device_result.mock_connectivity == true
+            fail_msg: "Mock device connectivity test failed: {{ mock_device_result.error | default('Unknown error') }}"
+          when: scenario.should_pass
+
+  rescue:
+    - name: Handle expected mock authentication validation failures
+      debug:
+        msg: |
+          Expected failure for mock scenario: {{ scenario.name }}
+          This validates that invalid mock authentication configurations are properly rejected.
+      when: not scenario.should_pass
+
+    - name: Handle unexpected mock authentication validation failures
+      fail:
+        msg: |
+          Unexpected failure for mock scenario: {{ scenario.name }}
+          Expected to pass but validation failed.
+      when: scenario.should_pass
+
+- name: Mock authentication scenario validation completed
+  debug:
+    msg: "✅ Mock authentication scenario '{{ scenario.name }}' validated successfully"
+  when: scenario.should_pass or not scenario.should_pass

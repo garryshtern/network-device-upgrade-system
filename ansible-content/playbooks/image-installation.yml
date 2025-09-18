@@ -42,17 +42,17 @@
               }) }}
 
         - name: Verify Phase 1 completion
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/common/tasks/phase-validation.yml
           vars:
             required_phase: "phase_1_complete"
 
         - name: Validate network convergence
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/network-validation/tasks/protocol-convergence.yml
 
         - name: Final device health check
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/common/tasks/health-check.yml
           vars:
             check_type: "pre_installation"
@@ -128,7 +128,7 @@
           when: reboot_required | bool
 
         - name: Verify device responsiveness
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/common/tasks/connectivity-check.yml
 
     # Step 4: Post-installation validation
@@ -142,11 +142,11 @@
               }) }}
 
         - name: Verify firmware version
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/image-validation/tasks/version-verification.yml
 
         - name: Run post-installation health check
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/common/tasks/health-check.yml
           vars:
             check_type: "post_installation"
@@ -174,7 +174,7 @@
               }) }}
 
         - name: Record installation metrics
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/common/tasks/metrics-export.yml
           vars:
             metric_type: "installation_completion"
@@ -186,7 +186,7 @@
               reboot_required: "{{ reboot_required }}"
 
         - name: Update device inventory
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/common/tasks/inventory-update.yml
 
   post_tasks:

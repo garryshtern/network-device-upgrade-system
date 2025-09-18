@@ -49,7 +49,7 @@
         - name: Test device connectivity
           block:
             - name: Include connectivity check tasks
-              ansible.builtin.include_tasks: >
+              ansible.builtin.include_tasks:
                 ../roles/common/tasks/connectivity-check.yml
           rescue:
             - name: Log connectivity check failure
@@ -59,7 +59,7 @@
         - name: Gather current device state
           block:
             - name: Include device status tasks
-              ansible.builtin.include_tasks: >
+              ansible.builtin.include_tasks:
                 ../roles/common/tasks/device-status.yml
           rescue:
             - name: Log device status check failure
@@ -255,11 +255,11 @@
               }}
 
         - name: Validate device connectivity
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/common/tasks/connectivity-check.yml
 
         - name: Run health check after rollback
-          ansible.builtin.include_tasks: >
+          ansible.builtin.include_tasks:
             ../roles/common/tasks/health-check.yml
           vars:
             check_type: "post_rollback"
