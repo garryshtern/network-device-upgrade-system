@@ -73,8 +73,7 @@
     - name: Phase 0 - Pre-Upgrade Validation
       block:
         - name: Device connectivity check
-          ansible.builtin.include_tasks: >
-            ../roles/common/tasks/connectivity-check.yml
+          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
 
         - name: Device health check and baseline capture
           ansible.builtin.include_tasks: ../roles/common/tasks/health-check.yml
@@ -90,8 +89,7 @@
 
       rescue:
         - name: Pre-validation failure handling
-          ansible.builtin.include_tasks: >
-            ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "pre_validation"
             error_message: "Pre-upgrade validation failed"
@@ -100,8 +98,7 @@
     - name: Phase 1 - Image Loading
       block:
         - name: Storage cleanup and preparation
-          ansible.builtin.include_tasks: >
-            ../roles/common/tasks/storage-cleanup.yml
+          ansible.builtin.include_tasks: ../roles/common/tasks/storage-cleanup.yml
           when: upgrade_phase in ['full', 'loading']
 
         - name: Backup current configuration
@@ -119,8 +116,7 @@
 
       rescue:
         - name: Image loading failure handling
-          ansible.builtin.include_tasks: >
-            ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "image_loading"
             error_message: "Image loading phase failed"
@@ -166,8 +162,7 @@
             and not skip_validation
 
         - name: Update device inventory
-          ansible.builtin.include_tasks: >
-            ../roles/common/tasks/metrics-export.yml
+          ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
           vars:
             metric_type: "upgrade_completion"
             upgrade_status: "success"
@@ -190,8 +185,7 @@
 
       rescue:
         - name: Rollback failure handling
-          ansible.builtin.include_tasks: >
-            ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "rollback"
             error_message: >
