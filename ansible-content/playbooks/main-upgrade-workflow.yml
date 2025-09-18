@@ -37,6 +37,10 @@
     # Paths and storage
     firmware_base_path: "/var/lib/network-upgrade/firmware"
     backup_base_path: "/var/lib/network-upgrade/backups"
+    # Task paths for shorter include_tasks references
+    common: "../roles/common/tasks"
+    validate: "../roles/image-validation/tasks"
+    space: "../roles/space-management/tasks"
   pre_tasks:
     - name: Validate required variables
       ansible.builtin.assert:
@@ -73,23 +77,22 @@
     - name: Phase 0 - Pre-Upgrade Validation
       block:
         - name: Device connectivity check
-          ansible.builtin.include_tasks: ../roles/common/tasks/connectivity-check.yml
+          ansible.builtin.include_tasks: "{{ common }}/connectivity-check.yml"
 
         - name: Device health check and baseline capture
-          ansible.builtin.include_tasks: ../roles/common/tasks/health-check.yml
+          ansible.builtin.include_tasks: "{{ common }}/health-check.yml"
           when: not skip_validation
 
-        - name: Verify firmware file availability
-          ansible.builtin.include_tasks: >
-            ../roles/image-validation/tasks/integrity-audit.yml
+        - name: Verify firmware availability
+          ansible.builtin.include_tasks: "{{ validate }}/integrity-audit.yml"
 
-        - name: Check storage space requirements
-          ansible.builtin.include_tasks: >
-            ../roles/space-management/tasks/space-check.yml
+        - name: Check storage space
+          ansible.builtin.include_tasks: "{{ space }}/space-check.yml"
 
       rescue:
         - name: Pre-validation failure handling
-          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: >-
+            ../roles/common/tasks/error-handling.yml
           vars:
             error_phase: "pre_validation"
             error_message: "Pre-upgrade validation failed"
@@ -97,8 +100,8 @@
     # Phase 1: Image Loading (Business Hours Safe)
     - name: Phase 1 - Image Loading
       block:
-        - name: Storage cleanup and preparation
-          ansible.builtin.include_tasks: ../roles/common/tasks/storage-cleanup.yml
+        - name: Storage cleanup
+          ansible.builtin.include_tasks: "{{ common }}/storage-cleanup.yml"
           when: upgrade_phase in ['full', 'loading']
 
         - name: Backup current configuration
@@ -116,7 +119,7 @@
 
       rescue:
         - name: Image loading failure handling
-          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: "{{ common }}/error-handling.yml"
           vars:
             error_phase: "image_loading"
             error_message: "Image loading phase failed"
@@ -162,7 +165,7 @@
             and not skip_validation
 
         - name: Update device inventory
-          ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+          ansible.builtin.include_tasks: "{{ common }}/metrics-export.yml"
           vars:
             metric_type: "upgrade_completion"
             upgrade_status: "success"
@@ -185,7 +188,7 @@
 
       rescue:
         - name: Rollback failure handling
-          ansible.builtin.include_tasks: ../roles/common/tasks/error-handling.yml
+          ansible.builtin.include_tasks: "{{ common }}/error-handling.yml"
           vars:
             error_phase: "rollback"
             error_message: >
