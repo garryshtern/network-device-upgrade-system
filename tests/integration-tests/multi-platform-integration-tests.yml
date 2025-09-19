@@ -6,6 +6,8 @@
   hosts: localhost
   gather_facts: yes
   vars:
+    # Project root directory - works regardless of execution context
+    project_root: "{{ ansible_env.PWD if ansible_env.PWD.endswith('ansible-content') else (ansible_env.PWD + '/../..') if ansible_env.PWD.endswith('integration-tests') else ansible_env.PWD }}"
     integration_test_scenarios:
       phase_separation_test:
         name: "Phase-Separated Upgrade Process"
@@ -221,7 +223,7 @@
       block:
         - name: Check AWX Configuration Templates
           find:
-            paths: "{{ playbook_dir }}/../../deployment/services/awx"
+            paths: "{{ project_root }}/deployment/services/awx"
             patterns: "*.yml"
             recurse: yes
           register: awx_config_files
@@ -235,7 +237,7 @@
 
         - name: Test Job Template Configurations
           find:
-            paths: "{{ playbook_dir }}/../../deployment/services/awx"
+            paths: "{{ project_root }}/deployment/services/awx"
             patterns: "*templates.yml"
           register: job_templates
 
