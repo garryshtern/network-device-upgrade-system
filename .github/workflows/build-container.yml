@@ -128,27 +128,76 @@ jobs:
         if: inputs.push_image
         run: |
           echo "Testing container functionality..."
-          
+
           # Get the first tag for testing
           IMAGE_TAG=$(echo '${{ steps.meta.outputs.tags }}' | head -1)
-          
+
           echo "Testing container with image: $IMAGE_TAG"
-          
+
           # Test syntax-check (default command)
           echo "::group::Testing container syntax-check"
           docker run --rm "$IMAGE_TAG"
           echo "::endgroup::"
-          
-          # Test help command
-          echo "::group::Testing container help"
-          docker run --rm "$IMAGE_TAG" help
+
+          # Test help command and verify comprehensive content
+          echo "::group::Testing container help comprehensiveness"
+          help_output=$(docker run --rm "$IMAGE_TAG" help)
+          echo "$help_output"
+
+          # Verify help contains key sections
+          echo "Verifying help contains all required sections..."
+          if ! echo "$help_output" | grep -q "ENVIRONMENT VARIABLES"; then
+            echo "❌ Help missing ENVIRONMENT VARIABLES section"
+            exit 1
+          fi
+          if ! echo "$help_output" | grep -q "SSH Key Authentication"; then
+            echo "❌ Help missing SSH Key Authentication section"
+            exit 1
+          fi
+          if ! echo "$help_output" | grep -q "API Token Authentication"; then
+            echo "❌ Help missing API Token Authentication section"
+            exit 1
+          fi
+          if ! echo "$help_output" | grep -q "AUTHENTICATION PRIORITY ORDER"; then
+            echo "❌ Help missing AUTHENTICATION PRIORITY ORDER section"
+            exit 1
+          fi
+          if ! echo "$help_output" | grep -q "PLATFORM SUPPORT"; then
+            echo "❌ Help missing PLATFORM SUPPORT section"
+            exit 1
+          fi
+          if ! echo "$help_output" | grep -q "TROUBLESHOOTING"; then
+            echo "❌ Help missing TROUBLESHOOTING section"
+            exit 1
+          fi
+          if ! echo "$help_output" | grep -q "SECURITY BEST PRACTICES"; then
+            echo "❌ Help missing SECURITY BEST PRACTICES section"
+            exit 1
+          fi
+          echo "✅ Help contains all required comprehensive sections"
           echo "::endgroup::"
-          
+
           # Test version information
           echo "::group::Testing container environment"
           docker run --rm "$IMAGE_TAG" shell -c "ansible --version && python3 --version"
           echo "::endgroup::"
-          
+
+          # Test container test suite
+          echo "::group::Testing container test command"
+          docker run --rm "$IMAGE_TAG" test
+          echo "::endgroup::"
+
+          # Test all commands are available
+          echo "::group::Testing all container commands"
+          for cmd in syntax-check dry-run test; do
+            echo "Testing command: $cmd"
+            docker run --rm "$IMAGE_TAG" "$cmd" || {
+              echo "❌ Command $cmd failed"
+              exit 1
+            }
+          done
+          echo "::endgroup::"
+
           echo "✅ Container functionality tests completed successfully"
 
       - name: Test podman compatibility

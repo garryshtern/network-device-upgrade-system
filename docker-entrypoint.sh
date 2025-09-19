@@ -93,46 +93,141 @@ ENVIRONMENT VARIABLES:
 
 EXAMPLES:
     # Syntax check (default)
-    docker run network-upgrade-system
+    docker run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
 
     # Run syntax check on specific playbook
-    docker run -e ANSIBLE_PLAYBOOK=ansible-content/playbooks/health-check.yml \\
-               network-upgrade-system syntax-check
+    docker run --rm \\
+      -e ANSIBLE_PLAYBOOK=ansible-content/playbooks/health-check.yml \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest syntax-check
 
     # Dry run upgrade workflow
-    docker run -e TARGET_FIRMWARE=9.3.12 -e TARGET_HOSTS=cisco-switch-01 \\
-               network-upgrade-system dry-run
+    docker run --rm \\
+      -e TARGET_FIRMWARE=9.3.12 -e TARGET_HOSTS=cisco-switch-01 \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # Execute actual upgrade (production)
-    docker run -e TARGET_FIRMWARE=9.3.12 -e TARGET_HOSTS=cisco-switch-01 \\
-               -e UPGRADE_PHASE=loading -e MAINTENANCE_WINDOW=false \\
-               network-upgrade-system run
+    docker run --rm \\
+      -e TARGET_FIRMWARE=9.3.12 -e TARGET_HOSTS=cisco-switch-01 \\
+      -e UPGRADE_PHASE=loading -e MAINTENANCE_WINDOW=false \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+    # SSH key authentication (recommended)
+    docker run --rm \\
+      -v ~/.ssh/id_rsa_cisco:/keys/cisco-key:ro \\
+      -v ~/.ssh/id_rsa_opengear:/keys/opengear-key:ro \\
+      -e VAULT_CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
+      -e VAULT_OPENGEAR_SSH_KEY=/keys/opengear-key \\
+      -e TARGET_HOSTS=cisco-datacenter-switches \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+
+    # API token authentication (FortiOS/Opengear API)
+    docker run --rm \\
+      -e VAULT_FORTIOS_API_TOKEN="\$(cat ~/.secrets/fortios-token)" \\
+      -e VAULT_OPENGEAR_API_TOKEN="\$(cat ~/.secrets/opengear-token)" \\
+      -e TARGET_HOSTS=fortinet-firewalls \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # Run with custom inventory
-    docker run -v /path/to/inventory:/opt/inventory:ro \\
-               -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \\
-               network-upgrade-system dry-run
+    docker run --rm \\
+      -v /path/to/inventory:/opt/inventory:ro \\
+      -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+
+    # Production deployment with all authentication methods
+    docker run --rm \\
+      -v /opt/secrets/ssh-keys:/keys:ro \\
+      -v /opt/inventory:/opt/inventory:ro \\
+      -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \\
+      -e TARGET_HOSTS=cisco-datacenter-switches \\
+      -e TARGET_FIRMWARE=9.3.12 \\
+      -e UPGRADE_PHASE=loading \\
+      -e VAULT_CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \\
+      -e VAULT_CISCO_IOSXE_SSH_KEY=/keys/cisco-iosxe-key \\
+      -e VAULT_FORTIOS_API_TOKEN="\$(cat /opt/secrets/fortios-api-token)" \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # Interactive shell for debugging
-    docker run -it network-upgrade-system shell
+    docker run --rm -it \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest shell
 
     # Run test suite
-    docker run network-upgrade-system test
+    docker run --rm \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest test
 
 PODMAN COMPATIBILITY (RHEL8/9):
     # Run with podman (rootless)
-    podman run --rm -it network-upgrade-system syntax-check
+    podman run --rm -it \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest syntax-check
 
-    # Mount external inventory with podman
-    podman run --rm -v ./inventory:/opt/inventory:Z \\
-               -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \\
-               network-upgrade-system dry-run
+    # Mount external inventory with podman (SELinux compatible)
+    podman run --rm \\
+      -v ./inventory:/opt/inventory:ro,Z \\
+      -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
-SECURITY NOTES:
+    # SSH keys with podman (SELinux context)
+    podman run --rm \\
+      -v ~/.ssh/id_rsa_cisco:/keys/cisco-key:ro,Z \\
+      -e VAULT_CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+
+AUTHENTICATION PRIORITY ORDER:
+    1. SSH Keys (Preferred for SSH-based platforms)
+       - Cisco NX-OS, IOS-XE, Metamako MOS, Opengear SSH
+    2. API Tokens (Preferred for API-based platforms)
+       - FortiOS API, Opengear REST API
+    3. Username/Password (Fallback when keys/tokens unavailable)
+
+PLATFORM SUPPORT:
+    ✓ Cisco NX-OS (SSH + SSH Key authentication)
+    ✓ Cisco IOS-XE (SSH + SSH Key authentication)
+    ✓ FortiOS (HTTPS API + API Token authentication)
+    ✓ Opengear (SSH + REST API + SSH Key/API Token authentication)
+    ✓ Metamako MOS (SSH + SSH Key authentication)
+
+UPGRADE PHASES:
+    - full: Complete upgrade workflow (default)
+    - loading: Firmware transfer and validation only
+    - installation: Firmware installation and reboot
+    - validation: Post-upgrade validation checks
+    - rollback: Rollback to previous firmware version
+
+TROUBLESHOOTING:
+    # Check container environment
+    docker run --rm -it \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest shell
+
+    # Validate SSH key permissions (must be 600)
+    ls -la ~/.ssh/id_rsa_cisco
+    chmod 600 ~/.ssh/id_rsa_cisco
+
+    # Test connectivity without changes
+    docker run --rm \\
+      -v ~/.ssh/id_rsa_cisco:/keys/cisco-key:ro \\
+      -e VAULT_CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
+      -e TARGET_HOSTS=test-device \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+
+    # View detailed Ansible output
+    docker run --rm \\
+      -e ANSIBLE_VERBOSITY=2 \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+
+SECURITY BEST PRACTICES:
     - Container runs as non-root user 'ansible' (UID 1000)
     - Compatible with rootless podman on RHEL8/9
+    - Always use read-only mounts (:ro) for SSH keys and inventory
+    - Set SSH key permissions to 600 before mounting
+    - Store API tokens in external secret management systems
+    - Use different SSH keys per platform/environment
+    - Regularly rotate SSH keys and API tokens
+    - Never log or print SSH keys or API tokens
+    - Use SELinux context (:Z) with podman for proper labeling
     - Mount vault password files securely with appropriate permissions
-    - Use read-only mounts for inventory files when possible
+
+DOCUMENTATION:
+    For detailed platform-specific configuration, see:
+    https://github.com/garryshtern/network-device-upgrade-system/tree/main/docs
 
 EOF
 }
