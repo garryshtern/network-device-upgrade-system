@@ -4,7 +4,7 @@
 
 - name: Production Readiness UAT Tests
   hosts: localhost
-  gather_facts: false
+  gather_facts: yes
   vars:
     # Project root directory - works regardless of execution context
     project_root: "{{ ansible_env.PWD if ansible_env.PWD.endswith('ansible-content') else (ansible_env.PWD + '/../..') if ansible_env.PWD.endswith('uat-tests') else (ansible_env.PWD + '/..') if ansible_env.PWD.endswith('tests') else ansible_env.PWD }}"
@@ -426,29 +426,29 @@
           ├── Device Count: {{ production_scenarios.enterprise_scale.device_count }}
           ├── Concurrent Upgrades: {{ production_scenarios.enterprise_scale.concurrent_upgrades }}
           ├── Success Rate Threshold: {{ production_scenarios.enterprise_scale.success_rate_threshold }}%
-          └── Result: {{ 'PASS' if enterprise_scale_test.rc == 0 else 'FAIL' }}
+          └── Result: {{ 'PASS' if (enterprise_scale_test | default({})).get('rc', 1) == 0 else 'FAIL' }}
           
           🔄 HIGH AVAILABILITY TEST
           ├── HA Pairs Tested: {{ production_scenarios.high_availability.ha_pairs }}
           ├── Failover Testing: {{ production_scenarios.high_availability.failover_testing }}
-          └── Result: {{ 'PASS' if ha_testing.rc == 0 else 'FAIL' }}
+          └── Result: {{ 'PASS' if (ha_testing | default({})).get('rc', 1) == 0 else 'FAIL' }}
           
           🚨 DISASTER RECOVERY TEST
           ├── Rollback Scenarios: {{ production_scenarios.disaster_recovery.rollback_scenarios }}
           ├── Network Partition Recovery: {{ production_scenarios.disaster_recovery.network_partition_recovery }}
-          └── Result: {{ 'PASS' if disaster_recovery_test.rc == 0 else 'FAIL' }}
+          └── Result: {{ 'PASS' if (disaster_recovery_test | default({})).get('rc', 1) == 0 else 'FAIL' }}
           
           🔒 SECURITY COMPLIANCE TEST
           ├── Certificate Validation: ✓
           ├── Secure Transfer Only: ✓
           ├── Audit Logging: ✓
-          └── Result: {{ 'PASS' if security_compliance_test.rc == 0 else 'FAIL' }}
+          └── Result: {{ 'PASS' if (security_compliance_test | default({})).get('rc', 1) == 0 else 'FAIL' }}
           
           📊 PERFORMANCE BENCHMARKS
           ├── Upgrade Time: Within limits
           ├── Memory Usage: Within limits
           ├── Throughput: {{ performance_benchmarks.min_throughput_mbps }}+ Mbps
-          └── Result: {{ 'PASS' if performance_test.rc == 0 else 'FAIL' }}
+          └── Result: {{ 'PASS' if (performance_test | default({})).get('rc', 1) == 0 else 'FAIL' }}
           
           🏛️ COMPLIANCE REQUIREMENTS
           {% for requirement in compliance_requirements %}
@@ -457,9 +457,9 @@
           
           📋 INFRASTRUCTURE READINESS
           ├── Ansible Environment: {{ 'Ready' if ansible_environment.rc == 0 else 'Issues Found' }}
-          ├── AWX Integration: {{ 'Available' if awx_check.status == 200 else 'Not Available' }}
-          ├── NetBox Integration: {{ 'Available' if netbox_check.status == 200 else 'Not Available' }}
-          └── InfluxDB Metrics: {{ 'Available' if influxdb_check.status == 200 else 'Not Available' }}
+          ├── AWX Integration: {{ 'Available' if (awx_check | default({})).get('status', 404) == 200 else 'Not Available' }}
+          ├── NetBox Integration: {{ 'Available' if (netbox_check | default({})).get('status', 404) == 200 else 'Not Available' }}
+          └── InfluxDB Metrics: {{ 'Available' if (influxdb_check | default({})).get('status', 404) == 200 else 'Not Available' }}
           
           ╔════════════════════════════════════════════════════════════╗
           ║ OVERALL PRODUCTION READINESS: {{ 'CERTIFIED ✓' if (enterprise_scale_test.rc == 0 and ha_testing.rc == 0 and disaster_recovery_test.rc == 0 and security_compliance_test.rc == 0 and performance_test.rc == 0) else 'NOT READY ✗' }}           ║
