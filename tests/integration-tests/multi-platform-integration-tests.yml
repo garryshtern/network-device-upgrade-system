@@ -83,7 +83,7 @@
       block:
         - name: Test Main Upgrade Workflow Structure
           ansible.builtin.slurp:
-            src: "{{ playbook_dir }}/../../ansible-content/playbooks/main-upgrade-workflow.yml"
+            src: "{{ project_root }}/ansible-content/playbooks/main-upgrade-workflow.yml"
           register: main_workflow
 
         - name: Validate Phase Separation in Main Workflow
@@ -100,7 +100,7 @@
 
         - name: Test Individual Phase Playbooks
           ansible.builtin.stat:
-            path: "{{ playbook_dir }}/../../ansible-content/playbooks/{{ item }}"
+            path: "{{ project_root }}/ansible-content/playbooks/{{ item }}"
           register: phase_playbooks
           loop:
             - "image-loading.yml"
@@ -124,7 +124,7 @@
       block:
         - name: Test Platform-Specific Role Integration
           ansible.builtin.stat:
-            path: "{{ playbook_dir }}/../../ansible-content/roles/{{ item }}-upgrade"
+            path: "{{ project_root }}/ansible-content/roles/{{ item }}-upgrade"
           register: platform_roles
           loop: "{{ integration_test_scenarios.multi_platform_test.platforms }}"
 
@@ -139,7 +139,7 @@
 
         - name: Test Cross-Platform Variable Consistency
           ansible.builtin.stat:
-            path: "{{ playbook_dir }}/../../ansible-content/inventory/group_vars/{{ item | replace('-', '_') }}.yml"
+            path: "{{ project_root }}/ansible-content/inventory/group_vars/{{ item | replace('-', '_') }}.yml"
           register: platform_var_files
           loop: "{{ integration_test_scenarios.multi_platform_test.platforms }}"
 
@@ -190,7 +190,7 @@
       block:
         - name: Test Rollback Playbook Structure
           slurp:
-            src: "{{ playbook_dir }}/../../ansible-content/playbooks/emergency-rollback.yml"
+            src: "{{ project_root }}/ansible-content/playbooks/emergency-rollback.yml"
           register: rollback_playbook
 
         - name: Validate Rollback Components
@@ -204,7 +204,7 @@
 
         - name: Test Error Handling in Platform Roles
           shell: |
-            find {{ playbook_dir }}/../../ansible-content/roles -name "*.yml" -exec grep -l "failed_when" {} \; | wc -l
+            find {{ project_root }}/ansible-content/roles -name "*.yml" -exec grep -l "failed_when" {} \; | wc -l
           register: error_handling_count
           changed_when: false
 
