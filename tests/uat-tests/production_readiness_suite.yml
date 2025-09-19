@@ -6,8 +6,10 @@
   hosts: localhost
   gather_facts: false
   vars:
-    ansible_content_dir: "{{ playbook_dir }}/../../ansible-content"
-    test_inventory_dir: "{{ playbook_dir }}/../mock-inventories"
+    # Project root directory - works regardless of execution context
+    project_root: "{{ ansible_env.PWD if ansible_env.PWD.endswith('ansible-content') else (ansible_env.PWD + '/../..') if ansible_env.PWD.endswith('uat-tests') else (ansible_env.PWD + '/..') if ansible_env.PWD.endswith('tests') else ansible_env.PWD }}"
+    ansible_content_dir: "{{ project_root }}/ansible-content"
+    test_inventory_dir: "{{ project_root }}/tests/mock-inventories"
     mock_device_port_base: 2250
     production_scenarios:
       enterprise_scale:
@@ -92,7 +94,7 @@
       block:
         - name: Create large-scale mock device inventory
           ansible.builtin.shell: |
-            cd {{ playbook_dir }}/../mock-devices
+            cd {{ project_root }}/tests/mock-devices
             python3 -c "
             from mock_device_engine import MockDeviceManager
             import json
@@ -132,7 +134,7 @@
           
         - name: Simulate concurrent upgrade scenario
           ansible.builtin.shell: |
-            cd {{ playbook_dir }}/../mock-devices
+            cd {{ project_root }}/tests/mock-devices
             python3 -c "
             from mock_device_engine import MockDeviceManager, ConcurrentUpgradeSimulator
             import json
@@ -188,7 +190,7 @@
       block:
         - name: Test HA pair upgrade coordination
           ansible.builtin.shell: |
-            cd {{ playbook_dir }}/../mock-devices
+            cd {{ project_root }}/tests/mock-devices
             python3 -c "
             from mock_device_engine import MockDeviceManager, ConcurrentUpgradeSimulator
             import json
@@ -237,7 +239,7 @@
       block:
         - name: Test rollback scenarios
           ansible.builtin.shell: |
-            cd {{ playbook_dir }}/../mock-devices
+            cd {{ project_root }}/tests/mock-devices
             python3 -c "
             from mock_device_engine import MockDeviceManager
             import random
@@ -288,7 +290,7 @@
           
         - name: Test certificate validation
           ansible.builtin.shell: |
-            cd {{ playbook_dir }}/../mock-devices
+            cd {{ project_root }}/tests/mock-devices
             python3 -c "
             from mock_device_engine import MockDeviceManager
             
@@ -339,7 +341,7 @@
       block:
         - name: Measure upgrade performance metrics
           ansible.builtin.shell: |
-            cd {{ playbook_dir }}/../mock-devices
+            cd {{ project_root }}/tests/mock-devices
             python3 -c "
             from mock_device_engine import MockDeviceManager
             import time
