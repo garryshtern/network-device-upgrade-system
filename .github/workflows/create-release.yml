@@ -227,7 +227,15 @@ jobs:
           docker tag ghcr.io/${{ github.repository }}:latest \
             ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.new_version }}
 
-          # Push the tagged version
+          # Tag it as main (alias for latest stable release)
+          docker tag ghcr.io/${{ github.repository }}:latest \
+            ghcr.io/${{ github.repository }}:main
+
+          # Push the tagged versions
           docker push ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.new_version }}
+          docker push ghcr.io/${{ github.repository }}:main
+          docker push ghcr.io/${{ github.repository }}:latest
 
           echo "✅ Tagged existing container with version ${{ needs.create-release.outputs.new_version }}"
+          echo "✅ Updated main tag to point to ${{ needs.create-release.outputs.new_version }}"
+          echo "✅ Updated latest tag to point to ${{ needs.create-release.outputs.new_version }}"

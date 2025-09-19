@@ -50,13 +50,46 @@ COMMANDS:
     help               Show this help message
 
 ENVIRONMENT VARIABLES:
+    # Core Ansible Configuration
     ANSIBLE_PLAYBOOK   Playbook to execute (default: ${DEFAULT_PLAYBOOK})
     ANSIBLE_INVENTORY  Inventory file (default: ${DEFAULT_INVENTORY})
+    ANSIBLE_CONFIG     Path to ansible.cfg file
+    ANSIBLE_VAULT_PASSWORD_FILE  Path to vault password file
+
+    # Upgrade Configuration
     TARGET_HOSTS       Hosts to target (default: all)
     TARGET_FIRMWARE    Firmware version to install
     UPGRADE_PHASE      Phase: full, loading, installation, validation, rollback
     MAINTENANCE_WINDOW Set to 'true' for installation phase
-    ANSIBLE_VAULT_PASSWORD_FILE  Path to vault password file
+
+    # SSH Key Authentication (Preferred)
+    VAULT_CISCO_NXOS_SSH_KEY    SSH private key for Cisco NX-OS devices
+    VAULT_CISCO_IOSXE_SSH_KEY   SSH private key for Cisco IOS-XE devices
+    VAULT_OPENGEAR_SSH_KEY      SSH private key for Opengear devices
+    VAULT_METAMAKO_SSH_KEY      SSH private key for Metamako devices
+
+    # API Token Authentication (API-based platforms)
+    VAULT_FORTIOS_API_TOKEN     API token for FortiOS devices
+    VAULT_OPENGEAR_API_TOKEN    API token for Opengear REST API
+
+    # Password Authentication (Fallback)
+    VAULT_CISCO_NXOS_PASSWORD   Password for Cisco NX-OS devices
+    VAULT_CISCO_IOSXE_PASSWORD  Password for Cisco IOS-XE devices
+    VAULT_FORTIOS_PASSWORD      Password for FortiOS devices
+    VAULT_OPENGEAR_PASSWORD     Password for Opengear devices
+    VAULT_METAMAKO_PASSWORD     Password for Metamako devices
+
+    # Username Configuration
+    VAULT_CISCO_NXOS_USERNAME   Username for Cisco NX-OS devices
+    VAULT_CISCO_IOSXE_USERNAME  Username for Cisco IOS-XE devices
+    VAULT_FORTIOS_USERNAME      Username for FortiOS devices
+    VAULT_OPENGEAR_USERNAME     Username for Opengear devices
+    VAULT_METAMAKO_USERNAME     Username for Metamako devices
+
+    # Additional Configuration
+    VAULT_IMAGE_SERVER_USERNAME Username for firmware image server
+    VAULT_IMAGE_SERVER_PASSWORD Password for firmware image server
+    VAULT_SNMP_COMMUNITY        SNMP community string for monitoring
 
 EXAMPLES:
     # Syntax check (default)
@@ -107,30 +140,55 @@ EOF
 # Validate environment
 validate_environment() {
     log "Validating container environment..."
-    
+
     # Check Ansible installation
     if ! command -v ansible-playbook &> /dev/null; then
         error "Ansible not found in container"
         exit 1
     fi
-    
-    # Check Ansible collections
-    if ! ansible-galaxy collection list --collections-path ~/.ansible/collections &> /dev/null; then
-        warn "Ansible collections check failed, attempting basic validation..."
-        # Try alternative check
-        if [[ ! -d ~/.ansible/collections ]]; then
-            error "Ansible collections directory not found"
-            exit 1
-        fi
-        warn "Collections directory exists but list command failed - proceeding with caution"
+
+    # Check ansible-galaxy command
+    if ! command -v ansible-galaxy &> /dev/null; then
+        error "ansible-galaxy command not found in container"
+        exit 1
     fi
-    
-    # Verify working directory
+
+    # Check Ansible collections with more robust validation
+    local collections_check=false
+    if ansible-galaxy collection list --collections-path ~/.ansible/collections &> /dev/null; then
+        collections_check=true
+    elif [[ -d ~/.ansible/collections ]] && [[ $(find ~/.ansible/collections -name "*.yml" -o -name "*.yaml" | wc -l) -gt 0 ]]; then
+        warn "Collections list command failed but collections exist - proceeding with caution"
+        collections_check=true
+    fi
+
+    if [[ "$collections_check" != "true" ]]; then
+        error "Ansible collections not properly installed"
+        exit 1
+    fi
+
+    # Verify working directory structure
     if [[ ! -d "ansible-content" ]]; then
         error "Ansible content directory not found"
         exit 1
     fi
-    
+
+    if [[ ! -d "ansible-content/playbooks" ]]; then
+        error "Ansible playbooks directory not found"
+        exit 1
+    fi
+
+    # Check for main playbook
+    if [[ ! -f "${DEFAULT_PLAYBOOK}" ]]; then
+        error "Default playbook not found: ${DEFAULT_PLAYBOOK}"
+        exit 1
+    fi
+
+    # Verify Ansible configuration
+    if [[ -n "${ANSIBLE_CONFIG}" ]] && [[ ! -f "${ANSIBLE_CONFIG}" ]]; then
+        warn "ANSIBLE_CONFIG points to non-existent file: ${ANSIBLE_CONFIG}"
+    fi
+
     success "Environment validation passed"
 }
 
