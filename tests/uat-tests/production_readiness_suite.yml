@@ -96,6 +96,8 @@
           ansible.builtin.shell: |
             cd {{ project_root }}/tests/mock-devices
             python3 -c "
+            import sys
+            sys.path.append('{{ project_root }}/tests/mock-devices')
             from mock_device_engine import MockDeviceManager
             import json
             import os
@@ -136,6 +138,8 @@
           ansible.builtin.shell: |
             cd {{ project_root }}/tests/mock-devices
             python3 -c "
+            import sys
+            sys.path.append('{{ project_root }}/tests/mock-devices')
             from mock_device_engine import MockDeviceManager, ConcurrentUpgradeSimulator
             import json
             import time
@@ -192,9 +196,11 @@
           ansible.builtin.shell: |
             cd {{ project_root }}/tests/mock-devices
             python3 -c "
+            import sys
+            sys.path.append('{{ project_root }}/tests/mock-devices')
             from mock_device_engine import MockDeviceManager, ConcurrentUpgradeSimulator
             import json
-            
+
             manager = MockDeviceManager()
             simulator = ConcurrentUpgradeSimulator(manager)
             
@@ -241,6 +247,8 @@
           ansible.builtin.shell: |
             cd {{ project_root }}/tests/mock-devices
             python3 -c "
+            import sys
+            sys.path.append('{{ project_root }}/tests/mock-devices')
             from mock_device_engine import MockDeviceManager
             import random
             
@@ -254,6 +262,8 @@
 
                 # Simulate upgrade failure requiring rollback
                 device.inject_error('upgrade_failure', 0)
+                import sys
+                sys.path.append('{{ project_root }}/tests/mock-devices')
                 from mock_device_engine import UpgradePhase
                 device.upgrade_phase = UpgradePhase.FAILED
                 
@@ -292,8 +302,10 @@
           ansible.builtin.shell: |
             cd {{ project_root }}/tests/mock-devices
             python3 -c "
+            import sys
+            sys.path.append('{{ project_root }}/tests/mock-devices')
             from mock_device_engine import MockDeviceManager
-            
+
             manager = MockDeviceManager()
             device_id = manager.create_device('fortios', 'security-test-fw')
             device = manager.devices[device_id]
@@ -343,6 +355,8 @@
           ansible.builtin.shell: |
             cd {{ project_root }}/tests/mock-devices
             python3 -c "
+            import sys
+            sys.path.append('{{ project_root }}/tests/mock-devices')
             from mock_device_engine import MockDeviceManager
             import time
             import psutil
