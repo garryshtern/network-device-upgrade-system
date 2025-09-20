@@ -18,6 +18,9 @@ on:
         required: false
         default: '50'
         type: string
+  schedule:
+    # Run automatic cleanup weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
 
 permissions:
   packages: write
@@ -31,19 +34,22 @@ jobs:
     steps:
       - name: Validate confirmation
         run: |
-          if [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "✅ Scheduled cleanup run - auto-approved"
+          elif [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE" ]; then
             echo "❌ Confirmation failed. You must type 'DELETE' to proceed."
             exit 1
+          else
+            echo "✅ Manual confirmation validated"
           fi
-          echo "✅ Confirmation validated"
 
       - name: Cleanup container package versions
         run: |
           echo "🗑️  Starting container package cleanup..."
 
           PACKAGE_NAME="network-device-upgrade-system"
-          KEEP_LATEST="${{ github.event.inputs.keep_latest }}"
-          MAX_LIMIT=${{ github.event.inputs.max_deletions }}
+          KEEP_LATEST="${{ github.event.inputs.keep_latest || 'true' }}"
+          MAX_LIMIT="${{ github.event.inputs.max_deletions || '20' }}"
 
           # Get all package versions
           echo "📋 Fetching package versions..."
