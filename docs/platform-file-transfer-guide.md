@@ -16,13 +16,13 @@ This guide provides comprehensive documentation of file transfer methods and upg
 
 ## File Transfer Methods Summary
 
-| Platform | Primary Transfer Method | Secondary Method | Protocol | **Primary Authentication** | **Fallback Authentication** | File Size Limit |
-|----------|------------------------|------------------|----------|---------------------------|----------------------------|------------------|
-| **Cisco NX-OS** | SCP | SFTP | SSH | **SSH Key** | Username/Password | ~8GB |
-| **Cisco IOS-XE** | SCP | HTTP/HTTPS | SSH/HTTP | **SSH Key** | Username/Password | ~4GB |
-| **FortiOS** | **HTTPS API Upload** | **No SCP** | HTTPS | **API Token** | Username/Password | ~2GB |
-| **Opengear** | CLI Commands + Local | SSH/SCP for staging | SSH | **SSH Key + API Token** | Username/Password | ~1GB |
-| **Metamako MOS** | SCP | HTTP | SSH/HTTP | **SSH Key** | Username/Password | ~500MB |
+| Platform | Primary Transfer Method | Secondary Method | Protocol | **Primary Authentication** | **Fallback Authentication** | File Size Limit | **Firmware Examples** |
+|----------|------------------------|------------------|----------|---------------------------|----------------------------|------------------|----------------------|
+| **Cisco NX-OS** | SCP | SFTP | SSH | **SSH Key** | Username/Password | ~8GB | `nxos64-cs.10.4.5.M.bin`, `nxos64-msll.10.4.6.M.bin` |
+| **Cisco IOS-XE** | SCP | HTTP/HTTPS | SSH/HTTP | **SSH Key** | Username/Password | ~4GB | `cat9k_iosxe.17.15.03a.SPA.bin`, `c8000aes-universalk9.17.15.03a.SPA.bin` |
+| **FortiOS** | **HTTPS API Upload** | **No SCP** | HTTPS | **API Token** | Username/Password | ~2GB | `FortiGate_600D_v7.0.12.build0523.out` |
+| **Opengear** | CLI Commands + Local | SSH/SCP for staging | SSH | **SSH Key + API Token** | Username/Password | ~1GB | `cm71xx-5.2.4.flash`, `console_manager-25.07.0-production-signed.raucb` |
+| **Metamako MOS** | SCP | HTTP | SSH/HTTP | **SSH Key** | Username/Password | ~500MB | `mos-0.39.9.iso` |
 
 ## Platform-Specific Details
 
@@ -39,17 +39,46 @@ This guide provides comprehensive documentation of file transfer methods and upg
     timeout: 1800
 ```
 
+**Platform-Specific Firmware Patterns**:
+- **Nexus 9000 Series**: `nxos64-cs.{version}.M.bin` (e.g., `nxos64-cs.10.4.5.M.bin`)
+- **Nexus 92384/93180**: `nxos64-cs.{version}.M.bin` (e.g., `nxos64-cs.10.4.5.M.bin`)
+- **Nexus 3548**: `nxos64-msll.{version}.M.bin` (e.g., `nxos64-msll.10.4.6.M.bin`)
+- **Nexus 7000 Series**: `n7000-s2-dk9.{version}.bin` (e.g., `n7000-s2-dk9.9.3.12.bin`)
+- **EPLD Images**: `n9000-epld.{version}.img` (e.g., `n9000-epld.9.3.16.img`)
+
+**Automatic Platform Selection**:
+The system automatically detects device models and selects appropriate firmware patterns:
+```yaml
+# Platform detection patterns in group_vars/cisco_nxos.yml
+device_model_patterns:
+  - { regex: "N9K-C923.*", platform: "nexus_9000", model_prefix: "N9K-C923" }
+  - { regex: "N3K-C354.*", platform: "nexus_3000", model_prefix: "N3K-C354" }
+  - { regex: "N7K-C70.*", platform: "nexus_7000", model_prefix: "N7K-C70" }
+
+# Firmware filename resolution
+firmware_filename_patterns:
+  nexus_9000:
+    N9K-C92384: "nxos64-cs.{{ target_version }}.M.bin"
+    N9K-C93180: "nxos64-cs.{{ target_version }}.M.bin"
+    default: "nxos64-cs.{{ target_version }}.M.bin"
+  nexus_3000:
+    N3K-C3548: "nxos64-msll.{{ target_version }}.M.bin"
+    default: "n3000-uk9.{{ target_version }}.bin"
+```
+
 **Key Characteristics**:
 - Uses standard SSH/SCP file transfer
 - Supports large firmware files (up to 8GB)
 - Files stored in bootflash: filesystem
 - Verification via SHA512 hash comparison
 - Requires SSH service enabled on device
+- **Automatic platform-specific firmware selection** based on device model detection
 
 **Upgrade Mechanism**:
 - ISSU (In-Service Software Upgrade) for compatible models
 - Traditional disruptive upgrade for older models
 - Boot variable modification for next reboot
+- **EPLD upgrade support** with disruptive/non-disruptive options
 
 ### 2. Cisco IOS-XE
 **Transfer Method**: SCP with HTTP fallback
@@ -63,12 +92,38 @@ This guide provides comprehensive documentation of file transfer methods and upg
     file_system: "flash:"
 ```
 
+**Platform-Specific Firmware Patterns**:
+- **Catalyst 9000 Series**: `cat9k_iosxe.{version}.SPA.bin` (e.g., `cat9k_iosxe.17.15.03a.SPA.bin`)
+- **Catalyst 9200/9300**: `cat9k_lite_iosxe.{version}.SPA.bin` (e.g., `cat9k_lite_iosxe.17.15.03a.SPA.bin`)
+- **Catalyst 8500L**: `c8000aes-universalk9.{version}.SPA.bin` (e.g., `c8000aes-universalk9.17.15.03a.SPA.bin`)
+- **ISR 4000 Series**: `isr4300-universalk9_ias.{version}.SPA.bin` (e.g., `isr4300-universalk9_ias.17.15.03a.SPA.bin`)
+- **ASR 1000 Series**: `asr1000rp3-adventerprisek9.{version}.SPA.bin`
+
+**Automatic Platform Selection**:
+The system detects hardware platforms and selects appropriate firmware:
+```yaml
+# Platform detection in group_vars/cisco_iosxe.yml
+device_model_patterns:
+  - { regex: "C92.*", platform: "catalyst_9000", model_prefix: "C92" }
+  - { regex: "C85.*", platform: "catalyst_8000", model_prefix: "C85" }
+  - { regex: "ISR43.*", platform: "isr_4000", model_prefix: "ISR43" }
+
+# Hardware-specific firmware patterns
+firmware_filename_patterns:
+  catalyst_9000:
+    C9200: "cat9k_lite_iosxe.{{ target_version }}.SPA.bin"
+    C9400: "cat9k_iosxe.{{ target_version }}.SPA.bin"
+  catalyst_8000:
+    C8500L: "c8000aes-universalk9.{{ target_version }}.SPA.bin"
+```
+
 **Key Characteristics**:
 - Primary: SCP for large files
 - Fallback: HTTP/HTTPS for smaller files
 - Install mode vs. bundle mode support
 - Flash filesystem management
 - Space validation before transfer
+- **Hardware-specific firmware selection** based on device model detection
 
 **Upgrade Mechanism**:
 - Install mode: `install add file` commands
@@ -122,12 +177,39 @@ This guide provides comprehensive documentation of file transfer methods and upg
                         else 'netflash' }}"
 ```
 
+**Platform-Specific Firmware Patterns**:
+- **CM7100 (Legacy Console Manager)**: `cm71xx-{version}.flash` (e.g., `cm71xx-5.2.4.flash`)
+- **IM7200 (Legacy Infrastructure Manager)**: `im72xx-{version}.flash` (e.g., `im72xx-5.2.4.flash`)
+- **CM8100 (Modern Console Manager)**: `console_manager-{version}-production-signed.raucb` (e.g., `console_manager-25.07.0-production-signed.raucb`)
+- **OM2100/OM2200 (Operations Manager)**: `operations_manager-{version}-production-signed.raucb` (e.g., `operations_manager-25.07.0-production-signed.raucb`)
+
+**Automatic Model Detection**:
+The system detects device models and selects appropriate firmware patterns:
+```yaml
+# Platform detection in group_vars/opengear.yml
+device_model_patterns:
+  - { regex: "CM71.*", platform: "console_manager_legacy", model_prefix: "CM71" }
+  - { regex: "CM81.*", platform: "console_manager_modern", model_prefix: "CM81" }
+  - { regex: "OM2[12].*", platform: "operations_manager", model_prefix: "OM2" }
+  - { regex: "IM72.*", platform: "infrastructure_manager", model_prefix: "IM72" }
+
+# Model-specific firmware patterns
+firmware_filename_patterns:
+  console_manager_legacy:
+    CM7100: "cm71xx-{{ target_version }}.flash"
+  console_manager_modern:
+    CM8100: "console_manager-{{ target_version }}-production-signed.raucb"
+  operations_manager:
+    OM2100: "operations_manager-{{ target_version }}-production-signed.raucb"
+    OM2200: "operations_manager-{{ target_version }}-production-signed.raucb"
+```
+
 **Key Characteristics**:
 - Legacy devices: `netflash` command (.flash files)
 - Modern devices: `puginstall` command (.raucb files)
 - Files must be pre-staged in `/tmp` or mounted storage
 - Architecture-specific command sets
-- Limited to specific file extensions
+- **Model-specific firmware patterns** with different naming conventions
 
 **Upgrade Mechanism**:
 - Architecture-dependent upgrade commands
@@ -260,7 +342,7 @@ ssh admin@device-ip "show version"
 ssh admin@device-ip "dir bootflash: | include free"
 
 # Test SCP manually
-scp firmware.bin admin@device-ip:bootflash:/
+scp nxos64-cs.10.4.5.M.bin admin@device-ip:bootflash:/
 ```
 
 #### FortiOS
@@ -274,11 +356,20 @@ curl -k https://device-ip/api/v2/monitor/system/status
 
 #### Opengear
 ```bash
-# Check device architecture
+# Check device architecture and model
 ssh root@device-ip "cat /etc/opengear-release"
+ssh root@device-ip "show system info | grep Model"
 
 # Verify available space
 ssh root@device-ip "df -h /tmp"
+
+# Test firmware staging (examples by model)
+# For CM7100 legacy:
+scp cm71xx-5.2.4.flash root@device-ip:/tmp/
+# For CM8100 modern:
+scp console_manager-25.07.0-production-signed.raucb root@device-ip:/tmp/
+# For OM2100/OM2200:
+scp operations_manager-25.07.0-production-signed.raucb root@device-ip:/tmp/
 ```
 
 #### Metamako MOS

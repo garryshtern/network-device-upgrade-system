@@ -425,9 +425,9 @@ The container expects firmware images to be organized by platform in the followi
 │   ├── im72xx-5.2.4.flash         # Legacy Infrastructure Manager (IM7200)
 │   └── ...
 └── metamako/            # Metamako MOS firmware images
-    ├── metamako-mos-2.15.0.tar.gz      # Base MOS firmware
-    ├── metawatch-2.15.0.tar.gz         # MetaWatch application
-    ├── metamux-2.15.0.tar.gz           # MetaMux application
+    ├── mos-0.39.9.iso                  # Base MOS firmware
+    ├── metawatch-3.2.0-1967.x86_64.rpm # MetaWatch application
+    ├── metamux-2.2.3-1849.x86_64.rpm   # MetaMux application
     └── ...
 ```
 
@@ -594,35 +594,40 @@ Metamako MOS upgrades are **complete system upgrades** that include both the bas
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/metamako_key:/keys/metamako-key:ro \
-  -e TARGET_FIRMWARE=metamako-mos-2.15.0.tar.gz \
+  -e TARGET_FIRMWARE=mos-0.39.9.iso \
   -e TARGET_HOSTS=metamako-devices \
   -e METAMAKO_SSH_KEY=/keys/metamako-key \
   -e METAMAKO_USERNAME=admin \
   -e ENABLE_APPLICATION_INSTALLATION=true \
-  -e METAWATCH_PACKAGE=metawatch-2.15.0.tar.gz \
-  -e METAMUX_PACKAGE=metamux-2.15.0.tar.gz \
+  -e METAWATCH_PACKAGE=metawatch-3.2.0-1967.x86_64.rpm \
+  -e METAMUX_PACKAGE=metamux-2.2.3-1849.x86_64.rpm \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 
 # Podman - Metamako MOS complete system upgrade (RHEL8/9 compatible)
 podman run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
   -v ~/.ssh/metamako_key:/keys/metamako-key:ro,Z \
-  -e TARGET_FIRMWARE=metamako-mos-2.15.0.tar.gz \
+  -e TARGET_FIRMWARE=mos-0.39.9.iso \
   -e TARGET_HOSTS=metamako-devices \
   -e METAMAKO_SSH_KEY=/keys/metamako-key \
   -e METAMAKO_USERNAME=admin \
   -e ENABLE_APPLICATION_INSTALLATION=true \
-  -e METAWATCH_PACKAGE=metawatch-2.15.0.tar.gz \
-  -e METAMUX_PACKAGE=metamux-2.15.0.tar.gz \
+  -e METAWATCH_PACKAGE=metawatch-3.2.0-1967.x86_64.rpm \
+  -e METAMUX_PACKAGE=metamux-2.2.3-1849.x86_64.rpm \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
 
 **MOS Upgrade Process Includes**:
-1. **Base MOS Firmware**: Core operating system and drivers
-2. **MetaWatch Application**: Performance monitoring and latency measurement
-3. **MetaMux Application**: High-performance packet switching and routing
+1. **Base MOS Firmware**: Core operating system and drivers (ISO format: `mos-0.39.9.iso`)
+2. **MetaWatch Application**: Performance monitoring and latency measurement (RPM: `metawatch-3.2.0-1967.x86_64.rpm`)
+3. **MetaMux Application**: High-performance packet switching and routing (RPM: `metamux-2.2.3-1849.x86_64.rpm`)
 4. **System Integration**: All components are installed and configured together
 5. **Latency Validation**: Ultra-low latency performance verification post-upgrade
+
+**File Formats**:
+- **MOS Base OS**: ISO image format for bare-metal installation
+- **Applications**: RPM packages installed via package manager
+- **Installation Method**: ISO boot/mount + RPM package installation
 
 **Important**: Metamako MOS upgrades are **always complete system upgrades** - you cannot upgrade MOS firmware without also updating the applications, as they are tightly integrated for ultra-low latency performance requirements.
 
@@ -650,7 +655,7 @@ For **FortiOS**, **Opengear**, and **Metamako**, the system uses platform-specif
 | Cisco IOS-XE | `firmware_base_path/target_firmware` | `/var/lib/network-upgrade/firmware/cat9k_iosxe.17.09.04a.SPA.bin` |
 | FortiOS | `firmware_base_path/fortios/target_firmware` | `/var/lib/network-upgrade/firmware/fortios/FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out` |
 | Opengear | `firmware_base_path/opengear/target_firmware` | `/var/lib/network-upgrade/firmware/opengear/cm71xx-5.2.4.flash` |
-| Metamako MOS | `firmware_base_path/metamako/target_firmware` | `/var/lib/network-upgrade/firmware/metamako/metamako-mos-2.15.0.tar.gz` |
+| Metamako MOS | `firmware_base_path/metamako/target_firmware` | `/var/lib/network-upgrade/firmware/metamako/mos-0.39.9.iso` |
 
 ### Platform-Specific Firmware Selection
 
@@ -718,9 +723,9 @@ docker run --rm \
 | IM7200 (Legacy) | `im72xx-{version}.flash` | `im72xx-5.2.4.flash` |
 | CM8100 (Modern) | `console_manager-{version}-production-signed.raucb` | `console_manager-25.07.0-production-signed.raucb` |
 | OM2100/OM2200 (Modern) | `operations_manager-{version}-production-signed.raucb` | `operations_manager-25.07.0-production-signed.raucb` |
-| **Metamako MOS** | `metamako-mos-{version}.tar.gz` | `metamako-mos-2.15.0.tar.gz` |
-| **MetaWatch App** | `metawatch-{version}.tar.gz` | `metawatch-2.15.0.tar.gz` |
-| **MetaMux App** | `metamux-{version}.tar.gz` | `metamux-2.15.0.tar.gz` |
+| **Metamako MOS** | `mos-{version}.iso` | `mos-0.39.9.iso` |
+| **MetaWatch App** | `metawatch-{version}-{build}.x86_64.rpm` | `metawatch-3.2.0-1967.x86_64.rpm` |
+| **MetaMux App** | `metamux-{version}-{build}.x86_64.rpm` | `metamux-2.2.3-1849.x86_64.rpm` |
 
 ### EPLD Upgrade Examples (Cisco NX-OS)
 
@@ -880,7 +885,7 @@ docker run --rm \
   --name metamako-system-upgrade \
   --mount type=bind,source=/opt/firmware,target=/var/lib/network-upgrade/firmware,readonly \
   --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
-  -e TARGET_FIRMWARE=metamako-mos-2.15.0.tar.gz \
+  -e TARGET_FIRMWARE=mos-0.39.9.iso \
   -e TARGET_HOSTS=metamako-switch-fabric \
   -e METAMAKO_SSH_KEY=/keys/metamako-key \
   -e METAMAKO_USERNAME=admin \
