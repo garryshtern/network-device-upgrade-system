@@ -407,8 +407,8 @@ The container expects firmware images to be organized by platform in the followi
 ```
 /var/lib/network-upgrade/firmware/
 ├── cisco.nxos/          # Cisco NX-OS firmware images
-│   ├── nxos.9.3.12.bin
-│   ├── nxos.10.2.5.bin
+│   ├── nxos64-cs.10.4.5.M.bin
+│   ├── nxos64-msll.10.4.6.M.bin
 │   └── ...
 ├── cisco.ios/           # Cisco IOS-XE firmware images
 │   ├── cat9k_lite_iosxe.16.12.10.SPA.bin
@@ -419,12 +419,15 @@ The container expects firmware images to be organized by platform in the followi
 │   ├── FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out
 │   └── ...
 ├── opengear/            # Opengear firmware images
-│   ├── og-4.8.6-x86_64.pkg
-│   ├── og-4.9.2-arm64.pkg
+│   ├── cm71xx-5.2.4.flash         # Legacy Console Manager (CM7100)
+│   ├── console_manager-25.07.0-production-signed.raucb  # Modern Console Manager (CM8100)
+│   ├── operations_manager-25.07.0-production-signed.raucb # Operations Manager (OM2100/OM2200)
+│   ├── im72xx-5.2.4.flash         # Legacy Infrastructure Manager (IM7200)
 │   └── ...
 └── metamako/            # Metamako MOS firmware images
-    ├── mos-1.2.3.tar.gz
-    ├── mos-1.3.1.tar.gz
+    ├── metamako-mos-2.15.0.tar.gz      # Base MOS firmware
+    ├── metawatch-2.15.0.tar.gz         # MetaWatch application
+    ├── metamux-2.15.0.tar.gz           # MetaMux application
     └── ...
 ```
 
@@ -436,7 +439,7 @@ The container expects firmware images to be organized by platform in the followi
 # Mount your firmware directory to the container
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
-  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=cisco-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
@@ -450,7 +453,7 @@ docker run --rm \
   -v /opt/firmware/cisco:/var/lib/network-upgrade/firmware/cisco.nxos:ro \
   -v /opt/firmware/fortinet:/var/lib/network-upgrade/firmware/fortios:ro \
   -v /opt/firmware/opengear:/var/lib/network-upgrade/firmware/opengear:ro \
-  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=cisco-datacenter-switches \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
@@ -466,7 +469,7 @@ docker run --rm \
   -v /opt/network-upgrade/logs:/var/log/network-upgrade \
   -v /opt/secrets/ssh-keys:/keys:ro \
   -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
-  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=datacenter-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
@@ -476,11 +479,21 @@ docker run --rm \
 
 #### Cisco NX-OS
 ```bash
-# NX-OS upgrade example
+# Docker - NX-OS upgrade example
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
-  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
+  -e TARGET_HOSTS=nexus-switches \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  -e CISCO_NXOS_USERNAME=admin \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+# Podman - NX-OS upgrade example (RHEL8/9 compatible)
+podman run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
+  -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro,Z \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=nexus-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
   -e CISCO_NXOS_USERNAME=admin \
@@ -489,10 +502,20 @@ docker run --rm \
 
 #### Cisco IOS-XE
 ```bash
-# IOS-XE upgrade example
+# Docker - IOS-XE upgrade example
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/cisco_iosxe_key:/keys/cisco-key:ro \
+  -e TARGET_FIRMWARE=cat9k_iosxe.17.09.04a.SPA.bin \
+  -e TARGET_HOSTS=catalyst-switches \
+  -e CISCO_IOSXE_SSH_KEY=/keys/cisco-key \
+  -e CISCO_IOSXE_USERNAME=admin \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+# Podman - IOS-XE upgrade example (RHEL8/9 compatible)
+podman run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
+  -v ~/.ssh/cisco_iosxe_key:/keys/cisco-key:ro,Z \
   -e TARGET_FIRMWARE=cat9k_iosxe.17.09.04a.SPA.bin \
   -e TARGET_HOSTS=catalyst-switches \
   -e CISCO_IOSXE_SSH_KEY=/keys/cisco-key \
@@ -512,31 +535,96 @@ docker run --rm \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
 
-#### Opengear
+#### Opengear Console Servers
+
+Opengear supports two different device models with different firmware formats and upgrade methods:
+
+**Legacy Models (CM7100, IM7200) - Uses .flash files**
 ```bash
-# Opengear upgrade example
+# Docker - Opengear legacy models upgrade example (CM7100, IM7200 with netflash)
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/opengear_key:/keys/opengear-key:ro \
-  -e TARGET_FIRMWARE=og-4.9.2-x86_64.pkg \
-  -e TARGET_HOSTS=console-servers \
+  -e TARGET_FIRMWARE=cm71xx-5.2.4.flash \
+  -e TARGET_HOSTS=console-servers-legacy \
+  -e OPENGEAR_SSH_KEY=/keys/opengear-key \
+  -e OPENGEAR_USERNAME=root \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+# Podman - Opengear legacy models upgrade example (RHEL8/9 compatible)
+podman run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
+  -v ~/.ssh/opengear_key:/keys/opengear-key:ro,Z \
+  -e TARGET_FIRMWARE=cm71xx-5.2.4.flash \
+  -e TARGET_HOSTS=console-servers-legacy \
   -e OPENGEAR_SSH_KEY=/keys/opengear-key \
   -e OPENGEAR_USERNAME=root \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
 
-#### Metamako MOS
+**Modern Models (CM8100, OM2100/OM2200) - Uses .raucb files**
 ```bash
-# Metamako upgrade example
+# Docker - Opengear modern models upgrade example (CM8100, OM2100/OM2200 with puginstall)
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ~/.ssh/opengear_key:/keys/opengear-key:ro \
+  -e TARGET_FIRMWARE=console_manager-25.07.0-production-signed.raucb \
+  -e TARGET_HOSTS=console-servers-modern \
+  -e OPENGEAR_SSH_KEY=/keys/opengear-key \
+  -e OPENGEAR_USERNAME=root \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+# Podman - Opengear modern models upgrade example (RHEL8/9 compatible)
+podman run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
+  -v ~/.ssh/opengear_key:/keys/opengear-key:ro,Z \
+  -e TARGET_FIRMWARE=console_manager-25.07.0-production-signed.raucb \
+  -e TARGET_HOSTS=console-servers-modern \
+  -e OPENGEAR_SSH_KEY=/keys/opengear-key \
+  -e OPENGEAR_USERNAME=root \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Metamako MOS (Complete System Upgrade)
+
+Metamako MOS upgrades are **complete system upgrades** that include both the base MOS firmware/OS and all applications (MetaWatch, MetaMux) as an integrated process.
+
+```bash
+# Docker - Metamako MOS complete system upgrade (includes MOS firmware + MetaWatch + MetaMux applications)
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/metamako_key:/keys/metamako-key:ro \
-  -e TARGET_FIRMWARE=mos-1.3.1.tar.gz \
+  -e TARGET_FIRMWARE=metamako-mos-2.15.0.tar.gz \
   -e TARGET_HOSTS=metamako-devices \
   -e METAMAKO_SSH_KEY=/keys/metamako-key \
   -e METAMAKO_USERNAME=admin \
+  -e ENABLE_APPLICATION_INSTALLATION=true \
+  -e METAWATCH_PACKAGE=metawatch-2.15.0.tar.gz \
+  -e METAMUX_PACKAGE=metamux-2.15.0.tar.gz \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+# Podman - Metamako MOS complete system upgrade (RHEL8/9 compatible)
+podman run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
+  -v ~/.ssh/metamako_key:/keys/metamako-key:ro,Z \
+  -e TARGET_FIRMWARE=metamako-mos-2.15.0.tar.gz \
+  -e TARGET_HOSTS=metamako-devices \
+  -e METAMAKO_SSH_KEY=/keys/metamako-key \
+  -e METAMAKO_USERNAME=admin \
+  -e ENABLE_APPLICATION_INSTALLATION=true \
+  -e METAWATCH_PACKAGE=metawatch-2.15.0.tar.gz \
+  -e METAMUX_PACKAGE=metamux-2.15.0.tar.gz \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
+
+**MOS Upgrade Process Includes**:
+1. **Base MOS Firmware**: Core operating system and drivers
+2. **MetaWatch Application**: Performance monitoring and latency measurement
+3. **MetaMux Application**: High-performance packet switching and routing
+4. **System Integration**: All components are installed and configured together
+5. **Latency Validation**: Ultra-low latency performance verification post-upgrade
+
+**Important**: Metamako MOS upgrades are **always complete system upgrades** - you cannot upgrade MOS firmware without also updating the applications, as they are tightly integrated for ultra-low latency performance requirements.
 
 ### Firmware Filename Resolution
 
@@ -550,31 +638,131 @@ Full Path = firmware_base_path + "/" + target_firmware
 
 Example:
 - `FIRMWARE_BASE_PATH=/var/lib/network-upgrade/firmware`
-- `TARGET_FIRMWARE=nxos.9.3.12.bin`
-- **Resolved Path**: `/var/lib/network-upgrade/firmware/nxos.9.3.12.bin`
+- `TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin`
+- **Resolved Path**: `/var/lib/network-upgrade/firmware/nxos64-cs.10.4.5.M.bin`
 
 #### Platform-Specific Subdirectories
 For **FortiOS**, **Opengear**, and **Metamako**, the system uses platform-specific subdirectories:
 
 | Platform | Firmware Path Resolution | Example |
 |----------|-------------------------|---------|
-| Cisco NX-OS | `firmware_base_path/target_firmware` | `/var/lib/network-upgrade/firmware/nxos.9.3.12.bin` |
+| Cisco NX-OS | `firmware_base_path/target_firmware` | `/var/lib/network-upgrade/firmware/nxos64-cs.10.4.5.M.bin` |
 | Cisco IOS-XE | `firmware_base_path/target_firmware` | `/var/lib/network-upgrade/firmware/cat9k_iosxe.17.09.04a.SPA.bin` |
 | FortiOS | `firmware_base_path/fortios/target_firmware` | `/var/lib/network-upgrade/firmware/fortios/FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out` |
-| Opengear | `firmware_base_path/opengear/target_firmware` | `/var/lib/network-upgrade/firmware/opengear/og-4.9.2-x86_64.pkg` |
-| Metamako MOS | `firmware_base_path/metamako/target_firmware` | `/var/lib/network-upgrade/firmware/metamako/mos-1.3.1.tar.gz` |
+| Opengear | `firmware_base_path/opengear/target_firmware` | `/var/lib/network-upgrade/firmware/opengear/cm71xx-5.2.4.flash` |
+| Metamako MOS | `firmware_base_path/metamako/target_firmware` | `/var/lib/network-upgrade/firmware/metamako/metamako-mos-2.15.0.tar.gz` |
+
+### Platform-Specific Firmware Selection
+
+The system automatically detects device models and selects the appropriate firmware file based on hardware platform. You can also specify firmware per device model using the `platform_firmware` parameter.
+
+#### Automatic Detection (Recommended)
+```bash
+# System automatically detects device model and selects correct firmware
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -e TARGET_FIRMWARE=9.3.12 \
+  -e TARGET_HOSTS=cisco-switches \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Platform-Specific Override
+```bash
+# Specify different firmware per platform/model
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -e TARGET_HOSTS=mixed-cisco-devices \
+  -e PLATFORM_FIRMWARE='{
+    "cisco_nxos": {
+      "N9K-C93180": "nxos64-cs.10.4.5.M.bin",
+      "N3K-C3548": "nxos64-msll.10.4.6.M.bin",
+      "N7K-C7004": "n7000-s2-dk9.9.3.12.bin",
+      "default": "nxos64-cs.10.4.5.M.bin"
+    },
+    "cisco_iosxe": {
+      "C9300": "cat9k_lite_iosxe.17.09.04a.SPA.bin",
+      "C9400": "cat9k_iosxe.17.09.04a.SPA.bin",
+      "C8500L": "c8000aes-universalk9.17.15.03a.SPA.bin",
+      "default": "cat9k_iosxe.17.09.04a.SPA.bin"
+    },
+    "opengear": {
+      "CM7100": "cm71xx-5.2.4.flash",
+      "CM8100": "console_manager-25.07.0-production-signed.raucb"
+    }
+  }' \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
 
 ### Firmware Naming Conventions
 
 | Platform | Firmware Naming Pattern | Example |
 |----------|------------------------|---------|
-| Cisco NX-OS | `nxos.{version}.bin` | `nxos.9.3.12.bin` |
-| Cisco IOS-XE | `cat9k_*iosxe.{version}.SPA.bin` | `cat9k_iosxe.17.09.04a.SPA.bin` |
-| FortiOS | `FGT_*-v{version}-*-FORTINET.out` | `FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out` |
-| Opengear | `og-{version}-{arch}.pkg` | `og-4.9.2-x86_64.pkg` |
-| Metamako MOS | `mos-{version}.tar.gz` | `mos-1.3.1.tar.gz` |
+| **Cisco NX-OS** | **Platform-Specific Patterns** | |
+| Nexus 9000 Series | `nxos64-cs.{version}.M.bin` | `nxos64-cs.10.4.5.M.bin` |
+| Nexus 92384/93180 | `nxos64-cs.{version}.M.bin` | `nxos64-cs.10.4.5.M.bin` |
+| Nexus 7000 Series | `n7000-s2-dk9.{version}.bin` | `n7000-s2-dk9.9.3.12.bin` |
+| Nexus 5000 Series | `n5000-uk9.{version}.bin` | `n5000-uk9.9.3.12.bin` |
+| Nexus 3548 | `nxos64-msll.{version}.M.bin` | `nxos64-msll.10.4.6.M.bin` |
+| Nexus 3000 Other | `n3000-uk9.{version}.bin` | `n3000-uk9.9.3.12.bin` |
+| **NX-OS EPLD** | `n9000-epld.{version}.img` | `n9000-epld.9.3.16.img` |
+| **Cisco IOS-XE** | **Platform-Specific Patterns** | |
+| Catalyst 9000 Series | `cat9k_iosxe.{version}.SPA.bin` | `cat9k_iosxe.17.09.04a.SPA.bin` |
+| Catalyst 9200/9300 | `cat9k_lite_iosxe.{version}.SPA.bin` | `cat9k_lite_iosxe.17.09.04a.SPA.bin` |
+| Catalyst 3850/3650 | `cat3k_caa-universalk9.{version}.SPA.bin` | `cat3k_caa-universalk9.17.09.04a.SPA.bin` |
+| ISR 4000 Series | `isr4300-universalk9_ias.{version}.SPA.bin` | `isr4300-universalk9_ias.17.09.04a.SPA.bin` |
+| ASR 1000 Series | `asr1000rp3-adventerprisek9.{version}.SPA.bin` | `asr1000rp3-adventerprisek9.17.09.04a.SPA.bin` |
+| Catalyst 8000 Series | `c8000aes-universalk9.{version}.SPA.bin` | `c8000aes-universalk9.17.15.03a.SPA.bin` |
+| **FortiOS** | `FGT_*-v{version}-*-FORTINET.out` | `FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out` |
+| **Opengear** | **Model-Specific Patterns** | |
+| CM7100 (Legacy) | `cm71xx-{version}.flash` | `cm71xx-5.2.4.flash` |
+| IM7200 (Legacy) | `im72xx-{version}.flash` | `im72xx-5.2.4.flash` |
+| CM8100 (Modern) | `console_manager-{version}-production-signed.raucb` | `console_manager-25.07.0-production-signed.raucb` |
+| OM2100/OM2200 (Modern) | `operations_manager-{version}-production-signed.raucb` | `operations_manager-25.07.0-production-signed.raucb` |
+| **Metamako MOS** | `metamako-mos-{version}.tar.gz` | `metamako-mos-2.15.0.tar.gz` |
+| **MetaWatch App** | `metawatch-{version}.tar.gz` | `metawatch-2.15.0.tar.gz` |
+| **MetaMux App** | `metamux-{version}.tar.gz` | `metamux-2.15.0.tar.gz` |
 
 ### EPLD Upgrade Examples (Cisco NX-OS)
+
+EPLD (Embedded Programmable Logic Device) upgrades require special handling and can be disruptive. The system automatically detects EPLD requirements and uses the correct firmware filename pattern:
+
+#### EPLD Upgrade with Automatic Detection
+```bash
+# Nexus 9000 EPLD upgrade with automatic filename detection
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
+  -e TARGET_FIRMWARE=10.4.5.M \
+  -e TARGET_EPLD_IMAGE=n9000-epld.9.3.16.img \
+  -e TARGET_HOSTS=nexus-9000-switches \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  -e ENABLE_EPLD_UPGRADE=true \
+  -e ALLOW_DISRUPTIVE_EPLD=true \
+  -e MAINTENANCE_WINDOW=true \
+  -e EPLD_UPGRADE_TIMEOUT=7200 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### EPLD-Only Upgrade
+```bash
+# EPLD-only upgrade (no firmware upgrade)
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
+  -e TARGET_EPLD_IMAGE=n9000-epld.9.3.16.img \
+  -e TARGET_HOSTS=nexus-switches \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  -e ENABLE_EPLD_UPGRADE=true \
+  -e ALLOW_DISRUPTIVE_EPLD=false \
+  -e UPGRADE_PHASE=epld \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+**EPLD Upgrade Notes:**
+- EPLD files use `.img` extension (e.g., `n9000-epld.9.3.16.img`)
+- System automatically detects correct EPLD filename based on device platform
+- EPLD upgrades can be disruptive and may require maintenance windows
+- Use `ALLOW_DISRUPTIVE_EPLD=true` only during maintenance windows
 
 EPLD (Embedded Programmable Logic Device) upgrades require special handling and can be disruptive:
 
@@ -584,7 +772,7 @@ EPLD (Embedded Programmable Logic Device) upgrades require special handling and 
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
-  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=nexus-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
   -e ENABLE_EPLD_UPGRADE=true \
@@ -605,6 +793,178 @@ docker run --rm \
   -e ALLOW_DISRUPTIVE_EPLD=true \
   -e MAINTENANCE_WINDOW=true \
   -e EPLD_UPGRADE_TIMEOUT=7200 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+## Complete Examples
+
+This section provides comprehensive, production-ready examples for all supported platforms. Replace `docker` with `podman` for Red Hat/enterprise environments.
+
+### Cisco NX-OS Complete Example
+
+```bash
+# Complete Cisco NX-OS upgrade with EPLD support
+docker run --rm \
+  --name cisco-nxos-upgrade \
+  --mount type=bind,source=/opt/firmware,target=/var/lib/network-upgrade/firmware,readonly \
+  --mount type=bind,source=/opt/backups,target=/var/lib/network-upgrade/backups \
+  --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
+  --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
+  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e TARGET_HOSTS=datacenter-nexus-switches \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
+  -e UPGRADE_PHASE=full \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \
+  -e CISCO_NXOS_USERNAME=admin \
+  -e ENABLE_EPLD_UPGRADE=true \
+  -e ALLOW_DISRUPTIVE_EPLD=false \
+  -e MAINTENANCE_WINDOW=false \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### FortiOS Multi-Step Upgrade Example
+
+```bash
+# FortiOS multi-step upgrade from 6.4.x to 7.2.5
+docker run --rm \
+  --name fortios-multi-step-upgrade \
+  --mount type=bind,source=/opt/firmware,target=/var/lib/network-upgrade/firmware,readonly \
+  --mount type=bind,source=/opt/secrets,target=/secrets,readonly \
+  --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
+  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e TARGET_HOSTS=fortinet-datacenter-firewalls \
+  -e TARGET_FIRMWARE=7.2.5 \
+  -e MULTI_STEP_UPGRADE_REQUIRED=true \
+  -e UPGRADE_PATH="6.4.8,7.0.12,7.2.5" \
+  -e MAINTENANCE_WINDOW=true \
+  -e FORTIOS_API_TOKEN="$(cat /secrets/fortios-api-token)" \
+  -e FORTIOS_USERNAME=admin \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Opengear Legacy Models Example
+
+```bash
+# Opengear legacy models (CM7100, OM7200) with .flash files
+docker run --rm \
+  --name opengear-legacy-upgrade \
+  --mount type=bind,source=/opt/firmware,target=/var/lib/network-upgrade/firmware,readonly \
+  --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
+  -e TARGET_FIRMWARE=cm71xx-5.2.4.flash \
+  -e TARGET_HOSTS=console-servers-legacy \
+  -e OPENGEAR_SSH_KEY=/keys/opengear-key \
+  -e OPENGEAR_USERNAME=root \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Opengear Modern Models Example
+
+```bash
+# Opengear modern models (CM8100, OM2200) with .raucb files
+docker run --rm \
+  --name opengear-modern-upgrade \
+  --mount type=bind,source=/opt/firmware,target=/var/lib/network-upgrade/firmware,readonly \
+  --mount type=bind,source=/opt/secrets,target=/secrets,readonly \
+  -e TARGET_FIRMWARE=console_manager-25.07.0-production-signed.raucb \
+  -e TARGET_HOSTS=console-servers-modern \
+  -e OPENGEAR_API_TOKEN="$(cat /secrets/opengear-api-token)" \
+  -e OPENGEAR_USERNAME=root \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Metamako MOS Complete System Upgrade
+
+```bash
+# Metamako MOS complete system upgrade (firmware + applications)
+docker run --rm \
+  --name metamako-system-upgrade \
+  --mount type=bind,source=/opt/firmware,target=/var/lib/network-upgrade/firmware,readonly \
+  --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
+  -e TARGET_FIRMWARE=metamako-mos-2.15.0.tar.gz \
+  -e TARGET_HOSTS=metamako-switch-fabric \
+  -e METAMAKO_SSH_KEY=/keys/metamako-key \
+  -e METAMAKO_USERNAME=admin \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Platform-Specific Firmware Example
+
+```bash
+# Multi-platform upgrade with device-specific firmware
+docker run --rm \
+  --name platform-specific-upgrade \
+  --mount type=bind,source=/opt/firmware,target=/var/lib/network-upgrade/firmware,readonly \
+  --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
+  --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
+  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e TARGET_HOSTS=mixed-platform-devices \
+  -e PLATFORM_FIRMWARE='{
+    "cisco_nxos": {
+      "N9K-C92384": "nxos64-cs.10.4.5.M.bin",
+      "N9K-C93180": "nxos64-cs.10.4.5.M.bin",
+      "N3K-C3548": "nxos64-msll.10.4.6.M.bin",
+      "N7K-C7004": "n7000-s2-dk9.9.3.12.bin",
+      "default": "nxos64-cs.10.4.5.M.bin"
+    },
+    "cisco_iosxe": {
+      "C9200": "cat9k_lite_iosxe.17.09.04a.SPA.bin",
+      "C9300": "cat9k_lite_iosxe.17.09.04a.SPA.bin",
+      "C9400": "cat9k_iosxe.17.09.04a.SPA.bin",
+      "C8500L": "c8000aes-universalk9.17.15.03a.SPA.bin",
+      "ISR4321": "isr4300-universalk9_ias.17.09.04a.SPA.bin",
+      "default": "cat9k_iosxe.17.09.04a.SPA.bin"
+    },
+    "opengear": {
+      "CM7100": "cm71xx-5.2.4.flash",
+      "CM8100": "console_manager-25.07.0-production-signed.raucb",
+      "OM2200": "operations_manager-25.07.0-production-signed.raucb"
+    }
+  }' \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \
+  -e CISCO_IOSXE_SSH_KEY=/keys/cisco-iosxe-key \
+  -e OPENGEAR_SSH_KEY=/keys/opengear-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Multi-Platform Production Example
+
+```bash
+# Complete multi-platform production deployment
+docker run --rm \
+  --name network-upgrade-production \
+  --mount type=bind,source=/opt/network-upgrade/firmware,target=/var/lib/network-upgrade/firmware,readonly \
+  --mount type=bind,source=/opt/network-upgrade/backups,target=/var/lib/network-upgrade/backups \
+  --mount type=bind,source=/opt/network-upgrade/logs,target=/var/log/network-upgrade \
+  --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
+  --mount type=bind,source=/opt/secrets,target=/secrets,readonly \
+  --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
+  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e TARGET_HOSTS=all-network-devices \
+  -e TARGET_FIRMWARE=auto-detect \
+  -e UPGRADE_PHASE=loading \
+  -e MAINTENANCE_WINDOW=false \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \
+  -e CISCO_IOSXE_SSH_KEY=/keys/cisco-iosxe-key \
+  -e FORTIOS_API_TOKEN="$(cat /secrets/fortios-api-token)" \
+  -e OPENGEAR_SSH_KEY=/keys/opengear-key \
+  -e OPENGEAR_API_TOKEN="$(cat /secrets/opengear-api-token)" \
+  -e METAMAKO_SSH_KEY=/keys/metamako-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Podman Examples (Enterprise/RHEL)
+
+For enterprise environments using Podman, replace `docker` with `podman` and add `:Z` flags for SELinux:
+
+```bash
+# Podman with SELinux context
+podman run --rm \
+  --name cisco-upgrade-rootless \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
+  -v /opt/secrets/ssh-keys:/keys:ro,Z \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
+  -e TARGET_HOSTS=cisco-switches \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
 

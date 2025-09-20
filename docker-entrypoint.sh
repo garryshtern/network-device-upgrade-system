@@ -370,17 +370,24 @@ run_tests() {
     success "Test suite completed"
 }
 
-# Start interactive shell
+# Start interactive shell or execute command
 start_shell() {
-    log "Starting interactive shell..."
-    log "Working directory: $(pwd)"
-    log "Ansible version: $(ansible --version | head -1)"
-    log "Collections installed:"
-    ansible-galaxy collection list | head -10
-    echo
-    warn "You are now in the container shell. Type 'exit' to leave."
-    
-    exec /bin/bash
+    # If arguments provided, execute them directly
+    if [[ $# -gt 1 ]]; then
+        shift  # Remove 'shell' from arguments
+        log "Executing command: $*"
+        exec "$@"
+    else
+        log "Starting interactive shell..."
+        log "Working directory: $(pwd)"
+        log "Ansible version: $(ansible --version | head -1)"
+        log "Collections installed:"
+        ansible-galaxy collection list | head -10
+        echo
+        warn "You are now in the container shell. Type 'exit' to leave."
+
+        exec /bin/bash
+    fi
 }
 
 # Main execution logic
@@ -411,7 +418,7 @@ main() {
             run_tests
             ;;
         "shell")
-            start_shell
+            start_shell "$@"
             ;;
         *)
             error "Unknown command: $command"
