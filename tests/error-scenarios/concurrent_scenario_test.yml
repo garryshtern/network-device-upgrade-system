@@ -33,21 +33,21 @@
 
         manager = MockDeviceManager()
         simulator = ConcurrentUpgradeSimulator(manager)
-        
+
         # Create devices
         devices = []
         {% for device in scenario.devices %}
         device_id = manager.create_device('{{ device.platform }}', '{{ device.name }}')
         devices.append({'id': device_id, 'name': '{{ device.name }}', 'platform': '{{ device.platform }}'})
         {% endfor %}
-        
+
         # Configure scenario
         scenario_config = {
             'name': '{{ scenario.name }}',
             'coordination': '{{ scenario.coordination }}',
             'devices': devices
         }
-        
+
         {% if scenario.resource_limits is defined %}
         import os
         resource_limits_json = os.environ.get('RESOURCE_LIMITS_JSON', '{}')
@@ -59,14 +59,14 @@
         failure_injection_json = os.environ.get('FAILURE_INJECTION_JSON', '{}')
         scenario_config['failure_injection'] = json.loads(failure_injection_json)
         {% endif %}
-        
+
         # Execute scenario
         result = simulator.run_concurrent_scenario(scenario_config)
-        
+
         print(f'Scenario: {{ scenario.name }}')
         print(f'Expected: {{ scenario.expected_outcome }}')
         print(f'Actual: {result[\"outcome\"]}')
-        
+
         if result['outcome'] == '{{ scenario.expected_outcome }}':
             print('PASS')
             sys.exit(0)

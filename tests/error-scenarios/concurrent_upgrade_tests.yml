@@ -18,7 +18,7 @@
           phase: "upgrade_installation"
           error: "POWER_SUPPLY_FAULT"
         expected_outcome: "primary_success_secondary_rollback"
-        
+
       - name: "Multi-Platform Batch with Network Partition"
         devices:
           - { platform: "cisco_nxos", name: "nxos-switch-01", port: "{{ base_port + 2 }}" }
@@ -31,7 +31,7 @@
           error: "NETWORK_PARTITION"
           duration: 60
         expected_outcome: "all_retry_success"
-        
+
       - name: "Resource Exhaustion During Concurrent Upgrades"
         devices:
           - { platform: "cisco_nxos", name: "nxos-switch-01", port: "{{ base_port + 5 }}" }
@@ -63,7 +63,7 @@
         msg: |
           Concurrent Upgrade Error Test Results:
           =====================================
-          
+
           {% for scenario_name, result in test_results.items() %}
           {{ scenario_name }}:
             Status: {{ result.status }}
@@ -72,14 +72,14 @@
             {% if result.errors | length > 0 %}
             Errors: {{ result.errors | join(', ') }}
             {% endif %}
-          
+
           {% endfor %}
-          
+
           Overall Summary:
           - Total Scenarios: {{ concurrent_scenarios | length }}
           - Passed: {{ test_results.values() | selectattr('status', 'equalto', 'PASS') | list | length }}
           - Failed: {{ test_results.values() | selectattr('status', 'equalto', 'FAIL') | list | length }}
-          
+
           Result: {{ 'PASS' if test_results.values() | selectattr('status', 'equalto', 'FAIL') | list | length == 0 else 'FAIL' }}
 
     - name: Fail if any concurrent upgrade tests failed

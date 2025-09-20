@@ -147,17 +147,17 @@
             version_tests:
               legacy_versions:
                 - version: "5.16.4"
-                  expected_valid: true
+                  expected_valid: True
                   device_type: "legacy_cli"
                 - version: "25.07.0"
-                  expected_valid: false
+                  expected_valid: False
                   device_type: "legacy_cli"
               modern_versions:
                 - version: "25.07.0"
-                  expected_valid: true
+                  expected_valid: True
                   device_type: "current_cli"
                 - version: "5.16.4"
-                  expected_valid: false
+                  expected_valid: False
                   device_type: "current_cli"
 
         - name: Validate Version Format Patterns
@@ -332,13 +332,13 @@
             cli_command_tests:
               - command: "netflash"
                 architecture: "legacy_cli"
-                expected_valid: true
+                expected_valid: True
               - command: "puginstall"
                 architecture: "current_cli"
-                expected_valid: true
+                expected_valid: True
               - command: "api_upload"
                 architecture: "legacy_cli"
-                expected_valid: false
+                expected_valid: False
 
         - name: Validate CLI Command Mapping
           ansible.builtin.assert:

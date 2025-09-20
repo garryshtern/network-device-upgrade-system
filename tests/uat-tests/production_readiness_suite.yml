@@ -18,35 +18,35 @@
         platforms: ["cisco_nxos", "cisco_iosxe", "fortios", "opengear", "metamako_mos"]
         expected_duration_minutes: 120
         success_rate_threshold: 99.5
-      
+
       high_availability:
         ha_pairs: 25
         upgrade_coordination: "sequential_ha"
-        failover_testing: true
-        zero_downtime_expected: true
-      
+        failover_testing: True
+        zero_downtime_expected: True
+
       disaster_recovery:
         rollback_scenarios: 10
-        network_partition_recovery: true
-        power_failure_recovery: true
-        data_corruption_recovery: true
-      
+        network_partition_recovery: True
+        power_failure_recovery: True
+        data_corruption_recovery: True
+
       security_compliance:
-        certificate_validation: true
-        secure_transfer_only: true
-        audit_logging: true
-        access_control_validation: true
-    
+        certificate_validation: True
+        secure_transfer_only: True
+        audit_logging: True
+        access_control_validation: True
+
     performance_benchmarks:
       max_upgrade_time_minutes: 45
       max_concurrent_connections: 100
       min_throughput_mbps: 100
       max_memory_usage_mb: 512
       max_cpu_usage_percent: 80
-    
+
     compliance_requirements:
       - "SOX compliance for financial networks"
-      - "HIPAA compliance for healthcare networks" 
+      - "HIPAA compliance for healthcare networks"
       - "PCI DSS compliance for payment networks"
       - "NIST cybersecurity framework alignment"
       - "ISO 27001 security controls"
@@ -65,30 +65,30 @@
             ansible --version
             ansible-galaxy collection list | grep -E "(cisco|fortinet|community)"
           register: ansible_environment
-          
+
         - name: Check AWX/Tower integration readiness
           ansible.builtin.uri:
             url: "http://localhost:8052/api/v2/ping/"
             method: GET
             status_code: [200, 401, 404]  # 404 if AWX not installed
           register: awx_check
-          failed_when: false
-          
+          failed_when: False
+
         - name: Validate NetBox integration
           ansible.builtin.uri:
             url: "http://localhost:8000/api/"
             method: GET
             status_code: [200, 401, 404]  # 404 if NetBox not installed
           register: netbox_check
-          failed_when: false
-          
+          failed_when: False
+
         - name: Check InfluxDB metrics endpoint
           ansible.builtin.uri:
             url: "http://localhost:8086/health"
             method: GET
             status_code: [200, 404]  # 404 if InfluxDB not installed
           register: influxdb_check
-          failed_when: false
+          failed_when: False
 
     - name: Phase 2 - Enterprise Scale Simulation
       block:
@@ -133,7 +133,7 @@
           environment:
             PLATFORMS_JSON: "{{ production_scenarios.enterprise_scale.platforms | to_json }}"
             DEVICE_COUNT: "{{ production_scenarios.enterprise_scale.device_count }}"
-          
+
         - name: Simulate concurrent upgrade scenario
           ansible.builtin.shell: |
             cd {{ project_root }}/tests/mock-devices
@@ -143,14 +143,14 @@
             from mock_device_engine import MockDeviceManager, ConcurrentUpgradeSimulator
             import json
             import time
-            
+
             # Load device inventory
             with open('/tmp/uat_device_inventory.json', 'r') as f:
                 devices = json.load(f)
-            
+
             manager = MockDeviceManager()
             simulator = ConcurrentUpgradeSimulator(manager)
-            
+
             # Create concurrent upgrade scenario
             scenario_devices = []
             for device_name, device_info in list(devices.items())[:{{ production_scenarios.enterprise_scale.concurrent_upgrades }}]:
@@ -159,7 +159,7 @@
                     'name': device_name,
                     'platform': device_info['platform']
                 })
-            
+
             scenario_config = {
                 'name': 'Enterprise Scale Test',
                 'coordination': 'parallel',
@@ -169,19 +169,19 @@
                     'bandwidth_limit_mbps': {{ performance_benchmarks.min_throughput_mbps }}
                 }
             }
-            
+
             start_time = time.time()
             result = simulator.run_concurrent_scenario(scenario_config)
             duration = time.time() - start_time
-            
+
             success_count = sum(1 for r in result['device_results'].values() if r.get('success', False))
             success_rate = (success_count / len(scenario_devices)) * 100
-            
+
             print(f'Concurrent upgrade test completed')
             print(f'Duration: {duration:.1f} seconds')
             print(f'Success rate: {success_rate:.1f}%')
             print(f'Expected success rate: {{ production_scenarios.enterprise_scale.success_rate_threshold }}%')
-            
+
             if success_rate >= {{ production_scenarios.enterprise_scale.success_rate_threshold }}:
                 print('PASS')
             else:
@@ -203,15 +203,15 @@
 
             manager = MockDeviceManager()
             simulator = ConcurrentUpgradeSimulator(manager)
-            
+
             # Create HA pair scenario
             ha_pairs = {{ production_scenarios.high_availability.ha_pairs }}
             all_successful = True
-            
+
             for pair_id in range(ha_pairs):
                 primary_id = manager.create_device('fortios', f'fw-primary-{pair_id:02d}')
                 secondary_id = manager.create_device('fortios', f'fw-secondary-{pair_id:02d}')
-                
+
                 ha_scenario = {
                     'name': f'HA Pair {pair_id}',
                     'coordination': 'sequential_ha',
@@ -225,12 +225,12 @@
                         'error': 'POWER_SUPPLY_FAULT'
                     }
                 }
-                
+
                 result = simulator.run_concurrent_scenario(ha_scenario)
                 if result['outcome'] != 'primary_success_secondary_rollback':
                     all_successful = False
                     break
-            
+
             if all_successful:
                 print(f'All {ha_pairs} HA pairs tested successfully')
                 print('PASS')
@@ -251,11 +251,11 @@
             sys.path.append('{{ project_root }}/tests/mock-devices')
             from mock_device_engine import MockDeviceManager
             import random
-            
+
             manager = MockDeviceManager()
             rollback_scenarios = {{ production_scenarios.disaster_recovery.rollback_scenarios }}
             successful_rollbacks = 0
-            
+
             for scenario_id in range(rollback_scenarios):
                 device_id = manager.create_device('cisco_nxos', f'test-rollback-{scenario_id}')
                 device = manager.devices[device_id]
@@ -266,18 +266,18 @@
                 sys.path.append('{{ project_root }}/tests/mock-devices')
                 from mock_device_engine import UpgradePhase
                 device.upgrade_phase = UpgradePhase.FAILED
-                
+
                 # Test rollback capability
                 rollback_result = device.process_command('rollback to previous version')
                 if 'rollback completed' in rollback_result.get('output', '').lower():
                     successful_rollbacks += 1
-            
+
             rollback_success_rate = (successful_rollbacks / rollback_scenarios) * 100
-            
+
             print(f'Rollback scenarios tested: {rollback_scenarios}')
             print(f'Successful rollbacks: {successful_rollbacks}')
             print(f'Rollback success rate: {rollback_success_rate:.1f}%')
-            
+
             if rollback_success_rate >= 95.0:  # 95% minimum for production
                 print('PASS')
             else:
@@ -291,13 +291,13 @@
         - name: Validate secure transfer mechanisms
           ansible.builtin.shell: |
             cd {{ ansible_content_dir }}
-            
+
             # Check for secure transfer configurations
             grep -r "ansible_become_method.*sudo" roles/ || echo "No sudo escalation found"
             grep -r "ansible_ssh_private_key_file" inventory/ || echo "No SSH key auth found"
             grep -r "vault_" inventory/group_vars/ | wc -l
           register: security_config_check
-          
+
         - name: Test certificate validation
           ansible.builtin.shell: |
             cd {{ project_root }}/tests/mock-devices
@@ -309,15 +309,15 @@
             manager = MockDeviceManager()
             device_id = manager.create_device('fortios', 'security-test-fw')
             device = manager.devices[device_id]
-            
+
             # Test certificate validation scenarios
             scenarios = [
                 'valid_certificate',
-                'expired_certificate', 
+                'expired_certificate',
                 'invalid_certificate',
                 'self_signed_certificate'
             ]
-            
+
             passed_scenarios = 0
             for scenario in scenarios:
                 # Clear any previous error state
@@ -334,13 +334,13 @@
                     result = device.process_command('connect')
                     if result.get('status') == 'success':
                         passed_scenarios += 1
-            
+
             compliance_rate = (passed_scenarios / len(scenarios)) * 100
-            
+
             print(f'Security compliance scenarios: {len(scenarios)}')
             print(f'Passed scenarios: {passed_scenarios}')
             print(f'Compliance rate: {compliance_rate:.1f}%')
-            
+
             if compliance_rate >= 100.0:
                 print('PASS')
             else:
@@ -361,51 +361,51 @@
             import time
             import psutil
             import os
-            
+
             manager = MockDeviceManager()
-            
+
             # Performance test setup
             test_devices = 10
             device_ids = []
-            
+
             # Create test devices
             for i in range(test_devices):
                 device_id = manager.create_device('cisco_nxos', f'perf-test-{i:02d}')
                 device_ids.append(device_id)
-            
+
             # Measure resource usage
             process = psutil.Process(os.getpid())
             initial_memory = process.memory_info().rss / 1024 / 1024  # MB
-            
+
             # Simulate concurrent upgrades
             start_time = time.time()
-            
+
             for device_id in device_ids:
                 device = manager.devices[device_id]
                 device.simulate_upgrade_progress('old_version', 'new_version')
-            
+
             end_time = time.time()
             final_memory = process.memory_info().rss / 1024 / 1024  # MB
-            
+
             upgrade_duration = end_time - start_time
             memory_usage = final_memory - initial_memory
             avg_upgrade_time = upgrade_duration / test_devices
-            
+
             print(f'Performance Metrics:')
             print(f'  Total upgrade duration: {upgrade_duration:.2f}s')
             print(f'  Average per device: {avg_upgrade_time:.2f}s')
             print(f'  Memory usage: {memory_usage:.1f}MB')
             print(f'  Peak memory: {final_memory:.1f}MB')
-            
+
             # Validate against benchmarks
             max_upgrade_time = {{ performance_benchmarks.max_upgrade_time_minutes }} * 60
             max_memory = {{ performance_benchmarks.max_memory_usage_mb }}
-            
+
             performance_pass = (
                 upgrade_duration <= max_upgrade_time and
                 final_memory <= max_memory
             )
-            
+
             if performance_pass:
                 print('PERFORMANCE: PASS')
             else:
@@ -417,62 +417,62 @@
     - name: Generate Production Readiness Report
       ansible.builtin.debug:
         msg: |
-          
+
           ╔════════════════════════════════════════════════════════════╗
           ║               PRODUCTION READINESS REPORT                  ║
           ╚════════════════════════════════════════════════════════════╝
-          
+
           🏢 ENTERPRISE SCALE TEST
           ├── Device Count: {{ production_scenarios.enterprise_scale.device_count }}
           ├── Concurrent Upgrades: {{ production_scenarios.enterprise_scale.concurrent_upgrades }}
           ├── Success Rate Threshold: {{ production_scenarios.enterprise_scale.success_rate_threshold }}%
           └── Result: {{ 'PASS' if (enterprise_scale_test | default({})).get('rc', 1) == 0 else 'FAIL' }}
-          
+
           🔄 HIGH AVAILABILITY TEST
           ├── HA Pairs Tested: {{ production_scenarios.high_availability.ha_pairs }}
           ├── Failover Testing: {{ production_scenarios.high_availability.failover_testing }}
           └── Result: {{ 'PASS' if (ha_testing | default({})).get('rc', 1) == 0 else 'FAIL' }}
-          
+
           🚨 DISASTER RECOVERY TEST
           ├── Rollback Scenarios: {{ production_scenarios.disaster_recovery.rollback_scenarios }}
           ├── Network Partition Recovery: {{ production_scenarios.disaster_recovery.network_partition_recovery }}
           └── Result: {{ 'PASS' if (disaster_recovery_test | default({})).get('rc', 1) == 0 else 'FAIL' }}
-          
+
           🔒 SECURITY COMPLIANCE TEST
           ├── Certificate Validation: ✓
           ├── Secure Transfer Only: ✓
           ├── Audit Logging: ✓
           └── Result: {{ 'PASS' if (security_compliance_test | default({})).get('rc', 1) == 0 else 'FAIL' }}
-          
+
           📊 PERFORMANCE BENCHMARKS
           ├── Upgrade Time: Within limits
           ├── Memory Usage: Within limits
           ├── Throughput: {{ performance_benchmarks.min_throughput_mbps }}+ Mbps
           └── Result: {{ 'PASS' if (performance_test | default({})).get('rc', 1) == 0 else 'FAIL' }}
-          
+
           🏛️ COMPLIANCE REQUIREMENTS
           {% for requirement in compliance_requirements %}
           ├── {{ requirement }}: ✓
           {% endfor %}
-          
+
           📋 INFRASTRUCTURE READINESS
           ├── Ansible Environment: {{ 'Ready' if ansible_environment.rc == 0 else 'Issues Found' }}
           ├── AWX Integration: {{ 'Available' if (awx_check | default({})).get('status', 404) == 200 else 'Not Available' }}
           ├── NetBox Integration: {{ 'Available' if (netbox_check | default({})).get('status', 404) == 200 else 'Not Available' }}
           └── InfluxDB Metrics: {{ 'Available' if (influxdb_check | default({})).get('status', 404) == 200 else 'Not Available' }}
-          
+
           ╔════════════════════════════════════════════════════════════╗
           ║ OVERALL PRODUCTION READINESS: {{ 'CERTIFIED ✓' if (enterprise_scale_test.rc == 0 and ha_testing.rc == 0 and disaster_recovery_test.rc == 0 and security_compliance_test.rc == 0 and performance_test.rc == 0) else 'NOT READY ✗' }}           ║
           ╚════════════════════════════════════════════════════════════╝
-          
+
           Next Steps:
           {% if (enterprise_scale_test.rc == 0 and ha_testing.rc == 0 and disaster_recovery_test.rc == 0 and security_compliance_test.rc == 0 and performance_test.rc == 0) %}
           ✅ System is ready for production deployment
-          ✅ All UAT tests passed successfully  
+          ✅ All UAT tests passed successfully
           ✅ Performance benchmarks met
           ✅ Security compliance validated
           ✅ Disaster recovery capabilities confirmed
-          
+
           Recommended actions:
           1. Schedule production deployment window
           2. Prepare rollback procedures
@@ -480,7 +480,7 @@
           4. Train operations team
           {% else %}
           ❌ System requires additional work before production
-          
+
           Failed components need remediation:
           {% if enterprise_scale_test.rc != 0 %}- Enterprise scale testing{% endif %}
           {% if ha_testing.rc != 0 %}- High availability testing{% endif %}
