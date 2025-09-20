@@ -347,7 +347,7 @@
 
         - name: Test SSL Configuration
           find:
-            paths: "../../deployment/system"
+            paths: "{{ playbook_dir }}/../../deployment/system"
             patterns: "*ssl*"
           register: ssl_config
 
