@@ -372,8 +372,13 @@ run_tests() {
 
 # Start interactive shell or execute command
 start_shell() {
-    # If arguments provided, execute them directly
-    if [[ $# -gt 1 ]]; then
+    # If -c flag is provided, execute the command
+    if [[ $# -gt 1 && "$2" == "-c" ]]; then
+        shift 2  # Remove 'shell' and '-c' from arguments
+        log "Executing shell command: $*"
+        exec /bin/bash -c "$*"
+    # If other arguments provided, execute them directly
+    elif [[ $# -gt 1 ]]; then
         shift  # Remove 'shell' from arguments
         log "Executing command: $*"
         exec "$@"
