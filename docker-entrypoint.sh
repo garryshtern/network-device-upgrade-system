@@ -62,34 +62,38 @@ ENVIRONMENT VARIABLES:
     UPGRADE_PHASE      Phase: full, loading, installation, validation, rollback
     MAINTENANCE_WINDOW Set to 'true' for installation phase
 
+    # Multi-Step Upgrade (FortiOS)
+    MULTI_STEP_UPGRADE_REQUIRED  Enable multi-step upgrade mode (true/false)
+    UPGRADE_PATH                 Comma-separated upgrade path (e.g., "6.4.8,7.0.12,7.2.5")
+
     # SSH Key Authentication (Preferred)
-    VAULT_CISCO_NXOS_SSH_KEY    SSH private key for Cisco NX-OS devices
-    VAULT_CISCO_IOSXE_SSH_KEY   SSH private key for Cisco IOS-XE devices
-    VAULT_OPENGEAR_SSH_KEY      SSH private key for Opengear devices
-    VAULT_METAMAKO_SSH_KEY      SSH private key for Metamako devices
+    CISCO_NXOS_SSH_KEY          SSH private key for Cisco NX-OS devices
+    CISCO_IOSXE_SSH_KEY         SSH private key for Cisco IOS-XE devices
+    OPENGEAR_SSH_KEY            SSH private key for Opengear devices
+    METAMAKO_SSH_KEY            SSH private key for Metamako devices
 
     # API Token Authentication (API-based platforms)
-    VAULT_FORTIOS_API_TOKEN     API token for FortiOS devices
-    VAULT_OPENGEAR_API_TOKEN    API token for Opengear REST API
+    FORTIOS_API_TOKEN           API token for FortiOS devices
+    OPENGEAR_API_TOKEN          API token for Opengear REST API
 
     # Password Authentication (Fallback)
-    VAULT_CISCO_NXOS_PASSWORD   Password for Cisco NX-OS devices
-    VAULT_CISCO_IOSXE_PASSWORD  Password for Cisco IOS-XE devices
-    VAULT_FORTIOS_PASSWORD      Password for FortiOS devices
-    VAULT_OPENGEAR_PASSWORD     Password for Opengear devices
-    VAULT_METAMAKO_PASSWORD     Password for Metamako devices
+    CISCO_NXOS_PASSWORD         Password for Cisco NX-OS devices
+    CISCO_IOSXE_PASSWORD        Password for Cisco IOS-XE devices
+    FORTIOS_PASSWORD            Password for FortiOS devices
+    OPENGEAR_PASSWORD           Password for Opengear devices
+    METAMAKO_PASSWORD           Password for Metamako devices
 
     # Username Configuration
-    VAULT_CISCO_NXOS_USERNAME   Username for Cisco NX-OS devices
-    VAULT_CISCO_IOSXE_USERNAME  Username for Cisco IOS-XE devices
-    VAULT_FORTIOS_USERNAME      Username for FortiOS devices
-    VAULT_OPENGEAR_USERNAME     Username for Opengear devices
-    VAULT_METAMAKO_USERNAME     Username for Metamako devices
+    CISCO_NXOS_USERNAME         Username for Cisco NX-OS devices
+    CISCO_IOSXE_USERNAME        Username for Cisco IOS-XE devices
+    FORTIOS_USERNAME            Username for FortiOS devices
+    OPENGEAR_USERNAME           Username for Opengear devices
+    METAMAKO_USERNAME           Username for Metamako devices
 
     # Additional Configuration
-    VAULT_IMAGE_SERVER_USERNAME Username for firmware image server
-    VAULT_IMAGE_SERVER_PASSWORD Password for firmware image server
-    VAULT_SNMP_COMMUNITY        SNMP community string for monitoring
+    IMAGE_SERVER_USERNAME       Username for firmware image server
+    IMAGE_SERVER_PASSWORD       Password for firmware image server
+    SNMP_COMMUNITY              SNMP community string for monitoring
 
 EXAMPLES:
     # Syntax check (default)
@@ -115,15 +119,15 @@ EXAMPLES:
     docker run --rm \\
       -v ~/.ssh/id_rsa_cisco:/keys/cisco-key:ro \\
       -v ~/.ssh/id_rsa_opengear:/keys/opengear-key:ro \\
-      -e VAULT_CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
-      -e VAULT_OPENGEAR_SSH_KEY=/keys/opengear-key \\
+      -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
+      -e OPENGEAR_SSH_KEY=/keys/opengear-key \\
       -e TARGET_HOSTS=cisco-datacenter-switches \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # API token authentication (FortiOS/Opengear API)
     docker run --rm \\
-      -e VAULT_FORTIOS_API_TOKEN="\$(cat ~/.secrets/fortios-token)" \\
-      -e VAULT_OPENGEAR_API_TOKEN="\$(cat ~/.secrets/opengear-token)" \\
+      -e FORTIOS_API_TOKEN="\$(cat ~/.secrets/fortios-token)" \\
+      -e OPENGEAR_API_TOKEN="\$(cat ~/.secrets/opengear-token)" \\
       -e TARGET_HOSTS=fortinet-firewalls \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
@@ -141,9 +145,9 @@ EXAMPLES:
       -e TARGET_HOSTS=cisco-datacenter-switches \\
       -e TARGET_FIRMWARE=9.3.12 \\
       -e UPGRADE_PHASE=loading \\
-      -e VAULT_CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \\
-      -e VAULT_CISCO_IOSXE_SSH_KEY=/keys/cisco-iosxe-key \\
-      -e VAULT_FORTIOS_API_TOKEN="\$(cat /opt/secrets/fortios-api-token)" \\
+      -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \\
+      -e CISCO_IOSXE_SSH_KEY=/keys/cisco-iosxe-key \\
+      -e FORTIOS_API_TOKEN="\$(cat /opt/secrets/fortios-api-token)" \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # Interactive shell for debugging
@@ -168,7 +172,7 @@ PODMAN COMPATIBILITY (RHEL8/9):
     # SSH keys with podman (SELinux context)
     podman run --rm \\
       -v ~/.ssh/id_rsa_cisco:/keys/cisco-key:ro,Z \\
-      -e VAULT_CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
+      -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
 AUTHENTICATION PRIORITY ORDER:
@@ -204,7 +208,7 @@ TROUBLESHOOTING:
     # Test connectivity without changes
     docker run --rm \\
       -v ~/.ssh/id_rsa_cisco:/keys/cisco-key:ro \\
-      -e VAULT_CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
+      -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
       -e TARGET_HOSTS=test-device \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
@@ -280,7 +284,7 @@ validate_environment() {
     fi
 
     # Verify Ansible configuration
-    if [[ -n "${ANSIBLE_CONFIG}" ]] && [[ ! -f "${ANSIBLE_CONFIG}" ]]; then
+    if [[ -n "${ANSIBLE_CONFIG:-}" ]] && [[ ! -f "${ANSIBLE_CONFIG}" ]]; then
         warn "ANSIBLE_CONFIG points to non-existent file: ${ANSIBLE_CONFIG}"
     fi
 

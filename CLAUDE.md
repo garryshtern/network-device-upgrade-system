@@ -71,14 +71,19 @@ ansible-galaxy collection install \
 
 🐳 **Production-ready container available:**
 
+**Prerequisites:**
+- Docker 20.10+ OR Podman 3.0+
+- 2GB RAM, 1GB disk space
+
+**Quick Start:**
 ```bash
 # Docker
 docker pull ghcr.io/garryshtern/network-device-upgrade-system:latest
 docker run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
 
-# Podman (RHEL8/9 compatible)
+# Podman (RHEL8/9 compatible - recommended for enterprise)
 podman pull ghcr.io/garryshtern/network-device-upgrade-system:latest
-podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
+podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
 ```
 
 **Container Features:**
@@ -87,8 +92,9 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
 - RHEL8/9 podman compatible
 - Multi-architecture (amd64/arm64)
 - Pre-installed Ansible 12.0.0 & Python 3.13.7
+- FortiOS multi-step upgrade support
 
-See [Container Deployment Guide](docs/container-deployment.md) for detailed usage.
+**Installation:** See [Container Deployment Guide](docs/container-deployment.md) for complete Docker/Podman installation instructions and platform-specific setup.
 
 ## Testing Framework
 
