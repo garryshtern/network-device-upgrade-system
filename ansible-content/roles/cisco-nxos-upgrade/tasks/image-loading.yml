@@ -3,6 +3,78 @@
 # Securely transfers firmware images from server to device
 # SECURITY: Uses server-initiated PUSH transfers (not device-initiated PULL)
 
+- name: Determine platform-specific firmware filename
+  block:
+    - name: Get device model information
+      cisco.nxos.nxos_command:
+        commands:
+          - show module | json
+      register: nxos_module_info
+
+    - name: Extract device model
+      ansible.builtin.set_fact:
+        device_model: >-
+          {{ nxos_facts.ansible_facts.ansible_net_model |
+             default(nxos_module_info.stdout[0].TABLE_modinfo.ROW_modinfo[0].model) }}
+
+    - name: Determine device platform family
+      ansible.builtin.set_fact:
+        device_platform: >-
+          {%- for pattern in device_model_patterns -%}
+            {%- if device_model is match(pattern.regex) -%}
+              {{ pattern.platform }}
+            {%- endif -%}
+          {%- endfor -%}
+
+    - name: Set firmware filename pattern
+      ansible.builtin.set_fact:
+        firmware_filename: >-
+          {%- if device_platform and device_platform in firmware_filename_patterns -%}
+            {%- set platform_patterns = firmware_filename_patterns[device_platform] -%}
+            {%- if device_model in platform_patterns -%}
+              {{ platform_patterns[device_model] }}
+            {%- else -%}
+              {{ platform_patterns.default }}
+            {%- endif -%}
+          {%- else -%}
+            nxos.{{ target_firmware_version }}.bin
+          {%- endif -%}
+
+    - name: Set firmware paths
+      ansible.builtin.set_fact:
+        local_firmware_path: "{{ firmware_base_path }}/{{ firmware_filename }}"
+
+    - name: Set EPLD firmware filename (if EPLD upgrade enabled)
+      ansible.builtin.set_fact:
+        epld_firmware_filename: >-
+          {%- if enable_epld_upgrade | default(false) -%}
+            {%- if device_platform and device_platform in epld_firmware_patterns -%}
+              {{ epld_firmware_patterns[device_platform].default }}
+            {%- else -%}
+              n9000-epld.{{ target_epld_version | default(target_firmware_version) }}.img
+            {%- endif -%}
+          {%- else -%}
+
+          {%- endif -%}
+        local_epld_path: >-
+          {%- if enable_epld_upgrade | default(false) -%}
+            {{ firmware_base_path }}/{{ epld_firmware_filename }}
+          {%- else -%}
+
+          {%- endif -%}
+      when: enable_epld_upgrade | default(false)
+
+    - name: Display firmware selection
+      ansible.builtin.debug:
+        msg:
+          - "Device Model: {{ device_model }}"
+          - "Platform Family: {{ device_platform | default('generic') }}"
+          - "Firmware File: {{ firmware_filename }}"
+          - "Full Path: {{ local_firmware_path }}"
+          - "EPLD Enabled: {{ enable_epld_upgrade | default(false) }}"
+          - "EPLD File: {{ epld_firmware_filename | default('N/A') }}"
+          - "EPLD Path: {{ local_epld_path | default('N/A') }}"
+
 - name: Get current storage information
   cisco.nxos.nxos_command:
     commands:

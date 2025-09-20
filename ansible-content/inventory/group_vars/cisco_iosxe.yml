@@ -28,6 +28,64 @@ bundle_mode_timeout: 1800
 # All images are pushed from the upgrade server to devices
 # No device-initiated connections to image servers
 
+# Platform-specific firmware filename patterns by hardware platform
+firmware_filename_patterns:
+  # Catalyst 9000 Series
+  catalyst_9000:
+    C9200: "cat9k_lite_iosxe.{{ target_version }}.SPA.bin"         # 9200 series
+    C9300: "cat9k_lite_iosxe.{{ target_version }}.SPA.bin"         # 9300 series
+    C9400: "cat9k_iosxe.{{ target_version }}.SPA.bin"              # 9400 series
+    C9500: "cat9k_iosxe.{{ target_version }}.SPA.bin"              # 9500 series
+    C9600: "cat9k_iosxe.{{ target_version }}.SPA.bin"              # 9600 series
+    C9800: "C9800-universalk9_iosxe.{{ target_version }}.SPA.bin"  # 9800 wireless
+    default: "cat9k_iosxe.{{ target_version }}.SPA.bin"            # Generic 9K
+  # Catalyst 3850/3650 Series
+  catalyst_3850:
+    C3850: "cat3k_caa-universalk9.{{ target_version }}.SPA.bin"    # 3850 switches
+    C3650: "cat3k_caa-universalk9.{{ target_version }}.SPA.bin"    # 3650 switches
+    default: "cat3k_caa-universalk9.{{ target_version }}.SPA.bin"  # Generic 3K
+  # ISR 4000 Series Routers
+  isr_4000:
+    ISR4221: "isr4200-universalk9_ias.{{ target_version }}.SPA.bin"  # 4221 router
+    ISR4321: "isr4300-universalk9_ias.{{ target_version }}.SPA.bin"  # 4321 router
+    ISR4331: "isr4300-universalk9_ias.{{ target_version }}.SPA.bin"  # 4331 router
+    ISR4351: "isr4300-universalk9_ias.{{ target_version }}.SPA.bin"  # 4351 router
+    ISR4431: "isr4400-universalk9_ias.{{ target_version }}.SPA.bin"  # 4431 router
+    ISR4451: "isr4400-universalk9_ias.{{ target_version }}.SPA.bin"  # 4451 router
+    default: "isr4300-universalk9_ias.{{ target_version }}.SPA.bin"  # Generic ISR4K
+  # ASR 1000 Series
+  asr_1000:
+    ASR1001: "asr1000rp3-adventerprisek9.{{ target_version }}.SPA.bin"  # 1001 router
+    ASR1002: "asr1000rp3-adventerprisek9.{{ target_version }}.SPA.bin"  # 1002 router
+    ASR1006: "asr1000rp3-adventerprisek9.{{ target_version }}.SPA.bin"  # 1006 router
+    ASR1009: "asr1000rp3-adventerprisek9.{{ target_version }}.SPA.bin"  # 1009 router
+    default: "asr1000rp3-adventerprisek9.{{ target_version }}.SPA.bin"  # Generic ASR1K
+  # Catalyst 8000 Series Edge Routers
+  catalyst_8000:
+    C8500L: "c8000aes-universalk9.{{ target_version }}.SPA.bin"         # 8500L router
+    C8500: "c8000aes-universalk9.{{ target_version }}.SPA.bin"          # 8500 router
+    C8300: "c8000aes-universalk9.{{ target_version }}.SPA.bin"          # 8300 router
+    C8200: "c8000aes-universalk9.{{ target_version }}.SPA.bin"          # 8200 router
+    default: "c8000aes-universalk9.{{ target_version }}.SPA.bin"        # Generic 8K
+
+# Device model detection patterns for firmware selection
+device_model_patterns:
+  - { regex: "C92.*", platform: "catalyst_9000", model_prefix: "C92" }
+  - { regex: "C93.*", platform: "catalyst_9000", model_prefix: "C93" }
+  - { regex: "C94.*", platform: "catalyst_9000", model_prefix: "C94" }
+  - { regex: "C95.*", platform: "catalyst_9000", model_prefix: "C95" }
+  - { regex: "C96.*", platform: "catalyst_9000", model_prefix: "C96" }
+  - { regex: "C98.*", platform: "catalyst_9000", model_prefix: "C98" }
+  - { regex: "C385.*", platform: "catalyst_3850", model_prefix: "C385" }
+  - { regex: "C365.*", platform: "catalyst_3850", model_prefix: "C365" }
+  - { regex: "ISR42.*", platform: "isr_4000", model_prefix: "ISR42" }
+  - { regex: "ISR43.*", platform: "isr_4000", model_prefix: "ISR43" }
+  - { regex: "ISR44.*", platform: "isr_4000", model_prefix: "ISR44" }
+  - { regex: "ASR10.*", platform: "asr_1000", model_prefix: "ASR10" }
+  - { regex: "C82.*", platform: "catalyst_8000", model_prefix: "C82" }
+  - { regex: "C83.*", platform: "catalyst_8000", model_prefix: "C83" }
+  - { regex: "C85.*", platform: "catalyst_8000", model_prefix: "C85" }
+
 # Storage settings
 min_bootflash_space_gb: 2
 cleanup_old_images: true

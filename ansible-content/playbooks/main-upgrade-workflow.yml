@@ -16,7 +16,9 @@
     # Workflow control variables
     # Options: full, loading, installation, validation, rollback
     upgrade_phase: "{{ phase | default('full') }}"
+    # Firmware selection - supports both global and platform-specific targeting
     firmware_version: "{{ target_firmware }}"
+    platform_specific_firmware: "{{ platform_firmware | default({}) }}"
     maintenance_window: "{{ maintenance | default(false) | bool }}"
     skip_validation: "{{ skip_checks | default(false) | bool }}"
     rollback_on_failure: "{{ auto_rollback | default(true) | bool }}"
@@ -45,12 +47,39 @@
     - name: Validate required variables
       ansible.builtin.assert:
         that:
-          - target_firmware is defined
-          - target_firmware != ""
+          - target_firmware is defined or platform_specific_firmware != {}
           - target_hosts is defined
         fail_msg: >
-          Required variables missing: target_firmware and target_hosts
-          must be defined
+          Required variables missing: Either target_firmware (global) or
+          platform_specific_firmware (per-platform) must be defined,
+          and target_hosts must be defined
+
+    - name: Resolve platform-specific firmware version
+      ansible.builtin.set_fact:
+        resolved_firmware_version: >-
+          {%- if platform_specific_firmware != {} -%}
+            {%- set platform_key = platform_type | default(ansible_network_os) -%}
+            {%- set device_model_key = device_model | default('default') -%}
+            {%- if platform_key in platform_specific_firmware -%}
+              {%- if device_model_key in platform_specific_firmware[platform_key] -%}
+                {{ platform_specific_firmware[platform_key][device_model_key] }}
+              {%- elif 'default' in platform_specific_firmware[platform_key] -%}
+                {{ platform_specific_firmware[platform_key]['default'] }}
+              {%- else -%}
+                {{ target_firmware | default('') }}
+              {%- endif -%}
+            {%- else -%}
+              {{ target_firmware | default('') }}
+            {%- endif -%}
+          {%- else -%}
+            {{ target_firmware | default('') }}
+          {%- endif -%}
+      when: platform_specific_firmware != {} or target_firmware is defined
+
+    - name: Set final firmware version for workflow
+      ansible.builtin.set_fact:
+        firmware_version: "{{ resolved_firmware_version | default(target_firmware) }}"
+        target_firmware_version: "{{ resolved_firmware_version | default(target_firmware) }}"
 
     - name: Set upgrade start timestamp
       ansible.builtin.set_fact:

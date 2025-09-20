@@ -88,8 +88,14 @@ jobs:
                 SKIP_VERSION=true
               fi
 
+              # Check deletion limit first to avoid stopping on labeled packages
+              if [ "$DELETED" -ge "$MAX_LIMIT" ]; then
+                echo "⚠️  Reached deletion limit ($MAX_LIMIT), stopping"
+                break
+              fi
+
               # Delete if not skipped and under limit
-              if [ "$SKIP_VERSION" = "false" ] && [ "$DELETED" -lt "$MAX_LIMIT" ]; then
+              if [ "$SKIP_VERSION" = "false" ]; then
                 TAGS_DISPLAY=$(echo $TAGS | tr '\n' ' ' | sed 's/^$/untagged/')
                 echo -n "🗑️  Deleting version $VERSION_ID ($TAGS_DISPLAY)... "
 
@@ -99,9 +105,6 @@ jobs:
                 else
                   echo "❌ Failed"
                 fi
-              elif [ "$DELETED" -ge "$MAX_LIMIT" ]; then
-                echo "⚠️  Reached deletion limit ($MAX_LIMIT), stopping"
-                break
               fi
             fi
           done < /tmp/package_versions.json

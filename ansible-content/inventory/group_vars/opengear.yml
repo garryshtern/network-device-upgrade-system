@@ -35,10 +35,11 @@ supported_models:
   legacy_cli:
     console_servers:
       - "CM7100"    # Legacy console server - CLI only
-      - "OM7200"    # Legacy operations manager - CLI only
+      - "OM7200"    # Legacy operations manager - CLI only (IM7200)
   current_cli:
     console_servers:
       - "CM8100"    # Current console server - CLI upgrades
+      - "OM2100"    # Current operations manager - CLI upgrades
       - "OM2200"    # Current operations manager - CLI upgrades
 
 # Architecture detection settings
@@ -60,13 +61,14 @@ local_firmware_path: "{{ firmware_base_path }}/opengear"
 # Firmware filename patterns by device model
 firmware_filename_patterns:
   legacy_cli:
-    # Legacy devices use 3.x.x version format (e.g., 3.16.4)
-    CM7100: "cm71xx-{{ target_version }}.flash"
-    OM7200: "im72xx-{{ target_version }}.flash"
+    # Legacy devices use 5.x.x version format (e.g., 5.2.4)
+    CM7100: "cm71xx-{{ target_version }}.flash"      # e.g., cm71xx-5.2.4.flash
+    OM7200: "im72xx-{{ target_version }}.flash"      # e.g., im72xx-5.2.4.flash (IM7200)
   current_cli:
     # Modern devices use YY.MM.x format (e.g., 25.07.0)
-    CM8100: "console_manager-{{ target_version }}-*.raucb"
-    OM2200: "operations_manager-{{ target_version }}-*.raucb"
+    CM8100: "console_manager-{{ target_version }}-production-signed.raucb"    # e.g., console_manager-25.07.0-production-signed.raucb
+    OM2100: "operations_manager-{{ target_version }}-production-signed.raucb" # e.g., operations_manager-25.07.0-production-signed.raucb
+    OM2200: "operations_manager-{{ target_version }}-production-signed.raucb" # e.g., operations_manager-25.07.0-production-signed.raucb
 
 # Version format validation by device architecture
 version_formats:

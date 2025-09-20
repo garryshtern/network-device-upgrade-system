@@ -194,3 +194,10 @@ Native service-based system:
 - All changes MUST include documentation verification checklist
 - Broken or missing documentation updates block deployment
 - Documentation review required for all significant changes
+- Use automated tools to check for broken links and outdated content
+- Regular audits to ensure compliance with documentation standards
+- Document search patterns used for verification and fixes
+- Verify fixes across ENTIRE codebase, not just obvious instances
+- Use multiple search methods (grep, ripgrep, manual review) for critical issues
+- Document search patterns used and verify completeness
+- When fixing syntax issues like folded scalars, check ALL files systematically
