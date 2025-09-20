@@ -15,7 +15,8 @@
       ansible.builtin.set_fact:
         device_model: >-
           {{ nxos_facts.ansible_facts.ansible_net_model |
-             default(nxos_module_info.stdout[0].TABLE_modinfo.ROW_modinfo[0].model) }}
+             default(nxos_module_info.stdout[0].
+                     TABLE_modinfo.ROW_modinfo[0].model) }}
 
     - name: Determine device platform family
       ansible.builtin.set_fact:
@@ -29,8 +30,10 @@
     - name: Set firmware filename pattern
       ansible.builtin.set_fact:
         firmware_filename: >-
-          {%- if device_platform and device_platform in firmware_filename_patterns -%}
-            {%- set platform_patterns = firmware_filename_patterns[device_platform] -%}
+          {%- if device_platform and
+              device_platform in firmware_filename_patterns -%}
+            {%- set platform_patterns =
+                firmware_filename_patterns[device_platform] -%}
             {%- if device_model in platform_patterns -%}
               {{ platform_patterns[device_model] }}
             {%- else -%}
@@ -48,10 +51,13 @@
       ansible.builtin.set_fact:
         epld_firmware_filename: >-
           {%- if enable_epld_upgrade | default(false) -%}
-            {%- if device_platform and device_platform in epld_firmware_patterns -%}
+            {%- if device_platform and
+                device_platform in epld_firmware_patterns -%}
               {{ epld_firmware_patterns[device_platform].default }}
             {%- else -%}
-              n9000-epld.{{ target_epld_version | default(target_firmware_version) }}.img
+              n9000-epld.{{
+                target_epld_version |
+                default(target_firmware_version) }}.img
             {%- endif -%}
           {%- else -%}
 
