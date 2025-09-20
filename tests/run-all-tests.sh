@@ -41,7 +41,11 @@ run_test_suite() {
         return 0
     else
         echo -e "${RED}✗ $test_name tests FAILED${NC}"
-        echo -e "${RED}  See $result_file for details${NC}"
+        echo -e "${RED}  Last 30 lines of output:${NC}"
+        echo -e "${RED}  ========================${NC}"
+        tail -30 "$result_file" | sed 's/^/  /'
+        echo -e "${RED}  ========================${NC}"
+        echo -e "${RED}  Full log: $result_file${NC}"
         return 1
     fi
 }

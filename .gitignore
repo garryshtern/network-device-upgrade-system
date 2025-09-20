@@ -205,6 +205,10 @@ tests/results/*
 **/performance_*/
 install/*.txt
 
+# Test artifact directories
+critical-gap-test-results-*/
+comprehensive-test-results-*/
+
 # Ansible temporary files
 **/.ansible/
 *.retry
