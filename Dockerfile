@@ -65,6 +65,7 @@ RUN ansible-galaxy collection install \
 COPY --chown=ansible:ansible ansible-content/ ./ansible-content/
 COPY --chown=ansible:ansible tests/ ./tests/
 COPY --chown=ansible:ansible docs/ ./docs/
+COPY --chown=ansible:ansible deployment/ ./deployment/
 COPY --chown=ansible:ansible CLAUDE.md ./CLAUDE.md
 COPY --chown=ansible:ansible docker-entrypoint.sh ./docker-entrypoint.sh
 
