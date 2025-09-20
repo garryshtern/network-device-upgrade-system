@@ -153,6 +153,11 @@ The container supports extensive configuration through environment variables:
 - `IMAGE_SERVER_PASSWORD` - Password for firmware image server
 - `SNMP_COMMUNITY` - SNMP community string for monitoring
 
+### Firmware Image Management
+- `FIRMWARE_BASE_PATH` - Base directory for firmware images in container (default: /var/lib/network-upgrade/firmware)
+- `TARGET_FIRMWARE` - Target firmware version/filename to install
+- `BACKUP_BASE_PATH` - Base directory for configuration backups (default: /var/lib/network-upgrade/backups)
+
 ## Authentication Configuration
 
 The container supports multiple authentication methods:
@@ -390,5 +395,226 @@ The multi-step upgrade process automatically:
 - **Downtime Planning**: Plan for extended downtime with multi-step upgrades
 - **HA Coordination**: HA clusters require special handling
 - **Firmware Availability**: Ensure all intermediate firmware versions are available
+
+## Firmware Image Management
+
+The container requires proper firmware image organization and mounting to perform upgrades. This section explains how to structure and provide firmware images to the container.
+
+### Firmware Directory Structure
+
+The container expects firmware images to be organized by platform in the following structure:
+
+```
+/var/lib/network-upgrade/firmware/
+├── cisco.nxos/          # Cisco NX-OS firmware images
+│   ├── nxos.9.3.12.bin
+│   ├── nxos.10.2.5.bin
+│   └── ...
+├── cisco.ios/           # Cisco IOS-XE firmware images
+│   ├── cat9k_lite_iosxe.16.12.10.SPA.bin
+│   ├── cat9k_iosxe.17.09.04a.SPA.bin
+│   └── ...
+├── fortios/             # FortiOS firmware images
+│   ├── FGT_VM64_KVM-v7.0.12-build0523-FORTINET.out
+│   ├── FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out
+│   └── ...
+├── opengear/            # Opengear firmware images
+│   ├── og-4.8.6-x86_64.pkg
+│   ├── og-4.9.2-arm64.pkg
+│   └── ...
+└── metamako/            # Metamako MOS firmware images
+    ├── mos-1.2.3.tar.gz
+    ├── mos-1.3.1.tar.gz
+    └── ...
+```
+
+### Volume Mounting for Firmware Images
+
+#### Method 1: Single Firmware Directory Mount
+
+```bash
+# Mount your firmware directory to the container
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_HOSTS=cisco-switches \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Method 2: Platform-Specific Mounts
+
+```bash
+# Mount platform-specific directories
+docker run --rm \
+  -v /opt/firmware/cisco:/var/lib/network-upgrade/firmware/cisco.nxos:ro \
+  -v /opt/firmware/fortinet:/var/lib/network-upgrade/firmware/fortios:ro \
+  -v /opt/firmware/opengear:/var/lib/network-upgrade/firmware/opengear:ro \
+  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_HOSTS=cisco-datacenter-switches \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Method 3: Production Setup with Multiple Volumes
+
+```bash
+# Production deployment with organized structure
+docker run --rm \
+  --name network-upgrade \
+  -v /opt/network-upgrade/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v /opt/network-upgrade/backups:/var/lib/network-upgrade/backups \
+  -v /opt/network-upgrade/logs:/var/log/network-upgrade \
+  -v /opt/secrets/ssh-keys:/keys:ro \
+  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_HOSTS=datacenter-switches \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Platform-Specific Firmware Examples
+
+#### Cisco NX-OS
+```bash
+# NX-OS upgrade example
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
+  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_HOSTS=nexus-switches \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  -e CISCO_NXOS_USERNAME=admin \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Cisco IOS-XE
+```bash
+# IOS-XE upgrade example
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ~/.ssh/cisco_iosxe_key:/keys/cisco-key:ro \
+  -e TARGET_FIRMWARE=cat9k_iosxe.17.09.04a.SPA.bin \
+  -e TARGET_HOSTS=catalyst-switches \
+  -e CISCO_IOSXE_SSH_KEY=/keys/cisco-key \
+  -e CISCO_IOSXE_USERNAME=admin \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### FortiOS
+```bash
+# FortiOS upgrade example
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -e TARGET_FIRMWARE=FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out \
+  -e TARGET_HOSTS=fortinet-firewalls \
+  -e FORTIOS_API_TOKEN="$(cat ~/.secrets/fortios-token)" \
+  -e FORTIOS_USERNAME=admin \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Opengear
+```bash
+# Opengear upgrade example
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ~/.ssh/opengear_key:/keys/opengear-key:ro \
+  -e TARGET_FIRMWARE=og-4.9.2-x86_64.pkg \
+  -e TARGET_HOSTS=console-servers \
+  -e OPENGEAR_SSH_KEY=/keys/opengear-key \
+  -e OPENGEAR_USERNAME=root \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Metamako MOS
+```bash
+# Metamako upgrade example
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ~/.ssh/metamako_key:/keys/metamako-key:ro \
+  -e TARGET_FIRMWARE=mos-1.3.1.tar.gz \
+  -e TARGET_HOSTS=metamako-devices \
+  -e METAMAKO_SSH_KEY=/keys/metamako-key \
+  -e METAMAKO_USERNAME=admin \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Firmware Filename Resolution
+
+The system resolves firmware file paths using different mechanisms depending on the platform:
+
+#### Direct Resolution (Cisco Platforms)
+For **Cisco NX-OS** and **Cisco IOS-XE**, the filename is constructed as:
+```
+Full Path = firmware_base_path + "/" + target_firmware
+```
+
+Example:
+- `FIRMWARE_BASE_PATH=/var/lib/network-upgrade/firmware`
+- `TARGET_FIRMWARE=nxos.9.3.12.bin`
+- **Resolved Path**: `/var/lib/network-upgrade/firmware/nxos.9.3.12.bin`
+
+#### Platform-Specific Subdirectories
+For **FortiOS**, **Opengear**, and **Metamako**, the system uses platform-specific subdirectories:
+
+| Platform | Firmware Path Resolution | Example |
+|----------|-------------------------|---------|
+| Cisco NX-OS | `firmware_base_path/target_firmware` | `/var/lib/network-upgrade/firmware/nxos.9.3.12.bin` |
+| Cisco IOS-XE | `firmware_base_path/target_firmware` | `/var/lib/network-upgrade/firmware/cat9k_iosxe.17.09.04a.SPA.bin` |
+| FortiOS | `firmware_base_path/fortios/target_firmware` | `/var/lib/network-upgrade/firmware/fortios/FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out` |
+| Opengear | `firmware_base_path/opengear/target_firmware` | `/var/lib/network-upgrade/firmware/opengear/og-4.9.2-x86_64.pkg` |
+| Metamako MOS | `firmware_base_path/metamako/target_firmware` | `/var/lib/network-upgrade/firmware/metamako/mos-1.3.1.tar.gz` |
+
+### Firmware Naming Conventions
+
+| Platform | Firmware Naming Pattern | Example |
+|----------|------------------------|---------|
+| Cisco NX-OS | `nxos.{version}.bin` | `nxos.9.3.12.bin` |
+| Cisco IOS-XE | `cat9k_*iosxe.{version}.SPA.bin` | `cat9k_iosxe.17.09.04a.SPA.bin` |
+| FortiOS | `FGT_*-v{version}-*-FORTINET.out` | `FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out` |
+| Opengear | `og-{version}-{arch}.pkg` | `og-4.9.2-x86_64.pkg` |
+| Metamako MOS | `mos-{version}.tar.gz` | `mos-1.3.1.tar.gz` |
+
+### EPLD Upgrade Examples (Cisco NX-OS)
+
+EPLD (Embedded Programmable Logic Device) upgrades require special handling and can be disruptive:
+
+#### Standard EPLD Upgrade
+```bash
+# EPLD upgrade with non-disruptive mode
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
+  -e TARGET_FIRMWARE=nxos.9.3.12.bin \
+  -e TARGET_HOSTS=nexus-switches \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  -e ENABLE_EPLD_UPGRADE=true \
+  -e ALLOW_DISRUPTIVE_EPLD=false \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Disruptive EPLD Upgrade (Maintenance Window Required)
+```bash
+# EPLD upgrade with disruptive mode (requires maintenance window)
+docker run --rm \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
+  -e TARGET_FIRMWARE=nxos.10.1.2.bin \
+  -e TARGET_HOSTS=nexus-core-switches \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  -e ENABLE_EPLD_UPGRADE=true \
+  -e ALLOW_DISRUPTIVE_EPLD=true \
+  -e MAINTENANCE_WINDOW=true \
+  -e EPLD_UPGRADE_TIMEOUT=7200 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Important Notes
+
+- **Read-Only Mounts**: Always use `:ro` flag for firmware directories to prevent accidental modification
+- **File Permissions**: Ensure firmware files are readable by UID 1000 (container user)
+- **Storage Space**: Plan for adequate storage - firmware images can be 500MB-2GB each
+- **Backup Storage**: Mount a writable volume for configuration backups
+- **Log Storage**: Mount a volume for persistent upgrade logs
+- **SELinux**: Use `:Z` flag with Podman for proper SELinux labeling
 
 For detailed platform-specific requirements, see [Platform File Transfer Guide](platform-file-transfer-guide.md).

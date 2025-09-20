@@ -62,6 +62,12 @@ ENVIRONMENT VARIABLES:
     UPGRADE_PHASE      Phase: full, loading, installation, validation, rollback
     MAINTENANCE_WINDOW Set to 'true' for installation phase
 
+    # EPLD Upgrade Configuration (Cisco NX-OS)
+    ENABLE_EPLD_UPGRADE      Enable EPLD upgrade (true/false)
+    ALLOW_DISRUPTIVE_EPLD    Allow disruptive EPLD upgrade (true/false)
+    EPLD_UPGRADE_TIMEOUT     EPLD upgrade timeout in seconds (default: 7200)
+    TARGET_EPLD_IMAGE        EPLD firmware filename (e.g., n9000-epld.10.1.2.img)
+
     # Multi-Step Upgrade (FortiOS)
     MULTI_STEP_UPGRADE_REQUIRED  Enable multi-step upgrade mode (true/false)
     UPGRADE_PATH                 Comma-separated upgrade path (e.g., "6.4.8,7.0.12,7.2.5")
@@ -94,6 +100,10 @@ ENVIRONMENT VARIABLES:
     IMAGE_SERVER_USERNAME       Username for firmware image server
     IMAGE_SERVER_PASSWORD       Password for firmware image server
     SNMP_COMMUNITY              SNMP community string for monitoring
+
+    # Firmware Image Management
+    FIRMWARE_BASE_PATH          Base directory for firmware images (default: /var/lib/network-upgrade/firmware)
+    BACKUP_BASE_PATH            Base directory for configuration backups (default: /var/lib/network-upgrade/backups)
 
 EXAMPLES:
     # Syntax check (default)

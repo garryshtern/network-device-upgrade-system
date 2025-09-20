@@ -7,7 +7,7 @@
   gather_facts: yes
   vars:
     # Project root directory - works regardless of execution context
-    project_root: "{{ ansible_env.PWD if ansible_env.PWD.endswith('ansible-content') else (ansible_env.PWD + '/../..') if ansible_env.PWD.endswith('integration-tests') else (ansible_env.PWD + '/..') if ansible_env.PWD.endswith('tests') else ansible_env.PWD }}"
+    project_root: "{{ playbook_dir + '/../..' }}"
     integration_test_scenarios:
       phase_separation_test:
         name: "Phase-Separated Upgrade Process"

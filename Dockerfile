@@ -52,7 +52,8 @@ RUN pip install --user --no-cache-dir --upgrade pip \
         netaddr \
         jinja2 \
         pyyaml \
-        requests
+        requests \
+        psutil
 
 # Install Ansible collections with explicit versions
 RUN ansible-galaxy collection install \
