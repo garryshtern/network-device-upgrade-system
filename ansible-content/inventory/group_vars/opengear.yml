@@ -62,13 +62,13 @@ local_firmware_path: "{{ firmware_base_path }}/opengear"
 firmware_filename_patterns:
   legacy_cli:
     # Legacy devices use 5.x.x version format (e.g., 5.2.4)
-    CM7100: "cm71xx-{{ target_version }}.flash"      # e.g., cm71xx-5.2.4.flash
-    OM7200: "im72xx-{{ target_version }}.flash"      # e.g., im72xx-5.2.4.flash (IM7200)
+    CM7100: "cm71xx-{{ target_version }}.flash"  # cm71xx-5.2.4.flash
+    OM7200: "im72xx-{{ target_version }}.flash"  # im72xx-5.2.4.flash
   current_cli:
     # Modern devices use YY.MM.x format (e.g., 25.07.0)
-    CM8100: "console_manager-{{ target_version }}-production-signed.raucb"    # e.g., console_manager-25.07.0-production-signed.raucb
-    OM2100: "operations_manager-{{ target_version }}-production-signed.raucb" # e.g., operations_manager-25.07.0-production-signed.raucb
-    OM2200: "operations_manager-{{ target_version }}-production-signed.raucb" # e.g., operations_manager-25.07.0-production-signed.raucb
+    CM8100: "console_manager-{{ target_version }}-production-signed.raucb"
+    OM2100: "operations_manager-{{ target_version }}-production-signed.raucb"
+    OM2200: "operations_manager-{{ target_version }}-production-signed.raucb"
 
 # Version format validation by device architecture
 version_formats:

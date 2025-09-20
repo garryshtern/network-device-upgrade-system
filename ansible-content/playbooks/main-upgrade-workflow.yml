@@ -57,11 +57,13 @@
     - name: Resolve platform-specific firmware version
       ansible.builtin.set_fact:
         resolved_firmware_version: >-
-          {%- if platform_specific_firmware != {} -%}
-            {%- set platform_key = platform_type | default(ansible_network_os) -%}
+          {% if platform_specific_firmware != {} %}
+            {%- set platform_key = platform_type |
+                default(ansible_network_os) -%}
             {%- set device_model_key = device_model | default('default') -%}
             {%- if platform_key in platform_specific_firmware -%}
-              {%- if device_model_key in platform_specific_firmware[platform_key] -%}
+              {%- if device_model_key in
+                  platform_specific_firmware[platform_key] -%}
                 {{ platform_specific_firmware[platform_key][device_model_key] }}
               {%- elif 'default' in platform_specific_firmware[platform_key] -%}
                 {{ platform_specific_firmware[platform_key]['default'] }}
@@ -78,8 +80,10 @@
 
     - name: Set final firmware version for workflow
       ansible.builtin.set_fact:
-        firmware_version: "{{ resolved_firmware_version | default(target_firmware) }}"
-        target_firmware_version: "{{ resolved_firmware_version | default(target_firmware) }}"
+        firmware_version: >
+          {{ resolved_firmware_version | default(target_firmware) }}
+        target_firmware_version: >
+          {{ resolved_firmware_version | default(target_firmware) }}
 
     - name: Set upgrade start timestamp
       ansible.builtin.set_fact:

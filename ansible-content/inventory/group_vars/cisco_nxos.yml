@@ -38,66 +38,6 @@ nxos_copy_timeout: 1800
 # All images are pushed from the upgrade server to devices
 # No device-initiated connections to image servers
 
-# Platform-specific firmware filename patterns by hardware platform
-firmware_filename_patterns:
-  # Nexus 9000 Series
-  nexus_9000:
-    N9K-C92384: "nxos64-cs.{{ target_version }}.M.bin"              # 92384 series
-    N9K-C93180: "nxos64-cs.{{ target_version }}.M.bin"              # 93180 series
-    N9K-C9300: "nxos64-cs.{{ target_version }}.M.bin"               # 9300 series
-    N9K-C9336: "nxos64-cs.{{ target_version }}.M.bin"               # 9336 series
-    N9K-C9348: "nxos64-cs.{{ target_version }}.M.bin"               # 9348 series
-    N9K-C9372: "nxos64-cs.{{ target_version }}.M.bin"               # 9372 series
-    N9K-C9396: "nxos64-cs.{{ target_version }}.M.bin"               # 9396 series
-    N9K-C9408: "nxos64-cs.{{ target_version }}.M.bin"               # 9408 series
-    N9K-C9500: "nxos64-cs.{{ target_version }}.M.bin"               # 9500 series
-    default: "nxos64-cs.{{ target_version }}.M.bin"                  # Generic 9K
-  # Nexus 7000 Series
-  nexus_7000:
-    N7K-C7004: "n7000-s2-dk9.{{ target_version }}.bin"              # 7004 chassis
-    N7K-C7009: "n7000-s2-dk9.{{ target_version }}.bin"              # 7009 chassis
-    N7K-C7018: "n7000-s2-dk9.{{ target_version }}.bin"              # 7018 chassis
-    N77-C7706: "n7700-s2-dk9.{{ target_version }}.bin"              # 7700 series
-    N77-C7710: "n7700-s2-dk9.{{ target_version }}.bin"              # 7700 series
-    default: "n7000-s2-dk9.{{ target_version }}.bin"                 # Generic 7K
-  # Nexus 5000 Series (Legacy)
-  nexus_5000:
-    N5K-C5548: "n5000-uk9.{{ target_version }}.bin"                 # 5548 switch
-    N5K-C5596: "n5000-uk9.{{ target_version }}.bin"                 # 5596 switch
-    N56-C5672: "n5600-uk9.{{ target_version }}.bin"                 # 5600 series
-    default: "n5000-uk9.{{ target_version }}.bin"                    # Generic 5K
-  # Nexus 3000 Series
-  nexus_3000:
-    N3K-C3548: "nxos64-msll.{{ target_version }}.M.bin"             # 3548 switch
-    N3K-C3048: "n3000-uk9.{{ target_version }}.bin"                 # 3048 switch
-    N3K-C3064: "n3000-uk9.{{ target_version }}.bin"                 # 3064 switch
-    N3K-C3172: "n3000-uk9-kickstart.{{ target_version }}.bin"       # 3172 switch
-    default: "n3000-uk9.{{ target_version }}.bin"                    # Generic 3K
-
-# EPLD firmware filename patterns
-epld_firmware_patterns:
-  # Nexus 9000 Series EPLD
-  nexus_9000:
-    default: "n9000-epld.{{ target_epld_version | default(target_version) }}.img"
-  # Other platforms use same pattern if EPLD is supported
-  nexus_7000:
-    default: "n7000-epld.{{ target_epld_version | default(target_version) }}.img"
-
-# Device model detection patterns for firmware selection
-device_model_patterns:
-  - { regex: "N9K-C923.*", platform: "nexus_9000", model_prefix: "N9K-C923" }  # 92384
-  - { regex: "N9K-C931.*", platform: "nexus_9000", model_prefix: "N9K-C931" }  # 93180
-  - { regex: "N9K-C93.*", platform: "nexus_9000", model_prefix: "N9K-C93" }
-  - { regex: "N9K-C94.*", platform: "nexus_9000", model_prefix: "N9K-C94" }
-  - { regex: "N9K-C95.*", platform: "nexus_9000", model_prefix: "N9K-C95" }
-  - { regex: "N9K-C96.*", platform: "nexus_9000", model_prefix: "N9K-C96" }
-  - { regex: "N7K-C70.*", platform: "nexus_7000", model_prefix: "N7K-C70" }
-  - { regex: "N77-C77.*", platform: "nexus_7000", model_prefix: "N77-C77" }
-  - { regex: "N5K-C5.*", platform: "nexus_5000", model_prefix: "N5K-C5" }
-  - { regex: "N56-C56.*", platform: "nexus_5000", model_prefix: "N56-C56" }
-  - { regex: "N3K-C354.*", platform: "nexus_3000", model_prefix: "N3K-C354" }  # 3548
-  - { regex: "N3K-C3.*", platform: "nexus_3000", model_prefix: "N3K-C3" }
-
 # Storage management
 min_free_space_mb: 2000
 cleanup_old_images: true
