@@ -11,7 +11,7 @@ This system provides automated firmware upgrade capabilities for:
 - **Opengear** (Console Servers/Smart PDUs) with multi-architecture support
 - **FortiOS** (Fortinet Firewalls) with HA coordination
 
-**Status**: Production ready for all platforms. See [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for detailed status.
+**Status**: Production ready for all platforms. See [Platform Implementation Status](docs/platform-implementation-status.md) for detailed status.
 
 ## Key Features
 
@@ -122,9 +122,9 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
 
 - **[📖 Documentation Hub](docs/README.md)** - Start here for comprehensive guides
 - **[⚙️ Installation Guide](docs/installation-guide.md)** - Step-by-step deployment  
-- **[🔄 Workflow Guide](docs/UPGRADE_WORKFLOW_GUIDE.md)** - Upgrade process and safety mechanisms
-- **[🏗️ Platform Guide](docs/PLATFORM_IMPLEMENTATION_GUIDE.md)** - Technical implementation details
-- **[📊 Implementation Status](docs/IMPLEMENTATION_STATUS.md)** - Current completion analysis
+- **[🔄 Workflow Guide](docs/upgrade-workflow-guide.md)** - Upgrade process and safety mechanisms
+- **[🏗️ Platform Guide](docs/platform-implementation-status.md)** - Technical implementation details
+- **[📊 Implementation Status](docs/platform-implementation-status.md)** - Current completion analysis
 - **[🧪 Testing Framework Guide](docs/testing-framework-guide.md)** - Comprehensive testing without physical devices
 - **[🧪 Molecule Testing Guide](docs/molecule-testing-guide.md)** - Role-specific container testing
 
@@ -260,8 +260,8 @@ network-upgrade-system/
 ## Documentation
 
 - 📘 [Installation Guide](docs/installation-guide.md) - Complete setup instructions
-- 🔄 [Upgrade Workflow Guide](docs/UPGRADE_WORKFLOW_GUIDE.md) - Upgrade process and safety mechanisms  
-- 🏗️ [Platform Implementation Guide](docs/PLATFORM_IMPLEMENTATION_GUIDE.md) - Technical implementation details
+- 🔄 [Upgrade Workflow Guide](docs/upgrade-workflow-guide.md) - Upgrade process and safety mechanisms  
+- 🏗️ [Platform Implementation Guide](docs/platform-implementation-status.md) - Technical implementation details
 - 📊 [Grafana Integration](docs/grafana-deployment.md) - Dashboard automation and monitoring  
 - 📖 [Documentation Hub](docs/README.md) - Complete documentation index
 
@@ -269,7 +269,7 @@ network-upgrade-system/
 
 For technical support and questions:
 - Check the [Installation Guide](docs/installation-guide.md) troubleshooting section
-- Review platform-specific procedures in [Platform Implementation Guide](docs/PLATFORM_IMPLEMENTATION_GUIDE.md)
+- Review platform-specific procedures in [Platform Implementation Guide](docs/platform-implementation-status.md)
 - Examine log files in `$HOME/.local/share/network-upgrade/logs/`
 - Use the built-in health check: `./scripts/system-health.sh`
 

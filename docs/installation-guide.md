@@ -572,7 +572,7 @@ After successful installation:
 5. **Process Documentation**: Document your specific upgrade procedures
 6. **Staff Training**: Train operations staff on the web interfaces and procedures
 
-For operational procedures, see the [Upgrade Workflow Guide](UPGRADE_WORKFLOW_GUIDE.md) and [Platform Implementation Guide](PLATFORM_IMPLEMENTATION_GUIDE.md).
+For operational procedures, see the [Upgrade Workflow Guide](upgrade-workflow-guide.md) and [Platform Implementation Guide](platform-implementation-status.md).
 
 ## Support and Maintenance
 
@@ -591,5 +591,5 @@ For operational procedures, see the [Upgrade Workflow Guide](UPGRADE_WORKFLOW_GU
 ### Getting Help
 - Check system health with `/usr/local/bin/network-upgrade-health`
 - Examine log files in `$HOME/.local/share/network-upgrade/logs/`
-- Review the [Platform Implementation Guide](PLATFORM_IMPLEMENTATION_GUIDE.md) for platform-specific issues
+- Review the [Platform Implementation Guide](platform-implementation-status.md) for platform-specific issues
 - See the [Documentation Hub](README.md) for comprehensive documentation

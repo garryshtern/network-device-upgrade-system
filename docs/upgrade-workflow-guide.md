@@ -272,104 +272,275 @@ graph TD
 ## Validation Framework Architecture
 
 ### Multi-Layer Validation Strategy
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                        COMPREHENSIVE VALIDATION FRAMEWORK                          │
-└─────────────────────────────────────────────────────────────────────────────────────┘
 
-     PRE-UPGRADE           DURING UPGRADE           POST-UPGRADE
-    ┌─────────────┐        ┌─────────────┐         ┌─────────────┐
-    │ BASELINE    │───────▶│ MONITORING  │────────▶│ COMPARISON  │
-    │ CAPTURE     │        │ & CHECKS    │         │ & ANALYSIS  │
-    └─────────────┘        └─────────────┘         └─────────────┘
-           │                       │                       │
-           ▼                       ▼                       ▼
-┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
-│ • BGP Neighbors     │  │ • Connectivity      │  │ • State Diff        │
-│ • Interface States  │  │ • Process Monitor   │  │ • Route Count       │
-│ • Routing Tables    │  │ • Error Detection   │  │ • Neighbor Status   │
-│ • ARP Tables        │  │ • Performance       │  │ • Protocol Health   │
-│ • Protocol Status   │  │ • Log Analysis      │  │ • Convergence Time  │
-│ • Multicast Trees   │  │ • System Health     │  │ • Performance       │
-│ • BFD Sessions      │  │ • Resource Usage    │  │ • Error Analysis    │
-│ • IPSec Tunnels     │  │ • Service Status    │  │ • Compliance Check  │
-│ • Optics Status     │  │ • Network Flow      │  │ • Rollback Decision │
-└─────────────────────┘  └─────────────────────┘  └─────────────────────┘
-           │                       │                       │
-           ▼                       ▼                       ▼
-     ┌─────────────┐        ┌─────────────┐         ┌─────────────┐
-     │ JSON Storage│        │ Real-time   │         │ InfluxDB    │
-     │ Local Files │        │ Streaming   │         │ Metrics     │
-     └─────────────┘        └─────────────┘         └─────────────┘
+```mermaid
+flowchart TD
+    subgraph VF["🛡️ COMPREHENSIVE VALIDATION FRAMEWORK"]
+        subgraph PreUpgrade["PRE-UPGRADE"]
+            BC[📊 BASELINE CAPTURE]
+
+            subgraph PreData["Baseline Data Collection"]
+                BGP[BGP Neighbors]
+                INTF[Interface States]
+                RT[Routing Tables]
+                ARP[ARP Tables]
+                PROTO[Protocol Status]
+                MC[Multicast Trees]
+                BFD[BFD Sessions]
+                IPSEC[IPSec Tunnels]
+                OPT[Optics Status]
+            end
+
+            JS[💾 JSON Storage<br/>Local Files]
+        end
+
+        subgraph DuringUpgrade["DURING UPGRADE"]
+            MC2[🔍 MONITORING & CHECKS]
+
+            subgraph MonData["Real-time Monitoring"]
+                CONN[Connectivity]
+                PM[Process Monitor]
+                ED[Error Detection]
+                PERF[Performance]
+                LA[Log Analysis]
+                SH[System Health]
+                RU[Resource Usage]
+                SS[Service Status]
+                NF[Network Flow]
+            end
+
+            RT2[📡 Real-time Streaming]
+        end
+
+        subgraph PostUpgrade["POST-UPGRADE"]
+            CA[📈 COMPARISON & ANALYSIS]
+
+            subgraph CompData["Analysis Results"]
+                SD[State Diff]
+                RC[Route Count]
+                NS[Neighbor Status]
+                PH[Protocol Health]
+                CT[Convergence Time]
+                PERF2[Performance]
+                EA[Error Analysis]
+                CC[Compliance Check]
+                RD[Rollback Decision]
+            end
+
+            IDB[📊 InfluxDB Metrics]
+        end
+    end
+
+    BC --> MC2
+    MC2 --> CA
+
+    BC --> PreData
+    PreData --> JS
+
+    MC2 --> MonData
+    MonData --> RT2
+
+    CA --> CompData
+    CompData --> IDB
+
+    style VF fill:#f9f9f9,stroke:#333,stroke-width:2px
+    style PreUpgrade fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    style DuringUpgrade fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style PostUpgrade fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
 ```
 
 ## Metrics and Observability Flow
 
 ### Real-Time Monitoring Pipeline
-```
-Network Devices ─────┐
-                     │
-                     ▼
-          ┌─────────────────────┐      ┌─────────────────────┐
-          │ Ansible Validation  │─────▶│ Structured Data     │
-          │ Tasks               │      │ Processing          │
-          │                     │      │                     │
-          │ • Command Execution │      │ • JSON Parsing      │
-          │ • Output Capture    │      │ • Data Validation   │
-          │ • State Analysis    │      │ • Metric Generation │
-          │ • Error Detection   │      │ • Tagging Strategy  │
-          └─────────────────────┘      └─────────────────────┘
-                     │                            │
-                     ▼                            ▼
-          ┌─────────────────────┐      ┌─────────────────────┐
-          │ Local Storage       │      │ InfluxDB Export     │
-          │                     │      │                     │
-          │ • Baseline Files    │      │ • Line Protocol     │
-          │ • Comparison Data   │      │ • Time Series       │
-          │ • Audit Logs        │      │ • Device Tags       │
-          │ • Error Context     │      │ • Status Metrics    │
-          └─────────────────────┘      └─────────────────────┘
-                     │                            │
-                     ▼                            ▼
-          ┌─────────────────────┐      ┌─────────────────────┐
-          │ AWX Job Logs        │      │ Grafana Dashboards │
-          │                     │      │                     │
-          │ • Execution History │      │ • Real-time Views   │
-          │ • Debug Information │      │ • Alert Rules       │
-          │ • Performance Data  │      │ • Trend Analysis    │
-          │ • User Actions      │      │ • Executive Reports │
-          └─────────────────────┘      └─────────────────────┘
+
+```mermaid
+flowchart TD
+    ND[🌐 Network Devices] --> AT[📋 Ansible Validation Tasks]
+
+    AT --> SDP[🔄 Structured Data Processing]
+    AT --> LS[💾 Local Storage]
+
+    SDP --> IE[📊 InfluxDB Export]
+    LS --> AJL[📄 AWX Job Logs]
+
+    IE --> GD[📈 Grafana Dashboards]
+    AJL --> GD
+
+    subgraph "Ansible Tasks"
+        AT1[Command Execution]
+        AT2[Output Capture]
+        AT3[State Analysis]
+        AT4[Error Detection]
+    end
+
+    subgraph "Data Processing"
+        SDP1[JSON Parsing]
+        SDP2[Data Validation]
+        SDP3[Metric Generation]
+        SDP4[Tagging Strategy]
+    end
+
+    subgraph "Local Storage"
+        LS1[Baseline Files]
+        LS2[Comparison Data]
+        LS3[Audit Logs]
+        LS4[Error Context]
+    end
+
+    subgraph "InfluxDB Export"
+        IE1[Line Protocol]
+        IE2[Time Series]
+        IE3[Device Tags]
+        IE4[Status Metrics]
+    end
+
+    subgraph "AWX Job Logs"
+        AJL1[Execution History]
+        AJL2[Debug Information]
+        AJL3[Performance Data]
+        AJL4[User Actions]
+    end
+
+    subgraph "Grafana Dashboards"
+        GD1[Real-time Views]
+        GD2[Alert Rules]
+        GD3[Trend Analysis]
+        GD4[Executive Reports]
+    end
+
+    AT -.-> AT1
+    AT -.-> AT2
+    AT -.-> AT3
+    AT -.-> AT4
+
+    SDP -.-> SDP1
+    SDP -.-> SDP2
+    SDP -.-> SDP3
+    SDP -.-> SDP4
+
+    LS -.-> LS1
+    LS -.-> LS2
+    LS -.-> LS3
+    LS -.-> LS4
+
+    IE -.-> IE1
+    IE -.-> IE2
+    IE -.-> IE3
+    IE -.-> IE4
+
+    AJL -.-> AJL1
+    AJL -.-> AJL2
+    AJL -.-> AJL3
+    AJL -.-> AJL4
+
+    GD -.-> GD1
+    GD -.-> GD2
+    GD -.-> GD3
+    GD -.-> GD4
+
+    style ND fill:#f9f9f9,stroke:#333,stroke-width:2px
+    style AT fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    style SDP fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style IE fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    style GD fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
 ```
 
 ## Operational Safety Features
 
 ### Built-in Safety Mechanisms
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                            OPERATIONAL SAFETY FRAMEWORK                             │
-└─────────────────────────────────────────────────────────────────────────────────────┘
 
-    PREVENTION              DETECTION               RECOVERY
-  ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
-  │ PRE-CHECKS  │────────▶│ MONITORING  │────────▶│ ROLLBACK    │
-  └─────────────┘         └─────────────┘         └─────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌───────────────┐       ┌───────────────┐       ┌───────────────┐
-│ • Permissions │       │ • Connectivity│       │ • Auto Restore│
-│ • Connectivity│       │ • Protocol    │       │ • Config Revert│
-│ • Disk Space  │       │ • Performance │       │ • Image Revert│
-│ • Image Hash  │       │ • Error Rate  │       │ • Boot Repair │
-│ • Dependencies│       │ • Response    │       │ • Network Fix │
-│ • Maintenance │       │ • Health      │       │ • Service Heal│
-│ • Approval    │       │ • Compliance  │       │ • Alert Notify│
-└───────────────┘       └───────────────┘       └───────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-  ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
-  │ GATE KEEPER │         │ REAL-TIME   │         │ RECOVERY    │
-  │ APPROVAL    │         │ TELEMETRY   │         │ VALIDATION  │
-  └─────────────┘         └─────────────┘         └─────────────┘
+```mermaid
+flowchart TD
+    subgraph OSF["🛡️ OPERATIONAL SAFETY FRAMEWORK"]
+        subgraph PREV["🔍 PREVENTION"]
+            PC[PRE-CHECKS]
+            PC --> PCD[Prevention Details]
+
+            subgraph "Pre-Check Items"
+                PC1[• Permissions]
+                PC2[• Connectivity]
+                PC3[• Disk Space]
+                PC4[• Image Hash]
+                PC5[• Dependencies]
+                PC6[• Maintenance]
+                PC7[• Approval]
+            end
+
+            PCD --> GK[GATE KEEPER<br/>APPROVAL]
+        end
+
+        subgraph DET["🔍 DETECTION"]
+            MON[MONITORING]
+            MON --> MD[Monitoring Details]
+
+            subgraph "Monitoring Items"
+                MON1[• Connectivity]
+                MON2[• Protocol]
+                MON3[• Performance]
+                MON4[• Error Rate]
+                MON5[• Response]
+                MON6[• Health]
+                MON7[• Compliance]
+            end
+
+            MD --> RT[REAL-TIME<br/>TELEMETRY]
+        end
+
+        subgraph REC["🔄 RECOVERY"]
+            RB[ROLLBACK]
+            RB --> RBD[Recovery Details]
+
+            subgraph "Recovery Items"
+                RB1[• Auto Restore]
+                RB2[• Config Revert]
+                RB3[• Image Revert]
+                RB4[• Boot Repair]
+                RB5[• Network Fix]
+                RB6[• Service Heal]
+                RB7[• Alert Notify]
+            end
+
+            RBD --> RV[RECOVERY<br/>VALIDATION]
+        end
+    end
+
+    PC --> MON
+    MON --> RB
+
+    PCD -.-> PC1
+    PCD -.-> PC2
+    PCD -.-> PC3
+    PCD -.-> PC4
+    PCD -.-> PC5
+    PCD -.-> PC6
+    PCD -.-> PC7
+
+    MD -.-> MON1
+    MD -.-> MON2
+    MD -.-> MON3
+    MD -.-> MON4
+    MD -.-> MON5
+    MD -.-> MON6
+    MD -.-> MON7
+
+    RBD -.-> RB1
+    RBD -.-> RB2
+    RBD -.-> RB3
+    RBD -.-> RB4
+    RBD -.-> RB5
+    RBD -.-> RB6
+    RBD -.-> RB7
+
+    style OSF fill:#f9f9f9,stroke:#333,stroke-width:3px
+    style PREV fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    style DET fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style REC fill:#ffebee,stroke:#f44336,stroke-width:2px
+    style PC fill:#c8e6c9
+    style MON fill:#ffcc80
+    style RB fill:#ffcdd2
+    style GK fill:#a5d6a7
+    style RT fill:#ffb74d
+    style RV fill:#ef9a9a
 ```
 
 This comprehensive workflow guide provides the visual foundation for understanding the system's operational approach, safety mechanisms, and platform-specific variations.

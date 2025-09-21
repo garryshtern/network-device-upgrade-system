@@ -9,8 +9,8 @@ This directory contains comprehensive documentation for the Network Device Upgra
 ```
 docs/
 ├── README.md                               # This documentation index
-├── PLATFORM_IMPLEMENTATION_STATUS.md      # Current platform implementation status
-├── PLATFORM_FILE_TRANSFER_GUIDE.md        # Platform-specific transfer methods and upgrade mechanisms
+├── platform-implementation-status.md      # Current platform implementation status
+├── platform-file-transfer-guide.md        # Platform-specific transfer methods and upgrade mechanisms
 ├── testing-framework-guide.md             # Comprehensive testing guide (consolidated)
 ├── molecule-testing-guide.md              # Role-specific container testing
 ├── installation-guide.md                  # Complete installation procedures
@@ -19,8 +19,8 @@ docs/
 ├── grafana-deployment.md                  # Grafana integration and dashboards
 ├── grafana-configuration-guide.md         # Grafana detailed configuration
 ├── critical-gaps-testing.md               # Critical gap testing framework
-├── UPGRADE_WORKFLOW_GUIDE.md               # Comprehensive workflow diagrams
-├── WORKFLOW_ARCHITECTURE.md               # GitHub Actions workflow architecture
+├── upgrade-workflow-guide.md               # Comprehensive workflow diagrams
+├── workflow-architecture.md               # GitHub Actions workflow architecture
 ├── ai-code-reviews/                       # AI-generated code review reports
 └── github-templates/                      # GitHub issue and PR templates
 ```
@@ -59,26 +59,26 @@ docs/
    - ISSU logic, HA coordination, and validation testing
 
 ### For Network Engineers
-4. **[Upgrade Workflow Guide](UPGRADE_WORKFLOW_GUIDE.md)** - Understand the upgrade process
+4. **[Upgrade Workflow Guide](upgrade-workflow-guide.md)** - Understand the upgrade process
    - Phase-separated upgrade architecture
    - Safety mechanisms and rollback procedures
    - Platform-specific workflow variations
    - Validation framework and error handling
 
-4.1. **[Platform File Transfer Guide](PLATFORM_FILE_TRANSFER_GUIDE.md)** - Transfer methods and upgrade mechanisms
+4.1. **[Platform File Transfer Guide](platform-file-transfer-guide.md)** - Transfer methods and upgrade mechanisms
    - API vs SCP transfer methods by vendor (FortiOS uses HTTPS API, others use SCP)
    - Security implications of different transfer methods
    - Platform-specific upgrade mechanisms and troubleshooting
    - Implementation code references and diagnostic procedures
 
 ### For Developers & Integrators
-5. **[Platform Implementation Guide](PLATFORM_IMPLEMENTATION_GUIDE.md)** - Technical implementation details
+5. **[Platform Implementation Guide](platform-implementation-status.md)** - Technical implementation details
    - Platform support matrix with visual status
    - Vendor-specific implementation details
    - Platform readiness status and implementation details
    - Architecture patterns for each platform
 
-6. **[Workflow Architecture Guide](WORKFLOW_ARCHITECTURE.md)** - CI/CD and automation architecture
+6. **[Workflow Architecture Guide](workflow-architecture.md)** - CI/CD and automation architecture
    - GitHub Actions workflow structure and optimization
    - Container build pipeline and deployment
    - Technology stack and testing framework
@@ -89,16 +89,16 @@ docs/
 The system follows a native service architecture with AWX orchestrating Ansible automation across network devices via systemd services.
 
 **For detailed architecture diagrams and flow charts, see**:
-- **[UPGRADE_WORKFLOW_GUIDE.md](UPGRADE_WORKFLOW_GUIDE.md)** - Comprehensive workflow diagrams
-- **[PLATFORM_IMPLEMENTATION_GUIDE.md](PLATFORM_IMPLEMENTATION_GUIDE.md)** - Platform-specific architecture
+- **[upgrade-workflow-guide.md](upgrade-workflow-guide.md)** - Comprehensive workflow diagrams
+- **[platform-implementation-status.md](platform-implementation-status.md)** - Platform-specific architecture
 
 ### Documentation Navigation by Role
 
 | Role | Start Here | Key Documents | Focus Areas |
 |------|------------|---------------|-------------|
 | **🔧 System Administrator** | [Installation Guide](installation-guide.md) | System setup, SSL, monitoring | Deployment & maintenance |
-| **👨‍💻 Network Engineer** | [Workflow Guide](UPGRADE_WORKFLOW_GUIDE.md) | Process flows, validation | Operations & troubleshooting |
-| **🛠️ Developer/Integrator** | [Platform Status](PLATFORM_IMPLEMENTATION_STATUS.md) | Architecture, status | Integration & customization |
+| **👨‍💻 Network Engineer** | [Workflow Guide](upgrade-workflow-guide.md) | Process flows, validation | Operations & troubleshooting |
+| **🛠️ Developer/Integrator** | [Platform Status](platform-implementation-status.md) | Architecture, status | Integration & customization |
 | **🧪 QA/Testing** | [Testing Framework Guide](testing-framework-guide.md) | Test coverage, 14/14 success | Quality assurance |
 
 ## 📊 Current Implementation Status
@@ -108,21 +108,21 @@ The system follows a native service architecture with AWX orchestrating Ansible 
 
 For detailed platform status and completion analysis, see:
 - **[README.md](../README.md)** - Current project status and overview
-- **[Platform Implementation Status](PLATFORM_IMPLEMENTATION_STATUS.md)** - Comprehensive platform analysis
+- **[Platform Implementation Status](platform-implementation-status.md)** - Comprehensive platform analysis
 
 ## 🎯 Documentation Quick Reference
 
 ### Essential Reading Order
 1. **[README.md](../README.md)** - Project overview and quick start
-2. **[Platform Implementation Status](PLATFORM_IMPLEMENTATION_STATUS.md)** - Current completion status
+2. **[Platform Implementation Status](platform-implementation-status.md)** - Current completion status
 3. **[Installation Guide](installation-guide.md)** - Deployment procedures
 4. **[Testing Framework Guide](testing-framework-guide.md)** - Quality assurance overview
-5. **[Workflow Guide](UPGRADE_WORKFLOW_GUIDE.md)** - Operational understanding
+5. **[Workflow Guide](upgrade-workflow-guide.md)** - Operational understanding
 6. **[Container Deployment Guide](container-deployment.md)** - Production container usage
 
 ### Reference Documents
 - **[CLAUDE.md](../CLAUDE.md)** - Developer guidance and testing procedures
-- **[Workflow Architecture](WORKFLOW_ARCHITECTURE.md)** - CI/CD pipeline details
+- **[Workflow Architecture](workflow-architecture.md)** - CI/CD pipeline details
 
 ### Visual Learning Path
 

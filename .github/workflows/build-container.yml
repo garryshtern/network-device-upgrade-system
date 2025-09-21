@@ -100,7 +100,7 @@ jobs:
             type=raw,value=${{ inputs.image_tag }},enable=${{ inputs.image_tag != '' }}
           labels: |
             org.opencontainers.image.title=Network Device Upgrade System
-            org.opencontainers.image.description=Production-ready AWX-based network device upgrade management system for 1000+ heterogeneous network devices with comprehensive validation, security, and monitoring. Supports Cisco NX-OS/IOS-XE, FortiOS, Opengear, and Metamako platforms with multi-step upgrades, EPLD support, and phase-separated workflows.
+            org.opencontainers.image.description=Automated network device firmware upgrade system using Ansible. Supports Cisco NX-OS/IOS-XE, FortiOS, Opengear, and Metamako with comprehensive validation and rollback.
             org.opencontainers.image.vendor=Network Operations
             org.opencontainers.image.documentation=https://github.com/${{ github.repository }}/tree/main/docs
             org.opencontainers.image.source=https://github.com/${{ github.repository }}

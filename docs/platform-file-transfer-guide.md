@@ -415,4 +415,4 @@ The main upgrade workflow (`ansible-content/playbooks/main-upgrade-workflow.yml`
 
 ---
 
-*This guide is part of the Network Device Upgrade System documentation. For related information, see [UPGRADE_WORKFLOW_GUIDE.md](UPGRADE_WORKFLOW_GUIDE.md) and [PLATFORM_IMPLEMENTATION_STATUS.md](PLATFORM_IMPLEMENTATION_STATUS.md).*
+*This guide is part of the Network Device Upgrade System documentation. For related information, see [upgrade-workflow-guide.md](upgrade-workflow-guide.md) and [platform-implementation-status.md](platform-implementation-status.md).*
