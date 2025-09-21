@@ -20,15 +20,15 @@ on:
         description: |
           Test level to run:
           - standard: Basic lint/syntax tests only (~5 min)
-          - comprehensive: Full test suite including all 14 test categories (~30 min)
-          - critical-gaps-only: Focus on critical gap tests and security validation (~10 min)
+          - comprehensive: Full test suite including all 14 categories (~30 min)
+          - critical-gaps-only: Critical gap tests and security validation (~10 min)
         required: false
         default: 'standard'
         type: choice
         options:
-        - 'standard'
-        - 'comprehensive'
-        - 'critical-gaps-only'
+          - 'standard'
+          - 'comprehensive'
+          - 'critical-gaps-only'
 
 permissions:
   contents: read
