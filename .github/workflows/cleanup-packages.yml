@@ -28,6 +28,11 @@ on:
         required: false
         default: '7'
         type: string
+      aggressive_sha_cleanup:
+        description: 'Aggressively remove SHA-only tagged images (older than 1 day)'
+        required: false
+        default: false
+        type: boolean
       dry_run:
         description: 'Preview deletions without actually removing packages'
         required: false
@@ -67,6 +72,7 @@ jobs:
           MAX_LIMIT="${{ github.event.inputs.max_deletions || '20' }}"
           DAYS_TO_KEEP="${{ github.event.inputs.days_to_keep || '7' }}"
           DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
+          AGGRESSIVE_SHA="${{ github.event.inputs.aggressive_sha_cleanup || 'false' }}"
 
           if [ "$DRY_RUN" = "true" ]; then
             echo "🔍 DRY RUN MODE: Will preview deletions without removing packages"
@@ -104,14 +110,29 @@ jobs:
               fi
 
               # Skip if keeping latest/main and this version has those tags
-              if [ "$KEEP_LATEST" = "true" ] && echo "$TAGS" | grep -qE '^(latest|main)$'; then
-                echo "📌 Keeping latest/main version: $VERSION_ID (tags: $(echo $TAGS | tr '\n' ' '))"
+              if [ "$KEEP_LATEST" = "true" ] && echo "$TAGS" | grep -qE '^(latest|main|stable|prod|production)$'; then
+                echo "📌 Keeping important tagged version: $VERSION_ID (tags: $(echo $TAGS | tr '\n' ' '))"
                 SKIPPED=$((SKIPPED + 1))
                 SKIP_VERSION=true
               fi
 
-              # Skip if version is newer than DAYS_TO_KEEP
-              if [ "$DAYS_TO_KEEP" -gt 0 ] && [ "$SKIP_VERSION" = "false" ]; then
+              # Aggressive SHA cleanup - delete SHA-only images older than 1 day
+              if [ "$AGGRESSIVE_SHA" = "true" ] && [ "$SKIP_VERSION" = "false" ]; then
+                # Check if this is a SHA-only tag (like main-abc1234)
+                if echo "$TAGS" | grep -qE '^[a-zA-Z]+-[a-f0-9]{7,}$' && ! echo "$TAGS" | grep -qE '^(latest|main|v[0-9])'; then
+                  SHA_CUTOFF_DATE=$(date -d "1 day ago" --iso-8601)
+                  if [ "$CREATED_AT" \> "$SHA_CUTOFF_DATE" ]; then
+                    echo "⏰ Keeping recent SHA version: $VERSION_ID (created: $CREATED_AT)"
+                    SKIPPED=$((SKIPPED + 1))
+                    SKIP_VERSION=true
+                  else
+                    echo "🔥 Aggressive SHA cleanup target: $VERSION_ID (tags: $(echo $TAGS | tr '\n' ' '))"
+                  fi
+                fi
+              fi
+
+              # Skip if version is newer than DAYS_TO_KEEP (normal cleanup)
+              if [ "$DAYS_TO_KEEP" -gt 0 ] && [ "$SKIP_VERSION" = "false" ] && [ "$AGGRESSIVE_SHA" = "false" ]; then
                 CUTOFF_DATE=$(date -d "$DAYS_TO_KEEP days ago" --iso-8601)
                 if [ "$CREATED_AT" \> "$CUTOFF_DATE" ]; then
                   echo "⏰ Keeping recent version: $VERSION_ID (created: $CREATED_AT)"
