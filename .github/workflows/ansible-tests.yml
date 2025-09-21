@@ -216,7 +216,7 @@ jobs:
                   assert response['status'] == 'success', f'{platform} show version returned error'
 
                   # Test device state management
-                  assert device.get_state() == DeviceState.ONLINE, f'{platform} not in online state'
+                  assert device.state == DeviceState.ONLINE, f'{platform} not in online state'
 
                   # Test platform-specific commands
                   if platform == 'cisco_nxos':
@@ -243,12 +243,12 @@ jobs:
               assert upgrade_resp['status'] == 'success', 'Upgrade initiation failed'
 
               # Verify device transitions through upgrade phases
-              initial_state = device.get_state()
+              initial_state = device.state
               assert initial_state == DeviceState.ONLINE, 'Device not in online state before upgrade'
 
               # Test state transitions during upgrade
-              device.set_state(DeviceState.UPGRADING)
-              assert device.get_state() == DeviceState.UPGRADING, 'Device failed to enter upgrading state'
+              device.state = DeviceState.UPGRADING
+              assert device.state == DeviceState.UPGRADING, 'Device failed to enter upgrading state'
 
               # Test upgrade phase tracking
               device.upgrade_phase = UpgradePhase.IMAGE_DOWNLOAD
@@ -268,15 +268,16 @@ jobs:
               # Test command execution errors
               error_resp = device.process_command('invalid_command_that_should_fail')
               assert error_resp['status'] == 'error', 'Invalid command should return error status'
-              assert 'error' in error_resp or 'message' in error_resp, 'Error response missing error details'
+              assert 'message' in error_resp, 'Error response missing message field'
+              assert 'Unknown command' in error_resp['message'], 'Error message not as expected'
 
               # Test device error state
-              device.set_state(DeviceState.ERROR)
-              assert device.get_state() == DeviceState.ERROR, 'Device failed to enter error state'
+              device.state = DeviceState.ERROR
+              assert device.state == DeviceState.ERROR, 'Device failed to enter error state'
 
               # Test recovery from error state
-              device.set_state(DeviceState.ONLINE)
-              assert device.get_state() == DeviceState.ONLINE, 'Device failed to recover from error state'
+              device.state = DeviceState.ONLINE
+              assert device.state == DeviceState.ONLINE, 'Device failed to recover from error state'
 
               print("    ✅ Error scenarios and recovery: PASSED")
               print("✅ Error handling mechanisms verified successfully\n")
@@ -386,7 +387,7 @@ jobs:
                   'device_id': device_id,
                   'platform': platform,
                   'ip': f'192.168.100.{len(device_configs) + 10}',
-                  'state': str(device.get_state().value),
+                  'state': str(device.state.value),
                   'firmware_version': device.config.firmware_version
               }
               device_configs.append(config)
