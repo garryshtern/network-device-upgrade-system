@@ -47,10 +47,26 @@ jobs:
         run: |
           echo "🗑️  Starting artifact cleanup..."
 
-          # Fetch all artifacts
+          # Fetch all artifacts with pagination
           echo "📋 Fetching artifact list..."
-          gh api "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
-            --jq '.artifacts[] | .id' > /tmp/artifact_ids.txt
+          > /tmp/artifact_ids.txt
+          page=1
+          while true; do
+            echo "📄 Fetching page $page..."
+            response=$(gh api "repos/${{ github.repository }}/actions/artifacts?per_page=100&page=$page")
+            artifacts=$(echo "$response" | jq -r '.artifacts[] | .id')
+
+            if [ -z "$artifacts" ]; then
+              echo "📄 No more artifacts found on page $page"
+              break
+            fi
+
+            echo "$artifacts" >> /tmp/artifact_ids.txt
+            page=$((page + 1))
+
+            # Add small delay to avoid rate limiting
+            sleep 0.1
+          done
 
           if [ ! -s /tmp/artifact_ids.txt ]; then
             echo "📭 No artifacts found to delete"

@@ -78,10 +78,26 @@ jobs:
             echo "🔍 DRY RUN MODE: Will preview deletions without removing packages"
           fi
 
-          # Get all package versions with creation dates
+          # Get all package versions with creation dates (handle pagination)
           echo "📋 Fetching package versions..."
-          gh api "user/packages/container/$PACKAGE_NAME/versions" \
-            --jq '.[] | {id: .id, tags: .metadata.container.tags, created_at: .created_at}' > /tmp/package_versions.json
+          > /tmp/package_versions.json
+          page=1
+          while true; do
+            echo "📄 Fetching package versions page $page..."
+            response=$(gh api "user/packages/container/$PACKAGE_NAME/versions?per_page=100&page=$page")
+            versions=$(echo "$response" | jq -c '.[] | {id: .id, tags: .metadata.container.tags, created_at: .created_at}')
+
+            if [ -z "$versions" ]; then
+              echo "📄 No more package versions found on page $page"
+              break
+            fi
+
+            echo "$versions" >> /tmp/package_versions.json
+            page=$((page + 1))
+
+            # Add small delay to avoid rate limiting
+            sleep 0.1
+          done
 
           if [ ! -s /tmp/package_versions.json ]; then
             echo "📭 No package versions found"
