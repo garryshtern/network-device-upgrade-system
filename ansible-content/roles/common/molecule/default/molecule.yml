@@ -1,0 +1,104 @@
+---
+# Critical Gap #8: Common Role Shared Utilities Testing
+# Business Impact: Cross-platform failures in shared functionality
+# Risk: Foundation utilities affecting all network operations
+dependency:
+  name: galaxy
+  options:
+    requirements-file: >
+      ../../../../../ansible-content/collections/requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: common-role-test-instance
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+    capabilities:
+      - NET_ADMIN
+    privileged: false
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      host_key_checking: false
+      stdout_callback: yaml
+  inventory:
+    host_vars:
+      common-role-test-instance:
+        ansible_connection: local
+
+        # Common role test configuration
+        test_connectivity: true
+        test_health_checks: true
+        test_storage_cleanup: true
+        test_metrics_export: true
+        test_error_handling: true
+
+        # Mock device configuration for testing
+        device_type: "test_device"
+        device_platform: "generic"
+        device_hostname: "test-device-01"
+        device_ip: "192.168.1.100"
+
+        # Connectivity test parameters
+        connectivity_timeout: 60
+        ping_timeout: 30
+        ssh_timeout: 45
+
+        # Health check parameters
+        health_check_categories:
+          - "connectivity"
+          - "storage"
+          - "performance"
+          - "configuration"
+
+        # Storage cleanup parameters
+        storage_paths:
+          - "/tmp/test-storage/logs"
+          - "/tmp/test-storage/temp"
+          - "/tmp/test-storage/cache"
+        cleanup_age_days: 7
+        preserve_recent_files: true
+
+        # Metrics export configuration
+        metrics_export_enabled: true
+        influxdb_enabled: false  # Disabled for testing
+        prometheus_enabled: false  # Disabled for testing
+        export_formats: ["json", "yaml"]
+
+        # Error handling test scenarios
+        error_scenarios:
+          - name: "connection_timeout"
+            error_type: "timeout"
+            expected_behavior: "retry"
+          - name: "authentication_failure"
+            error_type: "auth"
+            expected_behavior: "fail_fast"
+          - name: "command_failure"
+            error_type: "command"
+            expected_behavior: "log_and_continue"
+
+verifier:
+  name: ansible
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

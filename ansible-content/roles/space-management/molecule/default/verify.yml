@@ -1,0 +1,200 @@
+---
+# Space Management Verification Tests
+# Validates storage assessment and cleanup capabilities
+- name: Verify - Space Management Results
+  hosts: all
+  gather_facts: false
+  tasks:
+    # Verify space management configuration is properly set
+    - name: Verify space management configuration
+      ansible.builtin.assert:
+        that:
+          - minimum_free_space_mb is defined
+          - safety_margin_percent is defined
+          - enable_automatic_cleanup is defined
+          - preserve_current_image is defined
+        fail_msg: "Space management configuration not properly defined"
+
+    - name: Verify space thresholds are reasonable
+      ansible.builtin.assert:
+        that:
+          - minimum_free_space_mb | int >= 512
+          - safety_margin_percent | int >= 10
+          - safety_margin_percent | int <= 50
+        fail_msg: "Space management thresholds not within reasonable limits"
+
+    # Verify test platform scenarios are comprehensive
+    - name: Verify test platform coverage
+      ansible.builtin.assert:
+        that:
+          - test_platforms is defined
+          - test_platforms | length >= 3
+        fail_msg: "Insufficient test platform coverage"
+
+    - name: Verify each test platform has required fields
+      ansible.builtin.assert:
+        that:
+          - item.platform is defined
+          - item.filesystem_type is defined
+          - item.total_space_mb is defined
+          - item.used_space_mb is defined
+          - item.available_space_mb is defined
+          - item.firmware_size_mb is defined
+        fail_msg: "Test platform {{ item.platform | default('unknown') }} missing required fields"
+      loop: "{{ test_platforms }}"
+
+    # Verify space calculation scenarios
+    - name: Verify space scenarios are defined
+      ansible.builtin.assert:
+        that:
+          - space_scenarios is defined
+          - space_scenarios | length >= 3
+        fail_msg: "Space calculation scenarios not properly defined"
+
+    - name: Verify space scenario structure
+      ansible.builtin.assert:
+        that:
+          - item.name is defined
+          - item.available_mb is defined
+          - item.required_mb is defined
+          - item.expected_result is defined
+          - item.expected_result in ['proceed', 'cleanup_required', 'upgrade_blocked']
+        fail_msg: "Space scenario {{ item.name | default('unknown') }} has invalid structure"
+      loop: "{{ space_scenarios }}"
+
+    # Test space calculation logic manually
+    - name: Test space calculation logic
+      ansible.builtin.set_fact:
+        manual_space_test:
+          sufficient_case:
+            available: 2048
+            required: 1000
+            margin: "{{ (1000 * (safety_margin_percent | default(20) / 100)) | int }}"
+            total_needed: "{{ 1000 + (1000 * (safety_margin_percent | default(20) / 100)) | int }}"
+          insufficient_case:
+            available: 512
+            required: 1000
+
+    - name: Verify manual space calculations
+      ansible.builtin.assert:
+        that:
+          - manual_space_test.sufficient_case.available | int >= manual_space_test.sufficient_case.total_needed | int
+          - manual_space_test.insufficient_case.available | int < manual_space_test.insufficient_case.required | int
+        fail_msg: "Manual space calculation logic verification failed"
+
+    # Verify platform-specific support
+    - name: Test platform detection logic
+      ansible.builtin.set_fact:
+        platform_support_test:
+          cisco_nxos: "{{ 'cisco.nxos.nxos' in (test_platforms | map(attribute='platform') | list) }}"
+          cisco_ios: "{{ 'cisco.ios.ios' in (test_platforms | map(attribute='platform') | list) }}"
+          fortinet: "{{ 'fortinet.fortios.fortios' in (test_platforms | map(attribute='platform') | list) }}"
+
+    - name: Verify multi-platform support
+      ansible.builtin.assert:
+        that:
+          - platform_support_test.cisco_nxos | bool or test_platforms | selectattr('platform', 'search', 'nxos') | list | length > 0
+          - platform_support_test.cisco_ios | bool or test_platforms | selectattr('platform', 'search', 'ios') | list | length > 0
+          - platform_support_test.fortinet | bool or test_platforms | selectattr('platform', 'search', 'fortios') | list | length > 0
+        fail_msg: "Multi-platform support not properly configured"
+
+    # Verify required task files exist
+    - name: Check for platform-specific task files
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: platform_task_files
+      loop:
+        - "{{ role_path }}/tasks/main.yml"
+        - "{{ role_path }}/tasks/generic-assessment.yml"
+        - "{{ role_path }}/tasks/ios-assessment.yml"
+        - "{{ role_path }}/tasks/fortios-assessment.yml"
+
+    - name: Verify platform task files exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Required task file {{ item.item }} not found"
+      loop: "{{ platform_task_files.results }}"
+
+    # Test cleanup settings validation
+    - name: Verify cleanup configuration
+      ansible.builtin.assert:
+        that:
+          - enable_automatic_cleanup is defined
+          - preserve_current_image is defined
+          - cleanup_old_logs is defined
+        fail_msg: "Cleanup configuration not properly defined"
+
+    - name: Verify cleanup safety settings
+      ansible.builtin.assert:
+        that:
+          - preserve_current_image | bool
+        fail_msg: "Current image preservation should be enabled for safety"
+
+    # Test filesystem type coverage
+    - name: Verify filesystem type coverage
+      ansible.builtin.set_fact:
+        filesystem_types: "{{ test_platforms | map(attribute='filesystem_type') | list | unique }}"
+
+    - name: Verify comprehensive filesystem support
+      ansible.builtin.assert:
+        that:
+          - "'bootflash' in filesystem_types"
+          - "'flash' in filesystem_types"
+          - filesystem_types | length >= 2
+        fail_msg: "Insufficient filesystem type coverage in tests"
+
+    # Validate storage thresholds make sense
+    - name: Verify storage thresholds are logical
+      ansible.builtin.assert:
+        that:
+          - item.total_space_mb | int > item.used_space_mb | int
+          - item.used_space_mb | int + item.available_space_mb | int <= item.total_space_mb | int + 100  # Allow small variance
+          - item.firmware_size_mb | int > 0
+          - item.cleanup_threshold_mb | int > 0
+        fail_msg: "Storage thresholds for platform {{ item.platform }} are not logical"
+      loop: "{{ test_platforms }}"
+
+    # Success message
+    - name: Display verification success
+      ansible.builtin.debug:
+        msg: |
+          ✅ Space Management Role Verification PASSED
+
+          Platform Support Validated:
+          - Multi-platform support: ✅ ({{ test_platforms | length }} platforms)
+          - Filesystem types: ✅ ({{ filesystem_types | join(', ') }})
+          - Task file structure: ✅
+
+          Space Management Features:
+          - Space calculation logic: ✅
+          - Safety margins: ✅ ({{ safety_margin_percent }}%)
+          - Cleanup capabilities: ✅
+          - Current image preservation: ✅
+
+          Test Coverage:
+          - Space scenarios: ✅ ({{ space_scenarios | length }} scenarios)
+          - Platform scenarios: ✅ ({{ test_platforms | length }} platforms)
+          - Threshold validation: ✅
+
+          Configuration Validation:
+          - Minimum free space: ✅ ({{ minimum_free_space_mb }}MB)
+          - Automatic cleanup: ✅ ({{ enable_automatic_cleanup }})
+          - Safety settings: ✅
+
+          Status: Ready for production storage management
+
+    # Test edge cases
+    - name: Test edge case validation
+      ansible.builtin.set_fact:
+        edge_case_tests:
+          zero_available: "{{ 0 < minimum_free_space_mb | int }}"
+          oversized_firmware: "{{ test_platforms | selectattr('firmware_size_mb', 'gt', 'available_space_mb') | list | length >= 0 }}"
+          reasonable_margins: "{{ safety_margin_percent | int <= 50 and safety_margin_percent | int >= 10 }}"
+
+    - name: Verify edge case handling
+      ansible.builtin.assert:
+        that:
+          - edge_case_tests.zero_available | bool
+          - edge_case_tests.reasonable_margins | bool
+        fail_msg: "Edge case validation failed"

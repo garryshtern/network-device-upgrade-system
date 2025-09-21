@@ -1,0 +1,358 @@
+---
+# Common Role Test Environment Preparation
+# Sets up environment for testing shared utilities across platforms
+- name: Prepare - Setup Common Role Test Environment
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install system dependencies for common utilities testing
+      ansible.builtin.package:
+        name:
+          - python3-pip
+          - curl
+          - netcat-openbsd
+          - iputils-ping
+        state: present
+      become: true
+      ignore_errors: true  # May not be available in container
+
+    - name: Install Python libraries for common utilities
+      ansible.builtin.pip:
+        name:
+          - psutil
+          - requests
+          - pyyaml
+          - jsonschema
+          - influxdb-client
+        state: present
+      ignore_errors: true
+
+    - name: Create comprehensive test environment structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        # Core testing directories
+        - /tmp/common-utilities-test
+        - /tmp/common-utilities-test/connectivity
+        - /tmp/common-utilities-test/health
+        - /tmp/common-utilities-test/storage
+        - /tmp/common-utilities-test/metrics
+        - /tmp/common-utilities-test/errors
+        - /tmp/common-utilities-test/config
+
+        # Storage testing subdirectories
+        - /tmp/common-utilities-test/storage/logs
+        - /tmp/common-utilities-test/storage/temp
+        - /tmp/common-utilities-test/storage/cache
+        - /tmp/common-utilities-test/storage/backup
+
+        # Metrics export directories
+        - /tmp/common-utilities-test/metrics/json
+        - /tmp/common-utilities-test/metrics/yaml
+        - /tmp/common-utilities-test/metrics/csv
+        - /tmp/common-utilities-test/metrics/prometheus
+
+    - name: Create mock network connectivity tools
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Mock network connectivity testing tools
+          case "$1" in
+            "ping")
+              HOST="$2"
+              echo "PING $HOST 56(84) bytes of data."
+              echo "64 bytes from $HOST: icmp_seq=1 ttl=64 time=0.5 ms"
+              echo "64 bytes from $HOST: icmp_seq=2 ttl=64 time=0.3 ms"
+              echo "--- $HOST ping statistics ---"
+              echo "2 packets transmitted, 2 received, 0% packet loss"
+              exit 0
+              ;;
+            "ssh_test")
+              HOST="$2"
+              echo "SSH connection to $HOST: SUCCESS"
+              echo "Authentication: OK"
+              echo "Shell access: AVAILABLE"
+              exit 0
+              ;;
+            "telnet_test")
+              HOST="$2"
+              PORT="${3:-23}"
+              echo "Trying $HOST $PORT..."
+              echo "Connected to $HOST."
+              exit 0
+              ;;
+            *)
+              echo "Mock connectivity tool: $*"
+              exit 0
+              ;;
+          esac
+        dest: /tmp/common-utilities-test/connectivity/mock-network-tools
+        mode: '0755'
+
+    - name: Create mock health monitoring tools
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Mock health monitoring tools
+          case "$1" in
+            "cpu_check")
+              echo "CPU Usage: 45.2%"
+              echo "Load Average: 1.2, 1.1, 1.0"
+              echo "Status: HEALTHY"
+              ;;
+            "memory_check")
+              echo "Memory Usage: 67.8%"
+              echo "Total: 8GB, Used: 5.4GB, Free: 2.6GB"
+              echo "Status: HEALTHY"
+              ;;
+            "disk_check")
+              echo "Disk Usage: 23.1%"
+              echo "Total: 100GB, Used: 23GB, Free: 77GB"
+              echo "Status: HEALTHY"
+              ;;
+            "network_check")
+              echo "Network Interfaces: 2 active"
+              echo "Bandwidth utilization: 15%"
+              echo "Status: HEALTHY"
+              ;;
+            *)
+              echo "Health check: $1 - PASS"
+              ;;
+          esac
+        dest: /tmp/common-utilities-test/health/mock-health-monitor
+        mode: '0755'
+
+    - name: Create test files for storage cleanup validation
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "/tmp/common-utilities-test/storage/{{ item.path }}"
+        mode: '0644'
+      loop:
+        # Old log files (should be cleaned up)
+        - path: "logs/old-system-2023-07-01.log"
+          content: "Old system log from July 2023"
+        - path: "logs/old-application-2023-07-15.log"
+          content: "Old application log from July 2023"
+        - path: "logs/old-security-2023-08-01.log"
+          content: "Old security log from August 2023"
+
+        # Recent log files (should be preserved)
+        - path: "logs/current-system.log"
+          content: "Current system log - should be preserved"
+        - path: "logs/recent-application-2023-09-15.log"
+          content: "Recent application log - should be preserved"
+
+        # Temporary files
+        - path: "temp/temp-file-001.tmp"
+          content: "Temporary file 1"
+        - path: "temp/temp-file-002.tmp"
+          content: "Temporary file 2"
+        - path: "cache/cache-data.cache"
+          content: "Cached data file"
+
+    - name: Create storage cleanup configuration
+      ansible.builtin.copy:
+        content: |
+          # Storage Cleanup Configuration
+          cleanup_policies:
+            logs:
+              max_age_days: 7
+              preserve_pattern: "current-*"
+              compress_before_delete: true
+            temp:
+              max_age_days: 1
+              preserve_pattern: "important-*"
+              compress_before_delete: false
+            cache:
+              max_age_days: 3
+              preserve_pattern: "persistent-*"
+              compress_before_delete: false
+
+          safety_settings:
+            preserve_recent_files: true
+            minimum_free_space_mb: 1024
+            dry_run_first: true
+        dest: /tmp/common-utilities-test/storage/cleanup-config.yml
+        mode: '0644'
+
+    - name: Create mock metrics export tools
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Mock metrics export functionality
+          FORMAT="$1"
+          OUTPUT_FILE="$2"
+
+          case "$FORMAT" in
+            "json")
+              cat > "$OUTPUT_FILE" << EOF
+          {
+            "timestamp": $(date +%s),
+            "device": "test-device-01",
+            "metrics": {
+              "cpu_usage_percent": 45.2,
+              "memory_usage_percent": 67.8,
+              "disk_usage_percent": 23.1,
+              "network_throughput_mbps": 125.4,
+              "uptime_hours": 168
+            },
+            "status": "healthy"
+          }
+          EOF
+              ;;
+            "yaml")
+              cat > "$OUTPUT_FILE" << EOF
+          timestamp: $(date +%s)
+          device: test-device-01
+          metrics:
+            cpu_usage_percent: 45.2
+            memory_usage_percent: 67.8
+            disk_usage_percent: 23.1
+            network_throughput_mbps: 125.4
+            uptime_hours: 168
+          status: healthy
+          EOF
+              ;;
+            "prometheus")
+              cat > "$OUTPUT_FILE" << EOF
+          # HELP cpu_usage_percent Current CPU usage percentage
+          # TYPE cpu_usage_percent gauge
+          cpu_usage_percent{device="test-device-01"} 45.2
+
+          # HELP memory_usage_percent Current memory usage percentage
+          # TYPE memory_usage_percent gauge
+          memory_usage_percent{device="test-device-01"} 67.8
+
+          # HELP disk_usage_percent Current disk usage percentage
+          # TYPE disk_usage_percent gauge
+          disk_usage_percent{device="test-device-01"} 23.1
+          EOF
+              ;;
+            *)
+              echo "Unsupported format: $FORMAT"
+              exit 1
+              ;;
+          esac
+          echo "Metrics exported to $OUTPUT_FILE in $FORMAT format"
+        dest: /tmp/common-utilities-test/metrics/export-metrics
+        mode: '0755'
+
+    - name: Create error handling test scenarios
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Mock error scenario generator
+          SCENARIO="$1"
+
+          case "$SCENARIO" in
+            "connection_timeout")
+              echo "ERROR: Connection timeout after 60 seconds"
+              echo "BEHAVIOR: Implementing retry logic..."
+              echo "RETRY: Attempt 1 of 3"
+              sleep 1
+              echo "RETRY: Connection successful on retry"
+              exit 0
+              ;;
+            "authentication_failure")
+              echo "ERROR: Authentication failed"
+              echo "BEHAVIOR: Failing fast - no retry for auth errors"
+              exit 1
+              ;;
+            "command_failure")
+              echo "ERROR: Command execution failed"
+              echo "BEHAVIOR: Logging error and continuing..."
+              echo "LOG: Command failure recorded in error log"
+              exit 0
+              ;;
+            *)
+              echo "Unknown error scenario: $SCENARIO"
+              exit 1
+              ;;
+          esac
+        dest: /tmp/common-utilities-test/errors/error-simulator
+        mode: '0755'
+
+    - name: Create common utilities configuration files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "/tmp/common-utilities-test/config/{{ item.name }}"
+        mode: '0644'
+      loop:
+        - name: "connectivity-config.yml"
+          content: |
+            connectivity:
+              timeout_seconds: 60
+              retry_attempts: 3
+              retry_delay_seconds: 5
+              ping_count: 4
+              ssh_port: 22
+              telnet_port: 23
+
+        - name: "health-config.yml"
+          content: |
+            health_monitoring:
+              check_interval_minutes: 5
+              thresholds:
+                cpu_warning_percent: 80
+                cpu_critical_percent: 95
+                memory_warning_percent: 85
+                memory_critical_percent: 95
+                disk_warning_percent: 90
+                disk_critical_percent: 98
+              categories:
+                - connectivity
+                - storage
+                - performance
+                - configuration
+
+        - name: "metrics-config.yml"
+          content: |
+            metrics_export:
+              enabled: true
+              export_interval_minutes: 5
+              formats:
+                - json
+                - yaml
+                - prometheus
+              destinations:
+                influxdb:
+                  enabled: false
+                  url: "http://localhost:8086"
+                prometheus:
+                  enabled: false
+                  pushgateway: "http://localhost:9091"
+
+    - name: Setup test environment variables
+      ansible.builtin.set_fact:
+        common_test_env:
+          base_path: "/tmp/common-utilities-test"
+          tools_path: "/tmp/common-utilities-test"
+          config_path: "/tmp/common-utilities-test/config"
+          test_mode: true
+
+    - name: Validate common utilities test environment
+      ansible.builtin.debug:
+        msg: |
+          Common Utilities Test Environment Prepared:
+          - Connectivity tools: ✅ (ping, ssh, telnet simulation)
+          - Health monitoring: ✅ (cpu, memory, disk, network)
+          - Storage cleanup: ✅ (logs, temp, cache management)
+          - Metrics export: ✅ (JSON, YAML, Prometheus formats)
+          - Error handling: ✅ (timeout, auth, command scenarios)
+
+          Test Capabilities:
+          - Cross-platform utility testing
+          - Safety validation (preserve recent files)
+          - Multi-format metrics export
+          - Comprehensive error scenario handling
+          - Health threshold validation
+
+          Configuration Files:
+          - Connectivity settings: ✅
+          - Health monitoring thresholds: ✅
+          - Metrics export configuration: ✅
+          - Storage cleanup policies: ✅
+
+          Ready for comprehensive common utilities testing

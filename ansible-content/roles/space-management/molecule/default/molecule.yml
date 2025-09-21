@@ -1,0 +1,103 @@
+---
+# Critical Gap #7: Space Management Testing
+# Business Impact: Deployment failures due to insufficient storage
+# Risk: Failed upgrades, service disruption, manual intervention required
+dependency:
+  name: galaxy
+  options:
+    requirements-file: >
+      ../../../../../ansible-content/collections/requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: space-mgmt-test-instance
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+    capabilities:
+      - DAC_OVERRIDE
+    privileged: false
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      host_key_checking: false
+      stdout_callback: yaml
+  inventory:
+    host_vars:
+      space-mgmt-test-instance:
+        ansible_connection: local
+
+        # Test multiple platform scenarios
+        test_platforms:
+          - platform: "cisco.nxos.nxos"
+            filesystem_type: "bootflash"
+            total_space_mb: 8192
+            used_space_mb: 6144
+            available_space_mb: 2048
+            firmware_size_mb: 1800
+            cleanup_threshold_mb: 1000
+
+          - platform: "cisco.ios.ios"
+            filesystem_type: "flash"
+            total_space_mb: 4096
+            used_space_mb: 3000
+            available_space_mb: 1096
+            firmware_size_mb: 800
+            cleanup_threshold_mb: 500
+
+          - platform: "fortinet.fortios.fortios"
+            filesystem_type: "disk"
+            total_space_mb: 2048
+            used_space_mb: 1200
+            available_space_mb: 848
+            firmware_size_mb: 600
+            cleanup_threshold_mb: 300
+
+        # Space management configuration
+        minimum_free_space_mb: 1024
+        safety_margin_percent: 20
+        enable_automatic_cleanup: true
+        preserve_current_image: true
+        cleanup_old_logs: true
+
+        # Test scenarios for different space conditions
+        space_scenarios:
+          - name: "sufficient_space"
+            available_mb: 2048
+            required_mb: 1000
+            expected_result: "proceed"
+
+          - name: "insufficient_space"
+            available_mb: 512
+            required_mb: 1000
+            expected_result: "cleanup_required"
+
+          - name: "critical_low_space"
+            available_mb: 100
+            required_mb: 1000
+            expected_result: "upgrade_blocked"
+
+verifier:
+  name: ansible
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

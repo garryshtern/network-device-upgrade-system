@@ -1,0 +1,174 @@
+---
+# Space Management Test Playbook
+# Tests storage assessment and cleanup across multiple platforms
+- name: Converge - Test Space Management Role
+  hosts: all
+  gather_facts: false
+  vars:
+    # Test different platform scenarios
+    test_platform_scenarios:
+      - ansible_network_os: "cisco.nxos.nxos"
+        platform_name: "NX-OS"
+      - ansible_network_os: "cisco.ios.ios"
+        platform_name: "IOS"
+      - ansible_network_os: "fortinet.fortios.fortios"
+        platform_name: "FortiOS"
+      - ansible_network_os: "undefined"
+        platform_name: "Generic"
+
+  pre_tasks:
+    - name: Install required packages for space management testing
+      ansible.builtin.pip:
+        name:
+          - psutil
+        state: present
+      ignore_errors: true
+
+    - name: Create mock filesystem structure for testing
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /tmp/mock-filesystem
+        - /tmp/mock-filesystem/bootflash
+        - /tmp/mock-filesystem/flash
+        - /tmp/mock-filesystem/disk
+        - /tmp/mock-filesystem/logs
+        - /tmp/mock-filesystem/images
+
+    - name: Create mock filesystem usage files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "/tmp/mock-filesystem/{{ item.name }}"
+        mode: '0644'
+      loop:
+        - name: "bootflash/usage.txt"
+          content: |
+            Filesystem: bootflash
+            Total: 8192MB
+            Used: 6144MB
+            Available: 2048MB
+            Usage: 75%
+
+        - name: "flash/usage.txt"
+          content: |
+            Filesystem: flash
+            Total: 4096MB
+            Used: 3000MB
+            Available: 1096MB
+            Usage: 73%
+
+        - name: "disk/usage.txt"
+          content: |
+            Filesystem: disk
+            Total: 2048MB
+            Used: 1200MB
+            Available: 848MB
+            Usage: 59%
+
+    - name: Create mock old firmware files for cleanup testing
+      ansible.builtin.copy:
+        content: "Mock old firmware {{ item }}"
+        dest: "/tmp/mock-filesystem/images/old-firmware-{{ item }}.bin"
+        mode: '0644'
+      loop:
+        - "v1.0"
+        - "v1.1"
+        - "v1.2"
+
+    - name: Create mock log files for cleanup testing
+      ansible.builtin.copy:
+        content: "Log data {{ item }}"
+        dest: "/tmp/mock-filesystem/logs/old-log-{{ item }}.log"
+        mode: '0644'
+      loop:
+        - "2023-01"
+        - "2023-02"
+        - "2023-03"
+
+  tasks:
+    # Test space management role with different platform scenarios
+    - name: Test space management for each platform
+      ansible.builtin.include_role:
+        name: space-management
+      vars:
+        ansible_network_os: "{{ item.ansible_network_os }}"
+        test_mode: true
+        mock_filesystem_path: "/tmp/mock-filesystem"
+      loop: "{{ test_platform_scenarios }}"
+      loop_control:
+        loop_var: platform_scenario
+
+    # Test space calculation logic
+    - name: Test space calculation scenarios
+      ansible.builtin.set_fact:
+        space_test_results: |
+          {%- set results = [] -%}
+          {%- for scenario in space_scenarios -%}
+            {%- set available = scenario.available_mb | int -%}
+            {%- set required = scenario.required_mb | int -%}
+            {%- set safety_margin = (required * (safety_margin_percent | default(20) / 100)) | int -%}
+            {%- set total_required = required + safety_margin -%}
+            {%- if available >= total_required -%}
+              {%- set result = "proceed" -%}
+            {%- elif available >= required -%}
+              {%- set result = "cleanup_required" -%}
+            {%- else -%}
+              {%- set result = "upgrade_blocked" -%}
+            {%- endif -%}
+            {%- set _ = results.append({
+                'name': scenario.name,
+                'available': available,
+                'required': required,
+                'safety_margin': safety_margin,
+                'total_required': total_required,
+                'calculated_result': result,
+                'expected_result': scenario.expected_result
+              }) -%}
+          {%- endfor -%}
+          {{ results }}
+
+    - name: Validate space calculation logic
+      ansible.builtin.assert:
+        that:
+          - item.calculated_result == item.expected_result
+        fail_msg: "Space calculation failed for {{ item.name }}: expected {{ item.expected_result }}, got {{ item.calculated_result }}"
+      loop: "{{ space_test_results }}"
+
+    # Test filesystem detection and assessment
+    - name: Test filesystem assessment capabilities
+      ansible.builtin.stat:
+        path: "/tmp/mock-filesystem/{{ item }}"
+      register: filesystem_tests
+      loop:
+        - "bootflash"
+        - "flash"
+        - "disk"
+
+    - name: Validate filesystem structure exists
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+        fail_msg: "Mock filesystem {{ item.item }} not properly created"
+      loop: "{{ filesystem_tests.results }}"
+
+  post_tasks:
+    - name: Test cleanup functionality simulation
+      ansible.builtin.find:
+        paths: "/tmp/mock-filesystem/images"
+        patterns: "old-firmware-*.bin"
+      register: old_firmware_files
+
+    - name: Verify old firmware files exist for cleanup testing
+      ansible.builtin.assert:
+        that:
+          - old_firmware_files.files | length > 0
+        fail_msg: "Old firmware files not found for cleanup testing"
+
+    - name: Cleanup test filesystem
+      ansible.builtin.file:
+        path: "/tmp/mock-filesystem"
+        state: absent
+      ignore_errors: true

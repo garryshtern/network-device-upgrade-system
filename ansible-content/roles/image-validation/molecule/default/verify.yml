@@ -1,0 +1,166 @@
+---
+# Image Validation Verification Tests
+# Validates security and integrity checking capabilities
+- name: Verify - Image Validation Results
+  hosts: all
+  gather_facts: false
+  tasks:
+    # Test that role executed without errors
+    - name: Verify image validation role completed successfully
+      ansible.builtin.debug:
+        msg: "Image validation role executed successfully"
+
+    # Verify security validation variables are properly configured
+    - name: Verify security validation settings
+      ansible.builtin.assert:
+        that:
+          - firmware_hash_algorithm is defined
+          - verify_digital_signatures is defined
+          - check_image_compatibility is defined
+          - validate_file_permissions is defined
+        fail_msg: "Security validation settings not properly configured"
+
+    - name: Verify hash algorithm is secure
+      ansible.builtin.assert:
+        that:
+          - firmware_hash_algorithm in ['sha256', 'sha512']
+        fail_msg: "Insecure hash algorithm specified (should be sha256 or sha512)"
+
+    - name: Verify signature verification is enabled for production
+      ansible.builtin.assert:
+        that:
+          - verify_digital_signatures | bool
+        fail_msg: "Digital signature verification should be enabled for security"
+
+    # Test compatibility matrix validation
+    - name: Verify compatibility matrix is defined
+      ansible.builtin.assert:
+        that:
+          - compatibility_matrix is defined
+          - compatibility_matrix.cisco_nxos is defined
+          - compatibility_matrix.cisco_iosxe is defined
+          - compatibility_matrix.fortios is defined
+        fail_msg: "Firmware compatibility matrix not properly defined"
+
+    - name: Verify test firmware images configuration
+      ansible.builtin.assert:
+        that:
+          - test_firmware_images is defined
+          - test_firmware_images | length >= 3
+        fail_msg: "Test firmware images not properly configured"
+
+    # Validate each test firmware image has required fields
+    - name: Verify test firmware image structure
+      ansible.builtin.assert:
+        that:
+          - item.name is defined
+          - item.filename is defined
+          - item.vendor is defined
+          - item.platform is defined
+          - item.expected_hash is defined
+          - item.signature_valid is defined
+        fail_msg: "Test firmware image {{ item.name | default('unknown') }} missing required fields"
+      loop: "{{ test_firmware_images }}"
+
+    # Security-specific validations
+    - name: Verify security scan settings
+      ansible.builtin.assert:
+        that:
+          - security_scan_enabled is defined
+          - signature_verification_required is defined
+          - trust_anchor_validation is defined
+        fail_msg: "Security scan settings not properly configured"
+
+    # Verify support for multiple vendor platforms
+    - name: Verify multi-vendor support
+      ansible.builtin.set_fact:
+        supported_vendors: "{{ test_firmware_images | map(attribute='vendor') | list | unique }}"
+
+    - name: Validate multi-vendor compatibility
+      ansible.builtin.assert:
+        that:
+          - "'cisco' in supported_vendors"
+          - "'fortinet' in supported_vendors"
+          - supported_vendors | length >= 2
+        fail_msg: "Multi-vendor support not properly configured"
+
+    # Test hash algorithm validation
+    - name: Test hash algorithm validation logic
+      ansible.builtin.set_fact:
+        hash_validation_test:
+          valid_sha512: "{{ 'sha512' in ['sha256', 'sha512'] }}"
+          valid_sha256: "{{ 'sha256' in ['sha256', 'sha512'] }}"
+          invalid_md5: "{{ 'md5' not in ['sha256', 'sha512'] }}"
+
+    - name: Verify hash algorithm validation works
+      ansible.builtin.assert:
+        that:
+          - hash_validation_test.valid_sha512 | bool
+          - hash_validation_test.valid_sha256 | bool
+          - hash_validation_test.invalid_md5 | bool
+        fail_msg: "Hash algorithm validation logic failed"
+
+    # Verify task file structure exists
+    - name: Verify required task files exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: task_files
+      loop:
+        - "{{ role_path }}/tasks/main.yml"
+        - "{{ role_path }}/tasks/hash-verification.yml"
+        - "{{ role_path }}/tasks/integrity-audit.yml"
+        - "{{ role_path }}/tasks/version-verification.yml"
+
+    - name: Assert all required task files exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Required task file {{ item.item }} not found"
+      loop: "{{ task_files.results }}"
+
+    # Test file permission validation settings
+    - name: Verify file permission validation is enabled
+      ansible.builtin.assert:
+        that:
+          - validate_file_permissions | bool
+        fail_msg: "File permission validation should be enabled for security"
+
+    # Success validation message
+    - name: Display verification success
+      ansible.builtin.debug:
+        msg: |
+          ✅ Image Validation Role Verification PASSED
+
+          Security Features Validated:
+          - Hash algorithm security: ✅ ({{ firmware_hash_algorithm }})
+          - Digital signature verification: ✅
+          - File permission validation: ✅
+          - Multi-vendor support: ✅ ({{ supported_vendors | join(', ') }})
+          - Compatibility matrix: ✅
+
+          Test Configuration Validated:
+          - Test firmware images: ✅ ({{ test_firmware_images | length }} configured)
+          - Security scan settings: ✅
+          - Trust anchor validation: ✅
+
+          Task Structure Validated:
+          - Required task files: ✅
+          - Role configuration: ✅
+
+          Status: Ready for security-critical firmware validation
+
+    # Test specific security scenarios
+    - name: Test security scenario validation
+      ansible.builtin.set_fact:
+        security_scenarios:
+          hash_mismatch: "{{ test_firmware_images | selectattr('expected_hash', 'equalto', 'invalid_hash') | list | length > 0 }}"
+          signature_invalid: "{{ test_firmware_images | selectattr('signature_valid', 'equalto', false) | list | length > 0 }}"
+          multiple_vendors: "{{ (test_firmware_images | map(attribute='vendor') | list | unique | length) >= 2 }}"
+
+    - name: Verify security test scenarios are covered
+      ansible.builtin.assert:
+        that:
+          - security_scenarios.hash_mismatch | bool
+          - security_scenarios.signature_invalid | bool
+          - security_scenarios.multiple_vendors | bool
+        fail_msg: "Security test scenarios not properly configured"

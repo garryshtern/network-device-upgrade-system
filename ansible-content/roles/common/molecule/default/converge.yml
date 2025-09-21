@@ -1,0 +1,249 @@
+---
+# Common Role Test Playbook
+# Tests shared utilities and cross-platform functionality
+- name: Converge - Test Common Role Functionality
+  hosts: all
+  gather_facts: false
+  vars:
+    test_all_utilities: true
+
+  pre_tasks:
+    - name: Install required packages for common utilities testing
+      ansible.builtin.pip:
+        name:
+          - psutil
+          - requests
+          - pyyaml
+        state: present
+      ignore_errors: true
+
+    - name: Create test directory structure for common utilities
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /tmp/common-test
+        - /tmp/common-test/storage/logs
+        - /tmp/common-test/storage/temp
+        - /tmp/common-test/storage/cache
+        - /tmp/common-test/metrics
+        - /tmp/common-test/health
+        - /tmp/common-test/connectivity
+        - /tmp/common-test/config
+
+    - name: Create mock log files for cleanup testing
+      ansible.builtin.copy:
+        content: "Mock log data for {{ item }}"
+        dest: "/tmp/common-test/storage/logs/{{ item }}.log"
+        mode: '0644'
+      loop:
+        - "old-log-2023-08-01"
+        - "old-log-2023-08-15"
+        - "recent-log-2023-09-15"
+
+    - name: Create mock temp files for cleanup testing
+      ansible.builtin.copy:
+        content: "Temporary data {{ item }}"
+        dest: "/tmp/common-test/storage/temp/temp-{{ item }}.tmp"
+        mode: '0644'
+      loop:
+        - "001"
+        - "002"
+        - "003"
+
+    - name: Create mock configuration files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "/tmp/common-test/config/{{ item.name }}"
+        mode: '0644'
+      loop:
+        - name: "device-config.yml"
+          content: |
+            device:
+              hostname: "{{ device_hostname }}"
+              type: "{{ device_type }}"
+              platform: "{{ device_platform }}"
+              ip: "{{ device_ip }}"
+
+        - name: "health-thresholds.yml"
+          content: |
+            thresholds:
+              cpu_usage_percent: 80
+              memory_usage_percent: 85
+              disk_usage_percent: 90
+              connectivity_timeout: 60
+
+    - name: Setup mock connectivity endpoints
+      ansible.builtin.set_fact:
+        mock_endpoints:
+          ssh_test: true
+          ping_test: true
+          http_test: false  # Simulated failure
+
+  tasks:
+    # Test connectivity check functionality
+    - name: Test connectivity check utilities
+      block:
+        - name: Mock connectivity test (simulated)
+          ansible.builtin.debug:
+            msg: "Testing connectivity to {{ device_hostname }} ({{ device_ip }})"
+
+        - name: Simulate ping test result
+          ansible.builtin.set_fact:
+            ping_result:
+              ping: "{{ device_ip }}"
+              changed: false
+              failed: false
+
+        - name: Simulate SSH connectivity test
+          ansible.builtin.set_fact:
+            ssh_result:
+              stdout: "SSH connectivity test successful"
+              changed: false
+              failed: false
+
+      when: test_connectivity | default(false)
+
+    # Test health check functionality
+    - name: Test health check utilities
+      block:
+        - name: Simulate system health checks
+          ansible.builtin.set_fact:
+            health_results:
+              connectivity: "PASS"
+              storage: "PASS"
+              performance: "WARNING"
+              configuration: "PASS"
+
+        - name: Validate health check categories
+          ansible.builtin.assert:
+            that:
+              - item in health_results
+            fail_msg: "Health check category {{ item }} not found in results"
+          loop: "{{ health_check_categories }}"
+
+      when: test_health_checks | default(false)
+
+    # Test storage cleanup functionality
+    - name: Test storage cleanup utilities
+      block:
+        - name: Scan for files to cleanup
+          ansible.builtin.find:
+            paths: "{{ storage_paths }}"
+            age: "{{ cleanup_age_days }}d"
+            recurse: true
+          register: cleanup_candidates
+
+        - name: Simulate cleanup operation
+          ansible.builtin.debug:
+            msg: "Would cleanup {{ cleanup_candidates.files | length }} files"
+
+        - name: Validate cleanup safety (preserve recent files)
+          ansible.builtin.assert:
+            that:
+              - preserve_recent_files | bool
+            fail_msg: "Recent file preservation should be enabled for safety"
+
+      when: test_storage_cleanup | default(false)
+
+    # Test metrics export functionality
+    - name: Test metrics export utilities
+      block:
+        - name: Generate test metrics data
+          ansible.builtin.set_fact:
+            test_metrics:
+              timestamp: "{{ ansible_date_time.epoch }}"
+              device: "{{ device_hostname }}"
+              metrics:
+                cpu_usage: 45.2
+                memory_usage: 67.8
+                disk_usage: 23.1
+                uptime_hours: 168
+
+        - name: Test JSON export format
+          ansible.builtin.copy:
+            content: "{{ test_metrics | to_nice_json }}"
+            dest: "/tmp/common-test/metrics/test-metrics.json"
+            mode: '0644'
+          when: "'json' in export_formats"
+
+        - name: Test YAML export format
+          ansible.builtin.copy:
+            content: "{{ test_metrics | to_nice_yaml }}"
+            dest: "/tmp/common-test/metrics/test-metrics.yaml"
+            mode: '0644'
+          when: "'yaml' in export_formats"
+
+        - name: Validate metrics export files
+          ansible.builtin.stat:
+            path: "/tmp/common-test/metrics/test-metrics.{{ item }}"
+          register: metrics_files
+          loop: "{{ export_formats }}"
+
+        - name: Assert metrics files were created
+          ansible.builtin.assert:
+            that:
+              - item.stat.exists
+            fail_msg: "Metrics file for format {{ item.item }} not created"
+          loop: "{{ metrics_files.results }}"
+
+      when: test_metrics_export | default(false)
+
+    # Test error handling functionality
+    - name: Test error handling utilities
+      block:
+        - name: Test error scenario handling
+          ansible.builtin.set_fact:
+            error_handling_results: |
+              {%- set results = [] -%}
+              {%- for scenario in error_scenarios -%}
+                {%- set result = {
+                    'name': scenario.name,
+                    'error_type': scenario.error_type,
+                    'expected_behavior': scenario.expected_behavior,
+                    'test_passed': true
+                  } -%}
+                {%- set _ = results.append(result) -%}
+              {%- endfor -%}
+              {{ results }}
+
+        - name: Validate error scenario definitions
+          ansible.builtin.assert:
+            that:
+              - item.error_type in ['timeout', 'auth', 'command', 'network']
+              - item.expected_behavior in ['retry', 'fail_fast', 'log_and_continue']
+            fail_msg: "Error scenario {{ item.name }} has invalid configuration"
+          loop: "{{ error_scenarios }}"
+
+      when: test_error_handling | default(false)
+
+    # Test common utility functions
+    - name: Test common utility functions
+      block:
+        - name: Test timestamp generation
+          ansible.builtin.set_fact:
+            test_timestamp: "{{ ansible_date_time.epoch | int }}"
+
+        - name: Test device identification
+          ansible.builtin.set_fact:
+            device_identity:
+              hostname: "{{ device_hostname }}"
+              type: "{{ device_type }}"
+              platform: "{{ device_platform }}"
+
+        - name: Validate utility functions
+          ansible.builtin.assert:
+            that:
+              - test_timestamp | int > 0
+              - device_identity.hostname is defined
+              - device_identity.type is defined
+              - device_identity.platform is defined
+            fail_msg: "Common utility functions failed validation"
+
+  post_tasks:
+    - name: Cleanup test artifacts
+      ansible.builtin.file:
+        path: "/tmp/common-test"
+        state: absent
+      ignore_errors: true

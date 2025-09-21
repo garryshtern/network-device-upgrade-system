@@ -1,0 +1,293 @@
+---
+# Space Management Test Environment Preparation
+# Sets up mock filesystems and storage scenarios for testing
+- name: Prepare - Setup Space Management Test Environment
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install system dependencies for storage testing
+      ansible.builtin.package:
+        name:
+          - python3-pip
+          - util-linux
+          - coreutils
+        state: present
+      become: true
+      ignore_errors: true  # May not be available in container
+
+    - name: Install Python storage libraries
+      ansible.builtin.pip:
+        name:
+          - psutil
+        state: present
+      ignore_errors: true
+
+    - name: Create comprehensive test filesystem structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        # Different platform filesystem layouts
+        - /tmp/storage-test/cisco-nxos/bootflash
+        - /tmp/storage-test/cisco-nxos/volatile
+        - /tmp/storage-test/cisco-ios/flash
+        - /tmp/storage-test/cisco-ios/nvram
+        - /tmp/storage-test/fortinet/disk
+        - /tmp/storage-test/fortinet/ramdisk
+        - /tmp/storage-test/opengear/cf-card
+        - /tmp/storage-test/metamako/storage
+
+        # Common directories
+        - /tmp/storage-test/images/current
+        - /tmp/storage-test/images/backup
+        - /tmp/storage-test/images/old
+        - /tmp/storage-test/logs
+        - /tmp/storage-test/config
+        - /tmp/storage-test/temp
+
+    - name: Create mock disk usage command wrappers
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Mock disk usage command for different platforms
+          case "$1" in
+            "cisco-nxos")
+              cat << EOF
+          Device     1K-blocks    Used Available Use% Mounted on
+          bootflash:   8388608 6291456   2097152  75% /bootflash
+          volatile:    1048576  524288    524288  50% /volatile
+          EOF
+              ;;
+            "cisco-ios")
+              cat << EOF
+          Directory of flash:/
+
+          Total bytes: 4194304
+          Bytes free: 1048576
+          EOF
+              ;;
+            "fortinet")
+              cat << EOF
+          Filesystem     1K-blocks  Used Available Use% Mounted on
+          /dev/root        2097152 1258291    838861  60% /
+          tmpfs             524288  104858    419430  20% /tmp
+          EOF
+              ;;
+            *)
+              echo "Generic storage: 2GB total, 1GB used, 1GB available"
+              ;;
+          esac
+        dest: /tmp/storage-test/mock-df
+        mode: '0755'
+
+    - name: Create platform-specific storage simulation files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "/tmp/storage-test/{{ item.path }}"
+        mode: "{{ item.mode }}"
+      loop:
+        # Cisco NX-OS storage info
+        - path: cisco-nxos/bootflash/storage.info
+          mode: '0644'
+          content: |
+            Filesystem: bootflash
+            Total: 8192MB (8388608KB)
+            Used: 6144MB (6291456KB)
+            Available: 2048MB (2097152KB)
+            Usage: 75%
+            Mount: /bootflash
+
+        # Cisco IOS storage info
+        - path: cisco-ios/flash/storage.info
+          mode: '0644'
+          content: |
+            Device: flash:
+            Total: 4096MB (4194304KB)
+            Used: 3048MB (3145728KB)
+            Available: 1024MB (1048576KB)
+            Usage: 75%
+
+        # FortiOS storage info
+        - path: fortinet/disk/storage.info
+          mode: '0644'
+          content: |
+            Filesystem: /dev/root
+            Total: 2048MB (2097152KB)
+            Used: 1228MB (1258291KB)
+            Available: 820MB (838861KB)
+            Usage: 60%
+
+    - name: Create mock firmware files with various sizes
+      ansible.builtin.copy:
+        content: "{{ 'Mock firmware data for ' ~ item.name ~ ' - ' ~ ('x' * (item.size_kb | int)) }}"
+        dest: "/tmp/storage-test/images/{{ item.path }}"
+        mode: '0644'
+      loop:
+        # Current firmware images
+        - name: "NX-OS 10.1.2"
+          path: "current/nxos-10.1.2.bin"
+          size_kb: 1800000  # 1.8GB
+        - name: "IOS-XE 17.09.04a"
+          path: "current/iosxe-17.09.04a.bin"
+          size_kb: 800000   # 800MB
+        - name: "FortiOS 7.4.1"
+          path: "current/fortios-7.4.1.out"
+          size_kb: 600000   # 600MB
+
+        # Old firmware images for cleanup testing
+        - name: "NX-OS 9.3.10"
+          path: "old/nxos-9.3.10.bin"
+          size_kb: 1700000  # 1.7GB
+        - name: "IOS-XE 17.06.05"
+          path: "old/iosxe-17.06.05.bin"
+          size_kb: 750000   # 750MB
+        - name: "FortiOS 7.2.5"
+          path: "old/fortios-7.2.5.out"
+          size_kb: 550000   # 550MB
+
+    - name: Create space management configuration files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "/tmp/storage-test/{{ item.path }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - path: config/space-thresholds.conf
+          mode: '0644'
+          content: |
+            # Space Management Thresholds
+            minimum_free_space_mb=1024
+            safety_margin_percent=20
+            critical_threshold_percent=90
+            warning_threshold_percent=80
+
+            # Platform-specific settings
+            cisco_nxos_min_free=2048
+            cisco_ios_min_free=1024
+            fortios_min_free=512
+
+        - path: config/cleanup-policy.conf
+          mode: '0644'
+          content: |
+            # Cleanup Policy Configuration
+            enable_automatic_cleanup=true
+            preserve_current_image=true
+            preserve_backup_image=true
+            cleanup_old_logs=true
+            max_old_images_to_keep=2
+            log_retention_days=30
+
+    - name: Create storage assessment tools
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Mock storage assessment tool
+          PLATFORM="$1"
+          ASSESSMENT_TYPE="$2"
+
+          case "$PLATFORM" in
+            "cisco-nxos")
+              echo "Platform: Cisco NX-OS"
+              echo "Filesystem: bootflash"
+              echo "Total: 8192MB"
+              echo "Used: 6144MB"
+              echo "Available: 2048MB"
+              echo "Status: OK"
+              ;;
+            "cisco-ios")
+              echo "Platform: Cisco IOS"
+              echo "Filesystem: flash"
+              echo "Total: 4096MB"
+              echo "Used: 3048MB"
+              echo "Available: 1024MB"
+              echo "Status: WARNING"
+              ;;
+            "fortinet")
+              echo "Platform: FortiOS"
+              echo "Filesystem: disk"
+              echo "Total: 2048MB"
+              echo "Used: 1228MB"
+              echo "Available: 820MB"
+              echo "Status: OK"
+              ;;
+            *)
+              echo "Platform: Generic"
+              echo "Filesystem: unknown"
+              echo "Total: 2048MB"
+              echo "Used: 1024MB"
+              echo "Available: 1024MB"
+              echo "Status: OK"
+              ;;
+          esac
+        dest: /tmp/storage-test/storage-assessment
+        mode: '0755'
+
+    - name: Create cleanup simulation tool
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Mock cleanup tool
+          ACTION="$1"
+          TARGET="$2"
+
+          case "$ACTION" in
+            "scan")
+              echo "Scanning for cleanup candidates..."
+              find /tmp/storage-test/images/old -name "*.bin" -o -name "*.out" | head -5
+              echo "Found old firmware images consuming 3GB"
+              ;;
+            "cleanup")
+              echo "Cleaning up: $TARGET"
+              echo "Freed: 1.2GB"
+              echo "Status: Success"
+              ;;
+            "simulate")
+              echo "Simulation mode: Would free 3GB by removing old images"
+              ;;
+            *)
+              echo "Usage: cleanup [scan|cleanup|simulate] [target]"
+              ;;
+          esac
+        dest: /tmp/storage-test/cleanup-tool
+        mode: '0755'
+
+    - name: Setup test environment variables
+      ansible.builtin.set_fact:
+        storage_test_env:
+          base_path: "/tmp/storage-test"
+          mock_tools: "/tmp/storage-test"
+          config_path: "/tmp/storage-test/config"
+          test_mode: true
+
+    - name: Create platform filesystem mappings
+      ansible.builtin.set_fact:
+        platform_filesystem_map:
+          "cisco.nxos.nxos": "bootflash"
+          "cisco.ios.ios": "flash"
+          "fortinet.fortios.fortios": "disk"
+          "opengear": "cf-card"
+          "metamako": "storage"
+
+    - name: Validate storage test environment
+      ansible.builtin.debug:
+        msg: |
+          Space Management Test Environment Prepared:
+          - Platform filesystems: ✅ ({{ platform_filesystem_map.keys() | list | length }} platforms)
+          - Mock storage tools: ✅
+          - Configuration files: ✅
+          - Test firmware images: ✅
+          - Cleanup simulation: ✅
+
+          Storage Scenarios Available:
+          - Sufficient space (2GB+ available)
+          - Warning level (1GB available)
+          - Critical level (<500MB available)
+          - Multiple platform types
+
+          Test Capabilities:
+          - Space assessment across platforms
+          - Cleanup simulation and validation
+          - Threshold-based decision making
+          - Safety margin calculations
+
+          Ready for comprehensive storage testing

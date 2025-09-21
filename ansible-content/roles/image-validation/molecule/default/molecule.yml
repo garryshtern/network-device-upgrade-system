@@ -1,0 +1,105 @@
+---
+# Critical Gap #6: Image Validation Security Testing
+# Business Impact: Security/integrity validation for firmware deployment
+# Risk: Compromised firmware deployment, supply chain attacks
+dependency:
+  name: galaxy
+  options:
+    requirements-file: >
+      ../../../../../ansible-content/collections/requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: image-validation-test-instance
+    image: python:3.13-slim
+    pre_build_image: true
+    volumes:
+      - ${PWD}:/opt/network-upgrade:rw
+    working_dir: /opt/network-upgrade
+    command: sleep infinity
+    capabilities:
+      - DAC_OVERRIDE
+    privileged: false
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      host_key_checking: false
+      stdout_callback: yaml
+  inventory:
+    host_vars:
+      image-validation-test-instance:
+        ansible_connection: local
+        platform_type: "multi_vendor"
+
+        # Image validation test variables
+        firmware_base_path: "/tmp/firmware-test"
+        target_firmware: "test-firmware.bin"
+        firmware_hash_algorithm: "sha512"
+        verify_digital_signatures: true
+        check_image_compatibility: true
+        validate_file_permissions: true
+
+        # Security validation settings
+        security_scan_enabled: true
+        malware_scan_enabled: false  # Requires external tools
+        signature_verification_required: true
+        trust_anchor_validation: true
+
+        # Test firmware images with different characteristics
+        test_firmware_images:
+          - name: "valid_cisco_image"
+            filename: "nxos.10.1.2.bin"
+            vendor: "cisco"
+            platform: "nxos"
+            size_mb: 2048
+            expected_hash: "abc123def456..."
+            signature_valid: true
+          - name: "corrupted_image"
+            filename: "corrupted.bin"
+            vendor: "cisco"
+            platform: "nxos"
+            size_mb: 1024
+            expected_hash: "invalid_hash"
+            signature_valid: false
+          - name: "fortios_image"
+            filename: "fortios.7.4.1.out"
+            vendor: "fortinet"
+            platform: "fortios"
+            size_mb: 512
+            expected_hash: "def789abc012..."
+            signature_valid: true
+
+        # Compatibility matrix for testing
+        compatibility_matrix:
+          cisco_nxos:
+            - "10.1.1"
+            - "10.1.2"
+            - "10.2.1"
+          cisco_iosxe:
+            - "17.06.05"
+            - "17.09.04a"
+          fortios:
+            - "7.4.1"
+            - "7.4.2"
+
+verifier:
+  name: ansible
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

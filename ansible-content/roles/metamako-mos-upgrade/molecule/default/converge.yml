@@ -1,0 +1,88 @@
+---
+# Metamako MOS Upgrade Test Playbook
+# Tests ultra-low latency upgrade procedures for HFT environments
+- name: Converge - Test Metamako MOS Upgrade Role
+  hosts: all
+  gather_facts: false
+  vars:
+    target_firmware_version: "2.1.3"
+    manage_applications: true
+
+    # HFT-specific test configuration
+    test_latency_requirements: true
+    validate_timing_precision: true
+    simulate_trading_load: false  # Set to true for performance testing
+
+  pre_tasks:
+    - name: Install required Python packages for testing
+      ansible.builtin.pip:
+        name:
+          - netaddr
+          - jsonschema
+          - pexpect
+        state: present
+
+    - name: Create mock filesystem structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /tmp/metamako
+        - /var/backup
+        - /boot
+        - /opt/metawatch
+        - /opt/metamux
+        - /var/log/metamako
+
+    - name: Create mock version file
+      ansible.builtin.copy:
+        content: |
+          Model: MetaConnect-48
+          Version: 2.0.8
+          Serial: MK2345HFT001
+          Build: 2023-08-15T10:30:00Z
+          Features: HFT, PTP, MetaWatch, MetaMux
+        dest: /tmp/version_output.txt
+        mode: '0644'
+
+    - name: Create mock firmware image
+      ansible.builtin.copy:
+        content: |
+          # Mock firmware image for testing
+          # This would be a real firmware file in production
+        dest: "/tmp/metamakoos-2.1.3.tar.gz"
+        mode: '0644'
+
+    - name: Mock network device connection (simulate cli_command)
+      ansible.builtin.set_fact:
+        ansible_network_os: metamako.mos
+
+  tasks:
+    # Test basic role functionality
+    - name: Test Metamako MOS upgrade role
+      ansible.builtin.include_role:
+        name: metamako-mos-upgrade
+      vars:
+        # Override connection module for testing
+        ansible_connection: local
+
+    # Additional validation tasks
+    - name: Validate upgrade completion
+      ansible.builtin.assert:
+        that:
+          - metamako_upgrade_state is defined
+          - metamako_upgrade_state.device == inventory_hostname
+          - metamako_upgrade_state.target_version == target_firmware_version
+        fail_msg: "Metamako upgrade state validation failed"
+
+  post_tasks:
+    - name: Cleanup test artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/metamako
+        - /tmp/version_output.txt
+        - /tmp/metamakoos-2.1.3.tar.gz
+      ignore_errors: true

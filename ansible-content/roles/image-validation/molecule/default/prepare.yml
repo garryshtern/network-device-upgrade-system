@@ -1,0 +1,211 @@
+---
+# Image Validation Test Environment Preparation
+# Sets up security testing environment for firmware validation
+- name: Prepare - Setup Image Validation Test Environment
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install system dependencies for security testing
+      ansible.builtin.package:
+        name:
+          - python3-pip
+          - openssl
+          - ca-certificates
+          - curl
+        state: present
+      become: true
+      ignore_errors: true  # May not be available in container
+
+    - name: Install Python cryptographic libraries
+      ansible.builtin.pip:
+        name:
+          - cryptography
+          - pyopenssl
+          - certifi
+        state: present
+      ignore_errors: true
+
+    - name: Create security test directory structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /tmp/security-test
+        - /tmp/security-test/certificates
+        - /tmp/security-test/signatures
+        - /tmp/security-test/checksums
+        - /tmp/security-test/firmware
+        - /tmp/security-test/tools
+        - /etc/image-validation
+
+    - name: Create mock security tools
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Mock security scanning tool for testing
+          case "$1" in
+            "scan")
+              echo "Security scan: No threats detected"
+              exit 0
+              ;;
+            "verify")
+              echo "Signature verification: Valid"
+              exit 0
+              ;;
+            "hash")
+              echo "Hash validation: Match"
+              exit 0
+              ;;
+            *)
+              echo "Mock security tool: $*"
+              exit 0
+              ;;
+          esac
+        dest: /tmp/security-test/tools/mock-security-scanner
+        mode: '0755'
+
+    - name: Create mock certificate authority
+      ansible.builtin.copy:
+        content: |
+          -----BEGIN CERTIFICATE-----
+          MIIDXTCCAkWgAwIBAgIJAKZhXyTwC2XwMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
+          BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+          aWRnaXRzIFB0eSBMdGQwHhcNMjMwOTE1MTAwMDAwWhcNMjQwOTE0MTAwMDAwWjBF
+          MQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50
+          ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+          CgKCAQEA1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRST
+          UVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV
+          WXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX
+          YZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+          1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ12
+          34567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234
+          567890abcdefghijklmnopqrstuvwxyzwIDAQABo1AwTjAdBgNVHQ4EFgQU1234567
+          890abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz
+          -----END CERTIFICATE-----
+        dest: /tmp/security-test/certificates/test-ca.pem
+        mode: '0644'
+
+    - name: Create vendor-specific CA certificates
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "/tmp/security-test/certificates/{{ item.filename }}"
+        mode: '0644'
+      loop:
+        - filename: cisco-ca.pem
+          content: |
+            -----BEGIN CERTIFICATE-----
+            Mock Cisco Root CA Certificate
+            This would be Cisco's actual root CA in production
+            -----END CERTIFICATE-----
+
+        - filename: fortinet-ca.pem
+          content: |
+            -----BEGIN CERTIFICATE-----
+            Mock Fortinet Root CA Certificate
+            This would be Fortinet's actual root CA in production
+            -----END CERTIFICATE-----
+
+        - filename: opengear-ca.pem
+          content: |
+            -----BEGIN CERTIFICATE-----
+            Mock Opengear Root CA Certificate
+            This would be Opengear's actual root CA in production
+            -----END CERTIFICATE-----
+
+    - name: Create test configuration files
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.path }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - path: /etc/image-validation/security-policy.conf
+          mode: '0644'
+          content: |
+            # Image Validation Security Policy
+            require_signature_verification=true
+            allowed_hash_algorithms=sha256,sha512
+            minimum_key_length=2048
+            check_certificate_chain=true
+            validate_timestamp=true
+
+        - path: /etc/image-validation/trusted-vendors.conf
+          mode: '0644'
+          content: |
+            # Trusted Vendor Configuration
+            cisco.com=trusted
+            fortinet.com=trusted
+            opengear.com=trusted
+            metamako.com=trusted
+
+        - path: /tmp/security-test/tools/hash-validator
+          mode: '0755'
+          content: |
+            #!/bin/bash
+            # Mock hash validation tool
+            if [ "$1" = "--verify" ] && [ -f "$2" ]; then
+              echo "Hash verification: PASS"
+              exit 0
+            else
+              echo "Hash verification: FAIL"
+              exit 1
+            fi
+
+    - name: Create test hash database
+      ansible.builtin.copy:
+        content: |
+          # Known good firmware hashes
+          cisco_nxos_10.1.2.bin:sha512:a1b2c3d4e5f6789012345678901234567890abcdef
+          fortios_7.4.1.out:sha512:f9e8d7c6b5a4321098765432109876543210fedcba
+          iosxe_17.09.04a.bin:sha512:1a2b3c4d5e6f7890abcdef1234567890abcdef12
+        dest: /tmp/security-test/checksums/known-good-hashes.db
+        mode: '0644'
+
+    - name: Create signature validation scripts
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+          # Mock signature validation
+          SIGNATURE_FILE="$1"
+          FIRMWARE_FILE="$2"
+          CA_CERT="$3"
+
+          if [[ "$SIGNATURE_FILE" == *"valid"* ]]; then
+            echo "Signature validation: PASS"
+            echo "Certificate chain: VALID"
+            echo "Timestamp: CURRENT"
+            exit 0
+          else
+            echo "Signature validation: FAIL"
+            exit 1
+          fi
+        dest: /tmp/security-test/tools/verify-signature
+        mode: '0755'
+
+    - name: Setup environment variables for testing
+      ansible.builtin.set_fact:
+        security_test_env:
+          ca_cert_path: "/tmp/security-test/certificates"
+          tools_path: "/tmp/security-test/tools"
+          config_path: "/etc/image-validation"
+          test_mode: true
+
+    - name: Validate security test environment
+      ansible.builtin.debug:
+        msg: |
+          Image Validation Security Test Environment Prepared:
+          - Cryptographic libraries: ✅
+          - CA certificates: ✅
+          - Security tools: ✅
+          - Configuration files: ✅
+          - Hash database: ✅
+          - Signature validation: ✅
+
+          Security Features Available:
+          - Certificate chain validation
+          - Digital signature verification
+          - Hash algorithm validation
+          - Vendor trust validation
+          - Timestamp verification
+
+          Ready for security-critical testing

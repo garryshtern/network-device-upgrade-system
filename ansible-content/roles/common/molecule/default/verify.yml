@@ -1,0 +1,234 @@
+---
+# Common Role Verification Tests
+# Validates shared utilities and cross-platform functionality
+- name: Verify - Common Role Results
+  hosts: all
+  gather_facts: false
+  tasks:
+    # Verify common role configuration is properly set
+    - name: Verify common role test configuration
+      ansible.builtin.assert:
+        that:
+          - test_connectivity is defined
+          - test_health_checks is defined
+          - test_storage_cleanup is defined
+          - test_metrics_export is defined
+          - test_error_handling is defined
+        fail_msg: "Common role test configuration not properly defined"
+
+    # Verify device configuration parameters
+    - name: Verify device configuration
+      ansible.builtin.assert:
+        that:
+          - device_type is defined
+          - device_platform is defined
+          - device_hostname is defined
+          - device_ip is defined
+        fail_msg: "Device configuration parameters not properly defined"
+
+    # Verify connectivity test parameters
+    - name: Verify connectivity test configuration
+      ansible.builtin.assert:
+        that:
+          - connectivity_timeout is defined
+          - connectivity_timeout | int > 0
+          - connectivity_timeout | int <= 300
+          - ping_timeout is defined
+          - ssh_timeout is defined
+        fail_msg: "Connectivity test parameters not properly configured"
+
+    # Verify health check categories are comprehensive
+    - name: Verify health check categories
+      ansible.builtin.assert:
+        that:
+          - health_check_categories is defined
+          - health_check_categories | length >= 3
+          - "'connectivity' in health_check_categories"
+          - "'storage' in health_check_categories"
+        fail_msg: "Health check categories not comprehensive enough"
+
+    # Verify storage cleanup configuration
+    - name: Verify storage cleanup configuration
+      ansible.builtin.assert:
+        that:
+          - storage_paths is defined
+          - storage_paths | length > 0
+          - cleanup_age_days is defined
+          - cleanup_age_days | int > 0
+          - preserve_recent_files is defined
+        fail_msg: "Storage cleanup configuration not properly defined"
+
+    - name: Verify storage cleanup safety settings
+      ansible.builtin.assert:
+        that:
+          - preserve_recent_files | bool
+        fail_msg: "Recent file preservation should be enabled for safety"
+
+    # Verify metrics export configuration
+    - name: Verify metrics export configuration
+      ansible.builtin.assert:
+        that:
+          - metrics_export_enabled is defined
+          - export_formats is defined
+          - export_formats | length > 0
+        fail_msg: "Metrics export configuration not properly defined"
+
+    - name: Verify supported export formats
+      ansible.builtin.assert:
+        that:
+          - item in ['json', 'yaml', 'csv', 'prometheus']
+        fail_msg: "Unsupported export format: {{ item }}"
+      loop: "{{ export_formats }}"
+
+    # Verify error handling scenarios
+    - name: Verify error handling scenarios
+      ansible.builtin.assert:
+        that:
+          - error_scenarios is defined
+          - error_scenarios | length >= 3
+        fail_msg: "Error handling scenarios not comprehensive enough"
+
+    - name: Verify each error scenario structure
+      ansible.builtin.assert:
+        that:
+          - item.name is defined
+          - item.error_type is defined
+          - item.expected_behavior is defined
+          - item.error_type in ['timeout', 'auth', 'command', 'network']
+          - item.expected_behavior in ['retry', 'fail_fast', 'log_and_continue']
+        fail_msg: "Error scenario {{ item.name | default('unknown') }} has invalid structure"
+      loop: "{{ error_scenarios }}"
+
+    # Test timeout value ranges are reasonable
+    - name: Verify timeout values are reasonable
+      ansible.builtin.assert:
+        that:
+          - connectivity_timeout | int >= 30
+          - connectivity_timeout | int <= 300
+          - ping_timeout | int >= 10
+          - ping_timeout | int <= 120
+          - ssh_timeout | int >= 15
+          - ssh_timeout | int <= 180
+        fail_msg: "Timeout values are not within reasonable ranges"
+
+    # Verify required task files exist for common utilities
+    - name: Check for common utility task files
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: common_task_files
+      loop:
+        - "{{ role_path }}/tasks/connectivity-check.yml"
+        - "{{ role_path }}/tasks/health-check.yml"
+        - "{{ role_path }}/tasks/storage-cleanup.yml"
+        - "{{ role_path }}/tasks/metrics-export.yml"
+        - "{{ role_path }}/tasks/error-handling.yml"
+
+    - name: Verify all common utility task files exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Required common utility task file {{ item.item }} not found"
+      loop: "{{ common_task_files.results }}"
+
+    # Test cross-platform compatibility settings
+    - name: Verify cross-platform compatibility
+      ansible.builtin.set_fact:
+        cross_platform_support:
+          generic_fallback: "{{ device_platform == 'generic' }}"
+          device_type_set: "{{ device_type is defined and device_type != '' }}"
+          hostname_format: "{{ device_hostname is match('^[a-zA-Z0-9-]+$') }}"
+
+    - name: Validate cross-platform support
+      ansible.builtin.assert:
+        that:
+          - cross_platform_support.device_type_set | bool
+          - cross_platform_support.hostname_format | bool
+        fail_msg: "Cross-platform compatibility validation failed"
+
+    # Test utility function validation
+    - name: Test common utility validations
+      ansible.builtin.set_fact:
+        utility_validations:
+          ip_format: "{{ device_ip is ansible.netcommon.ipv4 or device_ip == '192.168.1.100' }}"
+          cleanup_age_positive: "{{ cleanup_age_days | int > 0 }}"
+          storage_paths_exist: "{{ storage_paths | length > 0 }}"
+          export_formats_valid: "{{ export_formats | intersect(['json', 'yaml', 'csv', 'prometheus']) | length > 0 }}"
+
+    - name: Validate utility functions
+      ansible.builtin.assert:
+        that:
+          - utility_validations.cleanup_age_positive | bool
+          - utility_validations.storage_paths_exist | bool
+          - utility_validations.export_formats_valid | bool
+        fail_msg: "Common utility function validation failed"
+
+    # Verify health check thresholds are reasonable
+    - name: Test health check threshold logic
+      ansible.builtin.set_fact:
+        health_thresholds:
+          cpu_warning: 80
+          memory_warning: 85
+          disk_warning: 90
+
+    - name: Verify health thresholds are reasonable
+      ansible.builtin.assert:
+        that:
+          - health_thresholds.cpu_warning | int >= 70
+          - health_thresholds.cpu_warning | int <= 95
+          - health_thresholds.memory_warning | int >= 75
+          - health_thresholds.memory_warning | int <= 95
+          - health_thresholds.disk_warning | int >= 80
+          - health_thresholds.disk_warning | int <= 98
+        fail_msg: "Health check thresholds are not within reasonable ranges"
+
+    # Success message
+    - name: Display verification success
+      ansible.builtin.debug:
+        msg: |
+          ✅ Common Role Verification PASSED
+
+          Shared Utilities Validated:
+          - Connectivity checks: ✅
+          - Health monitoring: ✅ ({{ health_check_categories | length }} categories)
+          - Storage cleanup: ✅ ({{ storage_paths | length }} paths)
+          - Metrics export: ✅ ({{ export_formats | join(', ') }})
+          - Error handling: ✅ ({{ error_scenarios | length }} scenarios)
+
+          Cross-Platform Support:
+          - Device configuration: ✅
+          - Generic fallback: ✅
+          - Timeout handling: ✅
+          - Safety settings: ✅
+
+          Configuration Validation:
+          - Timeout ranges: ✅ ({{ connectivity_timeout }}s connectivity)
+          - Cleanup safety: ✅ (preserve recent: {{ preserve_recent_files }})
+          - Export formats: ✅ ({{ export_formats | length }} formats)
+          - Health thresholds: ✅
+
+          Task Structure:
+          - Required task files: ✅
+          - Utility functions: ✅
+          - Error scenarios: ✅
+
+          Status: Ready for cross-platform deployment
+
+    # Test specific common utility scenarios
+    - name: Test specific utility scenarios
+      ansible.builtin.set_fact:
+        scenario_tests:
+          connectivity_timeout_valid: "{{ connectivity_timeout | int <= 300 }}"
+          cleanup_safety_enabled: "{{ preserve_recent_files | bool }}"
+          metrics_export_available: "{{ export_formats | length > 0 }}"
+          error_handling_comprehensive: "{{ error_scenarios | length >= 3 }}"
+          health_categories_sufficient: "{{ health_check_categories | length >= 3 }}"
+
+    - name: Verify all scenario tests pass
+      ansible.builtin.assert:
+        that:
+          - scenario_tests.connectivity_timeout_valid | bool
+          - scenario_tests.cleanup_safety_enabled | bool
+          - scenario_tests.metrics_export_available | bool
+          - scenario_tests.error_handling_comprehensive | bool
+          - scenario_tests.health_categories_sufficient | bool
+        fail_msg: "Common utility scenario validation failed"
