@@ -1,0 +1,22 @@
+---
+name: Minimal Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Minimal Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test basic functionality
+        run: |
+          echo "✅ Workflow is working"
+          ls -la
