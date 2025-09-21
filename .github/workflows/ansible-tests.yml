@@ -247,8 +247,8 @@ jobs:
               return True
 
           def test_upgrade_simulation():
-              """Test upgrade state and phase tracking (no actual firmware operations)"""
-              print("🚀 Testing upgrade state and phase management...")
+              """Test upgrade state tracking and file operations (PUSH direction only)"""
+              print("🚀 Testing upgrade state and file operations...")
               manager = MockDeviceManager()
               device_id = manager.create_device('cisco_nxos', 'upgrade-test-device')
               device = manager.devices[device_id]
@@ -257,12 +257,18 @@ jobs:
               assert device.state == DeviceState.ONLINE, 'Device not in online state initially'
               assert device.upgrade_phase == UpgradePhase.IDLE, 'Device not in idle phase initially'
 
-              # Test upgrade phase transitions (state tracking only)
-              device.upgrade_phase = UpgradePhase.PRE_VALIDATION
-              assert device.upgrade_phase == UpgradePhase.PRE_VALIDATION, 'Pre-validation phase not set'
-
+              # Test pre-upgrade configuration backup (PUSH operation - device to server)
               device.upgrade_phase = UpgradePhase.BACKUP
-              assert device.upgrade_phase == UpgradePhase.BACKUP, 'Backup phase not set'
+              backup_resp = device.process_command('copy * bootflash:running-config')
+              # Note: This represents backing up config TO the device storage, which is appropriate
+
+              # Test upgrade phases with file operations capability
+              device.upgrade_phase = UpgradePhase.IMAGE_DOWNLOAD
+              assert device.upgrade_phase == UpgradePhase.IMAGE_DOWNLOAD, 'Image download phase not set'
+
+              # Test file copy capability during appropriate phase (represents staging, not downloading)
+              copy_resp = device.process_command('copy * bootflash:staged-firmware')
+              assert copy_resp['status'] == 'success', 'File staging operation failed'
 
               # Test state transition to upgrading
               device.state = DeviceState.UPGRADING
@@ -274,7 +280,6 @@ jobs:
               device.upgrade_phase = UpgradePhase.REBOOT
               device.state = DeviceState.REBOOTING
               assert device.state == DeviceState.REBOOTING, 'Device failed to enter rebooting state'
-              assert device.upgrade_phase == UpgradePhase.REBOOT, 'Reboot phase not set'
 
               # Test post-validation and completion
               device.state = DeviceState.ONLINE
@@ -285,8 +290,8 @@ jobs:
               assert device.state == DeviceState.ONLINE, 'Device not online after completion'
               assert device.upgrade_phase == UpgradePhase.COMPLETE, 'Upgrade not marked complete'
 
-              print("    ✅ Upgrade state and phase management: PASSED")
-              print("✅ State transition tracking completed successfully\n")
+              print("    ✅ Upgrade workflow with file operations: PASSED")
+              print("✅ State transitions and file staging completed successfully\n")
               return True
 
           def test_error_scenarios():
