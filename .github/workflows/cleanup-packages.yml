@@ -18,6 +18,16 @@ on:
         required: false
         default: '50'
         type: string
+      days_to_keep:
+        description: 'Keep versions newer than this many days (0 = age ignored)'
+        required: false
+        default: '7'
+        type: string
+      dry_run:
+        description: 'Preview deletions without actually removing packages'
+        required: false
+        default: false
+        type: boolean
   schedule:
     # Run automatic cleanup weekly on Sundays at 2 AM UTC
     - cron: '0 2 * * 0'
@@ -50,11 +60,17 @@ jobs:
           PACKAGE_NAME="network-device-upgrade-system"
           KEEP_LATEST="${{ github.event.inputs.keep_latest || 'true' }}"
           MAX_LIMIT="${{ github.event.inputs.max_deletions || '20' }}"
+          DAYS_TO_KEEP="${{ github.event.inputs.days_to_keep || '7' }}"
+          DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
 
-          # Get all package versions
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "🔍 DRY RUN MODE: Will preview deletions without removing packages"
+          fi
+
+          # Get all package versions with creation dates
           echo "📋 Fetching package versions..."
           gh api "user/packages/container/$PACKAGE_NAME/versions" \
-            --jq '.[] | {id: .id, tags: .metadata.container.tags}' > /tmp/package_versions.json
+            --jq '.[] | {id: .id, tags: .metadata.container.tags, created_at: .created_at}' > /tmp/package_versions.json
 
           if [ ! -s /tmp/package_versions.json ]; then
             echo "📭 No package versions found"
@@ -71,6 +87,7 @@ jobs:
             if [ -n "$version_data" ]; then
               VERSION_ID=$(echo "$version_data" | jq -r '.id')
               TAGS=$(echo "$version_data" | jq -r '.tags[]?' 2>/dev/null || echo "")
+              CREATED_AT=$(echo "$version_data" | jq -r '.created_at')
 
               SKIP_VERSION=false
 
@@ -88,6 +105,16 @@ jobs:
                 SKIP_VERSION=true
               fi
 
+              # Skip if version is newer than DAYS_TO_KEEP
+              if [ "$DAYS_TO_KEEP" -gt 0 ] && [ "$SKIP_VERSION" = "false" ]; then
+                CUTOFF_DATE=$(date -d "$DAYS_TO_KEEP days ago" --iso-8601)
+                if [ "$CREATED_AT" \> "$CUTOFF_DATE" ]; then
+                  echo "⏰ Keeping recent version: $VERSION_ID (created: $CREATED_AT)"
+                  SKIPPED=$((SKIPPED + 1))
+                  SKIP_VERSION=true
+                fi
+              fi
+
               # Check deletion limit first to avoid stopping on labeled packages
               if [ "$DELETED" -ge "$MAX_LIMIT" ]; then
                 echo "⚠️  Reached deletion limit ($MAX_LIMIT), stopping"
@@ -97,22 +124,33 @@ jobs:
               # Delete if not skipped and under limit
               if [ "$SKIP_VERSION" = "false" ]; then
                 TAGS_DISPLAY=$(echo $TAGS | tr '\n' ' ' | sed 's/^$/untagged/')
-                echo -n "🗑️  Deleting version $VERSION_ID ($TAGS_DISPLAY)... "
 
-                if gh api --method DELETE "user/packages/container/$PACKAGE_NAME/versions/$VERSION_ID" --silent; then
-                  echo "✅ Deleted"
+                if [ "$DRY_RUN" = "true" ]; then
+                  echo "🔍 Would delete version $VERSION_ID ($TAGS_DISPLAY)"
                   DELETED=$((DELETED + 1))
                 else
-                  echo "❌ Failed"
+                  echo -n "🗑️  Deleting version $VERSION_ID ($TAGS_DISPLAY)... "
+                  if gh api --method DELETE "user/packages/container/$PACKAGE_NAME/versions/$VERSION_ID" --silent; then
+                    echo "✅ Deleted"
+                    DELETED=$((DELETED + 1))
+                  else
+                    echo "❌ Failed"
+                  fi
                 fi
               fi
             fi
           done < /tmp/package_versions.json
 
           echo ""
-          echo "🎉 Package cleanup completed!"
-          echo "   Versions deleted: $DELETED"
-          echo "   Versions kept: $SKIPPED"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "🔍 Dry run completed!"
+            echo "   Versions would be deleted: $DELETED"
+            echo "   Versions would be kept: $SKIPPED"
+          else
+            echo "🎉 Package cleanup completed!"
+            echo "   Versions deleted: $DELETED"
+            echo "   Versions kept: $SKIPPED"
+          fi
 
           # Clean up temp files
           rm -f /tmp/package_versions.json
@@ -123,12 +161,21 @@ jobs:
         run: |
           echo "### 🧹 Container Package Cleanup Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Package cleanup completed successfully**" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "🔍 **Dry run completed successfully** - No packages were actually deleted" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **Package cleanup completed successfully**" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cleanup Rules Applied:**" >> $GITHUB_STEP_SUMMARY
           echo "- Deleted non-release container package versions" >> $GITHUB_STEP_SUMMARY
           echo "- Kept semantic version releases (v1.0.0, etc.)" >> $GITHUB_STEP_SUMMARY
           if [ "${{ github.event.inputs.keep_latest }}" = "true" ]; then
             echo "- Kept latest and main tagged versions" >> $GITHUB_STEP_SUMMARY
           fi
+          if [ "${{ github.event.inputs.days_to_keep }}" != "0" ]; then
+            echo "- Kept versions newer than ${{ github.event.inputs.days_to_keep }} days" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- Limited deletions to maximum of ${{ github.event.inputs.max_deletions }} versions" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Future builds will create fresh development versions as needed." >> $GITHUB_STEP_SUMMARY
