@@ -1,0 +1,184 @@
+name: fix-github-workflows
+description: Comprehensively fix all GitHub Actions workflow failures and ensure all checks pass
+version: "1.0.0"
+
+input:
+  - name: repo_path
+    description: Path to the repository (defaults to current directory)
+    required: false
+    default: "."
+  - name: workflow_filter
+    description: Filter to specific workflow names (comma-separated)
+    required: false
+  - name: dry_run
+    description: Analyze issues without making changes
+    required: false
+    default: false
+  - name: skip_tests
+    description: Skip running tests locally (faster but less thorough)
+    required: false
+    default: false
+
+output:
+  - type: workflow_status
+    description: Current status of all workflows
+  - type: fixes_applied
+    description: Detailed list of all fixes applied
+  - type: verification_results
+    description: Results of local verification runs
+  - type: commit_summary
+    description: Summary of commits made
+
+prompt: |
+  I need you to comprehensively fix all GitHub Actions workflow failures. Please follow this systematic approach:
+
+  ## 1. Initial Assessment
+  
+  **Repository Analysis:**
+  - Examine repository at: {{repo_path}}
+  - Check for CLAUDE.md guidelines and project standards
+  - Identify the main branch and current HEAD
+  - Verify git status and working directory state
+
+  **Workflow Discovery:**
+  - List all workflows in `.github/workflows/`
+  - Parse workflow YAML files to understand job structure
+  - Identify dependencies between workflows and jobs
+  - Note any workflow dispatch triggers or schedule requirements
+
+  ## 2. GitHub Actions Status Analysis
+  
+  **Fetch Latest Run Status:**
+  - Get the latest workflow runs for the current branch
+  - Identify all failing workflows and specific job failures
+  - Extract detailed error messages and failure reasons
+  - Check for any warnings that could become failures
+  {% if workflow_filter %}
+  - Focus on workflows: {{workflow_filter}}
+  {% endif %}
+
+  **Deep Failure Analysis:**
+  - Parse workflow logs for specific error patterns:
+    - Linting failures (ESLint, flake8, pylint, ansible-lint, etc.)
+    - Test failures with stack traces
+    - Build/compilation errors
+    - Dependency installation issues
+    - YAML syntax errors
+    - Security scan failures
+    - Code coverage threshold failures
+  - Identify masked or hidden issues that might cause future failures
+  - Check for environment-specific issues (OS, Node/Python versions)
+
+  ## 3. Systematic Issue Resolution
+
+  **Linting & Code Quality Issues:**
+  - Run ESLint with --fix on JavaScript/TypeScript files
+  - Apply Prettier formatting consistently
+  - Fix Python issues with autopep8, black, isort
+  - Run flake8 and resolve style violations
+  - Fix pylint warnings and errors
+  - Resolve ansible-lint violations
+  - Fix YAML syntax and formatting issues
+  - Apply shellcheck fixes for shell scripts
+
+  **Test Failures:**
+  - Analyze failing test cases and error messages
+  - Fix broken imports and missing dependencies
+  - Resolve test environment setup issues
+  - Update test data or mocks if needed
+  - Fix async/timing issues in tests
+  - Ensure test isolation and cleanup
+
+  **Build & Dependency Issues:**
+  - Update package.json/requirements.txt versions if needed
+  - Fix TypeScript compilation errors
+  - Resolve import/export issues
+  - Update deprecated APIs or methods
+  - Fix security vulnerabilities in dependencies
+
+  **Ansible-Specific Issues:**
+  - Fix deprecated module usage
+  - Resolve variable scoping issues
+  - Fix template and handler problems
+  - Update role dependencies
+  - Fix inventory and playbook syntax
+
+  ## 4. Local Verification
+  {% if not skip_tests %}
+  **Run Full Test Suite:**
+  - Execute all linters locally to verify fixes
+  - Run unit tests, integration tests, and end-to-end tests
+  - Verify build processes complete successfully
+  - Test Ansible playbooks with --check and --diff
+  - Validate YAML files and configurations
+  - Check code coverage meets requirements
+
+  **Environment Testing:**
+  - Test across different environments if specified in workflows
+  - Verify compatibility with different Python/Node versions
+  - Test on different operating systems if applicable
+  {% endif %}
+
+  ## 5. Documentation & Standards Compliance
+
+  **Follow Project Guidelines:**
+  - Adhere to CLAUDE.md standards and conventions
+  - Maintain backward compatibility unless explicitly updating
+  - Add appropriate documentation for any changes
+  - Update README.md if workflow changes affect usage
+
+  **Testing Standards:**
+  - Add tests for any new functionality introduced during fixes
+  - Ensure test coverage doesn't decrease
+  - Add regression tests for fixed bugs where appropriate
+
+  ## 6. Git Management & Commits
+
+  **Semantic Commit Strategy:**
+  - Group related fixes into logical commits
+  - Use conventional commit format:
+    - `fix: resolve ESLint violations in workflow scripts`
+    - `test: fix failing unit tests in auth module`
+    - `ci: update deprecated GitHub Actions versions`
+    - `refactor: improve Ansible role structure for linting`
+    - `docs: update README with workflow changes`
+
+  **Commit Organization:**
+  - Create separate commits for different types of fixes
+  - Include detailed commit messages explaining the changes
+  - Reference specific workflow failures in commit messages
+  - Ensure each commit is atomic and reversible
+
+  ## 7. Final Verification & Reporting
+
+  **GitHub Actions Verification:**
+  - Push changes and monitor new workflow runs
+  - Verify ALL workflows pass without errors or warnings
+  - Check that no new issues were introduced
+  - Confirm all jobs complete successfully
+
+  **Comprehensive Summary:**
+  - List all workflows that were failing initially
+  - Detail every fix applied with before/after status
+  - Document any architectural or configuration changes
+  - Provide recommendations for preventing future failures
+  - Note any manual steps required post-fix
+
+  ## 8. Additional Considerations
+
+  **Security & Best Practices:**
+  - Ensure no secrets are exposed in logs or code
+  - Verify workflow permissions are appropriate
+  - Check for any security scan failures and resolve them
+  - Update any deprecated GitHub Actions to latest versions
+
+  **Performance Optimization:**
+  - Look for opportunities to optimize workflow runtime
+  - Consider caching strategies for dependencies
+  - Parallelize jobs where possible without breaking dependencies
+
+  {% if dry_run %}
+  **DRY RUN MODE**: Only analyze and report issues without making changes or commits.
+  {% endif %}
+
+  Begin the comprehensive workflow failure analysis and fixing process for: {{repo_path}}

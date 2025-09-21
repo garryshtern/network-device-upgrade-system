@@ -1,0 +1,117 @@
+name: lint-and-fix
+description: Run comprehensive linting and auto-fix issues across multiple languages and file types
+version: "1.0.0"
+
+input:
+  - name: target_path
+    description: Path to lint (defaults to current directory)
+    required: false
+    default: "."
+  - name: skip_commit
+    description: Skip auto-commit of changes
+    required: false
+    default: false
+  - name: dry_run
+    description: Show what would be linted without making changes
+    required: false
+    default: false
+
+output:
+  - type: fixes
+    description: Summary of all fixes applied
+  - type: remaining_issues
+    description: Issues that require manual intervention
+  - type: commit_info
+    description: Git commit details if changes were committed
+
+prompt: |
+  I need you to run comprehensive linting and auto-fix issues across my codebase. Please follow this systematic approach:
+
+  ## 1. Pre-flight Checks
+  - Scan the target path: {{target_path}}
+  - Identify file types present in the project
+  - Check which linting tools are available/installed
+  - Verify git status before making changes
+  - Create backup strategy if needed
+
+  ## 2. Linting & Auto-fixing (in order of dependency)
+
+  ### JavaScript/TypeScript
+  - Run ESLint with `--fix` flag on .js, .jsx, .ts, .tsx files
+  - Apply Prettier formatting to all supported files
+  - Run TypeScript compiler checks (`tsc --noEmit`)
+  - Handle any configuration conflicts between tools
+
+  ### Python
+  - Run autopep8 or black for code formatting
+  - Apply isort for import sorting
+  - Run flake8 for style guide enforcement
+  - Run pylint for code quality checks
+  - Fix docstring issues with pydocstyle if needed
+
+  ### YAML Files
+  - Run yamllint for YAML syntax and style
+  - Fix indentation and formatting issues
+  - Validate YAML structure
+
+  ### JSON Files
+  - Validate JSON syntax
+  - Apply consistent formatting
+  - Fix common JSON issues
+
+  ### Shell Scripts
+  - Run shellcheck for bash/sh files
+  - Fix common shell scripting issues
+  - Ensure proper shebang lines
+  - Check for security issues
+
+  ### Ansible
+  - Run ansible-lint on playbooks and roles
+  - Fix common Ansible best practice violations
+  - Validate YAML syntax in Ansible files
+  - Check for deprecated modules
+
+  ## 3. Issue Resolution
+  For each linter:
+  - Apply all auto-fixable issues
+  - Document issues requiring manual intervention
+  - Provide specific recommendations for manual fixes
+  - Note any conflicting rules between linters
+
+  ## 4. Verification
+  - Re-run all linters to confirm fixes
+  - Ensure no new issues were introduced
+  - Validate that code still functions correctly
+  - Check for any broken imports or references
+
+  ## 5. Git Management
+  {% if not skip_commit %}
+  - Stage all changes
+  - Create descriptive commit messages for each type of fix:
+    - "lint: fix ESLint issues and apply Prettier formatting"
+    - "lint: resolve Python style violations (flake8, pylint)"
+    - "lint: fix YAML and JSON formatting issues"
+    - "lint: resolve shell script issues (shellcheck)"
+    - "lint: fix Ansible linting violations"
+  - Use conventional commit format where appropriate
+  {% endif %}
+
+  ## 6. Summary Report
+  Provide:
+  - Total number of files processed
+  - Issues fixed by category
+  - Remaining manual issues with line numbers
+  - Performance impact of changes
+  - Next steps for manual fixes
+
+  ## Configuration Notes
+  - Respect existing config files (.eslintrc, .prettierrc, setup.cfg, etc.)
+  - Use project-specific linting rules when available
+  - Fall back to sensible defaults for unconfigured tools
+  - Handle monorepo structures appropriately
+
+  {% if dry_run %}
+  **DRY RUN MODE**: Only analyze and report what would be changed, don't modify files.
+  {% endif %}
+
+  Start the linting process for: {{target_path}}
