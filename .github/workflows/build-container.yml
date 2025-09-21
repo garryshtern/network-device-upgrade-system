@@ -73,25 +73,27 @@ jobs:
   build-container:
     name: Build Container Image (${{ matrix.platform.name }})
     runs-on: ubuntu-latest
+    if: |
+      (inputs.build_type == 'fast-x64' && matrix.platform.name == 'AMD64') ||
+      (inputs.build_type == 'arm64-only' && matrix.platform.name == 'ARM64') ||
+      (inputs.build_type == 'multi-platform') ||
+      (inputs.build_type == '' && matrix.platform.name == 'AMD64')
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{
-          (inputs.build_type == 'fast-x64' && fromJSON('[
-            {"name": "AMD64", "platforms": "linux/amd64", "suffix": "amd64", "primary": true}
-          ]')) ||
-          (inputs.build_type == 'arm64-only' && fromJSON('[
-            {"name": "ARM64", "platforms": "linux/arm64", "suffix": "arm64", "primary": true}
-          ]')) ||
-          (inputs.build_type == 'multi-platform' && fromJSON('[
-            {"name": "AMD64", "platforms": "linux/amd64", "suffix": "amd64", "primary": true},
-            {"name": "ARM64", "platforms": "linux/arm64", "suffix": "arm64", "primary": false},
-            {"name": "Multi-Platform", "platforms": "linux/amd64,linux/arm64", "suffix": "multi", "primary": false}
-          ]')) ||
-          fromJSON('[
-            {"name": "AMD64", "platforms": "linux/amd64", "suffix": "amd64", "primary": true}
-          ]')
-        }}
+        platform:
+          - name: "AMD64"
+            platforms: "linux/amd64"
+            suffix: "amd64"
+            primary: true
+          - name: "ARM64"
+            platforms: "linux/arm64"
+            suffix: "arm64"
+            primary: false
+          - name: "Multi-Platform"
+            platforms: "linux/amd64,linux/arm64"
+            suffix: "multi"
+            primary: false
     outputs:
       digest: ${{ steps.build.outputs.digest }}
       tags: ${{ steps.meta.outputs.tags }}
