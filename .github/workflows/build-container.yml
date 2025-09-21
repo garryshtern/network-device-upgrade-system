@@ -2,9 +2,10 @@
 name: Build Container Image
 
 # Cancel in-progress runs when a new workflow is triggered
+# Disable cancellation for workflow_call to prevent deadlocks with calling workflows
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
 
 on:
   release:
