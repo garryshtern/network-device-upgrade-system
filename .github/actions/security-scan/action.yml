@@ -1,0 +1,22 @@
+name: 'Security Scan'
+description: 'Scan for hardcoded secrets and security issues'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run security scan for secrets
+      shell: bash
+      run: |
+        # Check for potential secrets in code
+        grep -r "password\|secret\|key\|token" ansible-content/ \
+          --include="*.yml" --include="*.yaml" || true
+        echo "Security scan completed"
+
+    - name: Check for hardcoded IPs
+      shell: bash
+      run: |
+        # Check for hardcoded IP addresses (except test/mock IPs)
+        grep -r "192\.168\|10\.\|172\." ansible-content/ \
+          --include="*.yml" --include="*.yaml" | \
+          grep -v "127.0.0" || true
+        echo "IP address scan completed"

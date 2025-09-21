@@ -1,0 +1,54 @@
+name: 'Unit Tests'
+description: 'Run Ansible unit tests for variable validation, templates, and workflow logic'
+
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.13.7'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Ansible
+      shell: bash
+      run: |
+        pip install --upgrade ansible
+        ansible-galaxy collection install \
+          -r ansible-content/collections/requirements.yml \
+          --force --ignore-certs
+
+    - name: Run variable validation tests
+      shell: bash
+      run: |
+        ansible-playbook tests/unit-tests/variable-validation.yml
+
+    - name: Run template rendering tests
+      shell: bash
+      run: |
+        ansible-playbook tests/unit-tests/template-rendering.yml
+
+    - name: Run workflow logic tests
+      shell: bash
+      run: |
+        ansible-playbook tests/unit-tests/workflow-logic.yml
+
+    - name: Run error handling tests
+      shell: bash
+      run: |
+        ansible-playbook tests/unit-tests/error-handling.yml
+
+    - name: Run authentication validation tests
+      shell: bash
+      run: |
+        ansible-playbook tests/unit-tests/authentication-validation.yml
+
+    - name: Run mock authentication validation tests
+      shell: bash
+      run: |
+        ansible-playbook tests/unit-tests/mock-authentication-validation.yml

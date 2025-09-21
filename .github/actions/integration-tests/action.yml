@@ -1,0 +1,40 @@
+name: 'Integration Tests'
+description: 'Run integration tests and check mode validation'
+
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.13.7'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Ansible
+      shell: bash
+      run: |
+        pip install --upgrade ansible
+        ansible-galaxy collection install \
+          -r ansible-content/collections/requirements.yml \
+          --force --ignore-certs
+
+    - name: Run check mode tests
+      shell: bash
+      run: |
+        ANSIBLE_ROLES_PATH=ansible-content/roles \
+        ANSIBLE_CONFIG=ansible-content/ansible.cfg \
+        ansible-playbook -i tests/mock-inventories/all-platforms.yml \
+          --check --diff tests/integration-tests/check-mode-tests.yml
+
+    - name: Test main workflow syntax validation
+      shell: bash
+      run: |
+        ANSIBLE_ROLES_PATH=ansible-content/roles \
+        ANSIBLE_CONFIG=ansible-content/ansible.cfg \
+        ansible-playbook --syntax-check \
+          ansible-content/playbooks/main-upgrade-workflow.yml

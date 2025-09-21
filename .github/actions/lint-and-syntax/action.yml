@@ -1,0 +1,40 @@
+name: 'Lint and Syntax Tests'
+description: 'Run YAML linting, ansible-lint, and syntax validation'
+
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.13.7'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Ansible Environment
+      uses: ./.github/actions/setup-ansible
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache-key-suffix: 'lint-syntax'
+
+    - name: Run YAML syntax validation
+      shell: bash
+      run: |
+        python3 tests/validation-scripts/yaml-validator.py --ansible-only
+
+    - name: Run yamllint
+      shell: bash
+      run: |
+        yamllint ansible-content/
+      continue-on-error: true
+
+    - name: Run ansible-lint
+      shell: bash
+      run: |
+        ansible-lint ansible-content/playbooks/ ansible-content/roles/
+      continue-on-error: true
+
+    - name: Test playbook syntax
+      shell: bash
+      run: |
+        ansible-playbook --syntax-check \
+          ansible-content/playbooks/main-upgrade-workflow.yml
