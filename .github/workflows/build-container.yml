@@ -186,7 +186,17 @@ jobs:
 
           # Get the first tag for inspection
           IMAGE_TAG=$(echo '${{ steps.meta.outputs.tags }}' | head -1)
-          echo "Inspecting image: $IMAGE_TAG"
+          echo "Target image: $IMAGE_TAG"
+
+          # Pull the image for local inspection (required for multi-platform builds)
+          echo "📥 Pulling image for verification..."
+          docker pull "$IMAGE_TAG"
+
+          # Verify image was pulled successfully
+          if ! docker image inspect "$IMAGE_TAG" >/dev/null 2>&1; then
+            echo "❌ ERROR: Failed to pull image for verification"
+            exit 1
+          fi
 
           # Inspect image labels
           echo "📋 Container Labels:"
