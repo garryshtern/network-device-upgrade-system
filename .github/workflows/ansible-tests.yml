@@ -280,5 +280,5 @@ jobs:
     uses: ./.github/workflows/build-container.yml
     with:
       push_image: true
-      platforms: 'linux/amd64,linux/arm64'
+      build_type: 'fast-x64'
     secrets: inherit
