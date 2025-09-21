@@ -1,0 +1,57 @@
+---
+name: Unit Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13.7'
+
+      - name: Install Ansible
+        run: |
+          pip install --upgrade ansible
+          ansible-galaxy collection install \
+            -r ansible-content/collections/requirements.yml \
+            --force --ignore-certs
+
+      - name: Run variable validation tests
+        run: |
+          ansible-playbook tests/unit-tests/variable-validation.yml
+
+      - name: Run template rendering tests
+        run: |
+          ansible-playbook tests/unit-tests/template-rendering.yml
+
+      - name: Run workflow logic tests
+        run: |
+          ansible-playbook tests/unit-tests/workflow-logic.yml
+
+      - name: Run error handling tests
+        run: |
+          ansible-playbook tests/unit-tests/error-handling.yml
+
+      - name: Run authentication validation tests
+        run: |
+          ansible-playbook tests/unit-tests/authentication-validation.yml
+
+      - name: Run mock authentication validation tests
+        run: |
+          ansible-playbook tests/unit-tests/mock-authentication-validation.yml

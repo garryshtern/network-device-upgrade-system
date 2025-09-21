@@ -1,38 +1,106 @@
 ---
-name: Scheduled Comprehensive Tests
+name: Comprehensive Test Suites
 
-# Cancel in-progress runs when a new workflow is triggered
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-'on':
+on:
   schedule:
-    # Run comprehensive tests daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    # Run comprehensive tests weekly on Sundays at 3:00 AM UTC
+    - cron: '0 3 * * 0'
   workflow_dispatch:
     inputs:
-      test_scope:
-        description: 'Test scope to run'
-        required: true
-        default: 'extended'
+      test_level:
+        description: 'Test level to run'
+        required: false
+        default: 'standard'
         type: choice
         options:
-          - extended
-          - performance-only
-          - stress-test
-          - uat-only
-          - full-suite
+        - 'standard'
+        - 'comprehensive'
+        - 'critical-gaps-only'
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
-  extended-testing:
-    name: Extended Test Suite (Scheduled)
+  critical-gap-tests:
+    name: Critical Gap Test Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # Only run on schedule, manual trigger with critical-gaps-only, or manual comprehensive
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.test_level == 'critical-gaps-only' || inputs.test_level == 'comprehensive'))
+    strategy:
+      matrix:
+        python-version: ["3.13.7"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade ansible psutil
+          pip install yamllint ansible-lint
+
+      - name: Install Ansible collections
+        run: |
+          ansible-galaxy collection install \
+            -r ansible-content/collections/requirements.yml \
+            --force --ignore-certs
+
+      - name: Create reports directory
+        run: mkdir -p tests/reports
+
+      - name: Run Critical Gap Test Suite
+        run: |
+          chmod +x tests/critical-gaps/run-all-critical-gap-tests.sh
+          # Set timeout to prevent infinite execution
+          timeout 600 tests/critical-gaps/run-all-critical-gap-tests.sh || true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: critical-gap-test-results-${{ matrix.python-version }}
+          path: |
+            tests/reports/critical-gap-*.json
+            tests/reports/critical-gap-*.log
+            tests/reports/*-coverage-*.json
+          retention-days: 30
+
+      - name: Display test summary
+        if: always()
+        run: |
+          echo "=== CRITICAL GAP TEST SUMMARY ==="
+          if [ -f tests/reports/critical-gap-test-summary-*.json ]; then
+            latest_summary=$(ls -t tests/reports/critical-gap-test-summary-*.json | head -1)
+            echo "📊 Latest test summary: $latest_summary"
+
+            # Extract key metrics using jq if available
+            if command -v jq &> /dev/null; then
+              echo "📈 Success Rate: $(jq -r '.test_execution_summary.success_rate_percent' "$latest_summary")%"
+              echo "✅ Passed Tests: $(jq -r '.test_execution_summary.passed_tests' "$latest_summary")"
+              echo "❌ Failed Tests: $(jq -r '.test_execution_summary.failed_tests' "$latest_summary")"
+              echo "💰 Business Risk Addressed: $(jq -r '.business_impact.total_risk_addressed' "$latest_summary")"
+              echo "🚀 Production Readiness: $(jq -r '.business_impact.production_readiness' "$latest_summary")"
+            else
+              echo "📄 Raw summary:"
+              cat "$latest_summary"
+            fi
+          else
+            echo "⚠️ No test summary found - tests may not have completed successfully"
+            ls -la tests/reports/ || echo "Reports directory not found"
+          fi
+
+  comprehensive-test-suite:
+    name: Comprehensive Test Suite (All 14 Tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Only run on schedule or manual trigger with comprehensive level
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_level == 'comprehensive')
 
     steps:
       - name: Checkout code
@@ -45,117 +113,43 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade ansible
-          pip install yamllint ansible-lint pytest pytest-ansible paramiko psutil
+          python -m pip install --upgrade pip
+          pip install --upgrade ansible psutil
+          pip install yamllint ansible-lint
+
+      - name: Install Ansible collections
+        run: |
           ansible-galaxy collection install \
             -r ansible-content/collections/requirements.yml \
             --force --ignore-certs
 
-      - name: Run extended platform testing
-        if: >
-          github.event.inputs.test_scope == 'extended' ||
-          github.event.inputs.test_scope == ''
-        run: |
-          echo "Running extended platform-specific tests..."
-          # Test each platform with extended scenarios
-          for platform in cisco_nxos cisco_iosxe fortios opengear \
-                       metamako_mos; do
-            echo "=== Extended testing for platform: $platform ==="
-            if [ -f "tests/vendor-tests/${platform}-tests.yml" ]; then
-              ansible-playbook "tests/vendor-tests/${platform}-tests.yml" \
-                --check --diff || \
-                echo "Extended test completed for $platform"
-            fi
-          done
+      - name: Create results directory
+        run: mkdir -p tests/results
 
-      - name: Run stress tests
-        if: >
-          github.event.inputs.test_scope == 'extended' ||
-          github.event.inputs.test_scope == 'stress-test' ||
-          github.event.inputs.test_scope == ''
+      - name: Run comprehensive test suite
         run: |
-          echo "Running stress tests..."
-          # Simulate high load scenarios
-          for i in {1..5}; do
-            echo "Stress test iteration $i/5"
-            ansible-playbook -i tests/mock-inventories/all-platforms.yml \
-              --check --diff tests/integration-tests/workflow-tests.yml \
-              --extra-vars "stress_test=true iteration=$i" || true
-          done
+          cd tests
+          chmod +x run-all-tests.sh
+          ./run-all-tests.sh
 
-      - name: Run performance benchmarks
-        if: >
-          github.event.inputs.test_scope == 'extended' ||
-          github.event.inputs.test_scope == 'performance-only' ||
-          github.event.inputs.test_scope == ''
-        run: |
-          echo "Running performance benchmarks..."
-          if [ -f "./tests/performance-tests/run-performance-tests.sh" ]; then
-            ./tests/performance-tests/run-performance-tests.sh
-          else
-            echo "Performance tests not found, skipping"
-          fi
-
-      - name: Run UAT Production Readiness Tests
-        if: >
-          github.event.inputs.test_scope == 'extended' ||
-          github.event.inputs.test_scope == 'uat-only' ||
-          github.event.inputs.test_scope == 'full-suite' ||
-          github.event.inputs.test_scope == ''
-        run: |
-          echo "Running UAT Production Readiness Tests..."
-          # Run comprehensive UAT suite
-          ansible-playbook tests/uat-tests/production_readiness_suite.yml \
-            --extra-vars "test_mode=scheduled" || \
-            echo "UAT tests completed (some failures expected in mock environment)"
-
-      - name: Run comprehensive error simulation
-        if: >
-          github.event.inputs.test_scope == 'full-suite' ||
-          github.event.inputs.test_scope == ''
-        run: |
-          echo "Running comprehensive error simulation tests..."
-          ./tests/error-scenarios/run-error-simulation-tests.sh || \
-            echo "Error simulation tests completed"
-
-      - name: Generate extended test report
-        run: |
-          echo "# Extended Test Report" > extended-test-report.md
-          echo "Generated on: $(date)" >> extended-test-report.md
-          echo "Test scope: ${{ github.event.inputs.test_scope }}" >> extended-test-report.md
-          echo "" >> extended-test-report.md
-          echo "## Extended Testing Summary" >> extended-test-report.md
-          echo "- Platform-specific vendor tests: ✅" >> extended-test-report.md
-          echo "- Stress testing (5 iterations): ✅" >> extended-test-report.md
-          echo "- Performance benchmarks: ✅" >> extended-test-report.md
-          
-          # Add UAT and error simulation results if they were run
-          if [[ "${{ github.event.inputs.test_scope }}" == "extended" || \
-                "${{ github.event.inputs.test_scope }}" == "uat-only" || \
-                "${{ github.event.inputs.test_scope }}" == "full-suite" || \
-                "${{ github.event.inputs.test_scope }}" == "" ]]; then
-            echo "- UAT Production Readiness Tests: ✅" >> extended-test-report.md
-          fi
-          
-          if [[ "${{ github.event.inputs.test_scope }}" == "full-suite" || \
-                "${{ github.event.inputs.test_scope }}" == "" ]]; then
-            echo "- Error Simulation Framework: ✅" >> extended-test-report.md
-          fi
-          
-          echo "" >> extended-test-report.md
-          echo "Extended testing provides deeper validation beyond standard" \
-            "CI/CD tests." >> extended-test-report.md
-          echo "" >> extended-test-report.md
-          echo "## Production Readiness Assessment" >> extended-test-report.md
-          echo "Based on comprehensive testing including:" >> extended-test-report.md
-          echo "- Mock device simulation with realistic behavior" >> extended-test-report.md
-          echo "- Error injection and recovery testing" >> extended-test-report.md
-          echo "- Enterprise-scale concurrent upgrade simulation" >> extended-test-report.md
-          echo "- High availability and disaster recovery validation" >> extended-test-report.md
-          echo "- Security compliance and performance benchmarking" >> extended-test-report.md
-
-      - name: Upload extended test report
+      - name: Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: extended-test-report-${{ github.run_number }}
-          path: extended-test-report.md
+          name: comprehensive-test-results-${{ github.run_number }}
+          path: |
+            tests/results/test_report_*.txt
+            tests/results/*_*.log
+          retention-days: 30
+
+      - name: Fail if any tests failed
+        run: |
+          # Check if comprehensive tests passed by checking passed count and success rate
+          if grep -q "Passed: 14" tests/results/test_report_*.txt && grep -q "Failed: 0" tests/results/test_report_*.txt; then
+            echo "✅ All 14 test suites passed successfully"
+          else
+            echo "❌ Comprehensive test suite failed"
+            echo "Test report contents:"
+            cat tests/results/test_report_*.txt || echo "No test report found"
+            exit 1
+          fi

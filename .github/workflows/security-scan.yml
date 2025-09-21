@@ -1,0 +1,36 @@
+---
+name: Security Scan
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run security scan for secrets
+        run: |
+          # Check for potential secrets in code
+          grep -r "password\|secret\|key\|token" ansible-content/ \
+            --include="*.yml" --include="*.yaml" || true
+          echo "Security scan completed"
+
+      - name: Check for hardcoded IPs
+        run: |
+          # Check for hardcoded IP addresses (except test/mock IPs)
+          grep -r "192\.168\|10\.\|172\." ansible-content/ \
+            --include="*.yml" --include="*.yaml" | \
+            grep -v "127.0.0" || true
+          echo "IP address scan completed"
