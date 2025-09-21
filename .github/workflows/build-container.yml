@@ -122,8 +122,8 @@ jobs:
             type=semver,pattern={{version}},enable=${{ matrix.platform.primary }}
             type=semver,pattern={{major}}.{{minor}},suffix=-${{ matrix.platform.suffix }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.platform.primary }}
-            type=raw,value=latest-${{ matrix.platform.suffix }},enable=${{ is_default_branch }}
-            type=raw,value=latest,enable=${{ is_default_branch && matrix.platform.primary }}
+            type=raw,value=latest-${{ matrix.platform.suffix }},enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' && matrix.platform.primary }}
             type=sha,prefix={{branch}}-${{ matrix.platform.suffix }}-,format=short,enable=${{ github.event_name != 'workflow_dispatch' }}
             type=raw,value=${{ inputs.image_tag }}-${{ matrix.platform.suffix }},enable=${{ inputs.image_tag != '' }}
           labels: |
