@@ -13,6 +13,9 @@ on:
         required: false
         default: '100'
         type: string
+  schedule:
+    # Run automatic cleanup monthly on the first day at 3 AM UTC
+    - cron: '0 3 1 * *'
 
 permissions:
   actions: write
@@ -26,11 +29,14 @@ jobs:
     steps:
       - name: Validate confirmation
         run: |
-          if [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "✅ Scheduled cleanup run - auto-approved"
+          elif [ "${{ github.event.inputs.confirm_deletion }}" != "DELETE" ]; then
             echo "❌ Confirmation failed. You must type 'DELETE' to proceed."
             exit 1
+          else
+            echo "✅ Manual confirmation validated"
           fi
-          echo "✅ Confirmation validated"
 
       - name: Delete artifacts
         run: |
@@ -47,7 +53,7 @@ jobs:
           fi
 
           TOTAL_ARTIFACTS=$(wc -l < /tmp/artifact_ids.txt)
-          MAX_LIMIT=${{ github.event.inputs.max_artifacts }}
+          MAX_LIMIT=${{ github.event.inputs.max_artifacts || '50' }}
 
           if [ "$TOTAL_ARTIFACTS" -gt "$MAX_LIMIT" ]; then
             echo "⚠️  Found $TOTAL_ARTIFACTS artifacts, but limit is $MAX_LIMIT"
