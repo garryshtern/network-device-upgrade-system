@@ -58,15 +58,33 @@
         fail_msg: "Variable type validation failed"
         success_msg: "✓ All variables have correct types and formats"
 
-    - name: Test error handling
+    - name: Test error handling capability
       block:
-        - name: Attempt invalid operation
+        - name: Attempt invalid operation (intentional test failure)
           fail:
-            msg: "Simulated error for testing"
-      rescue:
-        - name: Verify error was caught
+            msg: "EXPECTED: Simulated error for testing error handling"
+
+        - name: This should not execute
           debug:
-            msg: "✓ Error handling works correctly"
+            msg: "ERROR: This task should not run if error handling works"
+
+      rescue:
+        - name: Verify error was caught and handled
+          debug:
+            msg: "✓ Error handling works correctly - caught expected failure"
+
+        - name: Set error handling test result
+          set_fact:
+            error_handling_test_passed: true
+
+      always:
+        - name: Ensure error handling test completed
+          assert:
+            that:
+              - error_handling_test_passed is defined
+              - error_handling_test_passed | bool
+            fail_msg: "Error handling test did not complete properly"
+            success_msg: "✓ Error handling test completed successfully"
 
     - name: Verify cleanup capability
       file:
@@ -103,6 +121,7 @@
           - "✓ Directory creation: PASSED"
           - "✓ File operations: PASSED"
           - "✓ Variable validation: PASSED"
-          - "✓ Error handling: PASSED"
+          - "✓ Error handling (block/rescue): PASSED"
           - "✓ Cleanup operations: PASSED"
-          - "=== All tests completed successfully ==="
+          - "=== All molecule tests completed successfully ==="
+          - "Note: Any 'EXPECTED' error messages above are intentional test failures"
