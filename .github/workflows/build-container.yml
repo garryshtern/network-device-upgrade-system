@@ -76,19 +76,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - name: "AMD64"
-            platforms: "linux/amd64"
-            suffix: "amd64"
-            primary: true
-          - name: "ARM64"
-            platforms: "linux/arm64"
-            suffix: "arm64"
-            primary: false
-          - name: "Multi-Platform"
-            platforms: "linux/amd64,linux/arm64"
-            suffix: "multi"
-            primary: false
+        platform: ${{
+          (inputs.build_type == 'fast-x64' && fromJSON('[
+            {"name": "AMD64", "platforms": "linux/amd64", "suffix": "amd64", "primary": true}
+          ]')) ||
+          (inputs.build_type == 'arm64-only' && fromJSON('[
+            {"name": "ARM64", "platforms": "linux/arm64", "suffix": "arm64", "primary": true}
+          ]')) ||
+          (inputs.build_type == 'multi-platform' && fromJSON('[
+            {"name": "AMD64", "platforms": "linux/amd64", "suffix": "amd64", "primary": true},
+            {"name": "ARM64", "platforms": "linux/arm64", "suffix": "arm64", "primary": false},
+            {"name": "Multi-Platform", "platforms": "linux/amd64,linux/arm64", "suffix": "multi", "primary": false}
+          ]')) ||
+          fromJSON('[
+            {"name": "AMD64", "platforms": "linux/amd64", "suffix": "amd64", "primary": true}
+          ]')
+        }}
     outputs:
       digest: ${{ steps.build.outputs.digest }}
       tags: ${{ steps.meta.outputs.tags }}
