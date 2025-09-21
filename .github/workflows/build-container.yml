@@ -176,14 +176,6 @@ jobs:
           push: ${{ inputs.push_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          annotations: |
-            index:org.opencontainers.image.title=Network Device Upgrade System
-            index:org.opencontainers.image.description=Automated network device firmware upgrade system using Ansible. Supports Cisco NX-OS/IOS-XE, FortiOS, Opengear, and Metamako with comprehensive validation and rollback.
-            index:org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            index:org.opencontainers.image.url=https://github.com/${{ github.repository }}
-            index:org.opencontainers.image.documentation=https://github.com/${{ github.repository }}/tree/main/docs
-            index:org.opencontainers.image.vendor=Network Operations
-            index:org.opencontainers.image.licenses=MIT
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
@@ -234,12 +226,9 @@ jobs:
           echo "📄 Description: $DESCRIPTION"
           echo "🏷️  Title: $TITLE"
 
-          # Verify manifest annotations (for GitHub Container Registry)
-          echo "🔍 Checking manifest annotations for GitHub Container Registry..."
-          docker buildx imagetools inspect "$IMAGE_TAG" --format '{{json .}}' | jq -r '.annotations // {}' | jq -e 'has("org.opencontainers.image.description")' || {
-            echo "⚠️  WARNING: Manifest annotations may not be set correctly for GitHub Container Registry"
-            echo "This may cause 'No description provided' to appear in GitHub packages"
-          }
+          # Display all labels for GitHub Container Registry troubleshooting
+          echo "🔍 All container labels:"
+          docker inspect "$IMAGE_TAG" --format='{{range $k, $v := .Config.Labels}}{{printf "%s=%s\n" $k $v}}{{end}}' | grep "org.opencontainers.image" | sort
 
       - name: Generate container SBOM
         if: inputs.push_image && github.event_name != 'pull_request'
