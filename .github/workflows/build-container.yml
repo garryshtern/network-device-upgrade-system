@@ -9,14 +9,20 @@ on:
         required: false
         default: 'true'
         type: boolean
-      platforms:
-        description: 'Target platforms'
+      build_type:
+        description: 'Container build type'
         required: false
-        default: 'linux/amd64'
+        default: 'fast-x64'
         type: choice
         options:
-        - 'linux/amd64'
-        - 'linux/amd64,linux/arm64'
+        - 'fast-x64'
+        - 'arm64-only'
+        - 'multi-platform'
+      platforms:
+        description: 'Custom platforms (advanced users only)'
+        required: false
+        default: ''
+        type: string
       image_tag:
         description: 'Custom image tag (leave empty for auto)'
         required: false
@@ -29,10 +35,15 @@ on:
         required: false
         default: true
         type: boolean
-      platforms:
-        description: 'Target platforms'
+      build_type:
+        description: 'Container build type'
         required: false
-        default: 'linux/amd64'
+        default: 'fast-x64'
+        type: string
+      platforms:
+        description: 'Custom platforms override'
+        required: false
+        default: ''
         type: string
       image_tag:
         description: 'Custom image tag'
@@ -94,13 +105,47 @@ jobs:
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.url=https://github.com/${{ github.repository }}
 
+      - name: Determine build platforms
+        id: platforms
+        run: |
+          BUILD_TYPE="${{ inputs.build_type || 'fast-x64' }}"
+          CUSTOM_PLATFORMS="${{ inputs.platforms }}"
+
+          # Use custom platforms if provided, otherwise map build_type
+          if [ -n "$CUSTOM_PLATFORMS" ]; then
+            PLATFORMS="$CUSTOM_PLATFORMS"
+            echo "Using custom platforms: $PLATFORMS"
+          else
+            case "$BUILD_TYPE" in
+              "fast-x64")
+                PLATFORMS="linux/amd64"
+                echo "🚀 Fast x64-only build selected (faster for development/testing)"
+                ;;
+              "arm64-only")
+                PLATFORMS="linux/arm64"
+                echo "🔧 ARM64-only build selected (for ARM-based systems)"
+                ;;
+              "multi-platform")
+                PLATFORMS="linux/amd64,linux/arm64"
+                echo "🌍 Multi-platform build selected (production deployment)"
+                ;;
+              *)
+                PLATFORMS="linux/amd64"
+                echo "⚠️  Unknown build type '$BUILD_TYPE', defaulting to x64-only"
+                ;;
+            esac
+          fi
+
+          echo "platforms=$PLATFORMS" >> $GITHUB_OUTPUT
+          echo "Final platforms: $PLATFORMS"
+
       - name: Build and push container image
         id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          platforms: ${{ inputs.platforms || 'linux/amd64' }}
+          platforms: ${{ steps.platforms.outputs.platforms }}
           push: ${{ inputs.push_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -277,7 +322,8 @@ jobs:
         run: |
           echo "🎉 Container build completed successfully!"
           echo "📋 Build Details:"
-          echo "  - Platforms: ${{ inputs.platforms || 'linux/amd64' }}"
+          echo "  - Build type: ${{ inputs.build_type || 'fast-x64' }}"
+          echo "  - Platforms: ${{ steps.platforms.outputs.platforms }}"
           echo "  - Push to registry: ${{ inputs.push_image }}"
           echo "  - Image digest: ${{ steps.build.outputs.digest }}"
           echo ""
