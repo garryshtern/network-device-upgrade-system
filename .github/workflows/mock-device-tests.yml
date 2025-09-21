@@ -110,10 +110,15 @@ jobs:
                   assert device.upgrade_phase == UpgradePhase.BACKUP, f'{platform} backup phase not set'
 
                   # Test file operations for platforms that support them
-                  if platform in ['cisco_nxos', 'cisco_iosxe']:
+                  if platform == 'cisco_nxos':
                       device.upgrade_phase = UpgradePhase.IMAGE_DOWNLOAD
                       copy_resp = device.process_command('copy * bootflash:staged-firmware')
                       assert copy_resp['status'] == 'success', f'{platform} file staging operation failed'
+                  elif platform == 'cisco_iosxe':
+                      device.upgrade_phase = UpgradePhase.IMAGE_DOWNLOAD
+                      # IOS-XE uses install mode commands instead of direct copy
+                      install_resp = device.process_command('request platform software package install switch all file bootflash:firmware.bin')
+                      assert install_resp['status'] == 'success', f'{platform} install operation failed'
 
                   # Test state transition to upgrading
                   device.state = DeviceState.UPGRADING
