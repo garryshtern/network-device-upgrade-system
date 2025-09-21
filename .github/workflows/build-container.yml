@@ -111,6 +111,19 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.url=https://github.com/${{ github.repository }}
+          flavor: |
+            latest=auto
+
+      - name: Verify metadata generation
+        run: |
+          echo "🏷️  Generated tags:"
+          echo '${{ steps.meta.outputs.tags }}' | sed 's/^/  - /'
+          echo ""
+          echo "🏷️  Generated labels:"
+          echo '${{ steps.meta.outputs.labels }}' | sed 's/^/  /'
+          echo ""
+          echo "📋 Metadata JSON:"
+          echo '${{ steps.meta.outputs.json }}' | jq '.'
 
       - name: Determine build platforms
         id: platforms
@@ -158,10 +171,43 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
           build-args: |
             BUILDTIME=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
             VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
             REVISION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+
+      - name: Verify container metadata
+        if: inputs.push_image
+        run: |
+          echo "🔍 Verifying container metadata was applied correctly..."
+
+          # Get the first tag for inspection
+          IMAGE_TAG=$(echo '${{ steps.meta.outputs.tags }}' | head -1)
+          echo "Inspecting image: $IMAGE_TAG"
+
+          # Inspect image labels
+          echo "📋 Container Labels:"
+          docker inspect "$IMAGE_TAG" --format='{{range $k, $v := .Config.Labels}}{{printf "%s=%s\n" $k $v}}{{end}}' | sort
+
+          # Verify key labels exist
+          DESCRIPTION=$(docker inspect "$IMAGE_TAG" --format='{{index .Config.Labels "org.opencontainers.image.description"}}')
+          TITLE=$(docker inspect "$IMAGE_TAG" --format='{{index .Config.Labels "org.opencontainers.image.title"}}')
+
+          if [ -z "$DESCRIPTION" ] || [ "$DESCRIPTION" = "<no value>" ]; then
+            echo "❌ ERROR: Description label missing or empty"
+            exit 1
+          fi
+
+          if [ -z "$TITLE" ] || [ "$TITLE" = "<no value>" ]; then
+            echo "❌ ERROR: Title label missing or empty"
+            exit 1
+          fi
+
+          echo "✅ SUCCESS: All required metadata labels are present"
+          echo "📄 Description: $DESCRIPTION"
+          echo "🏷️  Title: $TITLE"
 
       - name: Generate container SBOM
         if: inputs.push_image && github.event_name != 'pull_request'

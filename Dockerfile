@@ -2,12 +2,15 @@
 # Optimized for RHEL8/9 podman compatibility with non-root execution
 FROM python:3.13-alpine
 
-# Metadata
+# Metadata (will be overridden by build workflow for proper GitHub integration)
 LABEL org.opencontainers.image.title="Network Device Upgrade System"
 LABEL org.opencontainers.image.description="Automated network device firmware upgrade system using Ansible. Supports Cisco NX-OS/IOS-XE, FortiOS, Opengear, and Metamako with comprehensive validation and rollback."
 LABEL org.opencontainers.image.vendor="Network Operations"
 LABEL org.opencontainers.image.version="1.4.0"
 LABEL org.opencontainers.image.source="https://github.com/garryshtern/network-device-upgrade-system"
+LABEL org.opencontainers.image.documentation="https://github.com/garryshtern/network-device-upgrade-system/tree/main/docs"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.url="https://github.com/garryshtern/network-device-upgrade-system"
 
 # Install system dependencies required for Ansible and network operations
 RUN apk add --no-cache \
