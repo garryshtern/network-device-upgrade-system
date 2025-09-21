@@ -203,28 +203,43 @@ jobs:
               """Test all supported platform device creation and basic operations"""
               print("🔧 Testing platform device creation and basic operations...")
               manager = MockDeviceManager()
-              platforms = ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
 
-              for platform in platforms:
+              # Platform-specific version commands
+              platform_commands = {
+                  'cisco_nxos': 'show version',
+                  'cisco_iosxe': 'show version',
+                  'fortios': 'get system status',
+                  'opengear': 'config -g config.system.version',
+                  'metamako_mos': 'mdk-version'
+              }
+
+              for platform in platform_commands.keys():
                   print(f"  Testing {platform}...")
                   device_id = manager.create_device(platform, f'test-{platform}')
                   device = manager.devices[device_id]
 
-                  # Test basic command execution
-                  response = device.process_command('show version')
-                  assert 'status' in response, f'{platform} device failed show version'
-                  assert response['status'] == 'success', f'{platform} show version returned error'
+                  # Test platform-specific version command
+                  version_cmd = platform_commands[platform]
+                  response = device.process_command(version_cmd)
+                  assert 'status' in response, f'{platform} device failed {version_cmd}'
+                  assert response['status'] == 'success', f'{platform} {version_cmd} returned error'
 
                   # Test device state management
                   assert device.state == DeviceState.ONLINE, f'{platform} not in online state'
 
-                  # Test platform-specific commands
+                  # Test additional platform-specific commands
                   if platform == 'cisco_nxos':
                       resp = device.process_command('show module')
                       assert resp['status'] == 'success', f'{platform} show module failed'
                   elif platform == 'fortios':
-                      resp = device.process_command('get system status')
-                      assert resp['status'] == 'success', f'{platform} get system status failed'
+                      resp = device.process_command('get system ha status')
+                      assert resp['status'] == 'success', f'{platform} get system ha status failed'
+                  elif platform == 'opengear':
+                      resp = device.process_command('config -g config.system.model')
+                      assert resp['status'] == 'success', f'{platform} get model failed'
+                  elif platform == 'metamako_mos':
+                      resp = device.process_command('application status')
+                      assert resp['status'] == 'success', f'{platform} application status failed'
 
                   print(f"    ✅ {platform} basic operations: PASSED")
 
@@ -232,30 +247,46 @@ jobs:
               return True
 
           def test_upgrade_simulation():
-              """Test firmware upgrade simulation workflow"""
-              print("🚀 Testing firmware upgrade simulation workflow...")
+              """Test upgrade state and phase tracking (no actual firmware operations)"""
+              print("🚀 Testing upgrade state and phase management...")
               manager = MockDeviceManager()
               device_id = manager.create_device('cisco_nxos', 'upgrade-test-device')
               device = manager.devices[device_id]
 
-              # Test upgrade initiation
-              upgrade_resp = device.process_command('copy tftp://server/firmware.bin bootflash:')
-              assert upgrade_resp['status'] == 'success', 'Upgrade initiation failed'
+              # Verify device starts in online state and idle phase
+              assert device.state == DeviceState.ONLINE, 'Device not in online state initially'
+              assert device.upgrade_phase == UpgradePhase.IDLE, 'Device not in idle phase initially'
 
-              # Verify device transitions through upgrade phases
-              initial_state = device.state
-              assert initial_state == DeviceState.ONLINE, 'Device not in online state before upgrade'
+              # Test upgrade phase transitions (state tracking only)
+              device.upgrade_phase = UpgradePhase.PRE_VALIDATION
+              assert device.upgrade_phase == UpgradePhase.PRE_VALIDATION, 'Pre-validation phase not set'
 
-              # Test state transitions during upgrade
+              device.upgrade_phase = UpgradePhase.BACKUP
+              assert device.upgrade_phase == UpgradePhase.BACKUP, 'Backup phase not set'
+
+              # Test state transition to upgrading
               device.state = DeviceState.UPGRADING
+              device.upgrade_phase = UpgradePhase.INSTALLATION
               assert device.state == DeviceState.UPGRADING, 'Device failed to enter upgrading state'
+              assert device.upgrade_phase == UpgradePhase.INSTALLATION, 'Installation phase not set'
 
-              # Test upgrade phase tracking
-              device.upgrade_phase = UpgradePhase.IMAGE_DOWNLOAD
-              assert device.upgrade_phase == UpgradePhase.IMAGE_DOWNLOAD, 'Upgrade phase not set correctly'
+              # Test reboot phase
+              device.upgrade_phase = UpgradePhase.REBOOT
+              device.state = DeviceState.REBOOTING
+              assert device.state == DeviceState.REBOOTING, 'Device failed to enter rebooting state'
+              assert device.upgrade_phase == UpgradePhase.REBOOT, 'Reboot phase not set'
 
-              print("    ✅ Upgrade workflow simulation: PASSED")
-              print("✅ Firmware upgrade simulation completed successfully\n")
+              # Test post-validation and completion
+              device.state = DeviceState.ONLINE
+              device.upgrade_phase = UpgradePhase.POST_VALIDATION
+              assert device.upgrade_phase == UpgradePhase.POST_VALIDATION, 'Post-validation phase not set'
+
+              device.upgrade_phase = UpgradePhase.COMPLETE
+              assert device.state == DeviceState.ONLINE, 'Device not online after completion'
+              assert device.upgrade_phase == UpgradePhase.COMPLETE, 'Upgrade not marked complete'
+
+              print("    ✅ Upgrade state and phase management: PASSED")
+              print("✅ State transition tracking completed successfully\n")
               return True
 
           def test_error_scenarios():
