@@ -12,7 +12,12 @@ The Network Device Upgrade System includes two automated cleanup workflows to ma
 ## Container Package Cleanup
 
 ### Purpose
-Manages Docker container images in GitHub Container Registry (GHCR) to control storage costs and remove outdated development builds while preserving important releases.
+Manages Docker container images in GitHub Container Registry (GHCR) to control storage costs. Since containers are only built on releases (not for every commit), cleanup focuses on removing old development builds and untagged images while preserving official releases.
+
+### Container Build Strategy
+- **Release Builds**: Automatic builds triggered only on GitHub releases
+- **Development Builds**: Manual builds for development/testing purposes
+- **No CI Builds**: Containers are NOT built on every commit to reduce resource usage
 
 ### Automatic Schedule
 - **Frequency**: Weekly on Sundays at 2:00 AM UTC
@@ -20,10 +25,9 @@ Manages Docker container images in GitHub Container Registry (GHCR) to control s
 
 ### What Gets Deleted
 - Untagged container images
-- Development builds older than 7 days (configurable)
-- Branch-specific builds (e.g., `main-abc123`)
-- Pull request builds
-- Temporary development versions
+- Old development builds (manual test builds)
+- Stale branch-specific builds (e.g., `main-abc123`)
+- Obsolete multi-platform build artifacts
 
 ### What Gets Preserved
 - ✅ **Semantic version releases** (v1.0.0, v2.1.3, etc.)
