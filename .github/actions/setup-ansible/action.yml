@@ -57,4 +57,4 @@ runs:
       run: |
         ansible-galaxy collection install \
           -r ansible-content/collections/requirements.yml \
-          --force --ignore-certs
+          --force
