@@ -1,11 +1,11 @@
 ---
 name: Build Container Image
 
-# Cancel in-progress runs when a new workflow is triggered
-# Use different concurrency group for workflow_call to prevent deadlocks
-concurrency:
-  group: ${{ github.event_name == 'workflow_call' && format('build-container-called-{0}', github.ref) || format('{0}-{1}', github.workflow, github.ref) }}
-  cancel-in-progress: true
+# Concurrency control disabled for workflow_call to prevent deadlocks with calling workflows
+# Manual/release triggers don't need concurrency control due to infrequent usage
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
 
 on:
   release:
