@@ -2,7 +2,7 @@
 # Optimized for RHEL8/9 podman compatibility with non-root execution
 FROM python:3.13-alpine
 
-# Metadata (will be overridden by build workflow for proper GitHub integration)
+# Metadata labels for GitHub Container Registry
 LABEL org.opencontainers.image.title="Network Device Upgrade System"
 LABEL org.opencontainers.image.description="Automated network device firmware upgrade system using Ansible. Supports Cisco NX-OS/IOS-XE, FortiOS, Opengear, and Metamako with comprehensive validation and rollback."
 LABEL org.opencontainers.image.vendor="Network Operations"
