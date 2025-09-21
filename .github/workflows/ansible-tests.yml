@@ -7,24 +7,31 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run comprehensive tests weekly on Sundays at 3:00 AM UTC
+    - cron: '0 3 * * 0'
   workflow_dispatch:
     inputs:
       test_level:
-        description: |
-          Test level to run:
-          - standard: Basic lint/syntax tests only (~5 min)
-          - comprehensive: Full test suite including all 14 categories (~30 min)
-          - critical-gaps-only: Critical gap tests and security validation (~10 min)
+        description: 'Test level to run'
         required: false
         default: 'standard'
         type: choice
         options:
-          - 'standard'
-          - 'comprehensive'
-          - 'critical-gaps-only'
+        - 'standard'
+        - 'comprehensive'
+        - 'critical-gaps-only'
 
 permissions:
-  contents: read
+  contents: write
+  issues: read
+  checks: read
+  pull-requests: read
+  packages: write
 
 jobs:
   lint-and-syntax:
@@ -38,46 +45,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Run lint and syntax tests
+        uses: ./.github/actions/lint-and-syntax
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-lint-${{ matrix.python-version }}-${{ hashFiles('ansible-content/collections/requirements.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-lint-${{ matrix.python-version }}-
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade ansible
-          pip install yamllint ansible-lint
-
-      - name: Install Ansible collections
-        run: |
-          ansible-galaxy collection install \
-            -r ansible-content/collections/requirements.yml \
-            --force
-
-      - name: Run YAML syntax validation
-        run: |
-          find ansible-content/ -name "*.yml" -o -name "*.yaml" | xargs yamllint
-        continue-on-error: true
-
-      - name: Run ansible-lint
-        run: |
-          ansible-lint ansible-content/playbooks/ ansible-content/roles/
-        continue-on-error: true
-
-      - name: Test playbook syntax
-        run: |
-          ansible-playbook --syntax-check \
-            ansible-content/playbooks/main-upgrade-workflow.yml
 
   unit-tests:
     name: Unit Tests
@@ -87,24 +58,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13.7'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade ansible
-          pip install pytest
-
       - name: Run unit tests
-        run: |
-          if [ -f tests/unit-tests/pytest.ini ]; then
-            cd tests/unit-tests && python -m pytest -v
-          else
-            echo "✅ Unit tests placeholder - no pytest configuration found"
-          fi
+        uses: ./.github/actions/unit-tests
 
   integration-tests:
     name: Integration Tests
@@ -114,102 +69,154 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13.7'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade ansible
-
-      - name: Install Ansible collections
-        run: |
-          ansible-galaxy collection install \
-            -r ansible-content/collections/requirements.yml \
-            --force
-
       - name: Run integration tests
-        run: |
-          if [ -d tests/integration-tests ]; then
-            cd tests/integration-tests
-            chmod +x *.sh 2>/dev/null || true
-            if [ -f run-integration-tests.sh ]; then
-              echo "🚀 Running integration tests..."
-              ./run-integration-tests.sh
-            else
-              echo "✅ Integration tests placeholder - no runner script found"
-            fi
-          else
-            echo "✅ Integration tests placeholder - no test directory found"
-          fi
+        uses: ./.github/actions/integration-tests
 
   security-scan:
-    name: Security Tests
+    name: Security Scan
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13.7'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade ansible
-          pip install ansible-lint
 
       - name: Run security scan
-        run: |
-          echo "🔒 Running security tests..."
-          ansible-lint --offline ansible-content/ || true
-          echo "✅ Security scan completed"
+        uses: ./.github/actions/security-scan
 
   mock-device-tests:
-    name: Mock Device Tests
+    name: Mock Device Framework Tests
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Run mock device tests
+        uses: ./.github/actions/mock-device-tests
+
+  molecule-tests:
+    name: Molecule Tests
+    runs-on: ubuntu-latest
+    # Run molecule tests only for main branch pushes, PRs to main, or manual triggers
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.base_ref == 'main') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.13.7'
 
       - name: Install dependencies
         run: |
+          pip install --upgrade ansible molecule molecule-plugins[docker] docker
+          # Clear any existing collections to avoid conflicts
+          rm -rf ~/.ansible/collections
+          # Install collections to user directory
+          ansible-galaxy collection install \
+            -r ansible-content/collections/requirements.yml \
+            --force --ignore-certs --collections-path ~/.ansible/collections
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run molecule tests for network upgrade
+        run: |
+          cd tests/molecule-tests
+          molecule test -s network-upgrade-test
+        env:
+          MOLECULE_NO_LOG: false
+          MOLECULE_VERBOSITY: 1
+
+      - name: Run default molecule tests
+        run: |
+          cd tests/molecule-tests
+          molecule test -s default
+        env:
+          MOLECULE_NO_LOG: false
+
+  critical-gap-tests:
+    name: Critical Gap Test Suite
+    runs-on: ubuntu-latest
+    # Only run on schedule, manual trigger with critical-gaps-only, or manual comprehensive
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.test_level == 'critical-gaps-only' || inputs.test_level == 'comprehensive'))
+    strategy:
+      matrix:
+        python-version: ["3.13.7"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
-          pip install --upgrade ansible
+          pip install --upgrade ansible psutil
+          pip install yamllint ansible-lint
 
       - name: Install Ansible collections
         run: |
           ansible-galaxy collection install \
             -r ansible-content/collections/requirements.yml \
-            --force
+            --force --ignore-certs
 
-      - name: Run mock device tests
+      - name: Create reports directory
+        run: mkdir -p tests/reports
+
+      - name: Run Critical Gap Test Suite
         run: |
-          echo "🔧 Running mock device tests..."
-          if [ -d tests/mock-inventories ]; then
-            ls -la tests/mock-inventories/
-            echo "✅ Mock inventories found"
+          chmod +x tests/critical-gaps/run-all-critical-gap-tests.sh
+          # Set timeout to prevent infinite execution
+          timeout 600 tests/critical-gaps/run-all-critical-gap-tests.sh || true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: critical-gap-test-results-${{ matrix.python-version }}
+          path: |
+            tests/reports/critical-gap-*.json
+            tests/reports/critical-gap-*.log
+            tests/reports/*-coverage-*.json
+          retention-days: 30
+
+      - name: Display test summary
+        if: always()
+        run: |
+          echo "=== CRITICAL GAP TEST SUMMARY ==="
+          if [ -f tests/reports/critical-gap-test-summary-*.json ]; then
+            latest_summary=$(ls -t tests/reports/critical-gap-test-summary-*.json | head -1)
+            echo "📊 Latest test summary: $latest_summary"
+
+            # Extract key metrics using jq if available
+            if command -v jq &> /dev/null; then
+              echo "📈 Success Rate: $(jq -r '.test_execution_summary.success_rate_percent' "$latest_summary")%"
+              echo "✅ Passed Tests: $(jq -r '.test_execution_summary.passed_tests' "$latest_summary")"
+              echo "❌ Failed Tests: $(jq -r '.test_execution_summary.failed_tests' "$latest_summary")"
+              echo "💰 Business Risk Addressed: $(jq -r '.business_impact.total_risk_addressed' "$latest_summary")"
+              echo "🚀 Production Readiness: $(jq -r '.business_impact.production_readiness' "$latest_summary")"
+            else
+              echo "📄 Raw summary:"
+              cat "$latest_summary"
+            fi
           else
-            echo "✅ Mock device tests placeholder - no mock inventories found"
+            echo "⚠️ No test summary found - tests may not have completed successfully"
+            ls -la tests/reports/ || echo "Reports directory not found"
           fi
 
   comprehensive-test-suite:
-    name: Comprehensive Test Suite
+    name: Comprehensive Test Suite (All 14 Tests)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: |
-      (github.event_name == 'workflow_dispatch' && inputs.test_level == 'comprehensive')
+    # Only run on schedule or manual trigger with comprehensive level
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_level == 'comprehensive')
 
     steps:
       - name: Checkout code
@@ -220,47 +227,58 @@ jobs:
         with:
           python-version: '3.13.7'
 
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-comprehensive-${{ hashFiles('ansible-content/collections/requirements.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-comprehensive-
-            ${{ runner.os }}-pip-
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install --upgrade ansible
-          pip install yamllint ansible-lint pytest
+          pip install --upgrade ansible psutil
+          pip install yamllint ansible-lint
 
       - name: Install Ansible collections
         run: |
           ansible-galaxy collection install \
             -r ansible-content/collections/requirements.yml \
-            --force
+            --force --ignore-certs
+
+      - name: Create results directory
+        run: mkdir -p tests/results
 
       - name: Run comprehensive test suite
         run: |
-          echo "🚀 Starting comprehensive test suite..."
           cd tests
-          chmod +x *.sh 2>/dev/null || true
+          chmod +x run-all-tests.sh
+          ./run-all-tests.sh
 
-          if [ -f run-all-tests.sh ]; then
-            echo "📋 Executing comprehensive test runner..."
-            ./run-all-tests.sh
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-test-results-${{ github.run_number }}
+          path: |
+            tests/results/test_report_*.txt
+            tests/results/*_*.log
+          retention-days: 30
+
+      - name: Fail if any tests failed
+        run: |
+          # Check if comprehensive tests passed by checking passed count and success rate
+          if grep -q "Passed: 14" tests/results/test_report_*.txt && grep -q "Failed: 0" tests/results/test_report_*.txt; then
+            echo "✅ All 14 test suites passed successfully"
           else
-            echo "📋 Running comprehensive validation..."
-            echo "✅ Comprehensive tests placeholder - no runner script found"
+            echo "❌ Comprehensive test suite failed"
+            echo "Test report contents:"
+            cat tests/results/test_report_*.txt || echo "No test report found"
+            exit 1
           fi
 
-      - name: Archive comprehensive test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: comprehensive-test-results
-          path: |
-            tests/results/
-            tests/reports/
-          retention-days: 30
+  call-container-build:
+    name: Build Container Image
+    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests]
+    # Also include conditional dependencies if they ran
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      (always() && !failure() && !cancelled())
+    uses: ./.github/workflows/build-container.yml
+    with:
+      push_image: true
+      build_type: 'fast-x64'
+    secrets: inherit
