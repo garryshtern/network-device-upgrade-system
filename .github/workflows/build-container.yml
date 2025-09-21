@@ -126,6 +126,9 @@ jobs:
           echo "🏷️  Generated labels:"
           echo '${{ steps.meta.outputs.labels }}' | sed 's/^/  /'
           echo ""
+          echo "📝 Generated annotations:"
+          echo '${{ steps.meta.outputs.annotations }}' | sed 's/^/  /'
+          echo ""
           echo "📋 Metadata JSON:"
           echo '${{ steps.meta.outputs.json }}' | jq '.'
 
@@ -173,7 +176,14 @@ jobs:
           push: ${{ inputs.push_image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          annotations: ${{ steps.meta.outputs.annotations }}
+          annotations: |
+            manifest:org.opencontainers.image.title=Network Device Upgrade System
+            manifest:org.opencontainers.image.description=Automated network device firmware upgrade system using Ansible. Supports Cisco NX-OS/IOS-XE, FortiOS, Opengear, and Metamako with comprehensive validation and rollback.
+            manifest:org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            manifest:org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            manifest:org.opencontainers.image.documentation=https://github.com/${{ github.repository }}/tree/main/docs
+            manifest:org.opencontainers.image.vendor=Network Operations
+            manifest:org.opencontainers.image.licenses=MIT
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
