@@ -78,7 +78,8 @@
             margin: >-
               {{ (1000 * (safety_margin_percent | default(20) / 100)) | int }}
             total_needed: >-
-              {{ 1000 + (1000 * (safety_margin_percent | default(20) / 100)) | int }}
+              {{ 1000 + (1000 * (safety_margin_percent | default(20) / 100))
+                | int }}
           insufficient_case:
             available: 512
             required: 1000
@@ -98,16 +99,28 @@
     - name: Test platform detection logic
       ansible.builtin.set_fact:
         platform_support_test:
-          cisco_nxos: "{{ 'cisco.nxos.nxos' in (test_platforms | map(attribute='platform') | list) }}"
-          cisco_ios: "{{ 'cisco.ios.ios' in (test_platforms | map(attribute='platform') | list) }}"
-          fortinet: "{{ 'fortinet.fortios.fortios' in (test_platforms | map(attribute='platform') | list) }}"
+          cisco_nxos: >-
+            {{ 'cisco.nxos.nxos' in (test_platforms
+              | map(attribute='platform') | list) }}
+          cisco_ios: >-
+            {{ 'cisco.ios.ios' in (test_platforms
+              | map(attribute='platform') | list) }}
+          fortinet: >-
+            {{ 'fortinet.fortios.fortios' in (test_platforms
+              | map(attribute='platform') | list) }}
 
     - name: Verify multi-platform support
       ansible.builtin.assert:
         that:
-          - platform_support_test.cisco_nxos | bool or test_platforms | selectattr('platform', 'search', 'nxos') | list | length > 0
-          - platform_support_test.cisco_ios | bool or test_platforms | selectattr('platform', 'search', 'ios') | list | length > 0
-          - platform_support_test.fortinet | bool or test_platforms | selectattr('platform', 'search', 'fortios') | list | length > 0
+          - >-
+            platform_support_test.cisco_nxos | bool or test_platforms
+            | selectattr('platform', 'search', 'nxos') | list | length > 0
+          - >-
+            platform_support_test.cisco_ios | bool or test_platforms
+            | selectattr('platform', 'search', 'ios') | list | length > 0
+          - >-
+            platform_support_test.fortinet | bool or test_platforms
+            | selectattr('platform', 'search', 'fortios') | list | length > 0
         fail_msg: "Multi-platform support not properly configured"
 
     # Verify required task files exist
@@ -146,7 +159,9 @@
     # Test filesystem type coverage
     - name: Verify filesystem type coverage
       ansible.builtin.set_fact:
-        filesystem_types: "{{ test_platforms | map(attribute='filesystem_type') | list | unique }}"
+        filesystem_types: >-
+          {{ test_platforms | map(attribute='filesystem_type')
+            | list | unique }}
 
     - name: Verify comprehensive filesystem support
       ansible.builtin.assert:
@@ -161,10 +176,13 @@
       ansible.builtin.assert:
         that:
           - item.total_space_mb | int > item.used_space_mb | int
-          - item.used_space_mb | int + item.available_space_mb | int <= item.total_space_mb | int + 100  # Allow small variance
+          - >-
+            item.used_space_mb | int + item.available_space_mb | int <=
+            item.total_space_mb | int + 100  # Allow small variance
           - item.firmware_size_mb | int > 0
           - item.cleanup_threshold_mb | int > 0
-        fail_msg: "Storage thresholds for platform {{ item.platform }} are not logical"
+        fail_msg: >-
+          Storage thresholds for platform {{ item.platform }} are not logical
       loop: "{{ test_platforms }}"
 
     # Success message
@@ -201,8 +219,12 @@
       ansible.builtin.set_fact:
         edge_case_tests:
           zero_available: "{{ 0 < minimum_free_space_mb | int }}"
-          oversized_firmware: "{{ test_platforms | selectattr('firmware_size_mb', 'gt', 'available_space_mb') | list | length >= 0 }}"
-          reasonable_margins: "{{ safety_margin_percent | int <= 50 and safety_margin_percent | int >= 10 }}"
+          oversized_firmware: >-
+            {{ test_platforms | selectattr('firmware_size_mb', 'gt',
+              'available_space_mb') | list | length >= 0 }}
+          reasonable_margins: >-
+            {{ safety_margin_percent | int <= 50 and
+              safety_margin_percent | int >= 10 }}
 
     - name: Verify edge case handling
       ansible.builtin.assert:

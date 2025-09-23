@@ -88,7 +88,8 @@
       block:
         - name: Mock connectivity test (simulated)
           ansible.builtin.debug:
-            msg: "Testing connectivity to {{ device_hostname }} ({{ device_ip }})"
+            msg: >-
+              Testing connectivity to {{ device_hostname }} ({{ device_ip }})
 
         - name: Simulate ping test result
           ansible.builtin.set_fact:
@@ -213,7 +214,9 @@
           ansible.builtin.assert:
             that:
               - item.error_type in ['timeout', 'auth', 'command', 'network']
-              - item.expected_behavior in ['retry', 'fail_fast', 'log_and_continue']
+              - >-
+                item.expected_behavior in
+                ['retry', 'fail_fast', 'log_and_continue']
             fail_msg: "Error scenario {{ item.name }} has invalid configuration"
           loop: "{{ error_scenarios }}"
 
