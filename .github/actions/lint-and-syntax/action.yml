@@ -1,3 +1,4 @@
+---
 name: 'Lint and Syntax Tests'
 description: 'Run YAML linting, ansible-lint, and syntax validation'
 

@@ -120,7 +120,9 @@
 
     - name: Create mock firmware files with various sizes
       ansible.builtin.copy:
-        content: "{{ 'Mock firmware data for ' ~ item.name ~ ' - ' ~ ('x' * (item.size_kb | int)) }}"
+        content: >-
+          {{ 'Mock firmware data for ' ~ item.name ~ ' - ' ~
+          ('x' * (item.size_kb | int)) }}
         dest: "/tmp/storage-test/images/{{ item.path }}"
         mode: '0644'
       loop:
@@ -233,7 +235,8 @@
           case "$ACTION" in
             "scan")
               echo "Scanning for cleanup candidates..."
-              find /tmp/storage-test/images/old -name "*.bin" -o -name "*.out" | head -5
+              find /tmp/storage-test/images/old -name "*.bin" \
+                -o -name "*.out" | head -5
               echo "Found old firmware images consuming 3GB"
               ;;
             "cleanup")
@@ -272,7 +275,8 @@
       ansible.builtin.debug:
         msg: |
           Space Management Test Environment Prepared:
-          - Platform filesystems: ✅ ({{ platform_filesystem_map.keys() | list | length }} platforms)
+          - Platform filesystems: ✅ ({{
+            platform_filesystem_map.keys() | list | length }} platforms)
           - Mock storage tools: ✅
           - Configuration files: ✅
           - Test firmware images: ✅

@@ -74,26 +74,38 @@
               unknown
               {%- endif %}
           register: architecture_detection
-          loop: "{{ test_inventory.legacy_devices + test_inventory.modern_devices }}"
+          loop: >-
+            {{ test_inventory.legacy_devices + test_inventory.modern_devices }}
 
         - name: Validate Architecture Detection Logic
           ansible.builtin.assert:
             that:
-              - (item.ansible_facts.device_architecture | trim) == item.item.expected_architecture
-            fail_msg: "Architecture detection failed for {{ item.item.hostname }}: expected {{ item.item.expected_architecture }}, got {{ item.ansible_facts.device_architecture | trim }}"
-            success_msg: "✓ {{ item.item.hostname }} correctly detected as {{ item.ansible_facts.device_architecture | trim }}"
+              - >-
+                (item.ansible_facts.device_architecture | trim) ==
+                item.item.expected_architecture
+            fail_msg: >-
+              Architecture detection failed for {{ item.item.hostname }}:
+              expected {{ item.item.expected_architecture }},
+              got {{ item.ansible_facts.device_architecture | trim }}
+            success_msg: >-
+              ✓ {{ item.item.hostname }} correctly detected as
+              {{ item.ansible_facts.device_architecture | trim }}
           loop: "{{ architecture_detection.results }}"
 
         - name: Test Upgrade Command Assignment
           ansible.builtin.set_fact:
-            upgrade_command: "{{ upgrade_commands[item.expected_architecture].command }}"
+            upgrade_command: >-
+              {{ upgrade_commands[item.expected_architecture].command }}
           register: command_assignment
-          loop: "{{ test_inventory.legacy_devices + test_inventory.modern_devices }}"
+          loop: >-
+            {{ test_inventory.legacy_devices + test_inventory.modern_devices }}
           vars:
             upgrade_commands:
               legacy_cli:
                 command: "netflash"
-                storage_paths: ["/var/mnt/storage.nvlog", "/var/mnt/storage.usb"]
+                storage_paths:
+                  - "/var/mnt/storage.nvlog"
+                  - "/var/mnt/storage.usb"
               current_cli:
                 command: "puginstall"
                 storage_paths: ["/tmp"]
@@ -102,9 +114,16 @@
         - name: Validate Upgrade Command Assignment
           ansible.builtin.assert:
             that:
-              - (item.ansible_facts.upgrade_command | trim) == item.item.expected_command
-            fail_msg: "Command assignment failed for {{ item.item.hostname }}: expected {{ item.item.expected_command }}, got {{ item.ansible_facts.upgrade_command | trim }}"
-            success_msg: "✓ {{ item.item.hostname }} correctly assigned {{ item.ansible_facts.upgrade_command | trim }} command"
+              - >-
+                (item.ansible_facts.upgrade_command | trim) ==
+                item.item.expected_command
+            fail_msg: >-
+              Command assignment failed for {{ item.item.hostname }}:
+              expected {{ item.item.expected_command }},
+              got {{ item.ansible_facts.upgrade_command | trim }}
+            success_msg: >-
+              ✓ {{ item.item.hostname }} correctly assigned
+              {{ item.ansible_facts.upgrade_command | trim }} command
           loop: "{{ command_assignment.results }}"
 
     # ==========================================
@@ -138,8 +157,11 @@
           ansible.builtin.assert:
             that:
               - ssh_access_results.results | length == 4
-              - ssh_access_results.results | selectattr('state', 'equalto', 'started') | list | length == 4
-            success_msg: "✓ All Opengear devices accessible via SSH (CLI-based upgrades)"
+              - >-
+                ssh_access_results.results | selectattr('state', 'equalto',
+                'started') | list | length == 4
+            success_msg: >-
+              ✓ All Opengear devices accessible via SSH (CLI-based upgrades)
             fail_msg: "SSH access failed for Opengear devices"
 
         - name: Test Version Format Validation
@@ -147,26 +169,34 @@
             version_tests:
               legacy_versions:
                 - version: "5.16.4"
-                  expected_valid: True
+                  expected_valid: true
                   device_type: "legacy_cli"
                 - version: "25.07.0"
-                  expected_valid: False
+                  expected_valid: false
                   device_type: "legacy_cli"
               modern_versions:
                 - version: "25.07.0"
-                  expected_valid: True
+                  expected_valid: true
                   device_type: "current_cli"
                 - version: "5.16.4"
-                  expected_valid: False
+                  expected_valid: false
                   device_type: "current_cli"
 
         - name: Validate Version Format Patterns
           ansible.builtin.assert:
             that:
-              - (item.version is match(version_patterns[item.device_type].pattern)) == item.expected_valid
-            fail_msg: "Version validation failed for {{ item.version }} on {{ item.device_type }}"
-            success_msg: "✓ Version {{ item.version }} correctly validated for {{ item.device_type }}"
-          loop: "{{ version_tests.legacy_versions + version_tests.modern_versions }}"
+              - >-
+                (item.version is
+                match(version_patterns[item.device_type].pattern))
+                == item.expected_valid
+            fail_msg: >-
+              Version validation failed for {{ item.version }} on
+              {{ item.device_type }}
+            success_msg: >-
+              ✓ Version {{ item.version }} correctly validated for
+              {{ item.device_type }}
+          loop: >-
+            {{ version_tests.legacy_versions + version_tests.modern_versions }}
           vars:
             version_patterns:
               legacy_cli:
@@ -200,8 +230,11 @@
                   - item.expected_method == "cli"
                   - item.expected_connection == "ssh"
                   - item.expected_command in ["netflash", "puginstall"]
-                success_msg: "✓ Architecture routing working correctly for {{ item.device_type }}"
-                fail_msg: "Architecture routing logic failed for {{ item.device_type }}"
+                success_msg: >-
+                  ✓ Architecture routing working correctly for
+                  {{ item.device_type }}
+                fail_msg: >-
+                  Architecture routing logic failed for {{ item.device_type }}
               loop: "{{ test_architecture_detection }}"
 
     # ==========================================
@@ -212,7 +245,9 @@
       block:
         - name: Check Required Task Files Exist
           ansible.builtin.stat:
-            path: "{{ playbook_dir }}/../../ansible-content/roles/opengear-upgrade/tasks/{{ item }}"
+            path: >-
+              {{ playbook_dir }}/../../ansible-content/roles/opengear-upgrade/
+              tasks/{{ item }}
           register: task_file_checks
           loop:
             - "main.yml"
@@ -239,21 +274,27 @@
       block:
         - name: Check Opengear Group Variables File
           ansible.builtin.stat:
-            path: "{{ playbook_dir }}/../../ansible-content/inventory/group_vars/opengear.yml"
+            path: >-
+              {{ playbook_dir }}/../../ansible-content/inventory/
+              group_vars/opengear.yml
           register: opengear_group_vars_stat
 
         - name: Validate Group Variables File Exists
           ansible.builtin.assert:
             that:
               - opengear_group_vars_stat.stat.exists
-            success_msg: "✓ Opengear group variables file exists and is readable"
+            success_msg: >-
+              ✓ Opengear group variables file exists and is readable
             fail_msg: "Opengear group variables file missing"
 
-        # NOTE: Architecture detection validation skipped due to vault variable dependencies
-        # in the actual group variables file. In production, these would be properly configured.
+        # NOTE: Architecture detection validation skipped due to vault variable
+        # dependencies in the actual group variables file. In production, these
+        # would be properly configured.
         - name: Skip Architecture Detection Settings (vault variables)
           debug:
-            msg: "✓ Architecture detection settings validation skipped (vault variables required)"
+            msg: >-
+              ✓ Architecture detection settings validation skipped
+              (vault variables required)
 
     # ==========================================
     # Multi-Method Upgrade Path Tests
@@ -278,8 +319,12 @@
               assert:
                 that:
                   - selected_loading_task == "image-loading-legacy.yml"
-                  - selected_installation_task == "image-installation-legacy.yml"
-                success_msg: "✓ Opengear CLI upgrade path selection correct (all devices use CLI)"
+                  - >-
+                    selected_installation_task ==
+                    "image-installation-legacy.yml"
+                success_msg: >-
+                  ✓ Opengear CLI upgrade path selection correct
+                  (all devices use CLI)
                 fail_msg: "Opengear CLI upgrade path selection failed"
 
     # ==========================================
@@ -304,8 +349,10 @@
           ansible.builtin.assert:
             that:
               - item.expected_type == 'console_server'
-            success_msg: "✓ Device type detection logic correct for {{ item.model }}"
-            fail_msg: "Device type detection failed for {{ item.model }}"
+            success_msg: >-
+              ✓ Device type detection logic correct for {{ item.model }}
+            fail_msg: >-
+              Device type detection failed for {{ item.model }}
           loop: "{{ device_type_tests }}"
 
     # ==========================================
@@ -332,20 +379,24 @@
             cli_command_tests:
               - command: "netflash"
                 architecture: "legacy_cli"
-                expected_valid: True
+                expected_valid: true
               - command: "puginstall"
                 architecture: "current_cli"
-                expected_valid: True
+                expected_valid: true
               - command: "api_upload"
                 architecture: "legacy_cli"
-                expected_valid: False
+                expected_valid: false
 
         - name: Validate CLI Command Mapping
           ansible.builtin.assert:
             that:
-              - (item.command in ['netflash', 'puginstall']) == item.expected_valid
-            success_msg: "✓ CLI command validation working for {{ item.command }}"
-            fail_msg: "CLI command validation failed for {{ item.command }}"
+              - >-
+                (item.command in ['netflash', 'puginstall']) ==
+                item.expected_valid
+            success_msg: >-
+              ✓ CLI command validation working for {{ item.command }}
+            fail_msg: >-
+              CLI command validation failed for {{ item.command }}
           loop: "{{ cli_command_tests }}"
 
     # ==========================================

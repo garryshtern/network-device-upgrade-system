@@ -108,7 +108,7 @@
           {%- for scenario in space_scenarios -%}
             {%- set available = scenario.available_mb | int -%}
             {%- set required = scenario.required_mb | int -%}
-A            {%- set safety_margin = (required * (safety_margin_percent |
+            {%- set safety_margin = (required * (safety_margin_percent |
               default(20) / 100)) | int -%}
             {%- set total_required = required + safety_margin -%}
             {%- if available >= total_required -%}
