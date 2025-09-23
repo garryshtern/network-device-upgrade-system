@@ -85,4 +85,4 @@
         - /tmp/metamako
         - /tmp/version_output.txt
         - /tmp/metamakoos-2.1.3.tar.gz
-      ignore_errors: true
+      failed_when: false

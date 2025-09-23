@@ -15,7 +15,7 @@
           - cryptography
           - hashlib
         state: present
-      ignore_errors: true
+      failed_when: false
 
     - name: Create firmware test directory structure
       ansible.builtin.file:
@@ -139,4 +139,4 @@
       ansible.builtin.file:
         path: "{{ firmware_base_path }}"
         state: absent
-      ignore_errors: true
+      failed_when: false

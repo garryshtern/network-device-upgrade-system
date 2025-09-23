@@ -15,7 +15,7 @@
           - requests
           - pyyaml
         state: present
-      ignore_errors: true
+      failed_when: false
 
     - name: Create test directory structure for common utilities
       ansible.builtin.file:
@@ -84,6 +84,7 @@
   tasks:
     # Test connectivity check functionality
     - name: Test connectivity check utilities
+      when: test_connectivity | default(false)
       block:
         - name: Mock connectivity test (simulated)
           ansible.builtin.debug:
@@ -103,10 +104,10 @@
               changed: false
               failed: false
 
-      when: test_connectivity | default(false)
 
     # Test health check functionality
     - name: Test health check utilities
+      when: test_health_checks | default(false)
       block:
         - name: Simulate system health checks
           ansible.builtin.set_fact:
@@ -123,10 +124,10 @@
             fail_msg: "Health check category {{ item }} not found in results"
           loop: "{{ health_check_categories }}"
 
-      when: test_health_checks | default(false)
 
     # Test storage cleanup functionality
     - name: Test storage cleanup utilities
+      when: test_storage_cleanup | default(false)
       block:
         - name: Scan for files to cleanup
           ansible.builtin.find:
@@ -145,10 +146,10 @@
               - preserve_recent_files | bool
             fail_msg: "Recent file preservation should be enabled for safety"
 
-      when: test_storage_cleanup | default(false)
 
     # Test metrics export functionality
     - name: Test metrics export utilities
+      when: test_metrics_export | default(false)
       block:
         - name: Generate test metrics data
           ansible.builtin.set_fact:
@@ -188,10 +189,10 @@
             fail_msg: "Metrics file for format {{ item.item }} not created"
           loop: "{{ metrics_files.results }}"
 
-      when: test_metrics_export | default(false)
 
     # Test error handling functionality
     - name: Test error handling utilities
+      when: test_error_handling | default(false)
       block:
         - name: Test error scenario handling
           ansible.builtin.set_fact:
@@ -215,8 +216,6 @@
               - item.expected_behavior in ['retry', 'fail_fast', 'log_and_continue']
             fail_msg: "Error scenario {{ item.name }} has invalid configuration"
           loop: "{{ error_scenarios }}"
-
-      when: test_error_handling | default(false)
 
     # Test common utility functions
     - name: Test common utility functions
@@ -246,4 +245,4 @@
       ansible.builtin.file:
         path: "/tmp/common-test"
         state: absent
-      ignore_errors: true
+      failed_when: false

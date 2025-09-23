@@ -13,7 +13,7 @@
           - netcat-openbsd
         state: present
       become: true
-      ignore_errors: true  # May not be available in container
+      failed_when: false  # May not be available in container
 
     - name: Create mock network command wrapper
       ansible.builtin.copy:
@@ -47,7 +47,8 @@
               echo "System: 45.2°C, Optics: 52.1°C, All sensors normal"
               ;;
             "show timing status")
-              echo "PTP: Synchronized, GPS: Locked, Jitter: 12ns, Accuracy: ±1μs"
+              echo "PTP: Synchronized, GPS: Locked"
+              echo "Jitter: 12ns, Accuracy: ±1μs"
               ;;
             *)
               echo "Command output: $1"
@@ -56,7 +57,7 @@
         dest: /usr/local/bin/mock-cli
         mode: '0755'
       become: true
-      ignore_errors: true
+      failed_when: false
 
     - name: Create mock file system structure for testing
       ansible.builtin.file:

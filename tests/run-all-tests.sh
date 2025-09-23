@@ -184,7 +184,7 @@ main() {
     echo ""
     echo -e "${BLUE}Phase 2: Test Suites${NC}"
     
-    # Test suites to run
+    # Ansible-based test suites to run
     test_suites=(
         "Syntax_Tests:../tests/ansible-tests/syntax-tests.yml"
         "Secure_Transfer_Validation:../tests/unit-tests/secure-image-transfer-validation.yml"
@@ -201,16 +201,48 @@ main() {
         "Cisco_NXOS_Tests:../tests/vendor-tests/cisco-nxos-tests.yml"
         "Opengear_Multi_Arch_Tests:../tests/vendor-tests/opengear-tests.yml"
     )
+
+    # Shell-based test suites to run
+    shell_test_suites=(
+        "YAML_Validation:../tests/validation-scripts/run-yaml-tests.sh"
+        "Performance_Tests:../tests/performance-tests/run-performance-tests.sh"
+        "Error_Simulation:../tests/error-scenarios/run-error-simulation-tests.sh"
+    )
     
-    # Run each test suite
+    # Run each Ansible test suite
     for test_suite in "${test_suites[@]}"; do
         test_name="${test_suite%%:*}"
         test_file="${test_suite#*:}"
         total_tests=$((total_tests + 1))
-        
+
         if run_test_suite "$test_name" "$test_file"; then
             passed_tests=$((passed_tests + 1))
         else
+            failed_tests=$((failed_tests + 1))
+        fi
+        echo ""
+    done
+
+    echo ""
+    echo -e "${BLUE}Phase 3: Shell Test Suites${NC}"
+
+    # Run each shell test suite
+    for test_suite in "${shell_test_suites[@]}"; do
+        test_name="${test_suite%%:*}"
+        test_script="${test_suite#*:}"
+        total_tests=$((total_tests + 1))
+
+        echo -e "${YELLOW}Running $test_name tests...${NC}"
+
+        if cd "$PROJECT_ROOT" && chmod +x "$test_script" && "$test_script" > "$TEST_RESULTS_DIR/${test_name}_${TIMESTAMP}.log" 2>&1; then
+            echo -e "${GREEN}✓ $test_name tests PASSED${NC}"
+            passed_tests=$((passed_tests + 1))
+        else
+            echo -e "${RED}✗ $test_name tests FAILED${NC}"
+            echo -e "${RED}  Last 30 lines of output:${NC}"
+            echo -e "${RED}  ========================${NC}"
+            tail -30 "$TEST_RESULTS_DIR/${test_name}_${TIMESTAMP}.log" | sed 's/^/  /'
+            echo -e "${RED}  ========================${NC}"
             failed_tests=$((failed_tests + 1))
         fi
         echo ""

@@ -10,18 +10,11 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Setup Ansible Environment
+      uses: ./.github/actions/setup-ansible
       with:
         python-version: ${{ inputs.python-version }}
-
-    - name: Install Ansible
-      shell: bash
-      run: |
-        pip install --upgrade ansible
-        ansible-galaxy collection install \
-          -r ansible-content/collections/requirements.yml \
-          --force --ignore-certs
+        cache-key-suffix: 'unit-tests'
 
     - name: Run variable validation tests
       shell: bash

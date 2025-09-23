@@ -10,18 +10,16 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Setup Ansible Environment
+      uses: ./.github/actions/setup-ansible
       with:
         python-version: ${{ inputs.python-version }}
+        cache-key-suffix: 'mock-device-tests'
 
-    - name: Install dependencies
+    - name: Install additional test dependencies
       shell: bash
       run: |
-        pip install --upgrade ansible paramiko psutil
-        ansible-galaxy collection install \
-          -r ansible-content/collections/requirements.yml \
-          --force --ignore-certs
+        pip install paramiko psutil
 
     - name: Test mock device engine comprehensive functionality
       shell: bash

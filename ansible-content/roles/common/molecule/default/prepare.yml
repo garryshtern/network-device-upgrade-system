@@ -14,7 +14,7 @@
           - iputils-ping
         state: present
       become: true
-      ignore_errors: true  # May not be available in container
+      failed_when: false  # May not be available in container
 
     - name: Install Python libraries for common utilities
       ansible.builtin.pip:
@@ -25,7 +25,7 @@
           - jsonschema
           - influxdb-client
         state: present
-      ignore_errors: true
+      failed_when: false
 
     - name: Create comprehensive test environment structure
       ansible.builtin.file:

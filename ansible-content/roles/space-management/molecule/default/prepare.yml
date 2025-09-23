@@ -13,14 +13,14 @@
           - coreutils
         state: present
       become: true
-      ignore_errors: true  # May not be available in container
+      failed_when: false  # May not be available in container
 
     - name: Install Python storage libraries
       ansible.builtin.pip:
         name:
           - psutil
         state: present
-      ignore_errors: true
+      failed_when: false
 
     - name: Create comprehensive test filesystem structure
       ansible.builtin.file:

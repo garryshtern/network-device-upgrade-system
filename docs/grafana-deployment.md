@@ -266,8 +266,8 @@ Dashboard provisioning integrates with:
 
 ### Monitoring Stack Architecture
 This Grafana integration is part of the larger monitoring architecture described in:
-- `../../docs/architecture-overview.md`
-- `../../docs/monitoring-integration.md`
-- `../../README.md`
+- [Installation Guide](installation-guide.md) - System architecture overview
+- [Workflow Architecture](workflow-architecture.md) - CI/CD and monitoring integration
+- [Project Overview](../README.md) - Main project documentation
 
 For system-wide issues, consult the main project documentation and issue tracking system.

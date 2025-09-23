@@ -41,7 +41,7 @@ This guide provides complete testing capabilities for the Network Device Upgrade
 
 ```
 tests/
-├── TEST_FRAMEWORK_GUIDE.md           # This comprehensive guide
+├── testing-framework-guide.md        # This comprehensive guide (in docs/)
 ├── run-all-tests.sh                  # Main test runner (fixed for Mac bash 3.2)
 ├── mock-inventories/                 # Mock device inventories
 │   ├── all-platforms.yml            # All 5 supported platforms

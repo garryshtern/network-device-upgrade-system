@@ -69,7 +69,7 @@ ansible-playbook -i tests/mock-inventories/all-platforms.yml --check \
 ./tests/run-all-tests.sh
 ```
 
-**For complete testing guide, see**: `tests/TEST_FRAMEWORK_GUIDE.md`
+**For complete testing guide, see**: [Testing Framework Guide](testing-framework-guide.md)
 
 ## Installation Process Overview
 

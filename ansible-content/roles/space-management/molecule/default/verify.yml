@@ -40,7 +40,9 @@
           - item.used_space_mb is defined
           - item.available_space_mb is defined
           - item.firmware_size_mb is defined
-        fail_msg: "Test platform {{ item.platform | default('unknown') }} missing required fields"
+        fail_msg: >-
+          Test platform {{ item.platform | default('unknown') }}
+          missing required fields
       loop: "{{ test_platforms }}"
 
     # Verify space calculation scenarios
@@ -58,8 +60,12 @@
           - item.available_mb is defined
           - item.required_mb is defined
           - item.expected_result is defined
-          - item.expected_result in ['proceed', 'cleanup_required', 'upgrade_blocked']
-        fail_msg: "Space scenario {{ item.name | default('unknown') }} has invalid structure"
+          - >-
+            item.expected_result in
+            ['proceed', 'cleanup_required', 'upgrade_blocked']
+        fail_msg: >-
+          Space scenario {{ item.name | default('unknown') }}
+          has invalid structure
       loop: "{{ space_scenarios }}"
 
     # Test space calculation logic manually
@@ -69,8 +75,10 @@
           sufficient_case:
             available: 2048
             required: 1000
-            margin: "{{ (1000 * (safety_margin_percent | default(20) / 100)) | int }}"
-            total_needed: "{{ 1000 + (1000 * (safety_margin_percent | default(20) / 100)) | int }}"
+            margin: >-
+              {{ (1000 * (safety_margin_percent | default(20) / 100)) | int }}
+            total_needed: >-
+              {{ 1000 + (1000 * (safety_margin_percent | default(20) / 100)) | int }}
           insufficient_case:
             available: 512
             required: 1000
@@ -78,8 +86,12 @@
     - name: Verify manual space calculations
       ansible.builtin.assert:
         that:
-          - manual_space_test.sufficient_case.available | int >= manual_space_test.sufficient_case.total_needed | int
-          - manual_space_test.insufficient_case.available | int < manual_space_test.insufficient_case.required | int
+          - >-
+            manual_space_test.sufficient_case.available | int >=
+            manual_space_test.sufficient_case.total_needed | int
+          - >-
+            manual_space_test.insufficient_case.available | int <
+            manual_space_test.insufficient_case.required | int
         fail_msg: "Manual space calculation logic verification failed"
 
     # Verify platform-specific support

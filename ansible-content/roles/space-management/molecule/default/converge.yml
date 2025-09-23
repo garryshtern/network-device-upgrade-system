@@ -22,7 +22,7 @@
         name:
           - psutil
         state: present
-      ignore_errors: true
+      failed_when: false
 
     - name: Create mock filesystem structure for testing
       ansible.builtin.file:
@@ -171,4 +171,4 @@
       ansible.builtin.file:
         path: "/tmp/mock-filesystem"
         state: absent
-      ignore_errors: true
+      failed_when: false

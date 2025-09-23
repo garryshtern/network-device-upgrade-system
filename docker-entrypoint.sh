@@ -4,6 +4,55 @@
 
 set -euo pipefail
 
+# Privilege drop mechanism for SSH key handling
+# This must run BEFORE main() to handle root-to-ansible user switch
+handle_privilege_drop() {
+    # If we're running as root, copy SSH keys and switch to ansible user
+    if [[ $EUID -eq 0 ]]; then
+        log "Running as root - handling SSH key setup and switching to ansible user"
+
+        # Setup SSH keys as root (can read root-owned mounted keys)
+        setup_ssh_keys_as_root
+
+        # Switch to ansible user and re-exec this script
+        log "Switching to ansible user and re-executing..."
+        exec su ansible -c "$0 $(printf '%q ' "$@")"
+    fi
+
+    # If we reach here, we're running as ansible user - proceed normally
+}
+
+# Copy SSH keys when running as root
+setup_ssh_keys_as_root() {
+    local keys_dir="/home/ansible/.ssh"
+
+    # Create .ssh directory for ansible user
+    mkdir -p "$keys_dir"
+    chmod 700 "$keys_dir"
+    chown ansible:ansible "$keys_dir"
+
+    # Copy each SSH key type if it exists
+    copy_ssh_key_as_root "${CISCO_NXOS_SSH_KEY:-}" "$keys_dir/cisco_nxos_key"
+    copy_ssh_key_as_root "${CISCO_IOSXE_SSH_KEY:-}" "$keys_dir/cisco_iosxe_key"
+    copy_ssh_key_as_root "${OPENGEAR_SSH_KEY:-}" "$keys_dir/opengear_key"
+    copy_ssh_key_as_root "${METAMAKO_SSH_KEY:-}" "$keys_dir/metamako_key"
+
+    log "SSH keys copied and permissions set for ansible user"
+}
+
+# Helper function to copy individual SSH key
+copy_ssh_key_as_root() {
+    local src_key="$1"
+    local dest_key="$2"
+
+    if [[ -n "$src_key" ]] && [[ -f "$src_key" ]]; then
+        log "Copying SSH key: $src_key -> $dest_key"
+        cp "$src_key" "$dest_key"
+        chmod 600 "$dest_key"
+        chown ansible:ansible "$dest_key"
+    fi
+}
+
 # Default values
 DEFAULT_PLAYBOOK="ansible-content/playbooks/main-upgrade-workflow.yml"
 DEFAULT_INVENTORY="ansible-content/inventory/hosts.yml"
@@ -310,26 +359,200 @@ run_syntax_check() {
     success "Syntax check completed successfully"
 }
 
-# Execute dry run (check mode)
-run_dry_run() {
-    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
-    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
-    
-    log "Running dry run on: $playbook"
-    log "Using inventory: $inventory"
-    
+# Setup SSH key variables (keys already copied by root process)
+setup_ssh_keys() {
+    local keys_dir="/home/ansible/.ssh"
+
+    # Set internal SSH key variables to point to copied keys
+    if [[ -n "${CISCO_NXOS_SSH_KEY:-}" ]] && [[ -f "$keys_dir/cisco_nxos_key" ]]; then
+        export CISCO_NXOS_SSH_KEY_INTERNAL="$keys_dir/cisco_nxos_key"
+    fi
+
+    if [[ -n "${CISCO_IOSXE_SSH_KEY:-}" ]] && [[ -f "$keys_dir/cisco_iosxe_key" ]]; then
+        export CISCO_IOSXE_SSH_KEY_INTERNAL="$keys_dir/cisco_iosxe_key"
+    fi
+
+    if [[ -n "${OPENGEAR_SSH_KEY:-}" ]] && [[ -f "$keys_dir/opengear_key" ]]; then
+        export OPENGEAR_SSH_KEY_INTERNAL="$keys_dir/opengear_key"
+    fi
+
+    if [[ -n "${METAMAKO_SSH_KEY:-}" ]] && [[ -f "$keys_dir/metamako_key" ]]; then
+        export METAMAKO_SSH_KEY_INTERNAL="$keys_dir/metamako_key"
+    fi
+}
+
+# Build authentication and configuration options
+build_ansible_options() {
+    local ansible_opts=""
     local extra_vars=""
+
+    # Setup SSH keys first
+    setup_ssh_keys
+
+    # Authentication: SSH Keys (highest priority)
+    if [[ -n "${CISCO_NXOS_SSH_KEY_INTERNAL:-}" ]]; then
+        extra_vars="$extra_vars vault_cisco_nxos_ssh_key=${CISCO_NXOS_SSH_KEY_INTERNAL}"
+    fi
+
+    if [[ -n "${CISCO_IOSXE_SSH_KEY_INTERNAL:-}" ]]; then
+        extra_vars="$extra_vars vault_cisco_iosxe_ssh_key=${CISCO_IOSXE_SSH_KEY_INTERNAL}"
+    fi
+
+    if [[ -n "${OPENGEAR_SSH_KEY_INTERNAL:-}" ]]; then
+        extra_vars="$extra_vars vault_opengear_ssh_key=${OPENGEAR_SSH_KEY_INTERNAL}"
+    fi
+
+    if [[ -n "${METAMAKO_SSH_KEY_INTERNAL:-}" ]]; then
+        extra_vars="$extra_vars vault_metamako_ssh_key=${METAMAKO_SSH_KEY_INTERNAL}"
+    fi
+
+    # Authentication: API Tokens
+    if [[ -n "${FORTIOS_API_TOKEN:-}" ]]; then
+        extra_vars="$extra_vars vault_fortios_api_token=${FORTIOS_API_TOKEN}"
+    fi
+
+    if [[ -n "${OPENGEAR_API_TOKEN:-}" ]]; then
+        extra_vars="$extra_vars vault_opengear_api_token=${OPENGEAR_API_TOKEN}"
+    fi
+
+    # Authentication: Usernames and Passwords (fallback)
+    if [[ -n "${CISCO_NXOS_USERNAME:-}" ]]; then
+        extra_vars="$extra_vars vault_cisco_nxos_username=${CISCO_NXOS_USERNAME}"
+    fi
+    if [[ -n "${CISCO_NXOS_PASSWORD:-}" ]]; then
+        extra_vars="$extra_vars vault_cisco_nxos_password=${CISCO_NXOS_PASSWORD}"
+    fi
+
+    if [[ -n "${CISCO_IOSXE_USERNAME:-}" ]]; then
+        extra_vars="$extra_vars vault_cisco_iosxe_username=${CISCO_IOSXE_USERNAME}"
+    fi
+    if [[ -n "${CISCO_IOSXE_PASSWORD:-}" ]]; then
+        extra_vars="$extra_vars vault_cisco_iosxe_password=${CISCO_IOSXE_PASSWORD}"
+    fi
+
+    if [[ -n "${FORTIOS_USERNAME:-}" ]]; then
+        extra_vars="$extra_vars vault_fortios_username=${FORTIOS_USERNAME}"
+    fi
+    if [[ -n "${FORTIOS_PASSWORD:-}" ]]; then
+        extra_vars="$extra_vars vault_fortios_password=${FORTIOS_PASSWORD}"
+    fi
+
+    if [[ -n "${OPENGEAR_USERNAME:-}" ]]; then
+        extra_vars="$extra_vars vault_opengear_username=${OPENGEAR_USERNAME}"
+    fi
+    if [[ -n "${OPENGEAR_PASSWORD:-}" ]]; then
+        extra_vars="$extra_vars vault_opengear_password=${OPENGEAR_PASSWORD}"
+    fi
+
+    if [[ -n "${METAMAKO_USERNAME:-}" ]]; then
+        extra_vars="$extra_vars vault_metamako_username=${METAMAKO_USERNAME}"
+    fi
+    if [[ -n "${METAMAKO_PASSWORD:-}" ]]; then
+        extra_vars="$extra_vars vault_metamako_password=${METAMAKO_PASSWORD}"
+    fi
+
+    # Image server authentication
+    if [[ -n "${IMAGE_SERVER_USERNAME:-}" ]]; then
+        extra_vars="$extra_vars vault_image_server_username=${IMAGE_SERVER_USERNAME}"
+    fi
+    if [[ -n "${IMAGE_SERVER_PASSWORD:-}" ]]; then
+        extra_vars="$extra_vars vault_image_server_password=${IMAGE_SERVER_PASSWORD}"
+    fi
+
+    # SNMP Configuration
+    if [[ -n "${SNMP_COMMUNITY:-}" ]]; then
+        extra_vars="$extra_vars vault_snmp_community=${SNMP_COMMUNITY}"
+    fi
+
+    # Core upgrade variables
     [[ -n "${TARGET_HOSTS:-}" ]] && extra_vars="$extra_vars target_hosts=${TARGET_HOSTS}"
     [[ -n "${TARGET_FIRMWARE:-}" ]] && extra_vars="$extra_vars target_firmware=${TARGET_FIRMWARE}"
     [[ -n "${UPGRADE_PHASE:-}" ]] && extra_vars="$extra_vars upgrade_phase=${UPGRADE_PHASE}"
     [[ -n "${MAINTENANCE_WINDOW:-}" ]] && extra_vars="$extra_vars maintenance_window=${MAINTENANCE_WINDOW}"
-    
+
+    # EPLD upgrade configuration
+    if [[ -n "${ENABLE_EPLD_UPGRADE:-}" ]]; then
+        extra_vars="$extra_vars enable_epld_upgrade=${ENABLE_EPLD_UPGRADE}"
+    fi
+    if [[ -n "${ALLOW_DISRUPTIVE_EPLD:-}" ]]; then
+        extra_vars="$extra_vars allow_disruptive_epld=${ALLOW_DISRUPTIVE_EPLD}"
+    fi
+    if [[ -n "${EPLD_UPGRADE_TIMEOUT:-}" ]]; then
+        extra_vars="$extra_vars epld_upgrade_timeout=${EPLD_UPGRADE_TIMEOUT}"
+    fi
+    if [[ -n "${TARGET_EPLD_IMAGE:-}" ]]; then
+        extra_vars="$extra_vars target_epld_image=${TARGET_EPLD_IMAGE}"
+    fi
+
+    # Multi-step upgrade (FortiOS)
+    if [[ -n "${MULTI_STEP_UPGRADE_REQUIRED:-}" ]]; then
+        extra_vars="$extra_vars multi_step_upgrade_required=${MULTI_STEP_UPGRADE_REQUIRED}"
+    fi
+    if [[ -n "${UPGRADE_PATH:-}" ]]; then
+        extra_vars="$extra_vars upgrade_path=${UPGRADE_PATH}"
+    fi
+
+    # Firmware and backup paths
+    if [[ -n "${FIRMWARE_BASE_PATH:-}" ]]; then
+        extra_vars="$extra_vars firmware_base_path=${FIRMWARE_BASE_PATH}"
+    fi
+    if [[ -n "${BACKUP_BASE_PATH:-}" ]]; then
+        extra_vars="$extra_vars backup_base_path=${BACKUP_BASE_PATH}"
+    fi
+
+    # Ansible configuration
+    if [[ -n "${ANSIBLE_CONFIG:-}" ]]; then
+        export ANSIBLE_CONFIG="${ANSIBLE_CONFIG}"
+    fi
+
+    if [[ -n "${ANSIBLE_VAULT_PASSWORD_FILE:-}" ]]; then
+        ansible_opts="$ansible_opts --vault-password-file ${ANSIBLE_VAULT_PASSWORD_FILE}"
+    fi
+
+    # Set verbosity if requested
+    if [[ -n "${ANSIBLE_VERBOSITY:-}" ]]; then
+        case "${ANSIBLE_VERBOSITY}" in
+            1) ansible_opts="$ansible_opts -v" ;;
+            2) ansible_opts="$ansible_opts -vv" ;;
+            3) ansible_opts="$ansible_opts -vvv" ;;
+            4) ansible_opts="$ansible_opts -vvvv" ;;
+        esac
+    fi
+
+    echo "$ansible_opts|$extra_vars"
+}
+
+# Execute dry run (check mode)
+run_dry_run() {
+    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
+    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
+
+    log "Running dry run on: $playbook"
+    log "Using inventory: $inventory"
+
+    # Build authentication and configuration
+    local opts_and_vars
+    opts_and_vars=$(build_ansible_options)
+    local ansible_opts="${opts_and_vars%|*}"
+    local extra_vars="${opts_and_vars#*|}"
+
+    # Validate inventory exists
+    if [[ ! -f "$inventory" ]]; then
+        error "Inventory file not found: $inventory"
+        error "Make sure to mount your inventory file to the container"
+        error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
+        exit 1
+    fi
+
+    log "Extra variables: $extra_vars"
+
     ansible-playbook \
         --check --diff \
         -i "$inventory" \
+        ${ansible_opts} \
         ${extra_vars:+--extra-vars "$extra_vars"} \
         "$playbook"
-    
+
     success "Dry run completed successfully"
 }
 
@@ -337,22 +560,33 @@ run_dry_run() {
 run_playbook() {
     local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
     local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
-    
+
     warn "EXECUTING ACTUAL PLAYBOOK - CHANGES WILL BE MADE"
     log "Running playbook: $playbook"
     log "Using inventory: $inventory"
-    
-    local extra_vars=""
-    [[ -n "${TARGET_HOSTS:-}" ]] && extra_vars="$extra_vars target_hosts=${TARGET_HOSTS}"
-    [[ -n "${TARGET_FIRMWARE:-}" ]] && extra_vars="$extra_vars target_firmware=${TARGET_FIRMWARE}"
-    [[ -n "${UPGRADE_PHASE:-}" ]] && extra_vars="$extra_vars upgrade_phase=${UPGRADE_PHASE}"
-    [[ -n "${MAINTENANCE_WINDOW:-}" ]] && extra_vars="$extra_vars maintenance_window=${MAINTENANCE_WINDOW}"
-    
+
+    # Build authentication and configuration
+    local opts_and_vars
+    opts_and_vars=$(build_ansible_options)
+    local ansible_opts="${opts_and_vars%|*}"
+    local extra_vars="${opts_and_vars#*|}"
+
+    # Validate inventory exists
+    if [[ ! -f "$inventory" ]]; then
+        error "Inventory file not found: $inventory"
+        error "Make sure to mount your inventory file to the container"
+        error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
+        exit 1
+    fi
+
+    log "Extra variables: $extra_vars"
+
     ansible-playbook \
         -i "$inventory" \
+        ${ansible_opts} \
         ${extra_vars:+--extra-vars "$extra_vars"} \
         "$playbook"
-    
+
     success "Playbook execution completed"
 }
 
@@ -395,6 +629,138 @@ start_shell() {
     fi
 }
 
+# Validate TARGET_HOSTS against inventory
+validate_target_hosts() {
+    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
+    local target_hosts="${TARGET_HOSTS:-}"
+
+    # If no TARGET_HOSTS specified, validation passes
+    if [[ -z "$target_hosts" ]]; then
+        return 0
+    fi
+
+    # If TARGET_HOSTS is 'all', validation passes
+    if [[ "$target_hosts" == "all" ]]; then
+        return 0
+    fi
+
+    # Check if inventory file exists
+    if [[ ! -f "$inventory" ]]; then
+        error "TARGET_HOSTS specified but inventory file not found: $inventory"
+        error "When using TARGET_HOSTS, you MUST mount an inventory file."
+        error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
+        error "         -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml"
+        return 1
+    fi
+
+    log "Validating TARGET_HOSTS against inventory: $inventory"
+
+    # Split TARGET_HOSTS by comma and validate each host
+    IFS=',' read -ra hosts <<< "$target_hosts"
+    local validation_failed=false
+    local missing_hosts=()
+
+    for host in "${hosts[@]}"; do
+        # Trim whitespace
+        host=$(echo "$host" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+        # Skip empty hosts
+        if [[ -z "$host" ]]; then
+            continue
+        fi
+
+        # Check if host exists in inventory using ansible-inventory
+        if ! ansible-inventory -i "$inventory" --list 2>/dev/null | grep -q "\"$host\""; then
+            missing_hosts+=("$host")
+            validation_failed=true
+        fi
+    done
+
+    if [[ "$validation_failed" == true ]]; then
+        error "TARGET_HOSTS validation failed. The following hosts are not defined in inventory:"
+        for missing_host in "${missing_hosts[@]}"; do
+            error "  - $missing_host"
+        done
+        error "Please ensure all target hosts are defined in your inventory file: $inventory"
+        error "You can check your inventory with: ansible-inventory -i $inventory --list"
+        return 1
+    fi
+
+    success "TARGET_HOSTS validation passed. All hosts found in inventory."
+    return 0
+}
+
+# Validate environment and dependencies
+validate_environment() {
+    log "Validating environment..."
+
+    # Validate TARGET_HOSTS against inventory
+    if ! validate_target_hosts; then
+        exit 1
+    fi
+
+    success "Environment validation completed"
+}
+
+# Execute syntax check
+run_syntax_check() {
+    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
+    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
+
+    log "Running syntax check on: $playbook"
+    log "Using inventory: $inventory"
+
+    # Validate inventory exists
+    if [[ ! -f "$inventory" ]]; then
+        error "Inventory file not found: $inventory"
+        error "Make sure to mount your inventory file to the container"
+        error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
+        exit 1
+    fi
+
+    # Build authentication and configuration
+    local opts_and_vars
+    opts_and_vars=$(build_ansible_options)
+    local ansible_opts="${opts_and_vars%|*}"
+    local extra_vars="${opts_and_vars#*|}"
+
+    log "Extra variables: $extra_vars"
+
+    ansible-playbook \
+        --syntax-check \
+        -i "$inventory" \
+        ${ansible_opts} \
+        ${extra_vars:+--extra-vars "$extra_vars"} \
+        "$playbook"
+
+    success "Syntax check completed successfully"
+}
+
+# Run comprehensive test suite
+run_tests() {
+    log "Running comprehensive test suite..."
+
+    # Check if test runner exists
+    if [[ -f "/opt/app/tests/run-all-tests.sh" ]]; then
+        log "Executing test runner: /opt/app/tests/run-all-tests.sh"
+        /opt/app/tests/run-all-tests.sh
+    else
+        warn "Test runner not found. Running basic validation tests..."
+
+        # Basic validation tests
+        log "Testing Ansible installation..."
+        ansible --version
+
+        log "Testing Ansible collections..."
+        ansible-galaxy collection list
+
+        log "Testing syntax check..."
+        run_syntax_check
+
+        success "Basic validation tests completed"
+    fi
+}
+
 # Main execution logic
 main() {
     local command="${1:-syntax-check}"
@@ -433,6 +799,9 @@ main() {
             ;;
     esac
 }
+
+# Handle privilege drop (root -> ansible user) before main execution
+handle_privilege_drop "$@"
 
 # Execute main function with all arguments
 main "$@"

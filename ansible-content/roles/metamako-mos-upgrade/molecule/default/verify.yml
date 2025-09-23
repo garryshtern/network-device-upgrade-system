@@ -24,7 +24,9 @@
     - name: Verify target version format
       ansible.builtin.assert:
         that:
-          - metamako_upgrade_state.target_version is match("^[0-9]+\.[0-9]+\.[0-9]+")
+          - >-
+            metamako_upgrade_state.target_version is
+            match("^[0-9]+\.[0-9]+\.[0-9]+")
         fail_msg: "Target version format invalid (expected: x.y.z)"
 
     - name: Verify MetaWatch/MetaMux detection

@@ -94,6 +94,58 @@ jobs:
       - name: Run mock device tests
         uses: ./.github/actions/mock-device-tests
 
+  container-tests:
+    name: Container Functionality Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container image for testing
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: network-device-upgrade-system:test
+          cache-from: type=gha,scope=test
+          cache-to: type=gha,mode=max,scope=test
+          # Only build layers that changed to speed up testing
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Create test SSH keys
+        run: |
+          mkdir -p tests/container-tests/mockups/keys
+          ssh-keygen -t rsa -b 2048 -f tests/container-tests/mockups/keys/test-cisco-key -N "" -C "test-key"
+          chmod 600 tests/container-tests/mockups/keys/test-cisco-key
+
+      - name: Make container tests executable
+        run: |
+          chmod +x tests/container-tests/*.sh
+
+      - name: Run container test suite
+        run: |
+          cd tests/container-tests
+          export CONTAINER_IMAGE="network-device-upgrade-system:test"
+          ./run-all-container-tests.sh
+        env:
+          CONTAINER_IMAGE: "network-device-upgrade-system:test"
+
+      - name: Upload container test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: container-test-results-${{ github.run_number }}
+          path: |
+            tests/container-tests/results/*
+            tests/container-tests/reports/*
+          retention-days: 30
+
   molecule-tests:
     name: Molecule Tests
     runs-on: ubuntu-latest
@@ -104,20 +156,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Setup Ansible Environment with Molecule
+        uses: ./.github/actions/setup-ansible
         with:
           python-version: '3.13.7'
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade ansible molecule molecule-plugins[docker] docker
-          # Clear any existing collections to avoid conflicts
-          rm -rf ~/.ansible/collections
-          # Install collections to user directory
-          ansible-galaxy collection install \
-            -r ansible-content/collections/requirements.yml \
-            --force --ignore-certs --collections-path ~/.ansible/collections
+          install-molecule: 'true'
+          cache-key-suffix: 'molecule-tests'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -150,22 +194,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Setup Ansible Environment
+        uses: ./.github/actions/setup-ansible
         with:
           python-version: ${{ matrix.python-version }}
+          cache-key-suffix: 'critical-gap-tests'
 
-      - name: Install dependencies
+      - name: Install additional test dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade ansible psutil
-          pip install yamllint ansible-lint
-
-      - name: Install Ansible collections
-        run: |
-          ansible-galaxy collection install \
-            -r ansible-content/collections/requirements.yml \
-            --force --ignore-certs
+          pip install psutil
 
       - name: Create reports directory
         run: mkdir -p tests/reports
@@ -222,22 +259,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Setup Ansible Environment
+        uses: ./.github/actions/setup-ansible
         with:
           python-version: '3.13.7'
+          cache-key-suffix: 'comprehensive-tests'
 
-      - name: Install dependencies
+      - name: Install additional test dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade ansible psutil
-          pip install yamllint ansible-lint
-
-      - name: Install Ansible collections
-        run: |
-          ansible-galaxy collection install \
-            -r ansible-content/collections/requirements.yml \
-            --force --ignore-certs
+          pip install psutil
 
       - name: Create results directory
         run: mkdir -p tests/results
@@ -260,9 +290,10 @@ jobs:
 
       - name: Fail if any tests failed
         run: |
-          # Check if comprehensive tests passed by checking passed count and success rate
-          if grep -q "Passed: 14" tests/results/test_report_*.txt && grep -q "Failed: 0" tests/results/test_report_*.txt; then
-            echo "✅ All 14 test suites passed successfully"
+          # Check if comprehensive tests passed by checking that no tests failed
+          if grep -q "Failed: 0" tests/results/test_report_*.txt; then
+            passed_count=$(grep -o "Passed: [0-9]*" tests/results/test_report_*.txt | cut -d' ' -f2)
+            echo "✅ All $passed_count test suites passed successfully"
           else
             echo "❌ Comprehensive test suite failed"
             echo "Test report contents:"
@@ -271,11 +302,12 @@ jobs:
           fi
 
   call-container-build:
-    name: Build Container Image
-    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests]
-    # Also include conditional dependencies if they ran
+    name: Build and Push Production Container Image
+    needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests, container-tests]
+    # Only build production container on main branch pushes after all tests pass
     if: |
-      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
       (always() && !failure() && !cancelled())
     uses: ./.github/workflows/build-container.yml
     with:

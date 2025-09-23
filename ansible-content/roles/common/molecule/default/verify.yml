@@ -149,7 +149,7 @@
     - name: Test common utility validations
       ansible.builtin.set_fact:
         utility_validations:
-          ip_format: "{{ device_ip is ansible.netcommon.ipv4 or device_ip == '192.168.1.100' }}"
+          ip_format: "{{ device_ip | regex_search('^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$') or device_ip == '192.168.1.100' }}"
           cleanup_age_positive: "{{ cleanup_age_days | int > 0 }}"
           storage_paths_exist: "{{ storage_paths | length > 0 }}"
           export_formats_valid: "{{ export_formats | intersect(['json', 'yaml', 'csv', 'prometheus']) | length > 0 }}"

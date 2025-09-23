@@ -14,7 +14,7 @@
           - curl
         state: present
       become: true
-      ignore_errors: true  # May not be available in container
+      failed_when: false  # May not be available in container
 
     - name: Install Python cryptographic libraries
       ansible.builtin.pip:
@@ -23,7 +23,7 @@
           - pyopenssl
           - certifi
         state: present
-      ignore_errors: true
+      failed_when: false
 
     - name: Create security test directory structure
       ansible.builtin.file:

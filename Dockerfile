@@ -80,9 +80,13 @@ ENV ANSIBLE_CONFIG="/opt/network-upgrade/ansible-content/ansible.cfg"
 ENV ANSIBLE_COLLECTIONS_PATH="/home/ansible/.ansible/collections"
 ENV ANSIBLE_ROLES_PATH="/opt/network-upgrade/ansible-content/roles"
 
-# Health check to verify Ansible installation
+# Health check to verify Ansible installation (run as ansible user)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD ansible --version && ansible-galaxy collection list
+    CMD su ansible -c "ansible --version && ansible-galaxy collection list"
+
+# Switch back to root for container startup
+# The entrypoint script will handle privilege drop to ansible user after SSH key setup
+USER root
 
 # Set entrypoint and default command
 ENTRYPOINT ["./docker-entrypoint.sh"]

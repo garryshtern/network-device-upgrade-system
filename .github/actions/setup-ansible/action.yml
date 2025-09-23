@@ -26,8 +26,9 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ inputs.cache-key-suffix }}-${{ hashFiles('**/requirements*.txt') }}
+        key: ${{ runner.os }}-pip-${{ inputs.cache-key-suffix }}-${{ inputs.install-molecule }}-${{ hashFiles('**/requirements*.txt', 'ansible-content/collections/requirements.yml') }}
         restore-keys: |
+          ${{ runner.os }}-pip-${{ inputs.cache-key-suffix }}-${{ inputs.install-molecule }}-
           ${{ runner.os }}-pip-${{ inputs.cache-key-suffix }}-
           ${{ runner.os }}-pip-
 
@@ -55,6 +56,12 @@ runs:
     - name: Install Ansible collections
       shell: bash
       run: |
-        ansible-galaxy collection install \
-          -r ansible-content/collections/requirements.yml \
-          --force
+        # Only install if not cached or if requirements changed
+        if [ ! -d ~/.ansible/collections ] || [ ! -f ~/.ansible/collections/.installed ]; then
+          ansible-galaxy collection install \
+            -r ansible-content/collections/requirements.yml \
+            --force
+          touch ~/.ansible/collections/.installed
+        else
+          echo "Ansible collections found in cache"
+        fi

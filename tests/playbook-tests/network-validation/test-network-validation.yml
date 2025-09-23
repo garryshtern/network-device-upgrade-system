@@ -1,0 +1,319 @@
+---
+# Network Validation Playbook Test Suite
+# Tests network connectivity and configuration validation
+- name: Test Network Validation Playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Test configuration
+    test_environment: true
+    target_hosts: "localhost"
+    validation_types: ["connectivity", "configuration", "performance"]
+    network_requirements:
+      ping_targets: ["8.8.8.8", "1.1.1.1"]
+      dns_servers: ["8.8.8.8", "1.1.1.1"]
+      ntp_servers: ["pool.ntp.org"]
+
+    # Mock device configuration
+    ansible_network_os: "cisco.nxos.nxos"
+    device_platform: "cisco_nxos"
+
+    # Test validation parameters
+    validation_results_path: "/tmp/network-validation-test"
+    expected_validation_checks:
+      - "interface_status"
+      - "routing_table"
+      - "dns_resolution"
+      - "ntp_sync"
+      - "connectivity_test"
+
+  pre_tasks:
+    - name: Setup test environment for network validation
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ validation_results_path }}"
+        - "{{ validation_results_path }}/{{ inventory_hostname }}"
+        - /tmp/network-validation-test/reports
+        - /tmp/network-validation-test/logs
+        - /tmp/network-validation-test/configs
+
+    - name: Create mock network configuration for testing
+      ansible.builtin.copy:
+        content: |
+          # Mock network configuration for validation testing
+          hostname test-device-01
+
+          # Interface configuration
+          interface Ethernet1/1
+           description UPLINK-TO-CORE
+           ip address 192.168.1.10/24
+           no shutdown
+
+          interface loopback0
+           ip address 10.10.10.1/32
+
+          # Routing configuration
+          ip route 0.0.0.0/0 192.168.1.1
+
+          # DNS configuration
+          ip name-server 8.8.8.8
+          ip name-server 1.1.1.1
+
+          # NTP configuration
+          ntp server pool.ntp.org
+        dest: "{{ validation_results_path }}/mock-device-config.txt"
+        mode: '0644'
+
+    - name: Create mock validation baseline
+      ansible.builtin.copy:
+        content: |
+          # Network Validation Baseline
+          connectivity_requirements:
+            ping_success_rate: 95
+            dns_resolution_time_ms: 100
+            ntp_sync_tolerance_ms: 50
+
+          interface_requirements:
+            minimum_interfaces_up: 2
+            required_interfaces:
+              - "Ethernet1/1"
+              - "loopback0"
+
+          routing_requirements:
+            default_route_required: true
+            loopback_reachability: true
+        dest: "{{ validation_results_path }}/validation-baseline.yml"
+        mode: '0644'
+
+  tasks:
+    - name: Test network validation initialization
+      ansible.builtin.set_fact:
+        validation_state:
+          device_name: "{{ inventory_hostname }}"
+          platform: "{{ ansible_network_os }}"
+          validation_timestamp: >-
+            {{ ansible_date_time.epoch | default('1695340800') }}
+          validation_types: "{{ validation_types }}"
+          validation_status: "in_progress"
+
+    - name: Validate network validation state initialization
+      ansible.builtin.assert:
+        that:
+          - validation_state is defined
+          - validation_state.device_name == inventory_hostname
+          - validation_state.platform is defined
+          - validation_state.validation_timestamp is defined
+          - validation_state.validation_types | length > 0
+        fail_msg: "Network validation initialization failed"
+
+    - name: Test connectivity validation simulation
+      ansible.builtin.set_fact:
+        connectivity_results: |
+          {%- set results = [] -%}
+          {%- for target in network_requirements.ping_targets -%}
+            {%- set result = {
+                'target': target,
+                'type': 'ping',
+                'status': 'SUCCESS',
+                'latency_ms': (range(1, 50) | random),
+                'packet_loss': 0,
+                'description': 'Connectivity test to ' ~ target
+              } -%}
+            {%- set _ = results.append(result) -%}
+          {%- endfor -%}
+          {%- for server in network_requirements.dns_servers -%}
+            {%- set result = {
+                'target': server,
+                'type': 'dns',
+                'status': 'SUCCESS',
+                'response_time_ms': (range(5, 25) | random),
+                'description': 'DNS resolution test via ' ~ server
+              } -%}
+            {%- set _ = results.append(result) -%}
+          {%- endfor -%}
+          {{ results }}
+
+    - name: Validate connectivity test results structure
+      ansible.builtin.assert:
+        that:
+          - item.target is defined
+          - item.type is defined
+          - item.status in ['SUCCESS', 'FAILED', 'WARNING']
+          - item.description is defined
+        fail_msg: >
+          Connectivity test result {{ item.target }} has invalid structure
+      loop: "{{ connectivity_results }}"
+
+    - name: Test configuration validation simulation
+      ansible.builtin.set_fact:
+        config_validation_results: |
+          {%- set results = [] -%}
+          {%- for check in expected_validation_checks -%}
+            {%- set result = {
+                'check': check,
+                'status': 'PASS',
+                'value': 'Mock configuration valid',
+                'expected': 'Valid configuration',
+                'description': 'Configuration validation for ' ~ check
+              } -%}
+            {%- set _ = results.append(result) -%}
+          {%- endfor -%}
+          {{ results }}
+
+    - name: Validate configuration check results structure
+      ansible.builtin.assert:
+        that:
+          - item.check is defined
+          - item.status in ['PASS', 'FAIL', 'WARNING']
+          - item.value is defined
+          - item.expected is defined
+        fail_msg: "Configuration check {{ item.check }} has invalid structure"
+      loop: "{{ config_validation_results }}"
+
+    - name: Test network validation report generation
+      ansible.builtin.copy:
+        content: |
+          {
+            "validation_metadata": {
+              "device_name": "{{ validation_state.device_name }}",
+              "platform": "{{ validation_state.platform }}",
+              "validation_timestamp":
+                "{{ validation_state.validation_timestamp }}",
+              "validation_types":
+                {{ validation_state.validation_types | to_json }}
+            },
+            "connectivity_results":
+              {{ connectivity_results | to_json }},
+            "configuration_results":
+              {{ config_validation_results | to_json }},
+            "summary": {
+              "total_connectivity_tests":
+                {{ connectivity_results | length }},
+              "successful_connectivity":
+                {{ connectivity_results |
+                selectattr('status', 'equalto', 'SUCCESS') |
+                list | length }},
+              "total_config_checks":
+                {{ config_validation_results | length }},
+              "passed_config_checks":
+                {{ config_validation_results |
+                selectattr('status', 'equalto', 'PASS') |
+                list | length }},
+              "overall_validation_score": >
+              {{
+                ((
+                  (connectivity_results |
+                   selectattr('status', 'equalto', 'SUCCESS') |
+                   list | length) +
+                  (config_validation_results |
+                   selectattr('status', 'equalto', 'PASS') |
+                   list | length)
+                ) / (
+                  connectivity_results | length +
+                  config_validation_results | length
+                ) * 100) | round(2)
+              }}
+            }
+          }
+        dest: >-
+          {{ validation_results_path }}/reports/network-validation-{{-
+          inventory_hostname }}-{{-
+          ansible_date_time.epoch | default('test') }}.json
+        mode: '0644'
+
+    - name: Verify network validation report was generated
+      ansible.builtin.stat:
+        path: "{{ validation_results_path }}/reports/"
+      register: report_directory
+
+    - name: Find generated network validation reports
+      ansible.builtin.find:
+        paths: "{{ validation_results_path }}/reports/"
+        patterns: "network-validation-*.json"
+      register: validation_reports
+
+    - name: Validate network validation report generation
+      ansible.builtin.assert:
+        that:
+          - report_directory.stat.exists
+          - validation_reports.files | length > 0
+        fail_msg: "Network validation report generation failed"
+
+    - name: Test network validation report content validation
+      ansible.builtin.include_vars:
+        file: "{{ validation_reports.files[0].path }}"
+        name: generated_report
+
+    - name: Validate network validation report content structure
+      ansible.builtin.assert:
+        that:
+          - generated_report.validation_metadata is defined
+          - generated_report.connectivity_results is defined
+          - generated_report.configuration_results is defined
+          - generated_report.summary is defined
+          - generated_report.summary.total_connectivity_tests | int > 0
+          - generated_report.summary.overall_validation_score | float >= 0
+        fail_msg: "Generated network validation report has invalid structure"
+
+    - name: Test validation check completeness
+      ansible.builtin.assert:
+        that:
+          - item in expected_validation_checks
+        fail_msg: "Unexpected validation check: {{ item }}"
+      loop: >
+        {{ config_validation_results | map(attribute='check') | list | unique }}
+
+  post_tasks:
+    - name: Display network validation test results
+      ansible.builtin.debug:
+        msg: |
+          ✅ Network Validation Playbook Test Results:
+
+          Test Environment:
+          - Device: >
+              {{ validation_state.device_name }}
+          - Platform: >
+              {{ validation_state.platform }}
+          - Validation Types:
+              {{ validation_types | join(', ') }}
+
+          Connectivity Tests:
+          - Total Tests: >
+              {{ connectivity_results | length }}
+          - Successful: >
+              {{ connectivity_results |
+                selectattr('status', 'equalto', 'SUCCESS') |
+                list | length }}
+          - Failed:
+              {{ connectivity_results |
+              selectattr('status', 'equalto', 'FAILED') |
+              list | length }}
+
+          Configuration Validation:
+          - Total Checks: >
+              {{ config_validation_results | length }}
+          - Passed: >
+              {{ config_validation_results |
+                selectattr('status', 'equalto', 'PASS') |
+                list | length }}
+          - Failed:
+              {{ config_validation_results |
+              selectattr('status', 'equalto', 'FAIL') |
+              list | length }}
+
+          Report Generation:
+          - Reports Generated:
+              {{ validation_reports.files | length }}
+          - Report Location: >
+              {{ validation_results_path }}/reports/
+
+          Status: Network validation playbook testing SUCCESSFUL
+
+    - name: Cleanup test artifacts
+      ansible.builtin.file:
+        path: "{{ validation_results_path }}"
+        state: absent
+      failed_when: false

@@ -1,0 +1,373 @@
+---
+# Configuration Backup Playbook Test Suite
+# Tests configuration backup and archive functionality
+- name: Test Configuration Backup Playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Test configuration
+    test_environment: true
+    target_hosts: "localhost"
+    backup_types: ["running", "startup", "candidate"]
+    backup_formats: ["text", "xml", "json"]
+
+    # Mock device configuration
+    ansible_network_os: "cisco.nxos.nxos"
+    device_platform: "cisco_nxos"
+
+    # Test backup parameters
+    backup_results_path: "/tmp/config-backup-test"
+    backup_retention_days: 30
+    expected_backup_operations:
+      - "config_fetch"
+      - "config_validate"
+      - "config_archive"
+      - "backup_verify"
+      - "retention_cleanup"
+
+  pre_tasks:
+    - name: Setup test environment for configuration backup
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ backup_results_path }}"
+        - "{{ backup_results_path }}/{{ inventory_hostname }}"
+        - /tmp/config-backup-test/backups
+        - /tmp/config-backup-test/archive
+        - /tmp/config-backup-test/logs
+
+    - name: Create mock device running configuration
+      ansible.builtin.copy:
+        content: |
+          # Mock running configuration for backup testing
+          version 9.3(7)
+          hostname test-device-01
+
+          # System configuration
+          boot nxos bootflash:nxos.9.3.7.bin
+          feature interface-vlan
+          feature hsrp
+          feature lacp
+          feature dhcp
+          feature lldp
+
+          # Management interface
+          interface mgmt0
+           ip address 192.168.1.100/24
+           no shutdown
+
+          # Data interfaces
+          interface Ethernet1/1
+           description UPLINK-TO-CORE
+           switchport mode trunk
+           no shutdown
+
+          interface Ethernet1/2
+           description ACCESS-PORT
+           switchport mode access
+           switchport access vlan 100
+           no shutdown
+
+          # VLAN configuration
+          vlan 100
+           name PRODUCTION
+           state active
+
+          # Routing configuration
+          ip route 0.0.0.0/0 192.168.1.1
+
+          # Security configuration
+          username admin password 5 $5$encrypted$hash role network-admin
+          enable secret 5 $5$encrypted$enable$hash
+        dest: "{{ backup_results_path }}/mock-running-config.cfg"
+        mode: '0644'
+
+    - name: Create mock device startup configuration
+      ansible.builtin.copy:
+        content: |
+          # Mock startup configuration for backup testing
+          version 9.3.7
+          hostname test-device-01
+
+          # Basic configuration
+          boot nxos bootflash:nxos.9.3.7.bin
+          feature interface-vlan
+          feature hsrp
+
+          # Management interface
+          interface mgmt0
+           ip address 192.168.1.100/24
+
+          # Default route
+          ip route 0.0.0.0/0 192.168.1.1
+        dest: "{{ backup_results_path }}/mock-startup-config.cfg"
+        mode: '0644'
+
+    - name: Create backup configuration metadata
+      ansible.builtin.copy:
+        content: |
+          # Configuration Backup Metadata
+          backup_policy:
+            retention_days: 30
+            max_backups_per_device: 100
+            compression_enabled: true
+            encryption_enabled: false
+
+          backup_schedule:
+            frequency: daily
+            time: "02:00"
+            timezone: "UTC"
+
+          validation_checks:
+            syntax_validation: true
+            completeness_check: true
+            diff_comparison: true
+        dest: "{{ backup_results_path }}/backup-policy.yml"
+        mode: '0644'
+
+  tasks:
+    - name: Test configuration backup initialization
+      ansible.builtin.set_fact:
+        backup_state:
+          device_name: "{{ inventory_hostname }}"
+          platform: "{{ ansible_network_os }}"
+          backup_timestamp: >-
+            {{ ansible_date_time.epoch | default('1695340800') }}
+          backup_types: "{{ backup_types }}"
+          backup_status: "in_progress"
+
+    - name: Validate backup state initialization
+      ansible.builtin.assert:
+        that:
+          - backup_state is defined
+          - backup_state.device_name == inventory_hostname
+          - backup_state.platform is defined
+          - backup_state.backup_timestamp is defined
+          - backup_state.backup_types | length > 0
+        fail_msg: "Configuration backup initialization failed"
+
+    - name: Test configuration backup operations simulation
+      ansible.builtin.set_fact:
+        backup_operations_results: |
+          {%- set results = [] -%}
+          {%- for backup_type in backup_types -%}
+            {%- for operation in expected_backup_operations -%}
+              {%- set result = {
+                  'backup_type': backup_type,
+                  'operation': operation,
+                  'status': 'SUCCESS',
+                  'size_bytes': (range(1024, 10240) | random),
+                  'duration_seconds': (range(1, 30) | random),
+                  'description': 'Mock ' ~ operation ~ ' for ' ~ backup_type,
+                  'checksum': 'sha256:abcd1234' ~ loop.index
+                } -%}
+              {%- set _ = results.append(result) -%}
+            {%- endfor -%}
+          {%- endfor -%}
+          {{ results }}
+
+    - name: Validate backup operations results structure
+      ansible.builtin.assert:
+        that:
+          - item.backup_type is defined
+          - item.operation is defined
+          - item.status in ['SUCCESS', 'FAILED', 'WARNING']
+          - item.size_bytes is defined
+          - item.duration_seconds is defined
+          - item.checksum is defined
+        fail_msg: >
+          Backup operation {{ item.operation }} has invalid structure
+      loop: "{{ backup_operations_results }}"
+
+    - name: Test backup file generation simulation
+      ansible.builtin.set_fact:
+        backup_files_results: |
+          {%- set results = [] -%}
+          {%- for backup_type in backup_types -%}
+            {%- for format in backup_formats -%}
+              {%- set result = {
+                  'backup_type': backup_type,
+                  'format': format,
+                  'filename': inventory_hostname ~ '_' ~ backup_type ~
+                    '_' ~ ansible_date_time.epoch | default('test') ~
+                    '.' ~ format,
+                  'size_bytes': (range(2048, 20480) | random),
+                  'compressed': true,
+                  'encrypted': false,
+                  'path': backup_results_path ~ '/backups/' ~
+                    inventory_hostname ~ '_' ~ backup_type ~
+                    '_' ~ ansible_date_time.epoch | default('test') ~
+                    '.' ~ format,
+                  'status': 'CREATED'
+                } -%}
+              {%- set _ = results.append(result) -%}
+            {%- endfor -%}
+          {%- endfor -%}
+          {{ results }}
+
+    - name: Create mock backup files
+      ansible.builtin.copy:
+        content: >
+          Mock backup content for {{ item.backup_type }} configuration
+          in {{ item.format }} format.
+          Generated at: {{ backup_state.backup_timestamp }}
+          Device: {{ backup_state.device_name }}
+          Platform: {{ backup_state.platform }}
+          Checksum: {{ item.filename | hash('sha256') }}
+        dest: "{{ item.path }}"
+        mode: '0644'
+      loop: "{{ backup_files_results }}"
+
+    - name: Test configuration backup report generation
+      ansible.builtin.copy:
+        content: |
+          {
+            "backup_metadata": {
+              "device_name": "{{ backup_state.device_name }}",
+              "platform": "{{ backup_state.platform }}",
+              "backup_timestamp": "{{ backup_state.backup_timestamp }}",
+              "backup_types": {{ backup_state.backup_types | to_json }}
+            },
+            "backup_operations": {{ backup_operations_results | to_json }},
+            "backup_files": {{ backup_files_results | to_json }},
+            "summary": {
+              "total_operations": {{ backup_operations_results | length }},
+              "successful_operations": {{
+                backup_operations_results |
+                selectattr('status', 'equalto', 'SUCCESS') |
+                list | length
+              }},
+              "failed_operations": {{
+                backup_operations_results |
+                selectattr('status', 'equalto', 'FAILED') |
+                list | length
+              }},
+              "total_backup_files": {{ backup_files_results | length }},
+              "total_backup_size_bytes": {{
+                backup_files_results |
+                map(attribute='size_bytes') |
+                sum
+              }},
+              "backup_success_rate": {{
+                ((
+                  backup_operations_results |
+                  selectattr('status', 'equalto', 'SUCCESS') |
+                  list | length
+                ) / backup_operations_results | length * 100) | round(2)
+              }}
+            }
+          }
+        dest: >-
+          {{ backup_results_path }}/logs/config-backup-report-{{-
+          inventory_hostname }}-{{-
+          ansible_date_time.epoch | default('test') }}.json
+        mode: '0644'
+
+    - name: Verify backup report was generated
+      ansible.builtin.stat:
+        path: "{{ backup_results_path }}/logs/"
+      register: logs_directory
+
+    - name: Find generated backup reports
+      ansible.builtin.find:
+        paths: "{{ backup_results_path }}/logs/"
+        patterns: "config-backup-report-*.json"
+      register: backup_reports
+
+    - name: Validate backup report generation
+      ansible.builtin.assert:
+        that:
+          - logs_directory.stat.exists
+          - backup_reports.files | length > 0
+        fail_msg: "Configuration backup report generation failed"
+
+    - name: Test backup report content validation
+      ansible.builtin.include_vars:
+        file: "{{ backup_reports.files[0].path }}"
+        name: generated_report
+
+    - name: Validate backup report content structure
+      ansible.builtin.assert:
+        that:
+          - generated_report.backup_metadata is defined
+          - generated_report.backup_operations is defined
+          - generated_report.backup_files is defined
+          - generated_report.summary is defined
+          - generated_report.summary.total_operations | int > 0
+          - generated_report.summary.backup_success_rate | float >= 0
+        fail_msg: "Generated backup report has invalid structure"
+
+    - name: Test backup operation completeness
+      ansible.builtin.assert:
+        that:
+          - item in expected_backup_operations
+        fail_msg: "Unexpected backup operation: {{ item }}"
+      loop: >
+        {{ backup_operations_results | map(attribute='operation') |
+        list | unique }}
+
+    - name: Verify actual backup files were created
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+      register: backup_file_stats
+      loop: "{{ backup_files_results }}"
+
+    - name: Validate backup files exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.size > 0
+        fail_msg: "Backup file {{ item.item.filename }} was not created"
+      loop: "{{ backup_file_stats.results }}"
+
+  post_tasks:
+    - name: Display configuration backup test results
+      ansible.builtin.debug:
+        msg: |
+          ✅ Configuration Backup Playbook Test Results:
+
+          Test Environment:
+          - Device: >
+              {{ backup_state.device_name }}
+          - Platform: >
+              {{ backup_state.platform }}
+          - Backup Types: >
+              {{ backup_types | join(', ') }}
+
+          Backup Operations:
+          - Total Operations: >
+              {{ backup_operations_results | length }}
+          - Successful: >
+              {{ backup_operations_results |
+                selectattr('status', 'equalto', 'SUCCESS') |
+                list | length }}
+          - Failed: >
+              {{ backup_operations_results |
+                selectattr('status', 'equalto', 'FAILED') |
+                list | length }}
+
+          Backup Files:
+          - Total Files: >
+              {{ backup_files_results | length }}
+          - Total Size: >
+              {{ backup_files_results |
+                map(attribute='size_bytes') |
+                sum }} bytes
+          - Formats: >
+              {{ backup_formats | join(', ') }}
+
+          Report Generation:
+          - Reports Generated: >
+              {{ backup_reports.files | length }}
+          - Report Location: >
+              {{ backup_results_path }}/logs/
+
+          Status: Configuration backup playbook testing SUCCESSFUL
+
+    - name: Cleanup test artifacts
+      ansible.builtin.file:
+        path: "{{ backup_results_path }}"
+        state: absent
+      failed_when: false

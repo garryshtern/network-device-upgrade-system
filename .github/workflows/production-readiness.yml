@@ -61,7 +61,7 @@ jobs:
           pip install --upgrade ansible paramiko psutil sqlite3
           ansible-galaxy collection install \
             -r ansible-content/collections/requirements.yml \
-            --force --ignore-certs
+            --force
 
       - name: Validate test framework integrity
         run: |
@@ -198,7 +198,7 @@ jobs:
           pip install --upgrade ansible paramiko psutil memory_profiler
           ansible-galaxy collection install \
             -r ansible-content/collections/requirements.yml \
-            --force --ignore-certs
+            --force
 
       - name: Run Infrastructure Readiness Assessment
         if: matrix.test_type == 'infrastructure'
