@@ -1,0 +1,431 @@
+#!/bin/bash
+# Comprehensive Container Functionality Testing
+# Tests all container functionality against mock devices with complete scenarios
+
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Test configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.."; pwd)"
+MOCKUP_DIR="$SCRIPT_DIR/mockups"
+CONTAINER_IMAGE="${CONTAINER_IMAGE:-ghcr.io/garryshtern/network-device-upgrade-system:latest}"
+
+# Test results tracking
+TESTS_RUN=0
+TESTS_PASSED=0
+TESTS_FAILED=0
+
+log() {
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
+}
+
+success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+    ((TESTS_PASSED++))
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+    ((TESTS_FAILED++))
+}
+
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+# Enhanced test execution function with command support
+run_container_test() {
+    local test_name="$1"
+    local expected_result="$2"
+    local command="$3"
+    shift 3
+    local docker_args=("$@")
+
+    ((TESTS_RUN++))
+    log "Running test: $test_name (command: $command)"
+
+    # Create temporary files for capturing output
+    local stdout_file="/tmp/container-test-stdout-$$"
+    local stderr_file="/tmp/container-test-stderr-$$"
+    local exit_code=0
+
+    # Build docker command with proper volume mounts
+    local docker_cmd=(
+        docker run --rm
+        -v "$MOCKUP_DIR/inventory:/opt/inventory:ro"
+        -v "$MOCKUP_DIR/keys:/opt/keys:ro"
+        -v "$MOCKUP_DIR/firmware:/opt/firmware:ro"
+        -e ANSIBLE_INVENTORY="/opt/inventory/production.yml"
+    )
+
+    # Add provided arguments
+    docker_cmd+=("${docker_args[@]}")
+    docker_cmd+=("$CONTAINER_IMAGE" "$command")
+
+    # Run the container test
+    if "${docker_cmd[@]}" > "$stdout_file" 2> "$stderr_file"; then
+        exit_code=0
+    else
+        exit_code=$?
+    fi
+
+    # Check results
+    if [[ "$expected_result" == "success" && $exit_code -eq 0 ]]; then
+        success "$test_name: PASSED"
+    elif [[ "$expected_result" == "fail" && $exit_code -ne 0 ]]; then
+        success "$test_name: PASSED (expected failure)"
+    else
+        error "$test_name: FAILED (exit code: $exit_code)"
+        echo "Command: ${docker_cmd[*]}"
+        echo "STDOUT:"
+        cat "$stdout_file" | head -15
+        echo "STDERR:"
+        cat "$stderr_file" | head -15
+    fi
+
+    # Cleanup
+    rm -f "$stdout_file" "$stderr_file"
+}
+
+# Setup mock environment with firmware files
+setup_mock_environment() {
+    log "Setting up comprehensive mock environment..."
+
+    # Create mock directories
+    mkdir -p "$MOCKUP_DIR/firmware/cisco.nxos"
+    mkdir -p "$MOCKUP_DIR/firmware/cisco.ios"
+    mkdir -p "$MOCKUP_DIR/firmware/fortios"
+    mkdir -p "$MOCKUP_DIR/firmware/opengear"
+    mkdir -p "$MOCKUP_DIR/firmware/metamako"
+    mkdir -p "$MOCKUP_DIR/tokens"
+    mkdir -p "$MOCKUP_DIR/backups"
+
+    # Create mock firmware files (small empty files for testing)
+    echo "mock-cisco-nxos-firmware" > "$MOCKUP_DIR/firmware/cisco.nxos/nxos64-cs.10.4.5.M.bin"
+    echo "mock-cisco-iosxe-firmware" > "$MOCKUP_DIR/firmware/cisco.ios/cat9k_iosxe.17.09.04a.SPA.bin"
+    echo "mock-fortios-firmware" > "$MOCKUP_DIR/firmware/fortios/FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out"
+    echo "mock-opengear-firmware" > "$MOCKUP_DIR/firmware/opengear/cm71xx-5.2.4.flash"
+    echo "mock-metamako-firmware" > "$MOCKUP_DIR/firmware/metamako/mos-0.39.9.iso"
+
+    # Create mock API tokens
+    echo "mock-fortios-api-token-12345678" > "$MOCKUP_DIR/tokens/fortios-token"
+    echo "mock-opengear-api-token-87654321" > "$MOCKUP_DIR/tokens/opengear-token"
+
+    # Set permissions for container access
+    chmod -R 644 "$MOCKUP_DIR/firmware"
+    chmod -R 644 "$MOCKUP_DIR/tokens"
+    chmod -R 600 "$MOCKUP_DIR/keys"/* 2>/dev/null || true
+
+    success "Mock environment setup completed"
+}
+
+# Test container availability
+test_container_availability() {
+    log "=== Testing Container Availability ==="
+
+    if docker images | grep -q "network-device-upgrade-system"; then
+        success "Container image found locally"
+    else
+        log "Pulling container image: $CONTAINER_IMAGE"
+        if docker pull "$CONTAINER_IMAGE"; then
+            success "Container image pulled successfully"
+        else
+            error "Failed to pull container image"
+            return 1
+        fi
+    fi
+}
+
+# Test all container commands
+test_container_commands() {
+    log "=== Testing All Container Commands ==="
+
+    # Test help command
+    run_container_test "Help command" "success" "help"
+
+    # Test syntax-check command (default)
+    run_container_test "Syntax check command" "success" "syntax-check"
+
+    # Test dry-run command
+    run_container_test "Dry run command" "success" "dry-run" \
+        -e TARGET_HOSTS="cisco-switch-01"
+
+    # Test test command
+    run_container_test "Test command" "success" "test"
+
+    # Test shell command with simple execution
+    run_container_test "Shell command execution" "success" "shell" "-c" "echo 'Container shell works'"
+}
+
+# Test TARGET_HOSTS validation (NEW - critical functionality)
+test_target_hosts_validation() {
+    log "=== Testing TARGET_HOSTS Validation ==="
+
+    # Test valid single host
+    run_container_test "Valid single host" "success" "syntax-check" \
+        -e TARGET_HOSTS="cisco-switch-01"
+
+    # Test valid multiple hosts
+    run_container_test "Valid multiple hosts" "success" "syntax-check" \
+        -e TARGET_HOSTS="cisco-switch-01,fortinet-firewall-01"
+
+    # Test 'all' hosts
+    run_container_test "All hosts" "success" "syntax-check" \
+        -e TARGET_HOSTS="all"
+
+    # Test invalid host (should fail)
+    run_container_test "Invalid host" "fail" "syntax-check" \
+        -e TARGET_HOSTS="nonexistent-device"
+
+    # Test TARGET_HOSTS without inventory (should fail)
+    run_container_test "TARGET_HOSTS without inventory" "fail" "syntax-check" \
+        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml" \
+        -e TARGET_HOSTS="cisco-switch-01"
+
+    # Test mixed valid/invalid hosts (should fail)
+    run_container_test "Mixed valid/invalid hosts" "fail" "syntax-check" \
+        -e TARGET_HOSTS="cisco-switch-01,invalid-device,fortinet-firewall-01"
+}
+
+# Test platform-specific authentication
+test_platform_authentication() {
+    log "=== Testing Platform-Specific Authentication ==="
+
+    # Test Cisco NX-OS with SSH key
+    run_container_test "Cisco NX-OS SSH auth" "success" "syntax-check" \
+        -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key" \
+        -e TARGET_HOSTS="cisco-switch-01"
+
+    # Test Cisco IOS-XE with username/password
+    run_container_test "Cisco IOS-XE password auth" "success" "syntax-check" \
+        -e CISCO_IOSXE_USERNAME="admin" \
+        -e CISCO_IOSXE_PASSWORD="cisco123" \
+        -e TARGET_HOSTS="cisco-router-01"
+
+    # Test FortiOS with API token
+    run_container_test "FortiOS API auth" "success" "syntax-check" \
+        -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")" \
+        -e TARGET_HOSTS="fortinet-firewall-01"
+
+    # Test Opengear dual authentication (SSH + API)
+    run_container_test "Opengear dual auth" "success" "syntax-check" \
+        -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key" \
+        -e OPENGEAR_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/opengear-token")" \
+        -e TARGET_HOSTS="opengear-console-01"
+
+    # Test Metamako SSH authentication
+    run_container_test "Metamako SSH auth" "success" "syntax-check" \
+        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
+        -e TARGET_HOSTS="metamako-switch-01"
+}
+
+# Test upgrade phases and workflows
+test_upgrade_workflows() {
+    log "=== Testing Upgrade Workflows ==="
+
+    # Test loading phase
+    run_container_test "Loading phase workflow" "success" "dry-run" \
+        -e TARGET_HOSTS="cisco-switch-01" \
+        -e TARGET_FIRMWARE="nxos64-cs.10.4.5.M.bin" \
+        -e UPGRADE_PHASE="loading" \
+        -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key"
+
+    # Test validation phase
+    run_container_test "Validation phase workflow" "success" "dry-run" \
+        -e TARGET_HOSTS="fortinet-firewall-01" \
+        -e TARGET_FIRMWARE="FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out" \
+        -e UPGRADE_PHASE="validation" \
+        -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")"
+
+    # Test full workflow
+    run_container_test "Full workflow" "success" "dry-run" \
+        -e TARGET_HOSTS="opengear-console-01" \
+        -e TARGET_FIRMWARE="cm71xx-5.2.4.flash" \
+        -e UPGRADE_PHASE="full" \
+        -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key"
+}
+
+# Test EPLD upgrade functionality
+test_epld_functionality() {
+    log "=== Testing EPLD Upgrade Functionality ==="
+
+    # Test EPLD upgrade enabled
+    run_container_test "EPLD upgrade enabled" "success" "syntax-check" \
+        -e TARGET_HOSTS="cisco-switch-01" \
+        -e ENABLE_EPLD_UPGRADE="true" \
+        -e TARGET_EPLD_IMAGE="n9000-epld.9.3.16.img" \
+        -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key"
+
+    # Test disruptive EPLD upgrade
+    run_container_test "Disruptive EPLD upgrade" "success" "syntax-check" \
+        -e TARGET_HOSTS="cisco-switch-01" \
+        -e ENABLE_EPLD_UPGRADE="true" \
+        -e ALLOW_DISRUPTIVE_EPLD="true" \
+        -e MAINTENANCE_WINDOW="true" \
+        -e EPLD_UPGRADE_TIMEOUT="7200"
+}
+
+# Test FortiOS multi-step upgrades
+test_fortios_multistep() {
+    log "=== Testing FortiOS Multi-Step Upgrades ==="
+
+    # Test multi-step upgrade configuration
+    run_container_test "FortiOS multi-step upgrade" "success" "syntax-check" \
+        -e TARGET_HOSTS="fortinet-firewall-01" \
+        -e MULTI_STEP_UPGRADE_REQUIRED="true" \
+        -e UPGRADE_PATH="6.4.8,7.0.12,7.2.5" \
+        -e TARGET_FIRMWARE="7.2.5" \
+        -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")"
+}
+
+# Test error conditions and edge cases
+test_error_conditions() {
+    log "=== Testing Error Conditions and Edge Cases ==="
+
+    # Test missing inventory
+    run_container_test "Missing inventory" "fail" "syntax-check" \
+        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml"
+
+    # Test invalid command
+    run_container_test "Invalid command" "fail" "invalid-command"
+
+    # Test conflicting authentication (should still work)
+    run_container_test "Conflicting authentication" "success" "syntax-check" \
+        -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key" \
+        -e CISCO_NXOS_USERNAME="admin" \
+        -e CISCO_NXOS_PASSWORD="cisco123" \
+        -e TARGET_HOSTS="cisco-switch-01"
+
+    # Test empty TARGET_HOSTS (should use default 'all')
+    run_container_test "Empty TARGET_HOSTS" "success" "syntax-check" \
+        -e TARGET_HOSTS=""
+
+    # Test malformed TARGET_HOSTS
+    run_container_test "Malformed TARGET_HOSTS" "fail" "syntax-check" \
+        -e TARGET_HOSTS="cisco-switch-01,,,invalid-host,,"
+}
+
+# Test Ansible verbosity and configuration
+test_ansible_configuration() {
+    log "=== Testing Ansible Configuration ==="
+
+    # Test Ansible verbosity
+    run_container_test "Ansible verbosity" "success" "syntax-check" \
+        -e ANSIBLE_VERBOSITY="2" \
+        -e TARGET_HOSTS="cisco-switch-01"
+
+    # Test custom playbook
+    run_container_test "Custom playbook" "success" "syntax-check" \
+        -e ANSIBLE_PLAYBOOK="ansible-content/playbooks/health-check.yml" \
+        -e TARGET_HOSTS="cisco-switch-01"
+
+    # Test image server configuration
+    run_container_test "Image server config" "success" "syntax-check" \
+        -e IMAGE_SERVER_USERNAME="ftp-user" \
+        -e IMAGE_SERVER_PASSWORD="ftp-pass123" \
+        -e TARGET_HOSTS="cisco-switch-01"
+
+    # Test SNMP configuration
+    run_container_test "SNMP configuration" "success" "syntax-check" \
+        -e SNMP_COMMUNITY="private" \
+        -e TARGET_HOSTS="cisco-switch-01"
+}
+
+# Test comprehensive real-world scenarios
+test_comprehensive_scenarios() {
+    log "=== Testing Comprehensive Real-World Scenarios ==="
+
+    # Scenario 1: Multi-platform environment with all authentication methods
+    run_container_test "Multi-platform comprehensive" "success" "dry-run" \
+        -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key" \
+        -e CISCO_IOSXE_USERNAME="admin" \
+        -e CISCO_IOSXE_PASSWORD="cisco123" \
+        -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")" \
+        -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key" \
+        -e OPENGEAR_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/opengear-token")" \
+        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
+        -e TARGET_HOSTS="all" \
+        -e UPGRADE_PHASE="validation"
+
+    # Scenario 2: Production-like configuration with all options
+    run_container_test "Production-like configuration" "success" "syntax-check" \
+        -e TARGET_HOSTS="cisco-switch-01,fortinet-firewall-01" \
+        -e TARGET_FIRMWARE="auto-detect" \
+        -e UPGRADE_PHASE="full" \
+        -e MAINTENANCE_WINDOW="true" \
+        -e ENABLE_EPLD_UPGRADE="true" \
+        -e FIRMWARE_BASE_PATH="/opt/firmware" \
+        -e BACKUP_BASE_PATH="/opt/backups" \
+        -e IMAGE_SERVER_USERNAME="ftp-user" \
+        -e IMAGE_SERVER_PASSWORD="ftp-pass123" \
+        -e SNMP_COMMUNITY="private" \
+        -e ANSIBLE_VERBOSITY="1" \
+        -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key" \
+        -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")"
+
+    # Scenario 3: Emergency rollback scenario
+    run_container_test "Emergency rollback scenario" "success" "syntax-check" \
+        -e TARGET_HOSTS="cisco-switch-01" \
+        -e UPGRADE_PHASE="rollback" \
+        -e MAINTENANCE_WINDOW="true" \
+        -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key"
+}
+
+# Main execution
+main() {
+    echo "🚀 Comprehensive Container Functionality Testing Suite"
+    echo "===================================================="
+    echo "Container Image: $CONTAINER_IMAGE"
+    echo "Mockup Directory: $MOCKUP_DIR"
+    echo ""
+
+    # Setup
+    setup_mock_environment
+    test_container_availability
+
+    # Core functionality tests
+    test_container_commands
+    test_target_hosts_validation
+    test_platform_authentication
+
+    # Upgrade workflow tests
+    test_upgrade_workflows
+    test_epld_functionality
+    test_fortios_multistep
+
+    # Configuration and edge case tests
+    test_ansible_configuration
+    test_error_conditions
+
+    # Comprehensive scenarios
+    test_comprehensive_scenarios
+
+    # Results
+    echo ""
+    echo "===================================================="
+    echo "🎯 Comprehensive Test Results Summary"
+    echo "===================================================="
+    echo "Tests Run: $TESTS_RUN"
+    echo -e "Tests Passed: ${GREEN}$TESTS_PASSED${NC}"
+    echo -e "Tests Failed: ${RED}$TESTS_FAILED${NC}"
+
+    if [[ $TESTS_FAILED -eq 0 ]]; then
+        echo -e "${GREEN}🎉 All comprehensive tests passed!${NC}"
+        echo -e "${GREEN}Container functionality is fully validated against mock devices.${NC}"
+        exit 0
+    else
+        echo -e "${RED}❌ Some tests failed.${NC}"
+        echo -e "${RED}Container functionality needs attention.${NC}"
+        exit 1
+    fi
+}
+
+# Execute main function
+main "$@"

@@ -1,0 +1,130 @@
+---
+# Mock Production Inventory for Container Testing
+# Tests comprehensive environment variable functionality
+
+all:
+  children:
+    # Cisco NX-OS Switches
+    cisco_nxos:
+      hosts:
+        cisco-switch-01:
+          ansible_host: 192.168.1.101
+          device_model: N9K-C93180YC-EX
+          current_firmware: "9.3.10"
+          target_firmware: "9.3.12"
+        cisco-switch-02:
+          ansible_host: 192.168.1.102
+          device_model: N9K-C93240YC-FX2
+          current_firmware: "9.3.10"
+          target_firmware: "9.3.12"
+      vars:
+        ansible_network_os: cisco.nxos.nxos
+        ansible_connection: ansible.netcommon.network_cli
+        ansible_user: "{{ vault_cisco_nxos_username | default('admin') }}"
+        ansible_ssh_private_key_file: "{{ vault_cisco_nxos_ssh_key | default(omit) }}"
+        ansible_password: "{{ vault_cisco_nxos_password | default(omit) }}"
+        platform_type: cisco_nxos
+
+    # Cisco IOS-XE Routers
+    cisco_iosxe:
+      hosts:
+        cisco-router-01:
+          ansible_host: 192.168.1.201
+          device_model: ISR4321
+          current_firmware: "16.12.05"
+          target_firmware: "17.03.06"
+        cisco-router-02:
+          ansible_host: 192.168.1.202
+          device_model: ISR4331
+          current_firmware: "16.12.05"
+          target_firmware: "17.03.06"
+      vars:
+        ansible_network_os: cisco.ios.ios
+        ansible_connection: ansible.netcommon.network_cli
+        ansible_user: "{{ vault_cisco_iosxe_username | default('admin') }}"
+        ansible_ssh_private_key_file: "{{ vault_cisco_iosxe_ssh_key | default(omit) }}"
+        ansible_password: "{{ vault_cisco_iosxe_password | default(omit) }}"
+        platform_type: cisco_iosxe
+
+    # FortiOS Firewalls
+    fortios:
+      hosts:
+        fortinet-firewall-01:
+          ansible_host: 192.168.1.301
+          device_model: FortiGate-200E
+          current_firmware: "7.0.12"
+          target_firmware: "7.2.5"
+        fortinet-firewall-02:
+          ansible_host: 192.168.1.302
+          device_model: FortiGate-400E
+          current_firmware: "7.0.12"
+          target_firmware: "7.2.5"
+      vars:
+        ansible_network_os: fortinet.fortios.fortios
+        ansible_connection: ansible.netcommon.httpapi
+        ansible_user: "{{ vault_fortios_username | default('admin') }}"
+        ansible_httpapi_key: "{{ vault_fortios_api_token | default(omit) }}"
+        ansible_password: "{{ vault_fortios_password | default(omit) }}"
+        ansible_httpapi_use_ssl: true
+        ansible_httpapi_validate_certs: false
+        platform_type: fortios
+
+    # Opengear Console Servers
+    opengear:
+      hosts:
+        opengear-console-01:
+          ansible_host: 192.168.1.401
+          device_model: IM7208-2-DAC
+          current_firmware: "21.2.1"
+          target_firmware: "22.1.3"
+        opengear-console-02:
+          ansible_host: 192.168.1.402
+          device_model: IM7216-2-DAC
+          current_firmware: "21.2.1"
+          target_firmware: "22.1.3"
+      vars:
+        ansible_connection: ansible.netcommon.network_cli
+        ansible_user: "{{ vault_opengear_username | default('admin') }}"
+        ansible_ssh_private_key_file: "{{ vault_opengear_ssh_key | default(omit) }}"
+        ansible_password: "{{ vault_opengear_password | default(omit) }}"
+        opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
+        platform_type: opengear
+
+    # Metamako MOS Devices
+    metamako:
+      hosts:
+        metamako-switch-01:
+          ansible_host: 192.168.1.501
+          device_model: MetaConnect48
+          current_firmware: "1.60.17"
+          target_firmware: "1.62.2"
+        metamako-switch-02:
+          ansible_host: 192.168.1.502
+          device_model: MetaConnect24
+          current_firmware: "1.60.17"
+          target_firmware: "1.62.2"
+      vars:
+        ansible_connection: ansible.netcommon.network_cli
+        ansible_user: "{{ vault_metamako_username | default('admin') }}"
+        ansible_ssh_private_key_file: "{{ vault_metamako_ssh_key | default(omit) }}"
+        ansible_password: "{{ vault_metamako_password | default(omit) }}"
+        platform_type: metamako
+
+  vars:
+    # Global Variables for Testing
+    image_server_username: "{{ vault_image_server_username | default('ftp-user') }}"
+    image_server_password: "{{ vault_image_server_password | default('ftp-pass') }}"
+    snmp_community: "{{ vault_snmp_community | default('public') }}"
+
+    # Firmware image configuration
+    firmware_base_path: "/opt/firmware"
+    backup_base_path: "/opt/backups"
+
+    # Global networking
+    image_server_host: "192.168.1.10"
+    ntp_servers:
+      - "192.168.1.10"
+      - "pool.ntp.org"
+    dns_servers:
+      - "8.8.8.8"
+      - "1.1.1.1"
