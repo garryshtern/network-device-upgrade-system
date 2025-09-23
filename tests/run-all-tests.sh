@@ -207,6 +207,16 @@ main() {
         "YAML_Validation:../tests/validation-scripts/run-yaml-tests.sh"
         "Performance_Tests:../tests/performance-tests/run-performance-tests.sh"
         "Error_Simulation:../tests/error-scenarios/run-error-simulation-tests.sh"
+        "Container_Tests:../tests/container-tests/run-all-container-tests.sh"
+    )
+
+    # Playbook-specific test suites
+    playbook_test_suites=(
+        "Emergency_Rollback:../tests/playbook-tests/emergency-rollback/run-emergency-rollback-tests.sh"
+        "Network_Validation:../tests/playbook-tests/network-validation/run-network-validation-tests.sh"
+        "Config_Backup:../tests/playbook-tests/config-backup/run-config-backup-tests.sh"
+        "Compliance_Audit:../tests/playbook-tests/compliance-audit/run-compliance-audit-tests.sh"
+        "Image_Loading:../tests/playbook-tests/image-loading/run-image-loading-tests.sh"
     )
     
     # Run each Ansible test suite
@@ -224,7 +234,32 @@ main() {
     done
 
     echo ""
-    echo -e "${BLUE}Phase 3: Shell Test Suites${NC}"
+    echo -e "${BLUE}Phase 3: Playbook Test Suites${NC}"
+
+    # Run each playbook test suite
+    for test_suite in "${playbook_test_suites[@]}"; do
+        test_name="${test_suite%%:*}"
+        test_script="${test_suite#*:}"
+        total_tests=$((total_tests + 1))
+
+        echo -e "${YELLOW}Running $test_name tests...${NC}"
+
+        if cd "$PROJECT_ROOT" && chmod +x "$test_script" && "$test_script" > "$TEST_RESULTS_DIR/${test_name}_${TIMESTAMP}.log" 2>&1; then
+            echo -e "${GREEN}✓ $test_name tests PASSED${NC}"
+            passed_tests=$((passed_tests + 1))
+        else
+            echo -e "${RED}✗ $test_name tests FAILED${NC}"
+            echo -e "${RED}  Last 30 lines of output:${NC}"
+            echo -e "${RED}  ========================${NC}"
+            tail -30 "$TEST_RESULTS_DIR/${test_name}_${TIMESTAMP}.log" | sed 's/^/  /'
+            echo -e "${RED}  ========================${NC}"
+            failed_tests=$((failed_tests + 1))
+        fi
+        echo ""
+    done
+
+    echo ""
+    echo -e "${BLUE}Phase 4: Shell Test Suites${NC}"
 
     # Run each shell test suite
     for test_suite in "${shell_test_suites[@]}"; do
