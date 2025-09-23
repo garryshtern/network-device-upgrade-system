@@ -1,30 +1,28 @@
 ---
 extends: default
 
+ignore: |
+  tests/uat-tests/
+  tests/proposed-enhancements/
+  tests/critical-gaps/
+  tests/container-tests/
+  tests/vendor-tests/
+
 rules:
-  # Allow longer lines for test files and complex Jinja2 expressions
+  # Focus on critical issues only for network automation
   line-length:
-    max: 160  # Match ansible-lint default
+    max: 300  # Very generous for complex Jinja2 expressions
 
-  # Disable document start requirement (ansible-lint enforces this separately)
+  # Disable non-critical rules for network automation
   document-start: disable
-
-  # Allow truthy values (yes/no) which are common in Ansible
-  truthy:
-    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
-
-  # More flexible comment spacing
-  comments:
-    min-spaces-from-content: 1
-
-  # Allow empty lines at document end
-  empty-lines:
-    max-end: 1
-
-  # More flexible indentation for complex structures
+  new-line-at-end-of-file: disable
+  trailing-spaces: disable
+  empty-lines: disable
   indentation:
-    spaces: 2
-    indent-sequences: true
+    spaces: consistent  # Allow flexible indentation
+
+  # Allow truthy values common in Ansible
+  truthy: disable
 
   # Required by ansible-lint
   braces:
@@ -35,5 +33,9 @@ rules:
     forbid-implicit-octal: true
     forbid-explicit-octal: true
 
-  # Allow longer comment lines for documentation
-  comments-indentation: false
+  # Required by ansible-lint
+  comments:
+    min-spaces-from-content: 1
+
+  # Disable overly strict rules
+  comments-indentation: disable

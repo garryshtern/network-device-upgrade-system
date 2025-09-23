@@ -22,20 +22,20 @@
       high_availability:
         ha_pairs: 25
         upgrade_coordination: "sequential_ha"
-        failover_testing: True
-        zero_downtime_expected: True
+        failover_testing: true
+        zero_downtime_expected: true
 
       disaster_recovery:
         rollback_scenarios: 10
-        network_partition_recovery: True
-        power_failure_recovery: True
-        data_corruption_recovery: True
+        network_partition_recovery: true
+        power_failure_recovery: true
+        data_corruption_recovery: true
 
       security_compliance:
-        certificate_validation: True
-        secure_transfer_only: True
-        audit_logging: True
-        access_control_validation: True
+        certificate_validation: true
+        secure_transfer_only: true
+        audit_logging: true
+        access_control_validation: true
 
     performance_benchmarks:
       max_upgrade_time_minutes: 45
@@ -72,7 +72,7 @@
             method: GET
             status_code: [200, 401, 404]  # 404 if AWX not installed
           register: awx_check
-          failed_when: False
+          failed_when: false
 
         - name: Validate NetBox integration
           ansible.builtin.uri:
@@ -80,7 +80,7 @@
             method: GET
             status_code: [200, 401, 404]  # 404 if NetBox not installed
           register: netbox_check
-          failed_when: False
+          failed_when: false
 
         - name: Check InfluxDB metrics endpoint
           ansible.builtin.uri:
@@ -88,7 +88,7 @@
             method: GET
             status_code: [200, 404]  # 404 if InfluxDB not installed
           register: influxdb_check
-          failed_when: False
+          failed_when: false
 
     - name: Phase 2 - Enterprise Scale Simulation
       block:
