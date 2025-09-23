@@ -29,5 +29,5 @@ runs:
       run: |
         ANSIBLE_ROLES_PATH=ansible-content/roles \
         ANSIBLE_CONFIG=ansible-content/ansible.cfg \
-        ansible-playbook -i tests/mock-inventories/single-platform.yml \
-          --check --diff tests/integration-tests/workflow-tests.yml
+        ansible-playbook tests/integration-tests/workflow-tests.yml \
+          --limit localhost

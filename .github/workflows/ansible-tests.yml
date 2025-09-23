@@ -142,9 +142,11 @@ jobs:
         with:
           name: container-test-results-${{ github.run_number }}
           path: |
-            tests/container-tests/results/*
-            tests/container-tests/reports/*
+            tests/container-tests/results/
+            tests/container-tests/reports/
+            tests/container-tests/*.log
           retention-days: 30
+          if-no-files-found: ignore
 
   molecule-tests:
     name: Molecule Tests
