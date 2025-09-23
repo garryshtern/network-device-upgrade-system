@@ -1,25 +1,43 @@
-# lint-and-fix
+name: lint-and-fix
+description: Run comprehensive Ansible linting and auto-fix issues for network device upgrade system
+version: "2.0.0"
 
-Run comprehensive Ansible linting and auto-fix issues for network device upgrade system.
+input:
+  - name: target_path
+    description: Path to lint (defaults to current directory)
+    required: false
+    default: "."
+  - name: skip_commit
+    description: Skip auto-commit of changes
+    required: false
+    default: false
+  - name: dry_run
+    description: Show what would be linted without making changes
+    required: false
+    default: false
 
-## Usage
+output:
+  - type: fixes
+    description: Summary of all fixes applied
+  - type: remaining_issues
+    description: Issues that require manual intervention
+  - type: commit_info
+    description: Git commit details if changes were committed
 
-```
-/lint-and-fix [target_path] [--skip-commit] [--dry-run]
-```
-
-## Parameters
-
-- `target_path` (optional): Path to lint (defaults to current directory)
-- `--skip-commit` (optional): Skip auto-commit of changes
-- `--dry-run` (optional): Show what would be linted without making changes
-
-## Description
+prompt: |
 
 I need you to run comprehensive linting and auto-fix issues for this Ansible-based network device upgrade system. Please follow this systematic approach:
 
+Target path: {{target_path}}
+Skip commit: {{skip_commit}}
+Dry run mode: {{dry_run}}
+
+{% if dry_run %}
+**DRY RUN MODE**: Only analyze and report what would be changed for network infrastructure, don't modify files.
+{% endif %}
+
 ## 1. Pre-flight Checks
-- Scan the target path
+- Scan the target path: {{target_path}}
 - Verify git status before making changes
 - Check Ansible and linting tool availability:
   - ansible-lint (required)
@@ -130,6 +148,7 @@ ANSIBLE_CONFIG=ansible-content/ansible.cfg ansible-playbook --check ansible-cont
 
 ## 5. Network Infrastructure Git Management
 
+{% if not skip_commit %}
 Create focused commits for network infrastructure:
 ```bash
 # Separate commits by type of fix
@@ -143,6 +162,7 @@ Use conventional commit format:
 - `lint: resolve YAML line length issues in molecule tests`
 - `lint: apply shellcheck fixes to installation scripts`
 - `style: standardize YAML formatting across playbooks`
+{% endif %}
 
 ## 6. Network Infrastructure Summary Report
 Provide:
