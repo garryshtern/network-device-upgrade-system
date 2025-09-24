@@ -22,9 +22,9 @@ on:
         default: 'standard'
         type: choice
         options:
-        - 'standard'
-        - 'comprehensive'
-        - 'critical-gaps-only'
+          - 'standard'
+          - 'comprehensive'
+          - 'critical-gaps-only'
 
 permissions:
   contents: write

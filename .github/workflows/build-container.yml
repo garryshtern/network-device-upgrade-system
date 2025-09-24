@@ -23,9 +23,9 @@ on:
         default: 'fast-x64'
         type: choice
         options:
-        - 'fast-x64'
-        - 'arm64-only'
-        - 'multi-platform'
+          - 'fast-x64'
+          - 'arm64-only'
+          - 'multi-platform'
       platforms:
         description: 'Custom platforms (advanced users only)'
         required: false
