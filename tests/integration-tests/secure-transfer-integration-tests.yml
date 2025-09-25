@@ -133,7 +133,8 @@
 
         - name: Prefer SSH keys over passwords
           ansible.builtin.debug:
-            msg: "{{ '✅ Using SSH key authentication' if ansible_ssh_private_key_file is defined else '⚠️  Using password authentication - SSH keys preferred' }}"
+            msg: >-
+              {{ '✅ Using SSH key authentication' if ansible_ssh_private_key_file is defined else '⚠️  Using password authentication - SSH keys preferred' }}
           when: ansible_connection != 'local'
 
       rescue:
@@ -155,7 +156,8 @@
 
         - name: Confirm secure protocol usage
           ansible.builtin.debug:
-            msg: "{{ '✅ Secure transfer protocols configured' if secure_protocols_used else '⚠️  Verify secure protocol configuration' }}"
+            msg: >-
+              {{ '✅ Secure transfer protocols configured' if secure_protocols_used else '⚠️  Verify secure protocol configuration' }}
 
       rescue:
         - name: Handle protocol validation errors

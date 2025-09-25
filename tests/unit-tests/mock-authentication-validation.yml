@@ -182,7 +182,8 @@
             that:
               - item.success == true
               - item.command_response_status == 'success'
-            fail_msg: "Mock device authentication test failed for {{ item.platform }}: {{ item.error | default('Command failed') }}"
+            fail_msg: >-
+              Mock device authentication test failed for {{ item.platform }}: {{ item.error | default('Command failed') }}
           loop: "{{ mock_device_results }}"
           loop_control:
             label: "{{ item.platform }}"

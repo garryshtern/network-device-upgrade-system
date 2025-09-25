@@ -245,9 +245,7 @@
       block:
         - name: Check Required Task Files Exist
           ansible.builtin.stat:
-            path: >-
-              {{ playbook_dir }}/../../ansible-content/roles/opengear-upgrade/
-              tasks/{{ item }}
+            path: "{{ playbook_dir }}/../../ansible-content/roles/opengear-upgrade/tasks/{{ item }}"
           register: task_file_checks
           loop:
             - "main.yml"
@@ -274,9 +272,7 @@
       block:
         - name: Check Opengear Group Variables File
           ansible.builtin.stat:
-            path: >-
-              {{ playbook_dir }}/../../ansible-content/inventory/
-              group_vars/opengear.yml
+            path: "{{ playbook_dir }}/../../ansible-content/inventory/group_vars/opengear.yml"
           register: opengear_group_vars_stat
 
         - name: Validate Group Variables File Exists

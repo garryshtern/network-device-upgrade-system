@@ -204,19 +204,19 @@ main() {
 
     # Shell-based test suites to run
     shell_test_suites=(
-        "YAML_Validation:../tests/validation-scripts/run-yaml-tests.sh"
-        "Performance_Tests:../tests/performance-tests/run-performance-tests.sh"
-        "Error_Simulation:../tests/error-scenarios/run-error-simulation-tests.sh"
-        "Container_Tests:../tests/container-tests/run-all-container-tests.sh"
+        "YAML_Validation:tests/validation-scripts/run-yaml-tests.sh"
+        "Performance_Tests:tests/performance-tests/run-performance-tests.sh"
+        "Error_Simulation:tests/error-scenarios/run-error-simulation-tests.sh"
+        "Container_Tests:tests/container-tests/run-all-container-tests.sh"
     )
 
     # Playbook-specific test suites
     playbook_test_suites=(
-        "Emergency_Rollback:../tests/playbook-tests/emergency-rollback/run-emergency-rollback-tests.sh"
-        "Network_Validation:../tests/playbook-tests/network-validation/run-network-validation-tests.sh"
-        "Config_Backup:../tests/playbook-tests/config-backup/run-config-backup-tests.sh"
-        "Compliance_Audit:../tests/playbook-tests/compliance-audit/run-compliance-audit-tests.sh"
-        "Image_Loading:../tests/playbook-tests/image-loading/run-image-loading-tests.sh"
+        "Emergency_Rollback:tests/playbook-tests/emergency-rollback/run-emergency-rollback-tests.sh"
+        "Network_Validation:tests/playbook-tests/network-validation/run-network-validation-tests.sh"
+        "Config_Backup:tests/playbook-tests/config-backup/run-config-backup-tests.sh"
+        "Compliance_Audit:tests/playbook-tests/compliance-audit/run-compliance-audit-tests.sh"
+        "Image_Loading:tests/playbook-tests/image-loading/run-image-loading-tests.sh"
     )
     
     # Run each Ansible test suite

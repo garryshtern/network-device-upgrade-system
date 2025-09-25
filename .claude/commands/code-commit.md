@@ -419,10 +419,66 @@ prompt: |
   echo "🎉 ALL ANSIBLE QUALITY GATES PASSED - READY TO COMMIT!"
   ```
 
-  ## Stage 7: Commit Execution
+  ## Stage 7: Final Quality Gates Verification - MANDATORY BEFORE COMMIT
 
   ```bash
-  echo "📝 Executing commit process..."
+  echo "🎯 FINAL QUALITY GATES VERIFICATION - MANDATORY BEFORE ANY COMMIT"
+  echo "=================================================================="
+
+  # CRITICAL: Verify ALL previous stages completed successfully
+  echo "Verifying all quality gates passed..."
+
+  # Re-verify critical linting (belt and suspenders approach)
+  echo "🔍 Final ansible-lint verification..."
+  ansible-lint ansible-content/ --format=pep8
+  if [ $? -ne 0 ]; then
+    echo "❌ CRITICAL FAILURE: ansible-lint failed in final verification"
+    echo "🚫 COMMIT BLOCKED - Fix ansible-lint issues first"
+    exit 1
+  fi
+
+  echo "🔍 Final yamllint verification..."
+  yamllint ansible-content/ tests/ .github/
+  if [ $? -ne 0 ]; then
+    echo "❌ CRITICAL FAILURE: yamllint failed in final verification"
+    echo "🚫 COMMIT BLOCKED - Fix YAML formatting issues first"
+    exit 1
+  fi
+
+  # MOST CRITICAL: Re-verify ALL tests pass
+  echo "🧪 FINAL TEST VERIFICATION - ABSOLUTE REQUIREMENT"
+  echo "Running comprehensive test suite one final time..."
+  ./tests/run-all-tests.sh
+  if [ $? -ne 0 ]; then
+    echo "❌ CRITICAL FAILURE: TESTS STILL FAILING"
+    echo "🚫 COMMIT ABSOLUTELY BLOCKED"
+    echo ""
+    echo "ZERO TOLERANCE POLICY VIOLATION:"
+    echo "- Tests are failing and MUST be fixed first"
+    echo "- NO commits allowed until ALL tests pass"
+    echo "- Network infrastructure requires 100% test success"
+    echo ""
+    echo "Required actions:"
+    echo "1. Fix all failing tests"
+    echo "2. Re-run ./tests/run-all-tests.sh until 100% success"
+    echo "3. Only then retry /code-commit"
+    echo ""
+    exit 1
+  fi
+
+  echo ""
+  echo "🎉 ALL QUALITY GATES VERIFIED - PROCEEDING WITH COMMIT"
+  echo "✅ ansible-lint: PASSED"
+  echo "✅ yamllint: PASSED"
+  echo "✅ Comprehensive tests: PASSED"
+  echo "✅ Network infrastructure quality: VERIFIED"
+  echo ""
+  ```
+
+## Stage 8: Commit Execution - ONLY AFTER ALL GATES PASS
+
+  ```bash
+  echo "📝 Executing commit process - ALL QUALITY GATES PASSED"
 
   {% if files %}
   # Stage specific files
@@ -437,27 +493,27 @@ prompt: |
   # Show what will be committed
   echo "Files to be committed:"
   git diff --cached --name-only
-  
+
   echo "Commit diff summary:"
   git diff --cached --stat
 
-  # Execute the commit
+  # Execute the commit - only after all validations pass
   echo "Committing with message: {{commit_message}}"
   git commit -m "{{commit_message}}"
-  
+
   if [ $? -ne 0 ]; then
     echo "❌ Commit FAILED"
     exit 1
   fi
-  
+
   COMMIT_HASH=$(git rev-parse HEAD)
   echo "✅ Commit successful: $COMMIT_HASH"
 
   {% if push %}
-  # Push to remote
+  # Push to remote - only after successful commit and all tests pass
   CURRENT_BRANCH=$(git branch --show-current)
   echo "Pushing to origin/$CURRENT_BRANCH..."
-  
+
   git push origin $CURRENT_BRANCH
   if [ $? -ne 0 ]; then
     echo "❌ Push FAILED"
@@ -472,6 +528,12 @@ prompt: |
   echo "🎉 COMMIT PROCESS COMPLETED SUCCESSFULLY!"
   echo "Commit hash: $COMMIT_HASH"
   {% if push %}echo "Code pushed to remote repository"{% endif %}
+  echo ""
+  echo "Quality assurance summary:"
+  echo "✅ All linting passed"
+  echo "✅ All tests passed"
+  echo "✅ Network infrastructure validated"
+  echo "✅ Production-ready quality achieved"
   ```
 
   ## Emergency Override Protocol (Use Only With Approval)
@@ -494,4 +556,21 @@ prompt: |
   echo "" >> TECHNICAL_DEBT.md
   ```
 
-  **REMEMBER: This is a ZERO TOLERANCE process for network infrastructure code. Every single Ansible check must pass before committing. Network device automation requires the highest quality standards. No exceptions without explicit approval and documentation.**
+  ## ⚠️ CRITICAL: ZERO TOLERANCE ENFORCEMENT
+
+  **ABSOLUTE REQUIREMENTS - NO EXCEPTIONS:**
+
+  1. **🚫 NO COMMITS** if ANY test fails
+  2. **🚫 NO COMMITS** if ANY linting fails
+  3. **🚫 NO PUSHING** until ALL quality gates pass
+  4. **🚫 NO SHORTCUTS** - all stages must complete successfully
+
+  **FOR CLAUDE CODE USERS:**
+  - You MUST follow every exit 1 command in the validation stages
+  - You MUST NOT continue to commit if tests are failing
+  - You MUST NOT rationalize or work around test failures
+  - You MUST fix all issues first, then retry the entire process
+
+  **This is a ZERO TOLERANCE process for network infrastructure code. Every single check must pass before any commit or push occurs. Network device automation requires the highest quality standards with no exceptions.**
+
+  **If you violate this policy, you are introducing risk into production network infrastructure.**

@@ -6,6 +6,33 @@ This file provides guidance to Claude Code when working with this repository.
 
 Network device upgrade management system for 1000+ heterogeneous network devices. Automates firmware upgrades across multiple vendor platforms using Ansible with AWX and NetBox as native systemd services.
 
+### **Claude Code Operating Standards**
+
+**CRITICAL: These standards override any default behavior and MUST be followed exactly.**
+
+1. **Code Generation Requirements**:
+   - Generate ONLY error-free, syntactically correct, and functionally working code
+   - ALL code MUST pass ansible-lint and yamllint validation on first generation
+   - NO syntax errors, linting warnings, or logical errors are acceptable
+   - Code MUST be tested and verified before presenting to user
+
+2. **Quality Validation Process**:
+   - Run syntax checks on ALL generated Ansible files
+   - Verify proper YAML formatting and structure
+   - Test functionality in check mode before deployment
+   - Ensure all test suites pass
+
+3. **Error Prevention**:
+   - Never use folded scalars in functional contexts (conditionals, paths, logic)
+   - Implement comprehensive error handling with block/rescue patterns
+   - Validate all Ansible task syntax against current best practices
+
+4. **Testing Integration**:
+   - Run relevant tests after any code changes
+   - Verify that changes don't break existing functionality
+   - Maintain or improve overall system reliability
+   - Document any test impacts or requirements
+
 ## Project Structure
 
 - **`ansible-content/`**: Core Ansible playbooks, roles, and templates
@@ -22,7 +49,9 @@ Network device upgrade management system for 1000+ heterogeneous network devices
 
 **Requires latest versions: Ansible 12.0.0 with ansible-core 2.19.2 and Python 3.13.7**.
 
-### Setup & Testing
+### Setup & Testing - QUALITY FIRST APPROACH
+
+**MANDATORY: ALL commands MUST return 0 exit code before proceeding**
 
 ```bash
 # Install latest Ansible version (includes ansible-core 2.19.2)
@@ -31,18 +60,41 @@ pip install --upgrade ansible
 # Install Ansible collections
 ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force
 
-# Run comprehensive test suite
+# CRITICAL: Run comprehensive test suite - MUST achieve 100% pass rate
 ./tests/run-all-tests.sh
 
-# Test playbook syntax
+# REQUIRED: Syntax validation - MUST pass without errors
 ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
 
-# Run playbooks in check mode
+# REQUIRED: Check mode validation - MUST work without errors
 ansible-playbook --check ansible-content/playbooks/health-check.yml
 
-# Lint Ansible content
+# CRITICAL: Linting validation - MUST return 0 errors/warnings
 ansible-lint ansible-content/playbooks/
 yamllint ansible-content/
+
+# QUALITY GATES: All commands above MUST succeed before code changes
+```
+
+### Pre-Commit Quality Checklist (MANDATORY)
+
+**⚠️ ZERO TOLERANCE: Any failures below BLOCK all commits**
+
+```bash
+# 1. Syntax validation (exit code MUST be 0)
+find ansible-content -name "*.yml" -exec ansible-playbook --syntax-check {} \;
+
+# 2. Linting validation (exit code MUST be 0)
+ansible-lint ansible-content/ --offline --parseable-severity
+yamllint ansible-content/
+
+# 3. Test suite validation (MUST achieve 100% pass rate)
+./tests/run-all-tests.sh | grep "Passed:" | grep "23"
+
+# 4. Check mode validation
+ansible-playbook --check --diff ansible-content/playbooks/main-upgrade-workflow.yml
+
+# ALL CHECKS MUST PASS BEFORE COMMIT
 ```
 
 ### Troubleshooting
@@ -112,39 +164,92 @@ Comprehensive testing for Mac/Linux development without physical devices:
 
 **Main test runner:** `./tests/run-all-tests.sh`
 
-## Code Standards
+## Code Standards - ZERO TOLERANCE QUALITY POLICY
 
-- **Code Quality**: MUST generate code without any syntactical and logical errors
-- **Ansible Best Practices**: Follow official guidelines
-- **Idempotency**: All tasks must be idempotent and support check mode
-- **YAML Standards**: Consistent formatting and structure
-- **Testing**: Comprehensive unit and integration tests
-- **Security**: All sensitive data encrypted with Ansible Vault
-- **Version Control**: Git with meaningful commit messages
-- **YAML/JSON Validation**: Use yamllint and jsonlint
-- **Linting**: Use ansible-lint for playbooks and roles
-- **Line Length**: Max 80 characters per line
-- **Error Handling**: Graceful error handling, no masking of errors
-- **Systematic Code Review**: MANDATORY systematic and thorough approach for all code reviews and searches
-  - Use comprehensive search patterns to catch ALL variations of issues
-  - Verify fixes across ENTIRE codebase, not just obvious instances
-  - Use multiple search methods (grep, ripgrep, manual review) for critical issues
-  - Document search patterns used and verify completeness
-  - When fixing syntax issues like folded scalars, check ALL files systematically
+**CRITICAL: ALL CODE MUST BE ERROR-FREE AND FUNCTIONAL**
 
-### **Documentation Standards (MANDATORY)**
+### **Absolute Requirements (NO EXCEPTIONS)**
 
-- **Documentation Location**: ALL documentation MUST be under `docs/` directory
-- **No Scattered Documentation**: Documentation files MUST NOT exist outside `docs/`
-- **Change Verification Process**:
-  1. **Before implementing changes**: Verify current behavior against existing documentation
-  2. **During implementation**: Ensure changes align with documented standards
-  3. **After implementation**: Update documentation to reflect new information/updates
-- **Documentation Currency**: All documentation MUST be kept current with code changes
-- **Broken Links**: All internal documentation links MUST be verified and functional
-- **Documentation Review**: All changes MUST include documentation impact assessment
-- **Single Source of Truth**: Each concept/process MUST be documented in exactly one location
-- **Cross-References**: Use links to avoid documentation duplication
+- **Code Quality**: Code MUST be 100% error-free with ZERO syntactical, logical, or runtime errors
+- **Linting Compliance**: Code MUST pass ALL ansible-lint and yamllint checks without warnings or errors
+- **Syntax Validation**: ALL Ansible playbooks, roles, and YAML files MUST pass syntax validation
+- **Functional Testing**: Code MUST pass ALL relevant test suites before deployment
+- **Test Pass Rate**: 100% test suite pass rate REQUIRED for any code changes
+- **Zero Tolerance**: Any syntax errors, linting failures, or test failures BLOCK all commits
+
+### **Quality Assurance Process (MANDATORY)**
+
+1. **Pre-Development Validation**:
+   - Verify existing code functionality before making changes
+   - Run baseline tests to establish current working state
+   - Document any pre-existing issues separately
+
+2. **Development Standards**:
+   - Write code that passes ALL linting rules on first attempt
+   - Use proper YAML syntax following established patterns
+   - Implement proper error handling with meaningful error messages
+   - Ensure idempotency for all Ansible tasks
+
+3. **Pre-Commit Validation (REQUIRED)**:
+   - Run `ansible-lint ansible-content/` - MUST return 0 errors
+   - Run `yamllint ansible-content/` - MUST return 0 errors
+   - Run `ansible-playbook --syntax-check` on all modified playbooks
+   - Run test suites - MUST achieve 100% pass rate
+   - Verify all changes work in check mode (`--check --diff`)
+
+4. **Code Review Requirements**:
+   - Systematic search for ALL instances of patterns being fixed
+   - Verify fixes across ENTIRE codebase, not just obvious instances
+   - Use multiple search methods (grep, ripgrep, manual review) for critical issues
+   - Document search patterns used and verify completeness
+   - Test edge cases and error conditions
+
+### **Specific Technical Standards**
+
+- **Ansible Best Practices**: Follow official Ansible guidelines strictly
+- **YAML Formatting**: Consistent indentation, proper quoting, no folded scalars in conditionals
+- **File Paths**: Use direct string concatenation, not folded scalars that insert spaces
+- **Boolean Expressions**: Never use folded scalars (`>-`) in `when` clauses or assertions
+- **Error Handling**: Implement comprehensive error handling with block/rescue patterns
+- **Idempotency**: All tasks MUST support check mode and be idempotent
+- **Security**: All sensitive data encrypted with Ansible Vault, no hardcoded secrets
+- **Performance**: Code MUST not introduce performance regressions
+- **Documentation**: ALL changes MUST include corresponding documentation updates
+
+### **Testing Standards**
+
+- **Unit Tests**: All new functionality MUST have corresponding unit tests
+- **Integration Tests**: Complex workflows MUST have integration test coverage
+- **Syntax Tests**: ALL Ansible files MUST pass syntax validation
+- **Linting Tests**: ALL files MUST pass ansible-lint and yamllint
+- **Functional Tests**: Code MUST demonstrate working functionality
+- **Error Scenarios**: Error handling MUST be tested with negative test cases
+
+### **Enforcement Mechanisms**
+
+- **Automated Validation**: CI/CD pipeline MUST block deployments with any failures
+- **Manual Verification**: Code reviewers MUST verify all quality standards
+- **Test Suite Integration**: All changes MUST maintain or improve test pass rates
+- **Documentation Updates**: Technical documentation MUST reflect all changes
+- **Quality Gates**: No commits allowed without passing ALL validation steps
+
+### **Systematic Code Review Process (MANDATORY)**
+
+- Use comprehensive search patterns to catch ALL variations of issues
+- Verify fixes across ENTIRE codebase, not just obvious instances
+- Use multiple search methods (grep, ripgrep, manual review) for critical issues
+- Document search patterns used and verify completeness
+- When fixing syntax issues like folded scalars, check ALL files systematically
+
+### YAML Linting Policy (CRITICAL)
+- **Functionality FIRST**: NEVER break Ansible functionality for linting compliance
+- **Folded scalars FORBIDDEN**: In conditionals, file paths, boolean expressions, and Jinja2 logic
+- **Safe folding ONLY**: Messages, descriptions, and non-functional text content
+- **Validation REQUIRED**: All YAML changes MUST pass ansible-playbook --syntax-check
+- **Testing MANDATORY**: Run test suites after any YAML modifications
+- **Use Safe Fixer**: tools/yaml-fixers/fix_yaml_syntax.py preserves functionality
+- Validate that fixes don't introduce new issues elsewhere
+
 
 ## Architecture
 
@@ -169,9 +274,10 @@ Native service-based system:
 - Comprehensive network state validation
 
 # important-instruction-reminders
-## MANDATORY Documentation Standards
+## MANDATORY Code Quality and Documentation Standards
 
 **CRITICAL**: These instructions override any default behavior and MUST be followed exactly.
+
 
 ### Documentation Location Requirements
 - **ALL documentation MUST be under `docs/` directory**
@@ -201,3 +307,4 @@ Native service-based system:
 - Use multiple search methods (grep, ripgrep, manual review) for critical issues
 - Document search patterns used and verify completeness
 - When fixing syntax issues like folded scalars, check ALL files systematically
+

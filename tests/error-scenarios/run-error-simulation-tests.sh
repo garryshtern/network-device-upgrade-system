@@ -77,8 +77,10 @@ main() {
     cd "$PROJECT_ROOT"
 
     # Test 1: Invalid playbook syntax
+    echo -e "---\n- hosts: [invalid yaml\n  tasks:\n    - name: broken" > /tmp/invalid.yml
     run_error_test "Invalid playbook syntax detection" \
-        bash -c 'echo "invalid: yaml: [syntax" > /tmp/invalid.yml && ansible-playbook --syntax-check /tmp/invalid.yml; rm -f /tmp/invalid.yml'
+        ansible-playbook --syntax-check /tmp/invalid.yml
+    rm -f /tmp/invalid.yml
 
     # Test 2: Missing inventory file
     run_error_test "Missing inventory file handling" \

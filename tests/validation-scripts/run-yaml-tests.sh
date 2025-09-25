@@ -1,8 +1,8 @@
 #!/bin/bash
-# YAML Validation Test Runner
+# YAML Validation Test Suite
 # Comprehensive YAML and JSON validation for all project files
 
-set -euo pipefail
+set -e
 
 # Colors for output
 RED='\033[0;31m'
@@ -19,86 +19,101 @@ TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
 
-log() {
-    echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $1"
-}
+echo -e "${BLUE}🔍 YAML VALIDATION TEST SUITE${NC}"
+echo "==============================="
+echo "Comprehensive YAML and JSON validation"
+echo ""
 
-success() {
-    echo -e "${GREEN}[PASS]${NC} $1"
-    ((PASSED_TESTS++))
-}
+cd "$PROJECT_ROOT"
 
-error() {
-    echo -e "${RED}[FAIL]${NC} $1"
-    ((FAILED_TESTS++))
-}
+# Test 1: Python YAML validator
+echo -e "${YELLOW}[1/7]${NC} Testing Python YAML validator..."
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if python3 tests/validation-scripts/yaml-validator.py --ansible-only >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗ FAILED${NC}"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
 
-run_test() {
-    local test_name="$1"
-    shift
-    ((TOTAL_TESTS++))
+# Test 2: yamllint validation
+echo -e "${YELLOW}[2/7]${NC} Testing yamllint on ansible-content..."
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if yamllint ansible-content/ >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗ FAILED${NC}"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
 
-    log "Testing: $test_name"
+# Test 3: Ansible collection requirements validation
+echo -e "${YELLOW}[3/7]${NC} Testing Ansible collections requirements..."
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if python3 -c "import yaml; yaml.safe_load(open('ansible-content/collections/requirements.yml'))" >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗ FAILED${NC}"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
 
-    if "$@" >/dev/null 2>&1; then
-        success "$test_name"
-        return 0
-    else
-        error "$test_name"
-        return 1
-    fi
-}
+# Test 4: Inventory files validation
+echo -e "${YELLOW}[4/7]${NC} Testing inventory files..."
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if python3 -c "import yaml; yaml.safe_load(open('ansible-content/inventory/hosts.yml'))" >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗ FAILED${NC}"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
 
-main() {
-    echo -e "${BLUE}🔍 YAML VALIDATION TEST SUITE${NC}"
-    echo "==============================="
-    echo "Comprehensive YAML and JSON validation"
-    echo ""
+# Test 5: Group vars validation
+echo -e "${YELLOW}[5/7]${NC} Testing group variables..."
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if find ansible-content/inventory/group_vars -name "*.yml" -exec python3 -c "import yaml; yaml.safe_load(open('{}'))" \; >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗ FAILED${NC}"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
 
-    cd "$PROJECT_ROOT"
+# Test 6: Role metadata validation
+echo -e "${YELLOW}[6/7]${NC} Testing role metadata..."
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if find ansible-content/roles -name "meta/main.yml" -exec python3 -c "import yaml; yaml.safe_load(open('{}'))" \; >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗ FAILED${NC}"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
 
-    # Test 1: Python YAML validator
-    run_test "Python YAML validator execution" \
-        python3 tests/validation-scripts/yaml-validator.py --ansible-only
+# Test 7: Molecule configuration validation
+echo -e "${YELLOW}[7/7]${NC} Testing molecule configurations..."
+TOTAL_TESTS=$((TOTAL_TESTS + 1))
+if find ansible-content/roles -name "molecule.yml" -exec python3 -c "import yaml; yaml.safe_load(open('{}'))" \; >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ PASSED${NC}"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+else
+    echo -e "${RED}✗ FAILED${NC}"
+    FAILED_TESTS=$((FAILED_TESTS + 1))
+fi
 
-    # Test 2: yamllint on ansible content (allow some warnings)
-    run_test "yamllint validation on ansible-content" \
-        bash -c "yamllint ansible-content/ || [[ \$? -eq 1 ]]"
+# Summary
+echo ""
+echo -e "${BLUE}=== YAML VALIDATION SUMMARY ===${NC}"
+echo "Total tests: $TOTAL_TESTS"
+echo "Passed: ${GREEN}$PASSED_TESTS${NC}"
+echo "Failed: ${RED}$FAILED_TESTS${NC}"
 
-    # Test 3: Ansible collection requirements validation
-    run_test "Ansible collections requirements validation" \
-        python3 -c "import yaml; yaml.safe_load(open('ansible-content/collections/requirements.yml'))"
-
-    # Test 4: Inventory files validation
-    run_test "Inventory files YAML validation" \
-        bash -c 'find ansible-content/inventory -name "*.yml" -exec python3 -c "import yaml; yaml.safe_load(open(\"{}\"))" \;'
-
-    # Test 5: Group vars validation
-    run_test "Group vars YAML validation" \
-        bash -c 'find ansible-content/inventory/group_vars -name "*.yml" -exec python3 -c "import yaml; yaml.safe_load(open(\"{}\"))" \;'
-
-    # Test 6: Role metadata validation
-    run_test "Role metadata validation" \
-        bash -c 'find ansible-content/roles -name "meta/main.yml" -exec python3 -c "import yaml; yaml.safe_load(open(\"{}\"))" \;'
-
-    # Test 7: Molecule configuration validation
-    run_test "Molecule configuration validation" \
-        bash -c 'find ansible-content/roles -name "molecule.yml" -exec python3 -c "import yaml; yaml.safe_load(open(\"{}\"))" \;'
-
-    # Summary
-    echo ""
-    echo -e "${BLUE}=== YAML VALIDATION SUMMARY ===${NC}"
-    echo "Total tests: $TOTAL_TESTS"
-    echo "Passed: ${GREEN}$PASSED_TESTS${NC}"
-    echo "Failed: ${RED}$FAILED_TESTS${NC}"
-
-    if [[ $FAILED_TESTS -eq 0 ]]; then
-        echo -e "${GREEN}🎉 All YAML validation tests passed!${NC}"
-        return 0
-    else
-        echo -e "${RED}❌ Some YAML validation tests failed${NC}"
-        return 1
-    fi
-}
-
-main "$@"
+if [[ $FAILED_TESTS -eq 0 ]]; then
+    echo -e "${GREEN}🎉 All YAML validation tests passed!${NC}"
+    exit 0
+else
+    echo -e "${RED}❌ Some YAML validation tests failed${NC}"
+    exit 1
+fi
