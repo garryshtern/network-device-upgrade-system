@@ -210,9 +210,13 @@ setup_mock_environment() {
     mkdir -p "$script_dir/mockups/firmware"
     mkdir -p "$script_dir/mockups/inventory"
 
-    # Create mock API tokens
-    echo "mock-fortios-api-token-12345678" > "$script_dir/mockups/tokens/fortios-token"
-    echo "mock-opengear-api-token-87654321" > "$script_dir/mockups/tokens/opengear-token"
+    # Create mock API tokens (only if they don't exist to avoid permission conflicts)
+    if [[ ! -f "$script_dir/mockups/tokens/fortios-token" ]]; then
+        echo "mock-fortios-api-token-12345678" > "$script_dir/mockups/tokens/fortios-token"
+    fi
+    if [[ ! -f "$script_dir/mockups/tokens/opengear-token" ]]; then
+        echo "mock-opengear-api-token-87654321" > "$script_dir/mockups/tokens/opengear-token"
+    fi
 
     # Set correct permissions for container access (user ansible = UID 1000)
     if command -v sudo &> /dev/null; then
