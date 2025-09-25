@@ -25,12 +25,12 @@ log() {
 
 success() {
     echo -e "${GREEN}[PASS]${NC} $1"
-    ((TESTS_PASSED++))
+    TESTS_PASSED=$((TESTS_PASSED + 1))
 }
 
 error() {
     echo -e "${RED}[FAIL]${NC} $1"
-    ((TESTS_FAILED++))
+    TESTS_FAILED=$((TESTS_FAILED + 1))
 }
 
 section() {
@@ -40,7 +40,7 @@ section() {
 run_test() {
     local test_name="$1"
     shift
-    ((TESTS_RUN++))
+    TESTS_RUN=$((TESTS_RUN + 1))
 
     log "Testing: $test_name"
 

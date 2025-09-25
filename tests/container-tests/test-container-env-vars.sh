@@ -30,12 +30,12 @@ log() {
 
 success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
-    ((TESTS_PASSED++))
+    TESTS_PASSED=$((TESTS_PASSED + 1))
 }
 
 error() {
     echo -e "${RED}[ERROR]${NC} $1"
-    ((TESTS_FAILED++))
+    TESTS_FAILED=$((TESTS_FAILED + 1))
 }
 
 warn() {
@@ -49,7 +49,7 @@ run_container_test() {
     shift 2
     local docker_args=("$@")
 
-    ((TESTS_RUN++))
+    TESTS_RUN=$((TESTS_RUN + 1))
     log "Running test: $test_name"
 
     # Create temporary files for capturing output

@@ -28,12 +28,12 @@ log() {
 
 success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
-    ((PASSED_TESTS++))
+    PASSED_TESTS=$((PASSED_TESTS + 1))
 }
 
 error() {
     echo -e "${RED}[ERROR]${NC} $1"
-    ((FAILED_TESTS++))
+    FAILED_TESTS=$((FAILED_TESTS + 1))
 }
 
 warn() {
@@ -47,7 +47,7 @@ section() {
 # Test docker-entrypoint script functionality
 test_entrypoint_functionality() {
     section "Testing docker-entrypoint.sh functionality"
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     if [[ -f "$PROJECT_ROOT/docker-entrypoint.sh" ]]; then
         if bash "$SCRIPT_DIR/test-entrypoint-locally.sh" >/dev/null 2>&1; then
@@ -65,7 +65,7 @@ test_entrypoint_functionality() {
 # Test TARGET_HOSTS validation logic
 test_target_hosts_validation() {
     section "Testing TARGET_HOSTS validation logic"
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     cd "$PROJECT_ROOT"
 
@@ -84,7 +84,7 @@ test_target_hosts_validation() {
 # Test invalid TARGET_HOSTS validation
 test_invalid_target_hosts() {
     section "Testing invalid TARGET_HOSTS validation"
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     cd "$PROJECT_ROOT"
 
@@ -103,7 +103,7 @@ test_invalid_target_hosts() {
 # Test environment variable processing
 test_environment_variables() {
     section "Testing environment variable processing"
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     cd "$PROJECT_ROOT"
 
@@ -128,7 +128,7 @@ test_environment_variables() {
 # Test help command functionality
 test_help_command() {
     section "Testing help command functionality"
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     cd "$PROJECT_ROOT"
 
@@ -143,7 +143,7 @@ test_help_command() {
 # Test inventory file validation
 test_inventory_validation() {
     section "Testing inventory file validation"
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     cd "$PROJECT_ROOT"
 
@@ -162,7 +162,7 @@ test_inventory_validation() {
 # Test mock inventory structure
 test_mock_inventory() {
     section "Testing mock inventory structure"
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     local inventory_file="$SCRIPT_DIR/mockups/inventory/production.yml"
 
@@ -186,7 +186,7 @@ test_mock_inventory() {
 # Test Ansible playbook syntax
 test_ansible_syntax() {
     section "Testing Ansible playbook syntax"
-    ((TOTAL_TESTS++))
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     cd "$PROJECT_ROOT"
 

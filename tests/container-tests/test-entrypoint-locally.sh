@@ -8,16 +8,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.."; pwd)"
 ENTRYPOINT_SCRIPT="$PROJECT_ROOT/docker-entrypoint.sh"
 
+# Source the shared test library
+source "$SCRIPT_DIR/lib/test-common.sh"
+
 echo "🧪 Testing docker-entrypoint.sh environment variable handling..."
 echo "Script: $ENTRYPOINT_SCRIPT"
 echo "Working directory: $PROJECT_ROOT"
 
 cd "$PROJECT_ROOT"
 
-# Test 1: Basic environment variable parsing
-echo ""
-echo "=== Test 1: Environment Variable Processing ==="
-
+# Set up test environment variables
 export CISCO_NXOS_SSH_KEY="/opt/keys/cisco-key"
 export CISCO_IOSXE_USERNAME="admin"
 export CISCO_IOSXE_PASSWORD="password123"
@@ -27,61 +27,22 @@ export TARGET_FIRMWARE="9.3.12"
 export UPGRADE_PHASE="loading"
 export ANSIBLE_INVENTORY="$SCRIPT_DIR/mockups/inventory/production.yml"
 
-# Test the build_ansible_options function by sourcing the script functions
-echo "Testing build_ansible_options function..."
+section "Environment Variable Processing"
 
-# Test environment variable processing by checking if variables are exported
-echo "Testing environment variable export..."
+# Test environment variable setup
+run_test "SSH key variable set" test -n "${CISCO_NXOS_SSH_KEY:-}"
+run_test "Username variable set" test -n "${CISCO_IOSXE_USERNAME:-}"
+run_test "API token variable set" test -n "${FORTIOS_API_TOKEN:-}"
+run_test "Target hosts variable set" test -n "${TARGET_HOSTS:-}"
 
-# Check if our test variables are properly set
-if [[ -n "${CISCO_NXOS_SSH_KEY:-}" ]]; then
-    echo "✅ SSH key variable correctly set"
-else
-    echo "❌ SSH key variable missing or incorrect"
-fi
+section "Syntax Check with Environment Variables"
 
-if [[ -n "${CISCO_IOSXE_USERNAME:-}" ]]; then
-    echo "✅ Username variable correctly set"
-else
-    echo "❌ Username variable missing or incorrect"
-fi
+run_test "Entrypoint script exists" test -f "$ENTRYPOINT_SCRIPT"
+run_test "Syntax check with env vars" bash "$ENTRYPOINT_SCRIPT" syntax-check
 
-if [[ -n "${FORTIOS_API_TOKEN:-}" ]]; then
-    echo "✅ API token variable correctly set"
-else
-    echo "❌ API token variable missing or incorrect"
-fi
+section "Help Command"
 
-if [[ -n "${TARGET_HOSTS:-}" ]]; then
-    echo "✅ Target hosts variable correctly set"
-else
-    echo "❌ Target hosts variable missing or incorrect"
-fi
+run_test "Help shows env vars section" bash "$ENTRYPOINT_SCRIPT" help | grep -q "ENVIRONMENT VARIABLES"
 
-# Test 2: Syntax check with environment variables
-echo ""
-echo "=== Test 2: Syntax Check with Environment Variables ==="
-
-if [[ -f "$ENTRYPOINT_SCRIPT" ]]; then
-    echo "Testing syntax check command..."
-    if bash "$ENTRYPOINT_SCRIPT" syntax-check; then
-        echo "✅ Syntax check passed with environment variables"
-    else
-        echo "❌ Syntax check failed"
-    fi
-else
-    echo "❌ Entrypoint script not found: $ENTRYPOINT_SCRIPT"
-fi
-
-# Test 3: Help command
-echo ""
-echo "=== Test 3: Help Command ==="
-
-if bash "$ENTRYPOINT_SCRIPT" help | grep -q "ENVIRONMENT VARIABLES"; then
-    echo "✅ Help command shows environment variables section"
-else
-    echo "❌ Help command missing environment variables documentation"
-fi
-
-echo ""
-echo "🎉 Local entrypoint testing complete!"
+# Print summary
+print_test_summary "Local Entrypoint Tests"
