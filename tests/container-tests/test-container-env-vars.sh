@@ -116,15 +116,16 @@ test_container_availability() {
 
     # Check if Docker is available
     if ! command -v docker &> /dev/null; then
-        warn "Docker not available - skipping container tests"
-        warn "Container tests are optional for development environments"
-        exit 0
+        error "Docker not available - container tests cannot run"
+        error "Container functionality requires Docker or Podman"
+        return 1
     fi
 
     # Check if Docker daemon is running
     if ! docker info &> /dev/null; then
-        warn "Docker daemon not running - skipping container tests"
-        exit 0
+        error "Docker daemon not running - container tests cannot run"
+        error "Please ensure Docker service is started"
+        return 1
     fi
 
     # Check for local image first
@@ -133,16 +134,15 @@ test_container_availability() {
         return 0
     fi
 
-    # Try to pull image, but don't fail if it's not available
+    # Try to pull image only if not found locally
     log "Attempting to pull container image: $CONTAINER_IMAGE"
     if docker pull "$CONTAINER_IMAGE" 2>/dev/null; then
         success "Container image pulled successfully"
         return 0
     else
-        warn "Failed to pull container image - this is expected in CI environments"
-        warn "Container tests will be skipped as image is not available"
-        warn "This is not a test failure - container tests are optional"
-        exit 0
+        error "Failed to pull container image: $CONTAINER_IMAGE"
+        error "Container functionality tests require a working container image"
+        return 1  # Don't exit, let the test continue and fail properly
     fi
 }
 
@@ -350,7 +350,13 @@ main() {
 
     # Setup
     setup_mock_tokens
-    test_container_availability
+
+    # Test container availability - exit if critical failure
+    if ! test_container_availability; then
+        error "Container availability test failed - cannot continue"
+        echo "Container functionality is required and must work properly"
+        exit 1
+    fi
 
     # Run all tests
     test_basic_functionality
