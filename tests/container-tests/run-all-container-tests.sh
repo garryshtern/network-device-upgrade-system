@@ -61,13 +61,18 @@ run_test_suite() {
     # Make script executable
     chmod +x "$test_script"
 
-    # Run the test suite
-    if bash "$test_script"; then
+    # Run the test suite with better error handling
+    set +e  # Temporarily disable exit on error
+    bash "$test_script"
+    local test_result=$?
+    set -e  # Re-enable exit on error
+
+    if [[ $test_result -eq 0 ]]; then
         success "Test suite '$suite_name' PASSED"
         ((PASSED_SUITES++))
         return 0
     else
-        error "Test suite '$suite_name' FAILED"
+        error "Test suite '$suite_name' FAILED (exit code: $test_result)"
         ((FAILED_SUITES++))
         return 1
     fi
@@ -185,7 +190,8 @@ main() {
     section "Starting test suite execution..."
     echo ""
 
-    # Run all test suites in logical order
+    # Run all test suites in logical order with continued execution
+    set +e  # Don't exit on first test failure
 
     # 1. Basic entrypoint functionality (local tests)
     run_test_suite "Local Entrypoint Tests" "$SCRIPT_DIR/test-entrypoint-locally.sh"
@@ -206,6 +212,7 @@ main() {
     run_test_suite "Specific Functionality Tests" "$SCRIPT_DIR/test-specific-functionality.sh"
 
     # Generate final report
+    set -e  # Re-enable exit on error for report generation
     generate_test_report
 
     # Exit with appropriate code
