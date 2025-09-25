@@ -162,13 +162,18 @@ jobs:
 
           echo "=== RUNNING TESTS WITH FULL DEBUG ==="
           set -x  # Enable command tracing
-          bash -x ./run-all-container-tests.sh 2>&1 || {
+
+          if bash -x ./run-all-container-tests.sh 2>&1; then
+            echo "=== CONTAINER TESTS COMPLETED SUCCESSFULLY ==="
+            set +x  # Disable command tracing
+          else
+            exit_code=$?
             echo "=== CONTAINER TEST FAILED - CAPTURING ERROR STATE ==="
-            echo "Exit code: $?"
+            echo "Exit code: $exit_code"
             echo "=== END CONTAINER TEST FAILURE DEBUG ==="
+            set +x  # Disable command tracing
             exit 1
-          }
-          set +x  # Disable command tracing
+          fi
         env:
           CONTAINER_IMAGE: "network-device-upgrade-system:test"
 
