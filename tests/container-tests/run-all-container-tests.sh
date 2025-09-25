@@ -61,21 +61,30 @@ run_test_suite() {
     # Make script executable
     chmod +x "$test_script"
 
-    # Run the test suite with better error handling
+    # Run the test suite with full debugging
+    log "=== STARTING TEST: $suite_name ==="
+    log "Test script path: $test_script"
+    log "Script exists: $([ -f "$test_script" ] && echo "YES" || echo "NO")"
+    log "Script permissions: $(ls -la "$test_script" 2>/dev/null || echo "Cannot check")"
+
     set +e  # Temporarily disable exit on error
-    bash "$test_script" 2>&1
+    echo "=== BEGIN TEST OUTPUT: $suite_name ==="
+    bash -x "$test_script" 2>&1
     local test_result=$?
+    echo "=== END TEST OUTPUT: $suite_name ==="
     set -e  # Re-enable exit on error
+
+    log "Test '$suite_name' completed with exit code: $test_result"
 
     if [[ $test_result -eq 0 ]]; then
         success "Test suite '$suite_name' PASSED"
         ((PASSED_SUITES++))
         return 0
     else
-        warn "Test suite '$suite_name' completed with issues (exit code: $test_result)"
-        warn "This is expected for container tests when Docker environment has limitations"
-        ((PASSED_SUITES++))  # Count as passed since container tests are optional
-        return 0  # Don't fail the overall test suite
+        error "Test suite '$suite_name' FAILED (exit code: $test_result)"
+        error "Container functionality tests must pass - this is a required feature"
+        ((FAILED_SUITES++))
+        return 1  # Fail the test suite as container functionality is required
     fi
 }
 
@@ -194,11 +203,23 @@ main() {
     # Run all test suites in logical order with continued execution
     set +e  # Don't exit on first test failure
 
+    echo "=== ABOUT TO START INDIVIDUAL TEST SUITES ==="
+    echo "Script directory: $SCRIPT_DIR"
+    echo "Available test scripts:"
+    ls -la "$SCRIPT_DIR"/test-*.sh || echo "No test scripts found"
+    echo ""
+
     # 1. Basic entrypoint functionality (local tests)
+    echo "=== RUNNING TEST 1: Local Entrypoint Tests ==="
     run_test_suite "Local Entrypoint Tests" "$SCRIPT_DIR/test-entrypoint-locally.sh"
+    local test1_result=$?
+    echo "Test 1 result: $test1_result"
 
     # 2. Environment variable processing
+    echo "=== RUNNING TEST 2: Environment Variable Tests ==="
     run_test_suite "Environment Variable Tests" "$SCRIPT_DIR/test-container-env-vars.sh"
+    local test2_result=$?
+    echo "Test 2 result: $test2_result"
 
     # 3. Comprehensive container functionality
     run_test_suite "Comprehensive Functionality Tests" "$SCRIPT_DIR/test-comprehensive-container-functionality.sh"
