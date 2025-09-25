@@ -48,13 +48,13 @@ run_test_suite() {
     local suite_name="$1"
     local test_script="$2"
 
-    ((TOTAL_SUITES++))
+    TOTAL_SUITES=$((TOTAL_SUITES + 1))
     section "Running test suite: $suite_name"
     log "Script: $test_script"
 
     if [[ ! -f "$test_script" ]]; then
         error "Test script not found: $test_script"
-        ((FAILED_SUITES++))
+        FAILED_SUITES=$((FAILED_SUITES + 1))
         return 1
     fi
 
@@ -78,12 +78,12 @@ run_test_suite() {
 
     if [[ $test_result -eq 0 ]]; then
         success "Test suite '$suite_name' PASSED"
-        ((PASSED_SUITES++))
+        PASSED_SUITES=$((PASSED_SUITES + 1))
         return 0
     else
         error "Test suite '$suite_name' FAILED (exit code: $test_result)"
         error "Container functionality tests must pass - this is a required feature"
-        ((FAILED_SUITES++))
+        FAILED_SUITES=$((FAILED_SUITES + 1))
         return 1  # Fail the test suite as container functionality is required
     fi
 }
