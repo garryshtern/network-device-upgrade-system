@@ -42,7 +42,7 @@ run_test "Syntax check with env vars" bash "$ENTRYPOINT_SCRIPT" syntax-check
 
 section "Help Command"
 
-run_test "Help shows env vars section" bash "$ENTRYPOINT_SCRIPT" help | grep -q "ENVIRONMENT VARIABLES"
+run_test "Help shows env vars section" bash -c "bash '$ENTRYPOINT_SCRIPT' help | grep -q 'ENVIRONMENT VARIABLES'"
 
 # Print summary
 print_test_summary "Local Entrypoint Tests"
