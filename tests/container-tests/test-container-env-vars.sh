@@ -46,18 +46,31 @@ warn() {
 run_container_test() {
     local test_name="$1"
     local expected_result="$2"
-    local command="syntax-check"  # Default command
-    local docker_args=()
+    shift 2
 
-    # Parse arguments - if 3rd argument doesn't start with '-', it's the command
-    if [[ $# -gt 2 && ! "$3" =~ ^- ]]; then
-        command="$3"
-        shift 3
-        docker_args=("$@")
-    else
-        shift 2
-        docker_args=("$@")
-    fi
+    # Parse remaining arguments into docker args and command
+    local docker_args=()
+    local container_command=("syntax-check")  # Default command
+    local parsing_docker_args=true
+
+    while [[ $# -gt 0 ]]; do
+        if [[ "$parsing_docker_args" == "true" && "$1" =~ ^- ]]; then
+            # This is a docker argument (starts with -)
+            docker_args+=("$1")
+            if [[ "$1" == "-e" && $# -gt 1 ]]; then
+                # -e takes a value, so include the next argument too
+                docker_args+=("$2")
+                shift 2
+            else
+                shift
+            fi
+        else
+            # First non-docker argument starts the container command
+            parsing_docker_args=false
+            container_command=("$@")
+            break
+        fi
+    done
 
     TESTS_RUN=$((TESTS_RUN + 1))
     log "Running test: $test_name"
@@ -74,7 +87,7 @@ run_container_test() {
         -v "$MOCKUP_DIR/keys:/opt/keys:ro" \
         -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
         "${docker_args[@]}" \
-        "$CONTAINER_IMAGE" "$command" \
+        "$CONTAINER_IMAGE" "${container_command[@]}" \
         > "$stdout_file" 2> "$stderr_file"; then
         exit_code=0
     else
@@ -167,7 +180,7 @@ test_basic_functionality() {
     run_container_test "Basic syntax check" "success" "syntax-check"
 
     # Test 3: Shell access
-    run_container_test "Shell command execution" "success" "shell" -c "echo 'Container shell works'"
+    run_container_test "Shell command execution" "success" shell -c "echo 'Container shell works'"
 }
 
 # Test SSH key authentication
