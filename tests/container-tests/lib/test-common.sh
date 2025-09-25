@@ -78,7 +78,8 @@ run_test() {
 run_container_test() {
     local test_name="$1"
     local expected_result="$2"
-    shift 2
+    local command="${3:-syntax-check}"  # Default to syntax-check if no command specified
+    shift 3
     local docker_args=("$@")
 
     TESTS_RUN=$((TESTS_RUN + 1))
@@ -96,7 +97,7 @@ run_container_test() {
         -v "$MOCKUP_DIR/keys:/opt/keys:ro" \
         -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
         "${docker_args[@]}" \
-        "$CONTAINER_IMAGE" syntax-check \
+        "$CONTAINER_IMAGE" "$command" \
         > "$stdout_file" 2> "$stderr_file"; then
         exit_code=0
     else

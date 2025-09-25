@@ -46,7 +46,8 @@ warn() {
 run_container_test() {
     local test_name="$1"
     local expected_result="$2"
-    shift 2
+    local command="${3:-syntax-check}"  # Default to syntax-check if no command specified
+    shift 3
     local docker_args=("$@")
 
     TESTS_RUN=$((TESTS_RUN + 1))
@@ -64,7 +65,7 @@ run_container_test() {
         -v "$MOCKUP_DIR/keys:/opt/keys:ro" \
         -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
         "${docker_args[@]}" \
-        "$CONTAINER_IMAGE" syntax-check \
+        "$CONTAINER_IMAGE" "$command" \
         > "$stdout_file" 2> "$stderr_file"; then
         exit_code=0
     else
@@ -151,13 +152,13 @@ test_basic_functionality() {
     log "=== Testing Basic Functionality ==="
 
     # Test 1: Help command
-    run_container_test "Help command" "success" help
+    run_container_test "Help command" "success" "help"
 
     # Test 2: Basic syntax check
-    run_container_test "Basic syntax check" "success"
+    run_container_test "Basic syntax check" "success" "syntax-check"
 
     # Test 3: Shell access
-    run_container_test "Shell command execution" "success" shell -c "echo 'Container shell works'"
+    run_container_test "Shell command execution" "success" "shell" -c "echo 'Container shell works'"
 }
 
 # Test SSH key authentication
@@ -311,8 +312,7 @@ test_error_conditions() {
         -e TARGET_HOSTS="nonexistent-device"
 
     # Test invalid command
-    run_container_test "Invalid command" "fail" \
-        invalid-command
+    run_container_test "Invalid command" "fail" "invalid-command"
 }
 
 # Test comprehensive scenario
