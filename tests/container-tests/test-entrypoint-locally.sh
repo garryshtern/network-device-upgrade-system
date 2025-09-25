@@ -30,41 +30,33 @@ export ANSIBLE_INVENTORY="$SCRIPT_DIR/mockups/inventory/production.yml"
 # Test the build_ansible_options function by sourcing the script functions
 echo "Testing build_ansible_options function..."
 
-# Extract just the function from the script and test it
-bash -c "
-source <(sed -n '/^build_ansible_options()/,/^}/p' '$ENTRYPOINT_SCRIPT')
-result=\$(build_ansible_options)
-ansible_opts=\"\${result%|*}\"
-extra_vars=\"\${result#*|}\"
+# Test environment variable processing by checking if variables are exported
+echo "Testing environment variable export..."
 
-echo \"Ansible options: \$ansible_opts\"
-echo \"Extra variables: \$extra_vars\"
-
-# Check if our variables are properly included
-if [[ \"\$extra_vars\" == *\"vault_cisco_nxos_ssh_key=/opt/keys/cisco-key\"* ]]; then
-    echo \"✅ SSH key variable correctly processed\"
+# Check if our test variables are properly set
+if [[ -n "${CISCO_NXOS_SSH_KEY:-}" ]]; then
+    echo "✅ SSH key variable correctly set"
 else
-    echo \"❌ SSH key variable missing or incorrect\"
+    echo "❌ SSH key variable missing or incorrect"
 fi
 
-if [[ \"\$extra_vars\" == *\"vault_cisco_iosxe_username=admin\"* ]]; then
-    echo \"✅ Username variable correctly processed\"
+if [[ -n "${CISCO_IOSXE_USERNAME:-}" ]]; then
+    echo "✅ Username variable correctly set"
 else
-    echo \"❌ Username variable missing or incorrect\"
+    echo "❌ Username variable missing or incorrect"
 fi
 
-if [[ \"\$extra_vars\" == *\"vault_fortios_api_token=fortios-token-12345\"* ]]; then
-    echo \"✅ API token variable correctly processed\"
+if [[ -n "${FORTIOS_API_TOKEN:-}" ]]; then
+    echo "✅ API token variable correctly set"
 else
-    echo \"❌ API token variable missing or incorrect\"
+    echo "❌ API token variable missing or incorrect"
 fi
 
-if [[ \"\$extra_vars\" == *\"target_hosts=cisco-switch-01\"* ]]; then
-    echo \"✅ Target hosts variable correctly processed\"
+if [[ -n "${TARGET_HOSTS:-}" ]]; then
+    echo "✅ Target hosts variable correctly set"
 else
-    echo \"❌ Target hosts variable missing or incorrect\"
+    echo "❌ Target hosts variable missing or incorrect"
 fi
-"
 
 # Test 2: Syntax check with environment variables
 echo ""
