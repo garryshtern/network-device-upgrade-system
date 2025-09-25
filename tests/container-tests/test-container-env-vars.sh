@@ -46,9 +46,18 @@ warn() {
 run_container_test() {
     local test_name="$1"
     local expected_result="$2"
-    local command="${3:-syntax-check}"  # Default to syntax-check if no command specified
-    shift 3
-    local docker_args=("$@")
+    local command="syntax-check"  # Default command
+    local docker_args=()
+
+    # Parse arguments - if 3rd argument doesn't start with '-', it's the command
+    if [[ $# -gt 2 && ! "$3" =~ ^- ]]; then
+        command="$3"
+        shift 3
+        docker_args=("$@")
+    else
+        shift 2
+        docker_args=("$@")
+    fi
 
     TESTS_RUN=$((TESTS_RUN + 1))
     log "Running test: $test_name"
