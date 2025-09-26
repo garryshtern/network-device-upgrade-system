@@ -65,9 +65,7 @@
     - name: Handle BGP command failure
       ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({
-          'errors': >
-            bgp_validation.errors + ['Failed to retrieve BGP summary: ' +
-              ansible_failed_result.msg | default('Unknown error')]
+          'errors': bgp_validation.errors + ['Failed to retrieve BGP summary: ' + (ansible_failed_result.msg | default('Unknown error'))]
         }) }}"
 
 - name: Collect detailed BGP statistics
