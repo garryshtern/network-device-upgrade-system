@@ -68,9 +68,9 @@ run_comprehensive_container_test() {
         -v "$MOCKUP_DIR/inventory:/opt/inventory:ro"
         -v "$MOCKUP_DIR/keys:/opt/keys:ro"
         -v "$MOCKUP_DIR/firmware:/opt/firmware:ro"
-        -v "$PROJECT_ROOT/ansible-content/ansible.cfg:/opt/app/ansible-content/ansible.cfg:ro"
+        -v "$PROJECT_ROOT/ansible-content:/opt/network-upgrade/ansible-content:ro"
         -e ANSIBLE_INVENTORY="/opt/inventory/production.yml"
-        -e ANSIBLE_CONFIG="/opt/app/ansible-content/ansible.cfg"
+        -e ANSIBLE_CONFIG="/opt/network-upgrade/ansible-content/ansible.cfg"
     )
 
     # Add docker environment arguments
