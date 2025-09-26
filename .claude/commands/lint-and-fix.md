@@ -1,190 +1,97 @@
 name: lint-and-fix
-description: Run comprehensive Ansible linting and auto-fix issues for network device upgrade system
-version: "2.0.0"
+description: Run Ansible linting and auto-fix issues for network device upgrade system
+version: "3.0.0"
 
 input:
   - name: target_path
-    description: Path to lint (defaults to current directory)
+    description: Path to lint (defaults to ansible-content)
     required: false
-    default: "."
-  - name: skip_commit
-    description: Skip auto-commit of changes
-    required: false
-    default: false
+    default: "ansible-content"
   - name: dry_run
-    description: Show what would be linted without making changes
+    description: Show what would be fixed without making changes
     required: false
     default: false
 
 output:
   - type: fixes
-    description: Summary of all fixes applied
+    description: Summary of fixes applied
   - type: remaining_issues
     description: Issues that require manual intervention
-  - type: commit_info
-    description: Git commit details if changes were committed
 
 prompt: |
+  Run comprehensive Ansible linting and auto-fix for this network device upgrade system.
 
-I need you to run comprehensive linting and auto-fix issues for this Ansible-based network device upgrade system. Please follow this systematic approach:
+  Target: {{target_path}}
+  {% if dry_run %}**DRY RUN MODE** - Show issues without fixing{% endif %}
 
-Target path: {{target_path}}
-Skip commit: {{skip_commit}}
-Dry run mode: {{dry_run}}
+  ## 1. Ansible Linting
 
-{% if dry_run %}
-**DRY RUN MODE**: Only analyze and report what would be changed for network infrastructure, don't modify files.
-{% endif %}
+  **Run ansible-lint:**
+  ```bash
+  echo "🔧 Running ansible-lint on {{target_path}}"
+  if command -v ansible-lint >/dev/null; then
+    ansible-lint {{target_path}} --format=pep8
 
-## 1. Pre-flight Checks
-- Scan the target path: {{target_path}}
-- Verify git status before making changes
-- Check Ansible and linting tool availability:
-  - ansible-lint (required)
-  - yamllint (required)
-  - ansible-playbook --syntax-check
-  - shellcheck (for shell scripts)
-  - python3 -m py_compile (for Python scripts)
+    {% if not dry_run %}
+    # Apply auto-fixable rules
+    ansible-lint {{target_path}} --fix
+    {% endif %}
+  else
+    echo "⚠️ ansible-lint not found - install with: pip install ansible-lint"
+  fi
+  ```
 
-## 2. Network Infrastructure Linting & Auto-fixing (in priority order)
+  ## 2. YAML Formatting
 
-### Ansible Content (Primary Focus)
-```bash
-# Lint all playbooks
-ansible-lint ansible-content/playbooks/*.yml
+  **Run yamllint:**
+  ```bash
+  echo "📝 Running yamllint"
+  if command -v yamllint >/dev/null; then
+    yamllint {{target_path}} tests/ .github/workflows/
 
-# Lint all roles
-ansible-lint ansible-content/roles/*/tasks/*.yml
-ansible-lint ansible-content/roles/*/handlers/*.yml
-ansible-lint ansible-content/roles/*/meta/*.yml
+    {% if not dry_run %}
+    # Fix basic YAML issues (trailing spaces, line endings)
+    find {{target_path}} -name "*.yml" -o -name "*.yaml" | while read file; do
+      # Remove trailing whitespace
+      sed -i 's/[[:space:]]*$//' "$file"
+    done
+    {% endif %}
+  else
+    echo "⚠️ yamllint not found - install with: pip install yamllint"
+  fi
+  ```
 
-# Syntax check all playbooks
-ANSIBLE_CONFIG=ansible-content/ansible.cfg ansible-playbook --syntax-check ansible-content/playbooks/*.yml
+  ## 3. Ansible Playbook Syntax
 
-# Fix common Ansible issues:
-# - Use FQCN (fully qualified collection names)
-# - Remove deprecated modules (replace with ansible.builtin alternatives)
-# - Fix ansible-lint violations automatically where possible
-# - Ensure proper task naming and descriptions
-# - Validate variable usage and defaults
-```
+  **Validate playbook syntax:**
+  ```bash
+  echo "✅ Checking Ansible playbook syntax"
+  if [ -d "{{target_path}}/playbooks" ]; then
+    find {{target_path}}/playbooks -name "*.yml" | while read playbook; do
+      echo "Checking: $playbook"
+      ANSIBLE_CONFIG={{target_path}}/ansible.cfg ansible-playbook --syntax-check "$playbook" -i /dev/null
+    done
+  fi
+  ```
 
-### YAML Files (Critical for Network Configuration)
-```bash
-# Lint YAML with strict network device standards
-yamllint ansible-content/ tests/ .github/
+  ## 4. Summary
 
-# Fix common YAML issues:
-# - Line length violations (max 80 characters)
-# - Indentation consistency (2 spaces)
-# - Trailing whitespace
-# - Document separators
-# - Use folded scalars (>) for long lines in Jinja2 templates
-```
+  **Report results:**
+  ```bash
+  {% if not dry_run %}
+  echo "🎯 Linting completed. Check git diff for changes:"
+  git diff --name-only
 
-### Test Infrastructure
-```bash
-# Lint test scripts and configurations
-yamllint tests/mock-inventories/
-yamllint tests/*/
+  if [ -n "$(git diff --name-only)" ]; then
+    echo "📝 Changes made. Consider committing with:"
+    echo "git add ."
+    echo "git commit -m 'fix: resolve ansible-lint and yaml formatting issues'"
+  else
+    echo "✅ No changes needed - all files are already compliant"
+  fi
+  {% else %}
+  echo "🔍 DRY RUN completed - no changes made"
+  {% endif %}
+  ```
 
-# Shell script validation
-shellcheck tests/**/*.sh
-shellcheck install/*.sh
-
-# Molecule test validation
-yamllint ansible-content/roles/*/molecule/*/
-```
-
-### Container and CI/CD Files
-```bash
-# GitHub Actions workflow validation
-yamllint .github/workflows/
-yamllint .github/actions/*/action.yml
-
-# Docker and container configuration
-yamllint docker-compose*.yml || true
-```
-
-### Python Scripts (if present)
-```bash
-# Validate Python syntax in any scripts
-find . -name "*.py" -exec python3 -m py_compile {} \;
-```
-
-## 3. Network-Specific Issue Resolution
-
-### Critical Ansible Issues to Fix:
-1. **Collection Names**: Replace short names with FQCN
-   - `copy:` → `ansible.builtin.copy:`
-   - `template:` → `ansible.builtin.template:`
-   - `cisco.nxos.nxos_command:` (already correct)
-
-2. **Task Naming**: Ensure all tasks have descriptive names
-3. **Deprecation Warnings**: Replace deprecated modules
-4. **Variable Validation**: Check undefined variables
-5. **Handler Dependencies**: Validate handler relationships
-6. **Network Module Best Practices**: Proper use of network modules
-
-### YAML Formatting (Network Device Standards):
-1. **Line Length**: Max 80 characters (network industry standard)
-2. **Folded Scalars**: Use `>-` for long Jinja2 expressions
-3. **Indentation**: Consistent 2-space indentation
-4. **Key Ordering**: Logical ordering of task parameters
-5. **Inventory Structure**: Proper host and group organization
-
-## 4. Verification Process
-```bash
-# Re-run all linters to confirm fixes
-ansible-lint ansible-content/
-yamllint ansible-content/ tests/ .github/
-
-# Syntax validation
-ANSIBLE_CONFIG=ansible-content/ansible.cfg ansible-playbook --syntax-check ansible-content/playbooks/*.yml
-
-# Test critical workflows
-ANSIBLE_CONFIG=ansible-content/ansible.cfg ansible-playbook --check ansible-content/playbooks/health-check.yml
-```
-
-## 5. Network Infrastructure Git Management
-
-{% if not skip_commit %}
-Create focused commits for network infrastructure:
-```bash
-# Separate commits by type of fix
-git add ansible-content/ && git commit -m "lint: fix Ansible best practices and FQCN usage"
-git add tests/ && git commit -m "lint: resolve test infrastructure linting issues"
-git add .github/ && git commit -m "lint: fix CI/CD workflow YAML formatting"
-```
-
-Use conventional commit format:
-- `lint: fix ansible-lint violations in network roles`
-- `lint: resolve YAML line length issues in molecule tests`
-- `lint: apply shellcheck fixes to installation scripts`
-- `style: standardize YAML formatting across playbooks`
-{% endif %}
-
-## 6. Network Infrastructure Summary Report
-Provide:
-- Ansible playbooks and roles processed
-- Network module compatibility status
-- YAML formatting fixes applied
-- Critical network device configuration issues resolved
-- Remaining manual network-specific issues
-- Test infrastructure validation status
-- Container and CI/CD pipeline health
-
-## Configuration Standards for Network Automation
-- Follow `ansible-content/ansible.cfg` settings
-- Respect existing yamllint configuration
-- Use FQCN for all Ansible modules
-- Network device inventory structure in `tests/mock-inventories/`
-- Container compatibility with RHEL8/9 podman
-- Platform support: Cisco NX-OS, IOS-XE, FortiOS, Opengear, Metamako
-
-## Network Device Upgrade System Specific Checks
-- Validate upgrade workflow logic in `ansible-content/playbooks/main-upgrade-workflow.yml`
-- Check platform-specific role compatibility
-- Verify container entrypoint and environment variable processing
-- Ensure test coverage for all supported network platforms
-- Validate AWX job template and workflow configurations
+  Focus on network device upgrade playbooks and roles for Cisco, FortiOS, Opengear, and Metamako platforms.
