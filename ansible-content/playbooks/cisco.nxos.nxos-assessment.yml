@@ -1,18 +1,11 @@
 ---
-# Cisco NX-OS Assessment Playbook
+# Cisco NX-OS Assessment Tasks
 # Provides space and storage assessment for Cisco NX-OS devices
 # This is a compatibility layer for cisco.nxos.nxos namespace
+# Task-only file for include_tasks compatibility
 
-- name: Cisco NX-OS Storage Assessment
-  hosts: "{{ target_hosts | default('all') }}"
-  gather_facts: false
-  connection: network_cli
-  vars:
-    ansible_network_os: cisco.nxos.nxos
-
-  tasks:
-    - name: Include NX-OS assessment tasks
-      ansible.builtin.include_role:
-        name: space-management
-        tasks_from: nxos-assessment
-      when: ansible_network_os == "cisco.nxos.nxos"
+- name: Include NX-OS assessment tasks
+  ansible.builtin.include_role:
+    name: space-management
+    tasks_from: nxos-assessment
+  when: ansible_network_os == "cisco.nxos.nxos"
