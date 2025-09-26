@@ -6,168 +6,15 @@ set -uo pipefail
 # Note: Removed -e flag to prevent immediate exit on Docker failures
 # Container tests should continue even if some operations fail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
 # Test configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.."; pwd)"
 MOCKUP_DIR="$SCRIPT_DIR/mockups"
 CONTAINER_IMAGE="${CONTAINER_IMAGE:-ghcr.io/garryshtern/network-device-upgrade-system:latest}"
 
-# Test results tracking
-TESTS_RUN=0
-TESTS_PASSED=0
-TESTS_FAILED=0
+# Source the shared test library
+source "$SCRIPT_DIR/lib/test-common.sh"
 
-log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
-}
-
-success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-    TESTS_PASSED=$((TESTS_PASSED + 1))
-}
-
-error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-    TESTS_FAILED=$((TESTS_FAILED + 1))
-}
-
-warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-# Test execution function
-run_container_test() {
-    local test_name="$1"
-    local expected_result="$2"
-    shift 2
-
-    # Parse remaining arguments into docker args and command
-    local docker_args=()
-    local container_command=("syntax-check")  # Default command
-    local parsing_docker_args=true
-
-    while [[ $# -gt 0 ]]; do
-        if [[ "$parsing_docker_args" == "true" && "$1" =~ ^- ]]; then
-            # This is a docker argument (starts with -)
-            docker_args+=("$1")
-            if [[ "$1" == "-e" && $# -gt 1 ]]; then
-                # -e takes a value, so include the next argument too
-                docker_args+=("$2")
-                shift 2
-            else
-                shift
-            fi
-        else
-            # First non-docker argument starts the container command
-            parsing_docker_args=false
-            container_command=("$@")
-            break
-        fi
-    done
-
-    TESTS_RUN=$((TESTS_RUN + 1))
-    log "Running test: $test_name"
-
-    # Create temporary files for capturing output
-    local stdout_file="/tmp/container-test-stdout-$$"
-    local stderr_file="/tmp/container-test-stderr-$$"
-
-    local exit_code=0
-
-    # Run the container test
-    if docker run --rm \
-        -v "$MOCKUP_DIR/inventory:/opt/inventory:ro" \
-        -v "$MOCKUP_DIR/keys:/opt/keys:ro" \
-        -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
-        "${docker_args[@]}" \
-        "$CONTAINER_IMAGE" "${container_command[@]}" \
-        > "$stdout_file" 2> "$stderr_file"; then
-        exit_code=0
-    else
-        exit_code=$?
-    fi
-
-    # Check results
-    if [[ "$expected_result" == "success" && $exit_code -eq 0 ]]; then
-        success "$test_name: PASSED"
-    elif [[ "$expected_result" == "fail" && $exit_code -ne 0 ]]; then
-        success "$test_name: PASSED (expected failure)"
-    else
-        error "$test_name: FAILED (exit code: $exit_code)"
-        echo "STDOUT:"
-        cat "$stdout_file" | head -10
-        echo "STDERR:"
-        cat "$stderr_file" | head -10
-    fi
-
-    # Cleanup
-    rm -f "$stdout_file" "$stderr_file"
-}
-
-# Create mock API token files and fix permissions
-setup_mock_tokens() {
-    log "Setting up mock API tokens and fixing SSH key permissions..."
-    mkdir -p "$MOCKUP_DIR/tokens"
-
-    echo "mock-fortios-api-token-12345678" > "$MOCKUP_DIR/tokens/fortios-token"
-    echo "mock-opengear-api-token-87654321" > "$MOCKUP_DIR/tokens/opengear-token"
-
-    # Set correct permissions for container access (user ansible = UID 1000)
-    if command -v sudo &> /dev/null; then
-        sudo chown -R 1000:1000 "$MOCKUP_DIR/keys" "$MOCKUP_DIR/tokens" 2>/dev/null || {
-            warn "Could not set ownership to UID 1000. Tests may fail if SSH keys not accessible."
-            warn "Run: sudo chown -R 1000:1000 $MOCKUP_DIR/keys $MOCKUP_DIR/tokens"
-        }
-    else
-        warn "sudo not available. SSH key permissions may need manual adjustment."
-    fi
-
-    chmod 600 "$MOCKUP_DIR/tokens"/* 2>/dev/null
-    chmod 600 "$MOCKUP_DIR/keys"/* 2>/dev/null
-}
-
-# Test container availability
-test_container_availability() {
-    log "Testing container availability..."
-
-    # Check if Docker is available
-    if ! command -v docker &> /dev/null; then
-        error "Docker not available - container tests cannot run"
-        error "Container functionality requires Docker or Podman"
-        return 1
-    fi
-
-    # Check if Docker daemon is running
-    if ! docker info &> /dev/null; then
-        error "Docker daemon not running - container tests cannot run"
-        error "Please ensure Docker service is started"
-        return 1
-    fi
-
-    # Check for local image first
-    if docker images | grep -q "network-device-upgrade-system"; then
-        success "Container image found locally"
-        return 0
-    fi
-
-    # Try to pull image only if not found locally
-    log "Attempting to pull container image: $CONTAINER_IMAGE"
-    if docker pull "$CONTAINER_IMAGE" 2>/dev/null; then
-        success "Container image pulled successfully"
-        return 0
-    else
-        error "Failed to pull container image: $CONTAINER_IMAGE"
-        error "Container functionality tests require a working container image"
-        return 1  # Don't exit, let the test continue and fail properly
-    fi
-}
 
 # Test basic functionality
 test_basic_functionality() {
@@ -370,11 +217,11 @@ main() {
     echo "Mockup Directory: $MOCKUP_DIR"
     echo ""
 
-    # Setup
-    setup_mock_tokens
+    # Setup using shared library
+    setup_mock_environment "$SCRIPT_DIR"
 
     # Test container availability - exit if critical failure
-    if ! test_container_availability; then
+    if ! check_docker_availability; then
         error "Container availability test failed - cannot continue"
         echo "Container functionality is required and must work properly"
         exit 1
@@ -390,22 +237,8 @@ main() {
     test_error_conditions
     test_comprehensive_scenario
 
-    # Results
-    echo ""
-    echo "=============================================="
-    echo "🎯 Test Results Summary"
-    echo "=============================================="
-    echo "Tests Run: $TESTS_RUN"
-    echo -e "Tests Passed: ${GREEN}$TESTS_PASSED${NC}"
-    echo -e "Tests Failed: ${RED}$TESTS_FAILED${NC}"
-
-    if [[ $TESTS_FAILED -eq 0 ]]; then
-        echo -e "${GREEN}🎉 All tests passed!${NC}"
-        exit 0
-    else
-        echo -e "${RED}❌ Some tests failed.${NC}"
-        exit 1
-    fi
+    # Print test summary using shared library function
+    print_test_summary "Container Environment Variable Tests"
 }
 
 # Execute main function
