@@ -152,7 +152,8 @@
             check_type: "post_installation"
 
         - name: Validate network services
-          ansible.builtin.include_tasks: network-validation.yml
+          ansible.builtin.include_role:
+            name: network-validation
           vars:
             validation_type: "post_installation"
 

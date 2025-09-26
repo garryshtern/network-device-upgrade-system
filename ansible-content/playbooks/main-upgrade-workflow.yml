@@ -178,7 +178,7 @@
 
       rescue:
         - name: Installation failure - trigger rollback
-          ansible.builtin.include_tasks: emergency-rollback.yml
+          ansible.builtin.include_tasks: "{{ common }}/emergency-rollback.yml"
           when: rollback_on_failure | bool
 
     # Phase 3: Post-Installation Validation
@@ -191,7 +191,8 @@
           when: upgrade_phase in ['full', 'installation', 'validation']
 
         - name: Post-upgrade network validation
-          ansible.builtin.include_tasks: network-validation.yml
+          ansible.builtin.include_role:
+            name: network-validation
           when: >
             upgrade_phase in ['full', 'installation', 'validation']
             and not skip_validation
@@ -208,14 +209,14 @@
 
       rescue:
         - name: Post-validation failure - trigger rollback
-          ansible.builtin.include_tasks: emergency-rollback.yml
+          ansible.builtin.include_tasks: "{{ common }}/emergency-rollback.yml"
           when: rollback_on_failure | bool and upgrade_phase != 'validation'
 
     # Rollback workflow (when explicitly requested)
     - name: Rollback Workflow
       block:
         - name: Execute emergency rollback
-          ansible.builtin.include_tasks: emergency-rollback.yml
+          ansible.builtin.include_tasks: "{{ common }}/emergency-rollback.yml"
           when: upgrade_phase == 'rollback'
 
       rescue:

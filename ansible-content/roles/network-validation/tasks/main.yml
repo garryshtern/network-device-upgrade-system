@@ -1,0 +1,23 @@
+---
+# Network Validation Role - Main Tasks
+# Comprehensive network state validation and comparison
+
+- name: Run BGP validation
+  ansible.builtin.include_tasks: bgp-validation.yml
+  when: bgp_enabled | default(true) | bool
+
+- name: Run interface validation
+  ansible.builtin.include_tasks: interface-validation.yml
+
+- name: Run routing validation
+  ansible.builtin.include_tasks: routing-validation.yml
+
+- name: Run ARP validation
+  ansible.builtin.include_tasks: arp-validation.yml
+
+- name: Run multicast validation
+  ansible.builtin.include_tasks: multicast-validation.yml
+  when: multicast_enabled | default(true) | bool
+
+- name: Run protocol convergence validation
+  ansible.builtin.include_tasks: protocol-convergence.yml

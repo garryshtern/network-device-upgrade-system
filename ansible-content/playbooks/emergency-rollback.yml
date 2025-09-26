@@ -265,7 +265,8 @@
             check_type: "post_rollback"
 
         - name: Verify network services
-          ansible.builtin.include_tasks: network-validation.yml
+          ansible.builtin.include_role:
+            name: network-validation
           vars:
             validation_type: "post_rollback"
             compare_with_baseline: false
