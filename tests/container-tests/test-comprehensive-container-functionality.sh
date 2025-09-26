@@ -49,22 +49,36 @@ run_comprehensive_container_test() {
         exit_code=$?
     fi
 
-    # Check results
+    # Check results and provide detailed output for failures
     if [[ "$expected_result" == "success" && $exit_code -eq 0 ]]; then
         success "$test_name: PASSED"
+        # Clean up successful test files
+        rm -f "$stdout_file" "$stderr_file"
     elif [[ "$expected_result" == "fail" && $exit_code -ne 0 ]]; then
-        success "$test_name: PASSED (expected failure)"
-    else
-        error "$test_name: FAILED (exit code: $exit_code)"
+        success "$test_name: PASSED (expected failure, exit code: $exit_code)"
+        # Show output even for expected failures to verify they fail for the right reason
+        echo "=== EXPECTED FAILURE OUTPUT ==="
         echo "Command: ${docker_cmd[*]}"
         echo "STDOUT:"
-        cat "$stdout_file" | head -15
+        cat "$stdout_file"
         echo "STDERR:"
-        cat "$stderr_file" | head -15
-    fi
+        cat "$stderr_file"
+        echo "=== END EXPECTED FAILURE OUTPUT ==="
+        # Clean up expected failure files
+        rm -f "$stdout_file" "$stderr_file"
+    else
+        error "$test_name: FAILED (exit code: $exit_code)"
+        echo "=== DOCKER COMMAND THAT FAILED ==="
+        echo "${docker_cmd[*]}"
+        echo "=== FULL STDOUT OUTPUT ==="
+        cat "$stdout_file"
+        echo "=== FULL STDERR OUTPUT ==="
+        cat "$stderr_file"
+        echo "=== END ERROR OUTPUT ==="
 
-    # Cleanup
-    rm -f "$stdout_file" "$stderr_file"
+        # Keep failed test output files for debugging (don't delete them immediately)
+        echo "Debug files preserved: $stdout_file $stderr_file"
+    fi
 }
 
 # Setup additional mock firmware files for comprehensive testing

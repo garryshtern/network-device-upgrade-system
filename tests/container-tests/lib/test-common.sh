@@ -126,21 +126,35 @@ run_container_test() {
         exit_code=$?
     fi
 
-    # Check results
+    # Check results and provide detailed output for failures
     if [[ "$expected_result" == "success" && $exit_code -eq 0 ]]; then
         success "$test_name: PASSED"
+        # Clean up successful test files
+        rm -f "$stdout_file" "$stderr_file"
     elif [[ "$expected_result" == "fail" && $exit_code -ne 0 ]]; then
-        success "$test_name: PASSED (expected failure)"
+        success "$test_name: PASSED (expected failure, exit code: $exit_code)"
+        # Show output even for expected failures to verify they fail for the right reason
+        echo "=== EXPECTED FAILURE OUTPUT ==="
+        echo "STDOUT:"
+        cat "$stdout_file"
+        echo "STDERR:"
+        cat "$stderr_file"
+        echo "=== END EXPECTED FAILURE OUTPUT ==="
+        # Clean up expected failure files
+        rm -f "$stdout_file" "$stderr_file"
     else
         error "$test_name: FAILED (exit code: $exit_code)"
-        echo "STDOUT:"
-        cat "$stdout_file" | head -10
-        echo "STDERR:"
-        cat "$stderr_file" | head -10
-    fi
+        echo "=== DOCKER COMMAND THAT FAILED ==="
+        echo "docker run --rm -v \"$MOCKUP_DIR/inventory:/opt/inventory:ro\" -v \"$MOCKUP_DIR/keys:/opt/keys:ro\" -e ANSIBLE_INVENTORY=\"/opt/inventory/production.yml\" ${docker_args[*]} \"$CONTAINER_IMAGE\" ${container_command[*]}"
+        echo "=== FULL STDOUT OUTPUT ==="
+        cat "$stdout_file"
+        echo "=== FULL STDERR OUTPUT ==="
+        cat "$stderr_file"
+        echo "=== END ERROR OUTPUT ==="
 
-    # Cleanup
-    rm -f "$stdout_file" "$stderr_file"
+        # Keep failed test output files for debugging (don't delete them immediately)
+        echo "Debug files preserved: $stdout_file $stderr_file"
+    fi
 }
 
 # Test results summary
