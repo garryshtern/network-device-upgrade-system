@@ -5,7 +5,5 @@
 # Task-only file for include_tasks compatibility
 
 - name: Include NX-OS assessment tasks
-  ansible.builtin.include_role:
-    name: space-management
-    tasks_from: nxos-assessment
+  ansible.builtin.include_tasks: ../roles/space-management/tasks/nxos-assessment.yml
   when: ansible_network_os == "cisco.nxos.nxos"
