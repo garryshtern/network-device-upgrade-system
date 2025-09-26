@@ -19,7 +19,40 @@ run_comprehensive_container_test() {
     local expected_result="$2"
     local command="$3"
     shift 3
-    local docker_args=("$@")
+
+    # Parse remaining arguments into docker args and container command args
+    local docker_args=()
+    local container_args=()
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -e|--env)
+                # Docker environment variable
+                docker_args+=("$1")
+                if [[ $# -gt 1 ]]; then
+                    docker_args+=("$2")
+                    shift 2
+                else
+                    shift
+                fi
+                ;;
+            --)
+                # Everything after -- goes to container command
+                shift
+                container_args+=("$@")
+                break
+                ;;
+            *)
+                # For shell command, -c and following args go to container
+                if [[ "$command" == "shell" ]] || [[ ${#container_args[@]} -gt 0 ]]; then
+                    container_args+=("$1")
+                else
+                    docker_args+=("$1")
+                fi
+                shift
+                ;;
+        esac
+    done
 
     TESTS_RUN=$((TESTS_RUN + 1))
     log "Running test: $test_name (command: $command)"
@@ -35,12 +68,21 @@ run_comprehensive_container_test() {
         -v "$MOCKUP_DIR/inventory:/opt/inventory:ro"
         -v "$MOCKUP_DIR/keys:/opt/keys:ro"
         -v "$MOCKUP_DIR/firmware:/opt/firmware:ro"
+        -v "$PROJECT_ROOT/ansible-content/ansible.cfg:/opt/app/ansible-content/ansible.cfg:ro"
         -e ANSIBLE_INVENTORY="/opt/inventory/production.yml"
+        -e ANSIBLE_CONFIG="/opt/app/ansible-content/ansible.cfg"
     )
 
-    # Add provided arguments
+    # Add docker environment arguments
     docker_cmd+=("${docker_args[@]}")
+
+    # Add container image and command
     docker_cmd+=("$CONTAINER_IMAGE" "$command")
+
+    # Add container command arguments if any
+    if [[ ${#container_args[@]} -gt 0 ]]; then
+        docker_cmd+=("${container_args[@]}")
+    fi
 
     # Run the container test
     if "${docker_cmd[@]}" > "$stdout_file" 2> "$stderr_file"; then
@@ -125,7 +167,8 @@ test_container_commands() {
     run_comprehensive_container_test "Test command" "success" "test"
 
     # Test shell command with simple execution
-    run_comprehensive_container_test "Shell command execution" "success" "shell" "-c" "echo 'Container shell works'"
+    run_comprehensive_container_test "Shell command execution" "success" "shell" \
+        -c "echo 'Container shell works'"
 }
 
 # Test TARGET_HOSTS validation (NEW - critical functionality)

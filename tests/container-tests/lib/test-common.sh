@@ -117,7 +117,10 @@ run_container_test() {
     if docker run --rm \
         -v "$MOCKUP_DIR/inventory:/opt/inventory:ro" \
         -v "$MOCKUP_DIR/keys:/opt/keys:ro" \
+        -v "$MOCKUP_DIR/firmware:/opt/firmware:ro" \
+        -v "$(dirname "$MOCKUP_DIR")/../ansible-content/ansible.cfg:/opt/app/ansible-content/ansible.cfg:ro" \
         -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
+        -e ANSIBLE_CONFIG="/opt/app/ansible-content/ansible.cfg" \
         "${docker_args[@]}" \
         "$CONTAINER_IMAGE" "${container_command[@]}" \
         > "$stdout_file" 2> "$stderr_file"; then
@@ -145,7 +148,7 @@ run_container_test() {
     else
         error "$test_name: FAILED (exit code: $exit_code)"
         echo "=== DOCKER COMMAND THAT FAILED ==="
-        echo "docker run --rm -v \"$MOCKUP_DIR/inventory:/opt/inventory:ro\" -v \"$MOCKUP_DIR/keys:/opt/keys:ro\" -e ANSIBLE_INVENTORY=\"/opt/inventory/production.yml\" ${docker_args[*]} \"$CONTAINER_IMAGE\" ${container_command[*]}"
+        echo "docker run --rm -v \"$MOCKUP_DIR/inventory:/opt/inventory:ro\" -v \"$MOCKUP_DIR/keys:/opt/keys:ro\" -v \"$MOCKUP_DIR/firmware:/opt/firmware:ro\" -v \"$(dirname "$MOCKUP_DIR")/../ansible-content/ansible.cfg:/opt/app/ansible-content/ansible.cfg:ro\" -e ANSIBLE_INVENTORY=\"/opt/inventory/production.yml\" -e ANSIBLE_CONFIG=\"/opt/app/ansible-content/ansible.cfg\" ${docker_args[*]} \"$CONTAINER_IMAGE\" ${container_command[*]}"
         echo "=== FULL STDOUT OUTPUT ==="
         cat "$stdout_file"
         echo "=== FULL STDERR OUTPUT ==="
