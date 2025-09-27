@@ -324,12 +324,9 @@
     bgp_validation: "{{ bgp_validation | combine({
       'passed': bgp_validation_passed,
       'summary': {
-        'total_neighbors': >
-          bgp_validation.current.analysis.total_neighbors | default(0),
-        'established_neighbors': >
-          bgp_validation.current.analysis.established_neighbors | default(0),
-        'total_prefixes': >
-          bgp_validation.current.analysis.total_received_prefixes | default(0),
+        'total_neighbors': bgp_validation.current.analysis.total_neighbors | default(0),
+        'established_neighbors': bgp_validation.current.analysis.established_neighbors | default(0),
+        'total_prefixes': bgp_validation.current.analysis.total_received_prefixes | default(0),
         'validation_passed': bgp_validation_passed
       }
     }) }}"
