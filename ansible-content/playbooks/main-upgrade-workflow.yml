@@ -164,7 +164,9 @@
             that:
               - maintenance_window | bool
             fail_msg: "Image installation requires maintenance_window=true"
-          when: upgrade_phase in ['full', 'installation']
+          when:
+            - upgrade_phase in ['full', 'installation']
+            - not ansible_check_mode
 
         - name: Final pre-installation checks
           ansible.builtin.include_tasks:

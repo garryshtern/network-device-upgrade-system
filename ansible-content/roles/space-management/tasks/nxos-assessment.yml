@@ -4,7 +4,7 @@
 - name: Get bootflash directory information
   cisco.nxos.nxos_command:
     commands:
-      - dir bootflash:
+      - "dir bootflash:"
   register: nxos_bootflash_dir
 
 - name: Get free space information
