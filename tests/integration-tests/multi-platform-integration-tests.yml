@@ -94,7 +94,7 @@
               - "'Phase 3' in (main_workflow.content | b64decode)"
               - "'image-loading.yml' in (main_workflow.content | b64decode)"
               - "'image-installation.yml' in (main_workflow.content | b64decode)"
-              - "'network-validation.yml' in (main_workflow.content | b64decode)"
+              - "'network-validation' in (main_workflow.content | b64decode)"
             success_msg: "✓ Phase separation properly implemented in main workflow"
             fail_msg: "Phase separation not properly implemented"
 

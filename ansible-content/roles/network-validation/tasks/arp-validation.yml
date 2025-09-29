@@ -9,20 +9,26 @@
       - show ip arp summary | json
       - show ip arp statistics | json
   register: nxos_arp_info
-  when: ansible_network_os == "cisco.nxos.nxos"
+  when:
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
 - name: Get ARP table (IOS-XE)
   cisco.ios.ios_command:
     commands:
       - show ip arp
       - show arp summary
   register: ios_arp_info
-  when: ansible_network_os == "cisco.ios.ios"
+  when:
+    - ansible_network_os == "cisco.ios.ios"
+    - not ansible_check_mode
 - name: Get ARP table (Generic)
   ansible.netcommon.cli_command:
     command: show ip arp
   changed_when: false
   register: generic_arp_info
-  when: ansible_network_os not in ["cisco.nxos.nxos", "cisco.ios.ios"]
+  when:
+    - ansible_network_os not in ["cisco.nxos.nxos", "cisco.ios.ios"]
+    - not ansible_check_mode
   failed_when: false
 - name: Extract ARP data
   set_fact:
@@ -92,20 +98,23 @@
     commands:
       - show ip route 0.0.0.0/0 | json
   register: default_route_info
-  when: ansible_network_os == "cisco.nxos.nxos"
+  when:
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
   failed_when: false
 - name: Extract default gateway
-  set_fact:
+  ansible.builtin.set_fact:
     default_gateway: >
       {{ default_route_info.stdout[0] | from_json |
          json_query('TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
                      TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.
                      ROW_path.ipnexthop')
-      }} '
-  when: >
-    default_route_info is defined and default_route_info.rc
-      == 0 and default_route_info.stdout[0]
-    != ""
+      }}
+  when:
+    - not ansible_check_mode
+    - default_route_info is defined
+    - default_route_info.rc == 0
+    - default_route_info.stdout[0] != ""
 - name: Verify default gateway in ARP table
   ansible.builtin.debug:
     msg: 'Default Gateway Validation:
@@ -137,7 +146,9 @@
     commands:
       - show ip dhcp snooping binding | json
   register: dhcp_snooping_info
-  when: ansible_network_os == "cisco.nxos.nxos"
+  when:
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
   failed_when: false
 - name: Parse DHCP snooping bindings
   set_fact:
@@ -145,7 +156,10 @@
       {{ dhcp_snooping_info.stdout[0] | from_json |
          json_query('TABLE_binding.ROW_binding')
       | default([]) }}'
-  when: dhcp_snooping_info is defined and dhcp_snooping_info.rc == 0
+  when:
+    - not ansible_check_mode
+    - dhcp_snooping_info is defined
+    - dhcp_snooping_info.rc == 0
 - name: Validate DHCP snooping bindings
   ansible.builtin.debug:
     msg: 'DHCP Snooping Binding Table:
@@ -176,7 +190,9 @@
     commands:
       - show ipv6 neighbor | json
   register: ipv6_neighbor_info
-  when: ansible_network_os == "cisco.nxos.nxos"
+  when:
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
   failed_when: false
 - name: Parse IPv6 neighbors
   set_fact:
@@ -184,7 +200,10 @@
       {{ ipv6_neighbor_info.stdout[0] | from_json |
          json_query('TABLE_neighbor.ROW_neighbor')
       | default([]) }}'
-  when: ipv6_neighbor_info is defined and ipv6_neighbor_info.rc == 0
+  when:
+    - not ansible_check_mode
+    - ipv6_neighbor_info is defined
+    - ipv6_neighbor_info.rc == 0
 - name: Validate IPv6 neighbor discovery
   ansible.builtin.debug:
     msg: 'IPv6 Neighbor Discovery:
@@ -215,7 +234,9 @@
     commands:
       - show mac address-table | json
   register: mac_table_info
-  when: ansible_network_os == "cisco.nxos.nxos"
+  when:
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
   failed_when: false
 - name: Cross-reference ARP and MAC tables
   set_fact:
@@ -223,7 +244,10 @@
       {{ mac_table_info.stdout[0] | from_json |
          json_query('TABLE_mac_address.ROW_mac_address')
       | default([]) }}'
-  when: mac_table_info is defined and mac_table_info.rc == 0
+  when:
+    - not ansible_check_mode
+    - mac_table_info is defined
+    - mac_table_info.rc == 0
 - name: Validate ARP-MAC correlation
   ansible.builtin.debug:
     msg: 'MAC Address Table Status:
@@ -278,11 +302,11 @@
       incomplete_entries: >
         '{{ incomplete_arp_entries | length if incomplete_arp_entries
         is defined else 0 }}'
-      default_gateway_present: >
-        ' {{ true if default_gateway is defined and arp_entries
+      default_gateway_present: >-
+        {{ true if default_gateway is defined and arp_entries
         is defined and (arp_entries |
-          selectattr(''ip_addr'', ''equalto'', default_gateway)
-        | list | length > 0) else false }} '
+          selectattr('ip_addr', 'equalto', default_gateway)
+        | list | length > 0) else false }}
       dhcp_bindings: >
         '{{ dhcp_bindings | length if dhcp_bindings is defined else 0
         }}'
@@ -292,26 +316,14 @@
       mac_entries: '{{ mac_entries | length if mac_entries is defined else 0 }}'
 - name: ARP validation summary
   ansible.builtin.debug:
-    msg: 'ARP and Neighbor Discovery Validation Results:
-
+    msg: |
+      ARP and Neighbor Discovery Validation Results:
       - Total ARP Entries: {{ arp_baseline.total_arp_entries }}
-
       - Static Entries: {{ arp_baseline.static_entries }}
-
       - Dynamic Entries: {{ arp_baseline.dynamic_entries }}
-
       - Incomplete Entries: {{ arp_baseline.incomplete_entries }}
-
-      - Default Gateway in ARP: {{ ''YES''
-        if arp_baseline.default_gateway_present
-      else ''NO'' }}
-
+      - Default Gateway in ARP: {{ 'YES' if arp_baseline.default_gateway_present else 'NO' }}
       - DHCP Snooping Bindings: {{ arp_baseline.dhcp_bindings }}
-
       - IPv6 Neighbors: {{ arp_baseline.ipv6_neighbors }}
-
       - MAC Table Entries: {{ arp_baseline.mac_entries }}
-
-      - Overall Status: {{ ''HEALTHY'' if
-        arp_baseline.total_arp_entries > 0 else
-      ''EMPTY TABLE'' }}'
+      - Overall Status: {{ 'HEALTHY' if arp_baseline.total_arp_entries | int > 0 else 'EMPTY TABLE' }}

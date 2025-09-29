@@ -6,6 +6,7 @@
     path: "{{ firmware_base_path }}/{{ target_firmware }}"
   register: firmware_file_stat
   delegate_to: localhost
+  when: not ansible_check_mode
 
 - name: Verify image file exists
   ansible.builtin.assert:
@@ -18,6 +19,7 @@
         is not a regular file
     success_msg: >
       "Firmware file found: {{ firmware_base_path }}/{{ target_firmware }}"
+  when: not ansible_check_mode
 
 - name: Check minimum file size (prevent empty/corrupt files)
   ansible.builtin.assert:
@@ -30,6 +32,7 @@
       Firmware file size validation passed:
       {{ (firmware_file_stat.stat.size / 1024 / 1024) |
         round(2) }} MB
+  when: not ansible_check_mode
 
 - name: Check file permissions are readable
   ansible.builtin.assert:
@@ -37,6 +40,7 @@
       - firmware_file_stat.stat.readable
     fail_msg: "Firmware file {{ target_firmware }} is not readable"
     success_msg: "Firmware file permissions validation passed"
+  when: not ansible_check_mode
 
 - name: Validate file extension for platform
   ansible.builtin.assert:
@@ -63,7 +67,7 @@
     image_integrity_passed: true
     firmware_file_info:
       path: "{{ firmware_base_path }}/{{ target_firmware }}"
-      size_bytes: "{{ firmware_file_stat.stat.size }}"
-      size_mb: "{{ (firmware_file_stat.stat.size / 1024 / 1024) | round(2) }}"
-      modified_time: "{{ firmware_file_stat.stat.mtime }}"
-      checksum: "{{ firmware_file_stat.stat.checksum | default('unknown') }}"
+      size_bytes: "{{ firmware_file_stat.stat.size if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 0 }}"
+      size_mb: "{{ ((firmware_file_stat.stat.size / 1024 / 1024) | round(2)) if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 0 }}"
+      modified_time: "{{ firmware_file_stat.stat.mtime if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 'unknown' }}"
+      checksum: "{{ firmware_file_stat.stat.checksum | default('unknown') if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 'unknown' }}"

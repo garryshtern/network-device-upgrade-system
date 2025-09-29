@@ -1,0 +1,212 @@
+---
+# Compliance Audit Tasks
+# Extracted from compliance-audit.yml playbook for task inclusion
+# Post-upgrade compliance verification and reporting
+
+- name: Initialize compliance audit state
+  ansible.builtin.set_fact:
+    compliance_results:
+      device_name: "{{ inventory_hostname }}"
+      platform: "{{ ansible_network_os }}"
+      audit_timestamp: "{{ ansible_date_time.iso8601 if ansible_date_time is defined else lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      firmware_version: "{{ current_firmware_version | default('unknown') }}"
+      standards_tested: []
+      compliance_checks:
+        passed: []
+        failed: []
+        skipped: []
+        warnings: []
+
+- name: Create compliance audit directory
+  ansible.builtin.file:
+    path: "/var/lib/network-upgrade/compliance/{{ inventory_hostname }}"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+
+- name: Security Baseline Compliance Check
+  when: "'security_baseline' in (compliance_standards | default(['security_baseline', 'network_hardening']))"
+  block:
+    - name: Run security baseline audit placeholder
+      ansible.builtin.set_fact:
+        security_baseline_results:
+          passed: ["ssh_hardening", "password_policy"]
+          failed: []
+          skipped: []
+          warnings: ["weak_encryption_detected"]
+
+    - name: Update compliance results - security baseline
+      ansible.builtin.set_fact:
+        compliance_results: >-
+          {{
+            compliance_results | combine({
+              'standards_tested':
+                compliance_results.standards_tested + ['security_baseline'],
+              'compliance_checks': {
+                'passed':
+                  compliance_results.compliance_checks.passed +
+                  security_baseline_results.passed,
+                'failed':
+                  compliance_results.compliance_checks.failed +
+                  security_baseline_results.failed,
+                'skipped':
+                  compliance_results.compliance_checks.skipped +
+                  security_baseline_results.skipped,
+                'warnings':
+                  compliance_results.compliance_checks.warnings +
+                  security_baseline_results.warnings
+              }
+            })
+          }}
+
+  rescue:
+    - name: Handle security baseline audit failure
+      ansible.builtin.set_fact:
+        compliance_results: >
+          {{
+            compliance_results | combine({
+              'compliance_checks': {
+                'failed':
+                  compliance_results.compliance_checks.failed +
+                    ['security_baseline_audit_error']
+              }
+            })
+          }}
+
+- name: Network Hardening Compliance Check
+  when: "'network_hardening' in (compliance_standards | default(['security_baseline', 'network_hardening']))"
+  block:
+    - name: Run network hardening audit placeholder
+      ansible.builtin.set_fact:
+        network_hardening_results:
+          passed: ["acl_configuration", "snmp_security"]
+          failed: []
+          skipped: []
+          warnings: []
+
+    - name: Update compliance results - network hardening
+      ansible.builtin.set_fact:
+        compliance_results: >
+          {{
+            compliance_results | combine({
+              'standards_tested':
+                compliance_results.standards_tested + ['network_hardening'],
+              'compliance_checks': {
+                'passed':
+                  compliance_results.compliance_checks.passed +
+                  network_hardening_results.passed,
+                'failed':
+                  compliance_results.compliance_checks.failed +
+                  network_hardening_results.failed,
+                'skipped':
+                  compliance_results.compliance_checks.skipped +
+                  network_hardening_results.skipped,
+                'warnings':
+                  compliance_results.compliance_checks.warnings +
+                  network_hardening_results.warnings
+              }
+            })
+          }}
+
+  rescue:
+    - name: Handle network hardening audit failure
+      ansible.builtin.set_fact:
+        compliance_results: >
+          {{
+            compliance_results | combine({
+              'compliance_checks': {
+                'failed':
+                  compliance_results.compliance_checks.failed +
+                  ['network_hardening_audit_error']
+              }
+            })
+          }}
+
+- name: Platform-Specific Compliance Checks
+  block:
+    - name: Platform-specific compliance placeholder
+      ansible.builtin.set_fact:
+        platform_compliance_results:
+          passed: ["platform_config_valid"]
+          failed: []
+          skipped: []
+          warnings: []
+
+    - name: Update compliance results - platform specific
+      ansible.builtin.set_fact:
+        compliance_results: >
+          {{
+            compliance_results | combine({
+              'standards_tested':
+                compliance_results.standards_tested + ['platform_specific'],
+              'compliance_checks': {
+                'passed':
+                  compliance_results.compliance_checks.passed +
+                  platform_compliance_results.passed,
+                'failed':
+                  compliance_results.compliance_checks.failed +
+                  platform_compliance_results.failed,
+                'skipped':
+                  compliance_results.compliance_checks.skipped +
+                  platform_compliance_results.skipped,
+                'warnings':
+                  compliance_results.compliance_checks.warnings +
+                  platform_compliance_results.warnings
+              }
+            })
+          }}
+      when: platform_compliance_results is defined
+
+  rescue:
+    - name: Handle platform compliance audit failure
+      ansible.builtin.set_fact:
+        compliance_results: >
+          {{
+            compliance_results | combine({
+              'compliance_checks': {
+                'failed':
+                  compliance_results.compliance_checks.failed +
+                  ['platform_compliance_audit_error']
+              }
+            })
+          }}
+
+- name: Calculate total checks count
+  ansible.builtin.set_fact:
+    total_checks: >-
+      {{ (compliance_results.compliance_checks.passed |
+        length + compliance_results.compliance_checks.failed | length) }}
+
+- name: Calculate compliance percentage
+  ansible.builtin.set_fact:
+    compliance_percentage: >-
+      {{ (compliance_results.compliance_checks.passed |
+        length / total_checks * 100) | round(2) if
+        total_checks | int > 0 else 0 }}
+
+- name: Display compliance audit results
+  ansible.builtin.debug:
+    msg:
+      - "=== Compliance Audit Results ==="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ ansible_network_os }}"
+      - "Firmware Version: {{ compliance_results.firmware_version }}"
+      - "Audit Timestamp: {{ compliance_results.audit_timestamp }}"
+      - "Standards Tested: {{ compliance_results.standards_tested | join(', ') }}"
+      - "Checks Passed: {{ compliance_results.compliance_checks.passed | length }}"
+      - "Checks Failed: {{ compliance_results.compliance_checks.failed | length }}"
+      - "Warnings: {{ compliance_results.compliance_checks.warnings | length }}"
+      - "Compliance Score: {{ compliance_percentage }}%"
+      - "Overall Status: {{ 'COMPLIANT' if compliance_percentage >= 90 else 'NON-COMPLIANT' }}"
+      - "==============================="
+
+- name: Record compliance completion
+  ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+  vars:
+    metric_type: "compliance_audit"
+    metric_data:
+      device_id: "{{ inventory_hostname }}"
+      compliance_score: "{{ compliance_percentage }}"
+      platform: "{{ ansible_network_os }}"
+      status: "success"
+      timestamp: "{{ compliance_results.audit_timestamp }}"

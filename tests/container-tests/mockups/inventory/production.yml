@@ -83,10 +83,12 @@ all:
           current_firmware: "21.2.1"
           target_firmware: "22.1.3"
       vars:
-        ansible_connection: ansible.netcommon.network_cli
+        ansible_network_os: opengear
+        ansible_connection: local
         ansible_user: "{{ vault_opengear_username | default('admin') }}"
-        ansible_ssh_private_key_file: "{{ vault_opengear_ssh_key | default(omit) }}"
         ansible_password: "{{ vault_opengear_password | default(omit) }}"
+        opengear_username: "{{ vault_opengear_username | default('admin') }}"
+        opengear_password: "{{ vault_opengear_password | default('admin123') }}"
         opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
         platform_type: opengear
 
@@ -104,6 +106,7 @@ all:
           current_firmware: "1.60.17"
           target_firmware: "1.62.2"
       vars:
+        ansible_network_os: metamako.mos
         ansible_connection: ansible.netcommon.network_cli
         ansible_user: "{{ vault_metamako_username | default('admin') }}"
         ansible_ssh_private_key_file: "{{ vault_metamako_ssh_key | default(omit) }}"

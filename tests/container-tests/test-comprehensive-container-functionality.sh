@@ -140,6 +140,8 @@ setup_firmware_files() {
     echo "mock-cisco-iosxe-firmware" > "$MOCKUP_DIR/firmware/cisco.ios/cat9k_iosxe.17.09.04a.SPA.bin"
     echo "mock-fortios-firmware" > "$MOCKUP_DIR/firmware/fortios/FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out"
     echo "mock-opengear-firmware" > "$MOCKUP_DIR/firmware/opengear/cm71xx-5.2.4.flash"
+    echo "mock-opengear-firmware-22.1.3-im" > "$MOCKUP_DIR/firmware/opengear/im72xx-22.1.3.flash"
+    echo "mock-opengear-firmware-22.1.3-ops" > "$MOCKUP_DIR/firmware/opengear/operations_manager-22.1.3-production-signed.raucb"
     echo "mock-metamako-firmware" > "$MOCKUP_DIR/firmware/metamako/mos-0.39.9.iso"
 
     # Set permissions for container access

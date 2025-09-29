@@ -1,9 +1,0 @@
----
-# Cisco NX-OS Assessment Tasks
-# Provides space and storage assessment for Cisco NX-OS devices
-# This is a compatibility layer for cisco.nxos.nxos namespace
-# Task-only file for include_tasks compatibility
-
-- name: Include NX-OS assessment tasks
-  ansible.builtin.include_tasks: ../roles/space-management/tasks/nxos-assessment.yml
-  when: ansible_network_os == "cisco.nxos.nxos"

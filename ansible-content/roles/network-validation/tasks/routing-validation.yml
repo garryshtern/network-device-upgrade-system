@@ -11,7 +11,9 @@
           - show ip route | json
           - show ip route 0.0.0.0/0 | json
       register: nxos_routing_info
-      when: ansible_network_os == "cisco.nxos.nxos"
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - not ansible_check_mode
 
     - name: Get routing table (IOS-XE)
       cisco.ios.ios_command:
@@ -20,16 +22,20 @@
           - show ip route
           - show ip route 0.0.0.0
       register: ios_routing_info
-      when: ansible_network_os == "cisco.ios.ios"
+      when:
+        - ansible_network_os == "cisco.ios.ios"
+        - not ansible_check_mode
 
     - name: Get routing table (Generic)
       ansible.netcommon.cli_command:
-        ansible.builtin.command: "{{ item }}"
+        command: "{{ item }}"
       register: generic_routing_info
       loop:
         - "show ip route summary"
         - "show ip route"
-      when: ansible_network_os not in ["cisco.nxos.nxos", "cisco.ios.ios"]
+      when:
+        - ansible_network_os not in ["cisco.nxos.nxos", "cisco.ios.ios"]
+        - not ansible_check_mode
       failed_when: false
 
 - name: Parse routing information for NX-OS
@@ -167,7 +173,9 @@
         commands:
           - show ip ospf neighbor | json
       register: ospf_neighbors
-      when: ansible_network_os == "cisco.nxos.nxos"
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - not ansible_check_mode
       failed_when: false
 
     - name: Validate OSPF adjacencies
@@ -178,7 +186,10 @@
             json_query('TABLE_neighbor.ROW_neighbor') | default([]) %}
           - {{ neighbor.rid }}: {{ neighbor.state }} ({{ neighbor.interface }})
           {% endfor %}
-      when: ospf_neighbors is defined and ospf_neighbors.rc == 0
+      when:
+        - not ansible_check_mode
+        - ospf_neighbors is defined
+        - ospf_neighbors.rc == 0
 
 - name: EIGRP validation (if configured)
   block:
@@ -187,7 +198,9 @@
         commands:
           - show ip eigrp neighbors | json
       register: eigrp_neighbors
-      when: ansible_network_os == "cisco.nxos.nxos"
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - not ansible_check_mode
       failed_when: false
 
     - name: Validate EIGRP adjacencies
@@ -198,7 +211,10 @@
             json_query('TABLE_neighbor.ROW_neighbor') | default([]) %}
           - {{ neighbor.ipaddr }}: {{ neighbor.state }} AS {{ neighbor.as }}
           {% endfor %}
-      when: eigrp_neighbors is defined and eigrp_neighbors.rc == 0
+      when:
+        - not ansible_check_mode
+        - eigrp_neighbors is defined
+        - eigrp_neighbors.rc == 0
 
 - name: Store routing baseline
   ansible.builtin.set_fact:
@@ -222,6 +238,20 @@
            json_query('TABLE_neighbor.ROW_neighbor') | length
            if eigrp_neighbors is defined and eigrp_neighbors.rc == 0
            else 0 }}
+  when: not ansible_check_mode
+
+- name: Store routing baseline for check mode
+  ansible.builtin.set_fact:
+    routing_baseline:
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      total_routes: 0
+      static_routes_count: 0
+      connected_routes_count: 0
+      default_route_present: false
+      default_route_next_hop: "None"
+      ospf_neighbors: 0
+      eigrp_neighbors: 0
+  when: ansible_check_mode
 
 - name: Routing validation summary
   ansible.builtin.debug:
@@ -236,9 +266,11 @@
            else 'Missing' }}
       - Default Next-Hop: {{ routing_baseline.default_route_next_hop }}
       - Default Route Reachable:
-        {{ 'YES' if default_route_ping is defined and
+        {{ 'YES' if (default_route_ping is defined and
+           default_route_ping is succeeded and
+           default_route_ping.stdout is defined and
            default_route_ping.stdout[0] |
-           regex_search('Success rate is [^0]') else 'UNTESTED' }}
+           regex_search('Success rate is [^0]')) else 'UNTESTED' }}
       - OSPF Neighbors: {{ routing_baseline.ospf_neighbors }}
       - EIGRP Neighbors: {{ routing_baseline.eigrp_neighbors }}
       - >-

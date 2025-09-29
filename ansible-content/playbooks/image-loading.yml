@@ -6,7 +6,7 @@
 - name: Firmware Image Loading
   hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
-  connection: network_cli
+  # Connection method determined by inventory per platform
   vars:
     firmware_source_path: "{{ firmware_base_path }}/{{ ansible_network_os }}"
     device_storage_path: "/var/lib/firmware"
@@ -20,7 +20,7 @@
       delegate_to: localhost
     - name: Fail if firmware file not found
       ansible.builtin.fail:
-        msg: >
+        msg: >-
           Firmware file not found:
           {{ firmware_source_path }}/{{ firmware_version }}
       when: not firmware_file.stat.exists
@@ -38,21 +38,21 @@
           ansible.builtin.include_role:
             name: cisco-nxos-upgrade
             tasks_from: image-loading
-          when: ansible_network_os == 'nxos'
+          when: ansible_network_os == 'cisco.nxos.nxos'
 
         # Cisco IOS-XE Image Loading
         - name: Load Cisco IOS-XE image
           ansible.builtin.include_role:
             name: cisco-iosxe-upgrade
             tasks_from: image-loading
-          when: ansible_network_os == 'ios'
+          when: ansible_network_os == 'cisco.ios.ios'
 
         # Metamako MOS Image Loading
         - name: Load Metamako MOS image
           ansible.builtin.include_role:
             name: metamako-mos-upgrade
             tasks_from: image-loading
-          when: ansible_network_os == 'mos'
+          when: ansible_network_os == 'metamako.mos'
 
         # Opengear Image Loading
         - name: Load Opengear image
@@ -66,7 +66,7 @@
           ansible.builtin.include_role:
             name: fortios-upgrade
             tasks_from: image-loading
-          when: ansible_network_os == 'fortios'
+          when: ansible_network_os == 'fortinet.fortios.fortios'
 
     - name: Verify image integrity
       ansible.builtin.include_tasks:

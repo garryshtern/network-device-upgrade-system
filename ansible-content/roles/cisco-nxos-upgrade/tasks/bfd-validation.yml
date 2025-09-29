@@ -11,6 +11,7 @@
           - show feature | include bfd
       register: bfd_feature_status
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check BFD neighbor status
       cisco.nxos.nxos_command:
@@ -18,6 +19,7 @@
           - show bfd neighbors | json
       register: bfd_neighbors
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check BFD neighbor details
       cisco.nxos.nxos_command:
@@ -25,6 +27,7 @@
           - show bfd neighbors details | json
       register: bfd_neighbor_details
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check BFD interface configuration
       cisco.nxos.nxos_command:
@@ -32,6 +35,23 @@
           - show bfd interface | json
       register: bfd_interfaces
       failed_when: false
+      when: not ansible_check_mode
+
+- name: Simulate BFD data for check mode
+  ansible.builtin.set_fact:
+    bfd_feature_status:
+      stdout: ["bfd enabled"]
+      rc: 0
+    bfd_neighbors:
+      stdout: [{}]
+      rc: 0
+    bfd_neighbor_details:
+      stdout: [{}]
+      rc: 0
+    bfd_interfaces:
+      stdout: [{}]
+      rc: 0
+  when: ansible_check_mode
 
 - name: Parse BFD feature status
   block:

@@ -10,6 +10,7 @@
           - show crypto session
       register: crypto_sessions
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check IPSec SA status
       cisco.ios.ios_command:
@@ -17,6 +18,7 @@
           - show crypto ipsec sa
       register: ipsec_sa_status
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check ISAKMP SA status
       cisco.ios.ios_command:
@@ -24,6 +26,7 @@
           - show crypto isakmp sa
       register: isakmp_sa_status
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check crypto engine status
       cisco.ios.ios_command:
@@ -31,6 +34,23 @@
           - show crypto engine brief
       register: crypto_engine
       failed_when: false
+      when: not ansible_check_mode
+
+- name: Simulate IPSec data for check mode
+  ansible.builtin.set_fact:
+    crypto_sessions:
+      stdout: ["No active crypto sessions"]
+      rc: 0
+    ipsec_sa_status:
+      stdout: ["No active IPSec SAs"]
+      rc: 0
+    isakmp_sa_status:
+      stdout: ["No active ISAKMP SAs"]
+      rc: 0
+    crypto_engine:
+      stdout: ["Crypto Engine Status: OK"]
+      rc: 0
+  when: ansible_check_mode
 
 - name: Parse IPSec validation results
   block:
@@ -74,6 +94,7 @@
       when:
         - ipsec_sa_status.rc == 0
         - active_ipsec_tunnels is defined
+        - not ansible_check_mode
 
     - name: Verify ISAKMP phase 1 sessions
       ansible.builtin.assert:
@@ -86,6 +107,7 @@
       when:
         - isakmp_sa_status.rc == 0
         - isakmp_sessions is defined
+        - not ansible_check_mode
 
     - name: Verify crypto sessions are up
       ansible.builtin.assert:
@@ -96,6 +118,7 @@
       when:
         - crypto_sessions.rc == 0
         - total_crypto_sessions is defined
+        - not ansible_check_mode
 
 - name: Check VPN traffic flow
   block:
@@ -111,6 +134,7 @@
       when:
         - active_ipsec_tunnels is defined
         - active_ipsec_tunnels | length > 0
+        - not ansible_check_mode
 
 - name: IPSec validation summary
   ansible.builtin.debug:

@@ -10,6 +10,7 @@
           - show interfaces transceiver
       register: interface_transceivers
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check platform hardware transceivers
       cisco.ios.ios_command:
@@ -17,6 +18,7 @@
           - show platform hardware transceiver
       register: platform_transceivers
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check interface transceiver details
       cisco.ios.ios_command:
@@ -24,6 +26,7 @@
           - show interfaces transceiver detail
       register: transceiver_details
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check DOM (Digital Optical Monitoring) information
       cisco.ios.ios_command:
@@ -31,6 +34,23 @@
           - show interfaces transceiver dom
       register: transceiver_dom
       failed_when: false
+      when: not ansible_check_mode
+
+- name: Simulate optics data for check mode
+  ansible.builtin.set_fact:
+    interface_transceivers:
+      stdout: ["No transceivers found"]
+      rc: 0
+    platform_transceivers:
+      stdout: ["No transceivers found"]
+      rc: 0
+    transceiver_details:
+      stdout: ["No transceiver details"]
+      rc: 0
+    transceiver_dom:
+      stdout: ["No DOM information"]
+      rc: 0
+  when: ansible_check_mode
 
 - name: Parse transceiver information
   block:
@@ -43,18 +63,30 @@
       when:
         - interface_transceivers.rc == 0
         - interface_transceivers.stdout[0] | length > 100
+        - not ansible_check_mode
+
+    - name: Set transceivers for check mode
+      ansible.builtin.set_fact:
+        active_transceivers: []
+        optical_power_levels: []
+        transceiver_temperatures: []
+        transceiver_with_issues: []
+        working_transceivers: []
+        total_transceivers: 0
+        issues_count: 0
+      when: ansible_check_mode
 
     - name: Parse optical power levels from DOM
       ansible.builtin.set_fact:
         optical_power_levels: >-
           {{ transceiver_dom.stdout[0] |
              regex_findall(
-             '(\S+)\s+.*?Tx Power\s+([-\d\.]+)\s+dBm.*?
-             Rx Power\s+([-\d\.]+)\s+dBm',
-             multiline=True, dotall=True) }}
+             '(\S+)\s+.*?Tx Power\s+([-\d\.]+)\s+dBm.*?Rx Power\s+([-\d\.]+)\s+dBm',
+             multiline=True) }}
       when:
         - transceiver_dom.rc == 0
         - '"Tx Power" in transceiver_dom.stdout[0]'
+        - not ansible_check_mode
 
     - name: Extract temperature information
       ansible.builtin.set_fact:
@@ -76,7 +108,9 @@
         fail_msg: "No active transceivers found on device"
         success_msg: >
           "{{ active_transceivers | length }} active transceiver(s) detected"
-      when: active_transceivers is defined
+      when:
+        - active_transceivers is defined
+        - not ansible_check_mode
 
     - name: Check optical power levels are within acceptable range
       ansible.builtin.assert:
@@ -110,6 +144,7 @@
       when:
         - transceiver_temperatures is defined
         - transceiver_temperatures | length > 0
+  when: not ansible_check_mode
 
 - name: Check for transceiver errors
   block:

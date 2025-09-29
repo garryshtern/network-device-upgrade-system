@@ -7,6 +7,7 @@
     command: show version
   changed_when: false
   register: mos_version_check
+  when: not ansible_check_mode
 
 - name: Verify target version is active
   ansible.builtin.assert:
@@ -14,24 +15,28 @@
       - metamako_upgrade_state.target_version in mos_version_check.stdout
     fail_msg: >
       'Target firmware version not active: {{ mos_version_check.stdout }}'
+  when: not ansible_check_mode
 
 - name: Check system uptime
   ansible.netcommon.cli_command:
     command: show uptime
   changed_when: false
   register: mos_uptime_check
+  when: not ansible_check_mode
 
 - name: Measure post-upgrade latency
   ansible.netcommon.cli_command:
     command: show latency statistics
   changed_when: false
   register: post_upgrade_latency_stats
+  when: not ansible_check_mode
 
 - name: Get current latency measurements
   ansible.netcommon.cli_command:
     command: show latency current
   changed_when: false
   register: current_latency_measurements
+  when: not ansible_check_mode
 
 - name: Parse latency performance
   ansible.builtin.set_fact:
@@ -39,15 +44,15 @@
       avg_latency: >
         {{ post_upgrade_latency_stats.stdout
         | regex_search('Average: ([\\d\\.]+)', '\\1')
-        | first | default('0') }}
+        | first | default('0') if post_upgrade_latency_stats is defined else '0' }}
       max_latency: >
         {{ post_upgrade_latency_stats.stdout
         | regex_search('Maximum: ([\\d\\.]+)', '\\1')
-        | first | default('0') }}
+        | first | default('0') if post_upgrade_latency_stats is defined else '0' }}
       min_latency: >
         {{ post_upgrade_latency_stats.stdout
         | regex_search('Minimum: ([\\d\\.]+)', '\\1')
-        | first | default('0') }}
+        | first | default('0') if post_upgrade_latency_stats is defined else '0' }}
 
 - name: Validate latency performance meets requirements
   ansible.builtin.assert:
@@ -57,30 +62,34 @@
     fail_msg: >
       Average latency {{ post_upgrade_latency.avg_latency }}ns
       exceeds maximum allowed {{ max_allowed_latency_ns | default(100) }}ns
+  when: not ansible_check_mode
 
 - name: Check interface operational status
   ansible.netcommon.cli_command:
     command: show interface status
   changed_when: false
   register: mos_interface_status
+  when: not ansible_check_mode
 
 - name: Validate critical interfaces are operational
   ansible.builtin.assert:
     that:
       - "'up' in mos_interface_status.stdout"
     fail_msg: "Critical interfaces may not be operational"
+  when: not ansible_check_mode
 
 - name: Check interface error counters
   ansible.netcommon.cli_command:
     command: show interface errors
   changed_when: false
   register: mos_interface_errors
+  when: not ansible_check_mode
 
 - name: Verify minimal interface errors
   ansible.builtin.debug:
     msg: |
       Interface Error Summary:
-      {{ mos_interface_errors.stdout }}
+      {{ mos_interface_errors.stdout if (mos_interface_errors is defined and mos_interface_errors.stdout is defined) else 'No data in check mode' }}
       Warning: Check for excessive error counts that may indicate issues
 
 - name: Re-validate Metawatch status (if equipped)
@@ -89,7 +98,7 @@
   changed_when: false
   register: post_upgrade_metawatch
   failed_when: false
-  when: metamako_upgrade_state.metawatch_enabled
+  when: (metamako_upgrade_state is defined and metamako_upgrade_state.metawatch_enabled) and not ansible_check_mode
 
 - name: Re-validate Metamux status (if equipped)
   ansible.netcommon.cli_command:
@@ -97,7 +106,7 @@
   changed_when: false
   register: post_upgrade_metamux
   failed_when: false
-  when: metamako_upgrade_state.metamux_enabled
+  when: (metamako_upgrade_state is defined and metamako_upgrade_state.metamux_enabled) and not ansible_check_mode
 
 - name: Verify specialized components are functional
   ansible.builtin.debug:
@@ -117,6 +126,9 @@
         'enabled' in post_upgrade_metamux.stdout | lower
         else 'CHECK REQUIRED' }}
       {% endif %}
+  when:
+    - metamako_upgrade_state is defined
+    - not ansible_check_mode
 
 - name: Run performance benchmark
   ansible.netcommon.cli_command:
@@ -124,12 +136,20 @@
   register: performance_benchmark
   failed_when: false
   timeout: 300
+  when: not ansible_check_mode
+
+- name: Simulate performance benchmark for check mode
+  ansible.builtin.set_fact:
+    performance_benchmark:
+      stdout: "Benchmark completed successfully"
+      rc: 0
+  when: ansible_check_mode
 
 - name: Check benchmark results
   ansible.netcommon.cli_command:
     command: benchmark results
   register: benchmark_results
-  when: performance_benchmark is defined and performance_benchmark.rc == 0
+  when: performance_benchmark is defined and performance_benchmark.rc == 0 and not ansible_check_mode
 
 - name: Validate benchmark performance
   ansible.builtin.debug:
@@ -138,13 +158,21 @@
       >-
         {{ benchmark_results.stdout if benchmark_results is defined else
           'Benchmark not available' }}
-  when: benchmark_results is defined
+  when: benchmark_results is defined and not ansible_check_mode
 
 - name: Test basic network connectivity
   ansible.netcommon.cli_command:
     command: ping {{ management_gateway | default('192.168.1.1') }} count 3
   register: connectivity_test
   failed_when: false
+  when: not ansible_check_mode
+
+- name: Simulate connectivity test for check mode
+  ansible.builtin.set_fact:
+    connectivity_test:
+      stdout: "3 packets transmitted, 3 received"
+      rc: 0
+  when: ansible_check_mode
 
 - name: Validate network reachability
   ansible.builtin.assert:
@@ -153,7 +181,7 @@
         "'3 packets transmitted, 3 received' in connectivity_test.stdout
           or 'Success rate is 100' in connectivity_test.stdout"
     fail_msg: "Network connectivity test failed"
-  when: connectivity_test.rc == 0
+  when: connectivity_test is defined and connectivity_test.rc == 0 and not ansible_check_mode
   failed_when: false
 
 - name: Check system temperature
@@ -162,6 +190,7 @@
   changed_when: false
   register: system_temperature
   failed_when: false
+  when: not ansible_check_mode
 
 - name: Check power status
   ansible.netcommon.cli_command:
@@ -169,6 +198,7 @@
   changed_when: false
   register: power_status
   failed_when: false
+  when: not ansible_check_mode
 
 - name: Check fan status
   ansible.netcommon.cli_command:
@@ -176,6 +206,20 @@
   changed_when: false
   register: fan_status
   failed_when: false
+  when: not ansible_check_mode
+
+- name: Simulate environmental data for check mode
+  ansible.builtin.set_fact:
+    system_temperature:
+      stdout: "Temperature: OK"
+      rc: 0
+    power_status:
+      stdout: "Power: OK"
+      rc: 0
+    fan_status:
+      stdout: "Fans: OK"
+      rc: 0
+  when: ansible_check_mode
 
 - name: Validate environmental conditions
   ansible.builtin.debug:
@@ -234,3 +278,4 @@
         {{ 'VALIDATION COMPLETE' if
           metamako_upgrade_state.target_version in
           mos_version_check.stdout else 'CHECK REQUIRED' }}
+  when: not ansible_check_mode

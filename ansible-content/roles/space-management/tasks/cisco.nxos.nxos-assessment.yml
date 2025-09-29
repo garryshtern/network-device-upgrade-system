@@ -6,14 +6,12 @@
     commands:
       - "dir bootflash:"
   register: nxos_bootflash_dir
-  when: not ansible_check_mode
 
 - name: Get free space information
   cisco.nxos.nxos_command:
     commands:
       - "dir bootflash: | include free"
   register: nxos_free_space
-  when: not ansible_check_mode
 
 - name: Parse bootflash directory listing
   ansible.builtin.set_fact:
@@ -24,13 +22,6 @@
       {{ nxos_bootflash_dir.stdout[0] |
         regex_findall(
         '\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+\\.bin)') }}
-  when: not ansible_check_mode
-
-- name: Set bootflash info for check mode
-  ansible.builtin.set_fact:
-    nxos_files: []
-    nxos_images: []
-  when: ansible_check_mode
 
 - name: Parse free space information
   ansible.builtin.set_fact:
@@ -40,13 +31,6 @@
     nxos_free_bytes: >
       "{{ nxos_free_space.stdout[0] | regex_search('(\\d+)
         bytes free', '\\1') | first | int }}"
-  when: not ansible_check_mode
-
-- name: Set free space info for check mode
-  ansible.builtin.set_fact:
-    nxos_total_bytes: 0
-    nxos_free_bytes: 0
-  when: ansible_check_mode
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:
@@ -57,14 +41,3 @@
         'images_found': nxos_images,
         'cleanup_candidates': nxos_images
       }) }}
-  when: not ansible_check_mode
-
-- name: Set storage info for check mode
-  ansible.builtin.set_fact:
-    storage_info:
-      platform: "{{ ansible_network_os | default('unknown') }}"
-      total_space_gb: 0
-      free_space_gb: 0
-      images_found: []
-      cleanup_candidates: []
-  when: ansible_check_mode

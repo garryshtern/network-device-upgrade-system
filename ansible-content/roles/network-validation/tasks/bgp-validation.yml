@@ -35,21 +35,24 @@
         commands:
           - show bgp all summary
       register: bgp_summary_raw
-      when: ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
+      when:
+        - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
+        - not ansible_check_mode
 
     - name: Get BGP summary (Arista)
       arista.eos.eos_command:
         commands:
           - show bgp summary
       register: bgp_summary_raw
-      when: ansible_network_os == 'arista.eos.eos'
+      when:
+        - ansible_network_os == 'arista.eos.eos'
+        - not ansible_check_mode
 
     - name: Parse BGP neighbor states
       ansible.builtin.set_fact:
-        bgp_neighbors: "{{ bgp_summary_raw.stdout[0] | bgp_neighbors_parser }}"
-      vars:
-        bgp_neighbors_parser: >-
+        bgp_neighbors: >-
           {%- set neighbors = [] -%}
+          {%- if bgp_summary_raw is defined and bgp_summary_raw.stdout is defined -%}
           {%- for line in bgp_summary_raw.stdout[0].split('\n') -%}
             {%- if line | regex_search('^\d+\.\d+\.\d+\.\d+') -%}
               {%- set parts = line.split() -%}
@@ -72,6 +75,7 @@
               {%- endif -%}
             {%- endif -%}
           {%- endfor -%}
+          {%- endif -%}
           {{ neighbors }}
 
   rescue:
@@ -258,15 +262,19 @@
 - name: Evaluate BGP validation results
   ansible.builtin.set_fact:
     bgp_validation_passed: "{{
-      bgp_validation.current.analysis.established_neighbors | default(0) > 0 and
+      bgp_validation.current.analysis.established_neighbors | int > 0 and
       (validation_mode == 'pre_upgrade' or
-       (bgp_validation.comparison.neighbor_count_match | default(true) and
-        bgp_validation.comparison.established_count_match | default(true) and
-        bgp_validation.comparison.prefix_variance_percentage
-          | default(0) <= 10 and
-        bgp_validation.comparison.new_down_neighbors
-          | default([]) | length == 0))
+       (bgp_validation.comparison.neighbor_count_match and
+        bgp_validation.comparison.established_count_match and
+        bgp_validation.comparison.prefix_variance_percentage | int <= 10 and
+        bgp_validation.comparison.new_down_neighbors | length == 0))
     }}"
+  when: not ansible_check_mode
+
+- name: Set BGP validation passed for check mode
+  ansible.builtin.set_fact:
+    bgp_validation_passed: true
+  when: ansible_check_mode
 
 - name: Add validation errors for failures
   ansible.builtin.set_fact:

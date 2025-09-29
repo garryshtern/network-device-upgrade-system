@@ -11,6 +11,7 @@
           - show bfd summary
       register: bfd_summary
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check BFD neighbors
       cisco.ios.ios_command:
@@ -18,6 +19,7 @@
           - show bfd neighbors
       register: bfd_neighbors
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check BFD neighbor details
       cisco.ios.ios_command:
@@ -25,6 +27,20 @@
           - show bfd neighbors details
       register: bfd_neighbor_details
       failed_when: false
+      when: not ansible_check_mode
+
+- name: Simulate BFD data for check mode
+  ansible.builtin.set_fact:
+    bfd_summary:
+      stdout: ["Number of BFD Sessions: 0\nNo active BFD sessions"]
+      rc: 0
+    bfd_neighbors:
+      stdout: ["No BFD neighbors found"]
+      rc: 0
+    bfd_neighbor_details:
+      stdout: ["No BFD neighbor details available"]
+      rc: 0
+  when: ansible_check_mode
 
 - name: Parse BFD session information
   block:
@@ -32,11 +48,16 @@
       ansible.builtin.set_fact:
         bfd_total_sessions: >-
           {{ bfd_summary.stdout[0] |
-             regex_search('Number of BFD
-               Sessions:\s+(\d+)', '\\1') | first | int }}
+             regex_search('Number of BFD Sessions:\s+(\d+)', '\\1') | first | int }}
       when:
         - bfd_summary.rc == 0
         - '"Number of BFD Sessions:" in bfd_summary.stdout[0]'
+        - not ansible_check_mode
+
+    - name: Set BFD session count for check mode
+      ansible.builtin.set_fact:
+        bfd_total_sessions: 0
+      when: ansible_check_mode
 
     - name: Parse BFD neighbor sessions
       ansible.builtin.set_fact:
@@ -45,7 +66,16 @@
              regex_findall(
              '(\d+\.\d+\.\d+\.\d+)\s+(\S+)\s+(\S+)\s+(Up|Down)',
              multiline=True) }}
-      when: bfd_neighbors.rc == 0
+      when:
+        - bfd_neighbors.rc == 0
+        - not ansible_check_mode
+
+    - name: Set BFD neighbors for check mode
+      ansible.builtin.set_fact:
+        bfd_active_neighbors: []
+        bfd_up_sessions: 0
+        bfd_down_sessions: 0
+      when: ansible_check_mode
 
     - name: Count UP BFD sessions
       ansible.builtin.set_fact:
@@ -68,10 +98,16 @@
         bfd_session_details: >-
           {{ bfd_neighbor_details.stdout[0] |
              regex_findall('NeighAddr:\s+(\S+).*?State:\s+(\S+).*?MinTxInt:\s+(\d+).*?MinRxInt:\s+(\d+)',
-             multiline=True, dotall=True) }}
+             multiline=True) }}
       when:
         - bfd_neighbor_details.rc == 0
         - bfd_neighbor_details.stdout[0] | length > 0
+        - not ansible_check_mode
+
+    - name: Set BFD session details for check mode
+      ansible.builtin.set_fact:
+        bfd_session_details: []
+      when: ansible_check_mode
 
 - name: Validate BFD session health
   block:
@@ -82,7 +118,9 @@
           - bfd_total_sessions | int > 0
         fail_msg: "No BFD sessions configured on device"
         success_msg: "{{ bfd_total_sessions }} BFD session(s) configured"
-      when: bfd_total_sessions is defined
+      when:
+        - bfd_total_sessions is defined
+        - not ansible_check_mode
 
     - name: Verify BFD neighbors are reachable
       ansible.builtin.assert:
@@ -91,7 +129,9 @@
           - bfd_active_neighbors | length > 0
         fail_msg: "No BFD neighbors found"
         success_msg: "{{ bfd_active_neighbors | length }} BFD neighbor(s) found"
-      when: bfd_active_neighbors is defined
+      when:
+        - bfd_active_neighbors is defined
+        - not ansible_check_mode
 
     - name: Verify majority of BFD sessions are UP
       ansible.builtin.assert:
@@ -111,6 +151,7 @@
         - bfd_up_sessions is defined
         - bfd_down_sessions is defined
         - bfd_active_neighbors is defined
+        - not ansible_check_mode
 
 - name: Check specific BFD neighbor connectivity
   block:
@@ -124,6 +165,7 @@
         - bfd_active_neighbors is defined
         - bfd_active_neighbors | length > 0
         - item[3] == 'Up'
+        - not ansible_check_mode
       failed_when: false
 
     - name: Verify BFD neighbor ping success
@@ -142,6 +184,7 @@
       when:
         - bfd_ping_results is defined
         - item.rc == 0
+        - not ansible_check_mode
       loop_control:
         index_var: item_index
 

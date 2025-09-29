@@ -11,6 +11,7 @@
           - show ip igmp snooping | json
       register: igmp_snooping_status
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check IGMP interface configuration
       cisco.nxos.nxos_command:
@@ -18,6 +19,7 @@
           - show ip igmp interface | json
       register: igmp_interface_config
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check IGMP groups
       cisco.nxos.nxos_command:
@@ -25,6 +27,7 @@
           - show ip igmp groups | json
       register: igmp_groups
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check IGMP snooping groups
       cisco.nxos.nxos_command:
@@ -32,6 +35,7 @@
           - show ip igmp snooping groups | json
       register: igmp_snooping_groups
       failed_when: false
+      when: not ansible_check_mode
 
 - name: Parse IGMP snooping configuration
   block:
@@ -42,6 +46,8 @@
              json_query('TABLE_vlan.ROW_vlan[*].{vlan:
                vlan_id, enabled: snooping_enabled}') }}
       when:
+        - not ansible_check_mode
+        - igmp_snooping_status is defined
         - igmp_snooping_status.rc == 0
         - igmp_snooping_status.stdout[0] | length > 10
 
@@ -63,6 +69,8 @@
              json_query('TABLE_intf.ROW_intf[*].{interface: >
                intf_name, version: version, querier: querier_addr}') }}
       when:
+        - not ansible_check_mode
+        - igmp_interface_config is defined
         - igmp_interface_config.rc == 0
         - igmp_interface_config.stdout[0] | length > 10
 
@@ -80,6 +88,8 @@
              json_query('TABLE_group.ROW_group[*].{group: >
                grp_addr, interface: intf_name, mode: mode, uptime: uptime}') }}
       when:
+        - not ansible_check_mode
+        - igmp_groups is defined
         - igmp_groups.rc == 0
         - igmp_groups.stdout[0] | length > 10
 
@@ -90,6 +100,8 @@
              json_query('TABLE_group.ROW_group[*].{group: >
                grp_addr, vlan: vlan_id, ports: port_list}') }}
       when:
+        - not ansible_check_mode
+        - igmp_snooping_groups is defined
         - igmp_snooping_groups.rc == 0
         - igmp_snooping_groups.stdout[0] | length > 10
 
@@ -164,6 +176,7 @@
           - show ip igmp snooping statistics
       register: igmp_statistics
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Check for IGMP errors or warnings in logs
       cisco.nxos.nxos_command:
@@ -171,6 +184,7 @@
           - show logging last 50 | include -i igmp
       register: igmp_logs
       failed_when: false
+      when: not ansible_check_mode
 
     - name: Parse IGMP error conditions
       ansible.builtin.set_fact:
@@ -178,6 +192,8 @@
           {{ igmp_logs.stdout[0] |
             regex_findall('.*ERROR.*igmp.*|.*WARN.*igmp.*', ignorecase=True) }}
       when:
+        - not ansible_check_mode
+        - igmp_logs is defined
         - igmp_logs.rc == 0
         - igmp_logs.stdout[0] | length > 0
 
@@ -301,3 +317,4 @@
         hash('md5') }}.txt
     mode: "0644"
   delegate_to: localhost
+  when: not ansible_check_mode

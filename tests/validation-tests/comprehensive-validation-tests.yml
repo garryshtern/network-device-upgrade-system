@@ -292,8 +292,9 @@
         - name: Validate Platform Validation Integration
           ansible.builtin.assert:
             that:
-              - "'network-validation.yml' in (main_workflow_content.content | b64decode)"
+              - "'network-validation' in (main_workflow_content.content | b64decode)"
               - "'validation' in (main_workflow_content.content | b64decode)"
+              - "'protocol-convergence.yml' in (main_workflow_content.content | b64decode)"
             success_msg: "✓ Main workflow validation integration complete"
             fail_msg: "Main workflow validation integration missing"
 

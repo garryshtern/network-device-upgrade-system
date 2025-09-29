@@ -19,7 +19,9 @@
 
     - name: Store validation API token
       ansible.builtin.set_fact:
-        validation_api_token: "{{ validation_auth.json.token }}"
+        validation_api_token: >-
+          {{ validation_auth.json.token if validation_auth.json is defined
+             else 'mock-token-check-mode' }}
 
     - name: Verify system information
       ansible.builtin.uri:
@@ -33,10 +35,14 @@
     - name: Confirm target version is active
       ansible.builtin.assert:
         that:
-          - opengear_upgrade_state.target_version
-            in system_info_validation.json.version
-        fail_msg: >
-          "Target version not active: {{ system_info_validation.json.version }}"
+          - >-
+            ansible_check_mode or
+            (system_info_validation.json is defined and
+             opengear_upgrade_state.target_version in system_info_validation.json.version)
+        fail_msg: >-
+          Target version not active: {{ system_info_validation.json.version
+            if system_info_validation.json is defined
+            else 'check-mode-no-response' }}
 
 - name: System health validation
   block:
@@ -52,10 +58,14 @@
     - name: Verify system health
       ansible.builtin.assert:
         that:
-          - system_health_validation.json.status in ['healthy', 'ok', 'normal']
-        fail_msg: >
-          "System health check failed: {{
-            system_health_validation.json.status }}"
+          - >-
+            ansible_check_mode or
+            (system_health_validation.json is defined and
+             system_health_validation.json.status in ['healthy', 'ok', 'normal'])
+        fail_msg: >-
+          System health check failed: {{ system_health_validation.json.status
+            if system_health_validation.json is defined
+            else 'check-mode-no-response' }}
 
     - name: Check system resources
       ansible.builtin.uri:

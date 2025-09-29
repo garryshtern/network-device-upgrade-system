@@ -174,6 +174,7 @@ all:
         opengear-cm7100-legacy:
           ansible_host: 127.0.0.7
           ansible_connection: ssh
+          ansible_network_os: opengear
           platform_type: opengear
           firmware_version: "5.16.8"
           target_version: "5.18.2"
@@ -188,6 +189,7 @@ all:
         opengear-om7200-legacy:
           ansible_host: 127.0.0.8
           ansible_connection: ssh
+          ansible_network_os: opengear
           platform_type: opengear
           firmware_version: "5.14.2"
           target_version: "5.18.2"
@@ -202,6 +204,7 @@ all:
         opengear-cm8100-modern:
           ansible_host: 127.0.0.9
           ansible_connection: ssh
+          ansible_network_os: opengear
           platform_type: opengear
           firmware_version: "24.11.0"
           target_version: "25.07.0"
@@ -216,6 +219,7 @@ all:
         opengear-om2200-modern:
           ansible_host: 127.0.0.10
           ansible_connection: ssh
+          ansible_network_os: opengear
           platform_type: opengear
           firmware_version: "24.09.1"
           target_version: "25.07.0"
@@ -244,6 +248,7 @@ all:
         metamako-mc48-metawatch:
           ansible_host: 127.0.0.11
           ansible_connection: ssh
+          ansible_network_os: mos
           platform_type: metamako_mos
           firmware_version: "0.39.1"
           target_version: "0.39.11"
@@ -267,6 +272,7 @@ all:
         metamako-mc24-metamux:
           ansible_host: 127.0.0.12
           ansible_connection: ssh
+          ansible_network_os: mos
           platform_type: metamako_mos
           firmware_version: "0.39.5"
           target_version: "0.39.11"
@@ -290,6 +296,7 @@ all:
         metamako-mc12-basic:
           ansible_host: 127.0.0.13
           ansible_connection: ssh
+          ansible_network_os: mos
           platform_type: metamako_mos
           firmware_version: "0.39.8"
           target_version: "0.39.11"
@@ -307,6 +314,7 @@ all:
         metamako-mc64-switch-apps:
           ansible_host: 127.0.0.14
           ansible_connection: ssh
+          ansible_network_os: mos
           platform_type: metamako_mos
           firmware_version: "0.39.3"
           target_version: "0.39.11"

@@ -1,0 +1,90 @@
+---
+# Storage Space Check Tasks
+# Platform-agnostic storage space validation for firmware upgrades
+
+- name: Set default space requirements
+  ansible.builtin.set_fact:
+    required_space_gb: "{{ required_space_gb | default(firmware_size_gb | default(2)) }}"
+    space_check_results:
+      device: "{{ inventory_hostname }}"
+      platform: "{{ ansible_network_os }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      required_space: "{{ required_space_gb | default(2) }}"
+      available_space: 0
+      passed: false
+      warnings: []
+
+- name: Platform-specific storage assessment
+  block:
+    # Cisco NX-OS Storage Check
+    - name: Cisco NX-OS storage assessment
+      ansible.builtin.include_tasks: cisco.nxos.nxos-assessment.yml
+      when: ansible_network_os == 'cisco.nxos.nxos'
+
+    # Cisco IOS-XE Storage Check
+    - name: Cisco IOS-XE storage assessment
+      ansible.builtin.include_tasks: ios-assessment.yml
+      when: ansible_network_os == 'cisco.ios.ios'
+
+    # FortiOS Storage Check
+    - name: FortiOS storage assessment
+      ansible.builtin.include_tasks: fortios-assessment.yml
+      when:
+        - ansible_network_os == 'fortios'
+        - not ansible_check_mode
+
+    # Metamako MOS Storage Check
+    - name: Metamako MOS storage assessment
+      ansible.builtin.include_tasks: mos-assessment.yml
+      when: ansible_network_os == 'metamako.mos'
+
+    # Opengear Storage Check
+    - name: Opengear storage assessment
+      ansible.builtin.include_tasks: opengear-assessment.yml
+      when: ansible_network_os == 'opengear'
+
+    # Generic fallback for other platforms or FortiOS in check mode
+    - name: Generic storage assessment
+      ansible.builtin.include_tasks: generic-assessment.yml
+      when: >
+        ansible_network_os not in ['cisco.nxos.nxos', 'cisco.ios.ios', 'metamako.mos', 'opengear'] or
+        (ansible_network_os == 'fortios' and ansible_check_mode)
+
+  rescue:
+    - name: Storage check failed - use generic assessment
+      ansible.builtin.include_tasks: generic-assessment.yml
+
+- name: Validate storage space availability
+  ansible.builtin.assert:
+    that:
+      - space_check_results.available_space | int >= space_check_results.required_space | int
+    fail_msg: >-
+      Insufficient storage space: {{ space_check_results.available_space }}GB available,
+      {{ space_check_results.required_space }}GB required
+    success_msg: >-
+      Storage space check passed: {{ space_check_results.available_space }}GB available,
+      {{ space_check_results.required_space }}GB required
+  when: not ansible_check_mode
+
+- name: Display storage check results
+  ansible.builtin.debug:
+    msg:
+      - "=== Storage Space Check ==="
+      - "Device: {{ space_check_results.device }}"
+      - "Platform: {{ space_check_results.platform }}"
+      - "Required Space: {{ space_check_results.required_space }}GB"
+      - "Available Space: {{ space_check_results.available_space }}GB"
+      - "Status: {{ 'PASS' if space_check_results.passed else 'FAIL' }}"
+      - "=========================="
+
+- name: Record space check completion
+  ansible.builtin.include_tasks: ../../common/tasks/metrics-export.yml
+  vars:
+    metric_type: "storage_check"
+    metric_data:
+      device_id: "{{ inventory_hostname }}"
+      platform: "{{ ansible_network_os }}"
+      required_space_gb: "{{ space_check_results.required_space }}"
+      available_space_gb: "{{ space_check_results.available_space }}"
+      status: "{{ 'success' if space_check_results.passed else 'failed' }}"
+      timestamp: "{{ space_check_results.timestamp }}"

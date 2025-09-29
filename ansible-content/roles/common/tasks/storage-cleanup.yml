@@ -91,10 +91,15 @@
     - name: Validate sufficient space is available
       ansible.builtin.assert:
         that:
-          - post_cleanup_storage.free_space_gb >= minimum_free_space_gb
+          - >-
+            ansible_check_mode or
+            (post_cleanup_storage.free_space_gb is defined and
+             post_cleanup_storage.free_space_gb >= minimum_free_space_gb)
         fail_msg: |
           Insufficient storage space after cleanup:
-          Available: {{ post_cleanup_storage.free_space_gb }}GB
+          Available: {{ post_cleanup_storage.free_space_gb
+            if post_cleanup_storage.free_space_gb is defined
+            else 'check-mode-unknown' }}GB
           Required: {{ minimum_free_space_gb }}GB
 
     - name: Log storage cleanup results
@@ -105,11 +110,17 @@
           device_id: "{{ inventory_hostname }}"
           platform: "{{ ansible_network_os }}"
           cleanup_performed: "{{ cleanup_required }}"
-          space_before_gb: "{{ storage_info.free_space_gb }}"
-          space_after_gb: "{{ post_cleanup_storage.free_space_gb }}"
+          space_before_gb: >-
+            {{ storage_info.free_space_gb
+               if storage_info.free_space_gb is defined
+               else 0 }}
+          space_after_gb: >-
+            {{ post_cleanup_storage.free_space_gb
+               if post_cleanup_storage.free_space_gb is defined
+               else 0 }}
           space_freed_gb: >-
-            {{ post_cleanup_storage.free_space_gb -
-            storage_info.free_space_gb }}
+            {{ (post_cleanup_storage.free_space_gb | default(0)) -
+               (storage_info.free_space_gb | default(0)) }}
 
     - name: Display storage cleanup results
       ansible.builtin.debug:
@@ -117,15 +128,15 @@
           - "=== Storage Cleanup Complete ==="
           - "Device: {{ inventory_hostname }}"
           - "Cleanup Performed: {{ 'Yes' if cleanup_required else 'No' }}"
-          - "Space Before: {{ storage_info.free_space_gb }}GB"
-          - "Space After: {{ post_cleanup_storage.free_space_gb }}GB"
-          - >
-            "Space Freed: {{ post_cleanup_storage.free_space_gb -
-              storage_info.free_space_gb }}GB"
+          - "Space Before: {{ storage_info.free_space_gb | default('unknown') }}GB"
+          - "Space After: {{ post_cleanup_storage.free_space_gb | default('unknown') }}GB"
           - >-
-            "Status: {{ 'SUFFICIENT' if
-              post_cleanup_storage.free_space_gb >= minimum_free_space_gb
-              else 'INSUFFICIENT' }}"
+            Space Freed: {{ (post_cleanup_storage.free_space_gb | default(0)) -
+              (storage_info.free_space_gb | default(0)) }}GB
+          - >-
+            Status: {{ 'SUFFICIENT' if
+              (post_cleanup_storage.free_space_gb | default(0)) >= minimum_free_space_gb
+              else 'INSUFFICIENT' }}
           - "==============================="
   rescue:
     - name: Storage cleanup failure handling

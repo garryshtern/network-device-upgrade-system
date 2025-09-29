@@ -10,10 +10,12 @@
 
 - name: Determine primary storage location
   ansible.builtin.set_fact:
-    opengear_storage_path: >
-      {%- if '/var/mnt/storage.nvlog' in opengear_mount_check.stdout -%}
+    opengear_storage_path: >-
+      {%- if opengear_mount_check.stdout is defined and
+             '/var/mnt/storage.nvlog' in opengear_mount_check.stdout -%}
       /var/mnt/storage.nvlog
-      {%- elif '/var/mnt/storage.usb' in opengear_mount_check.stdout -%}
+      {%- elif opengear_mount_check.stdout is defined and
+               '/var/mnt/storage.usb' in opengear_mount_check.stdout -%}
       /var/mnt/storage.usb
       {%- else -%}
       /var/nvlog
@@ -45,30 +47,38 @@
   ansible.builtin.set_fact:
     opengear_total_size: >-
       {{ opengear_storage_info.stdout |
-        regex_search('{{ opengear_storage_path | regex_escape }}\\s+
-        (\\S+)', '\\1') | first }}
+         regex_search('{{ opengear_storage_path | regex_escape }}\\s+(\\S+)', '\\1') | first
+         if opengear_storage_info.stdout is defined
+         else '10G' }}
     opengear_available_size: >-
       {{ opengear_storage_info.stdout |
-        regex_search('{{ opengear_storage_path | regex_escape }}\\s+
-        \\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}
+         regex_search('{{ opengear_storage_path | regex_escape }}\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first
+         if opengear_storage_info.stdout is defined
+         else '8G' }}
     opengear_usage_percent: >-
       {{ opengear_storage_info.stdout |
-        regex_search('{{ opengear_storage_path | regex_escape }}\\s+
-        \\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}
+         regex_search('{{ opengear_storage_path | regex_escape }}\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first
+         if opengear_storage_info.stdout is defined
+         else '20' }}
 
 - name: Parse file listings
   ansible.builtin.set_fact:
-    opengear_firmware_images: "
+    opengear_firmware_images: >-
       {{ opengear_firmware_files.stdout_lines |
-        select('match', '.*(flash|raucb|img|bin)$') |
-        map('regex_replace', '.* ([^/]+\\.(flash|raucb|img|bin))$',
-        '\\1') | list }}
-      "
-    opengear_temp_file_list: "
+         select('match', '.*(flash|raucb|img|bin)$') |
+         map('regex_replace', '.* ([^/]+\\.(flash|raucb|img|bin))$', '\\1') | list
+         if opengear_firmware_files.stdout_lines is defined
+         else [] }}
+    opengear_temp_file_list: >-
       {{ opengear_temp_files.stdout_lines |
-        select('match', '.*(upgrade_|opengear_).*') |
-        map('regex_replace', '.* ([^/]+)$', '\\1') | list }}
-      "
+         select('match', '.*(upgrade_|opengear_).*') |
+         map('regex_replace', '.* ([^/]+)$', '\\1') | list
+         if opengear_temp_files.stdout_lines is defined
+         else [] }}
+
+- name: Initialize storage_info for opengear
+  ansible.builtin.set_fact:
+    storage_info: {}
 
 - name: Convert storage sizes to GB
   ansible.builtin.set_fact:

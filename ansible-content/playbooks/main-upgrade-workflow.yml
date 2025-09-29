@@ -137,11 +137,11 @@
           when: upgrade_phase in ['full', 'loading']
 
         - name: Backup current configuration
-          ansible.builtin.include_tasks: config-backup.yml
+          ansible.builtin.include_tasks: ../roles/common/tasks/config-backup.yml
           when: upgrade_phase in ['full', 'loading']
 
         - name: Load firmware image
-          ansible.builtin.include_tasks: image-loading.yml
+          ansible.builtin.include_tasks: ../roles/common/tasks/image-loading.yml
           when: upgrade_phase in ['full', 'loading']
 
         - name: Verify loaded image integrity
@@ -173,6 +173,7 @@
             ../roles/network-validation/tasks/protocol-convergence.yml
           when: >
             upgrade_phase in ['full', 'installation'] and not skip_validation
+            and ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios', 'arista.eos.eos']
 
         - name: Install firmware image
           ansible.builtin.include_tasks: image-installation.yml
@@ -198,6 +199,7 @@
           when: >
             upgrade_phase in ['full', 'installation', 'validation']
             and not skip_validation
+            and ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios', 'arista.eos.eos']
 
         - name: Update device inventory
           ansible.builtin.include_tasks: "{{ common }}/metrics-export.yml"
@@ -206,7 +208,7 @@
             upgrade_status: "success"
 
         - name: Compliance audit update
-          ansible.builtin.include_tasks: compliance-audit.yml
+          ansible.builtin.include_tasks: "{{ common }}/compliance-audit.yml"
           when: upgrade_phase in ['full', 'validation']
 
       rescue:

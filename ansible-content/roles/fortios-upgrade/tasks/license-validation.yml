@@ -2,96 +2,104 @@
 # FortiCare License Validation for FortiOS
 # Ensures valid licensing before upgrade
 
-- name: Check FortiCare license status
-  fortinet.fortios.fortios_monitor_fact:
-    vdom: "root"
-    selector: "license_status"
-  register: license_info
-
-- name: Parse license information
-  ansible.builtin.set_fact:
-    license_details:
-      status: "{{ license_info.meta.results.status }}"
-      expiry: "{{ license_info.meta.results.expiry_date | default('unknown') }}"
-      support_contract: >
-        "{{ license_info.meta.results.support | default('unknown') }}"
-
-- name: Check license expiry
-  block:
-    - name: Parse expiry date
-      ansible.builtin.set_fact:
-        license_expires: >
-          "{{ license_details.expiry | to_datetime('%Y-%m-%d') }}"
-        current_date: "{{ ansible_date_time.date | to_datetime('%Y-%m-%d') }}"
-      when: license_details.expiry != "unknown"
-
-    - name: Calculate days until expiry
-      ansible.builtin.set_fact:
-        days_until_expiry: "{{ ((license_expires - current_date).days) | int }}"
-      when: license_expires is defined
-
-    - name: Warn about license expiry
-      ansible.builtin.debug:
-        msg: |
-          WARNING: FortiCare license expires in {{ days_until_expiry }} days.
-          Ensure license is valid for upgrade support.
-      when: days_until_expiry is defined and days_until_expiry | int < 30
-
-- name: Validate support contract status
-  block:
-    - name: Check support contract validity
-      ansible.builtin.assert:
-        that:
-          - license_details.support != "expired"
-          - license_details.status in ["valid", "registered"]
-        fail_msg: "Invalid or expired FortiCare support contract"
-
-    - name: Update license status
-      ansible.builtin.set_fact:
-        fortios_upgrade_state: >
-          "{{ fortios_upgrade_state | combine({'license_status': >
-            'valid' if license_details.status in
-              ['valid', 'registered'] else 'invalid'})
-          }}"
-
-- name: Check firmware download entitlement
-  fortinet.fortios.fortios_monitor_fact:
-    vdom: "root"
-    selector: "system_firmware"
-  register: firmware_entitlement
-  failed_when: false
-
-- name: Validate firmware access
-  block:
-    - name: Check available firmware versions
-      ansible.builtin.debug:
-        msg: >
-          "Available firmware versions: >
-            {{ firmware_entitlement.meta.results.available | default([]) }}"
-      when: firmware_entitlement.meta is defined
-
-    - name: Verify target version availability
-      ansible.builtin.assert:
-        that:
-          - >
-            fortios_upgrade_state.target_version in
-              (firmware_entitlement.meta.results.available |
-              map(attribute='version') | list)
-        fail_msg: "Target firmware version not available with current license"
-      when: >
-        firmware_entitlement.meta is defined and
-          firmware_entitlement.meta.results.available is defined
-
-- name: Log license validation results
+- name: Skip FortiOS license validation in check mode
   ansible.builtin.debug:
-    msg: |-
-      FortiCare License Validation:
-      - Status: {{ license_details.status }}
-      - Support Contract: {{ license_details.support_contract }}
-      - Expiry Date: {{ license_details.expiry }}
-      - Days Until Expiry: {{ days_until_expiry | default('N/A') }}
-      - >
-        Firmware Access: >
-          {{ 'Validated' if firmware_entitlement.meta is defined
-          else 'Not Checked' }}
-      - Overall Status: {{ fortios_upgrade_state.license_status }}
+    msg: "FortiOS license validation skipped in check mode - requires API connectivity"
+  when: ansible_check_mode
+
+- name: FortiOS license validation tasks
+  block:
+    - name: Check FortiCare license status
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "license_status"
+      register: license_info
+
+    - name: Parse license information
+      ansible.builtin.set_fact:
+        license_details:
+          status: "{{ license_info.meta.results.status }}"
+          expiry: "{{ license_info.meta.results.expiry_date | default('unknown') }}"
+          support_contract: >
+            "{{ license_info.meta.results.support | default('unknown') }}"
+
+    - name: Check license expiry
+      block:
+        - name: Parse expiry date
+          ansible.builtin.set_fact:
+            license_expires: >
+              "{{ license_details.expiry | to_datetime('%Y-%m-%d') }}"
+            current_date: "{{ ansible_date_time.date | to_datetime('%Y-%m-%d') }}"
+          when: license_details.expiry != "unknown"
+
+        - name: Calculate days until expiry
+          ansible.builtin.set_fact:
+            days_until_expiry: "{{ ((license_expires - current_date).days) | int }}"
+          when: license_expires is defined
+
+        - name: Warn about license expiry
+          ansible.builtin.debug:
+            msg: |
+              WARNING: FortiCare license expires in {{ days_until_expiry }} days.
+              Ensure license is valid for upgrade support.
+          when: days_until_expiry is defined and days_until_expiry | int < 30
+
+    - name: Validate support contract status
+      block:
+        - name: Check support contract validity
+          ansible.builtin.assert:
+            that:
+              - license_details.support != "expired"
+              - license_details.status in ["valid", "registered"]
+            fail_msg: "Invalid or expired FortiCare support contract"
+
+        - name: Update license status
+          ansible.builtin.set_fact:
+            fortios_upgrade_state: >
+              "{{ fortios_upgrade_state | combine({'license_status': >
+                'valid' if license_details.status in
+                  ['valid', 'registered'] else 'invalid'})
+              }}"
+
+    - name: Check firmware download entitlement
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_firmware"
+      register: firmware_entitlement
+      failed_when: false
+
+    - name: Validate firmware access
+      block:
+        - name: Check available firmware versions
+          ansible.builtin.debug:
+            msg: >
+              "Available firmware versions: >
+                {{ firmware_entitlement.meta.results.available | default([]) }}"
+          when: firmware_entitlement.meta is defined
+
+        - name: Verify target version availability
+          ansible.builtin.assert:
+            that:
+              - >
+                fortios_upgrade_state.target_version in
+                  (firmware_entitlement.meta.results.available |
+                  map(attribute='version') | list)
+            fail_msg: "Target firmware version not available with current license"
+          when: >
+            firmware_entitlement.meta is defined and
+              firmware_entitlement.meta.results.available is defined
+
+    - name: Log license validation results
+      ansible.builtin.debug:
+        msg: |-
+          FortiCare License Validation:
+          - Status: {{ license_details.status }}
+          - Support Contract: {{ license_details.support_contract }}
+          - Expiry Date: {{ license_details.expiry }}
+          - Days Until Expiry: {{ days_until_expiry | default('N/A') }}
+          - >
+            Firmware Access: >
+              {{ 'Validated' if firmware_entitlement.meta is defined
+              else 'Not Checked' }}
+          - Overall Status: {{ fortios_upgrade_state.license_status }}
+  when: not ansible_check_mode

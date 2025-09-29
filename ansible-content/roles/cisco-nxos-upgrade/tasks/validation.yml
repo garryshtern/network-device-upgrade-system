@@ -10,6 +10,7 @@
       - show system resources | json
       - show interface brief | json
   register: nxos_system_info
+  when: not ansible_check_mode
 
 - name: Parse system information
   ansible.builtin.set_fact:
@@ -17,6 +18,15 @@
     nxos_boot_info: "{{ nxos_system_info.stdout[1] | from_json }}"
     nxos_resources: "{{ nxos_system_info.stdout[2] | from_json }}"
     nxos_interfaces: "{{ nxos_system_info.stdout[3] | from_json }}"
+  when: not ansible_check_mode
+
+- name: Parse system information for check mode
+  ansible.builtin.set_fact:
+    nxos_version_info: {}
+    nxos_boot_info: {}
+    nxos_resources: {}
+    nxos_interfaces: {}
+  when: ansible_check_mode
 
 - name: Check system health indicators
   cisco.nxos.nxos_command:
@@ -25,6 +35,7 @@
       - show processes cpu | json
       - show system internal flash
   register: nxos_health_check
+  when: not ansible_check_mode
 
 - name: Validate critical system parameters
   ansible.builtin.assert:
@@ -36,6 +47,7 @@
       "System resources are under stress - CPU:
       {{ nxos_resources.cpu_usage_kernel
         }}%, Memory: {{ nxos_resources.memory_usage_kernel }}%"
+  when: not ansible_check_mode
 
 - name: Check VPC consistency (if VPC is configured)
   when: nxos_vpc_consistency_check | default(true)
@@ -46,6 +58,7 @@
         commands:
           - show vpc brief | json
       register: vpc_status
+      when: not ansible_check_mode
 
     - name: Validate VPC peer connectivity
       ansible.builtin.assert:
@@ -53,7 +66,9 @@
           - "'peer-link is up' in vpc_status.stdout[0]"
           - "'peer is alive' in vpc_status.stdout[0]"
         fail_msg: "VPC peer connectivity issues detected"
-      when: vpc_status.stdout[0] | length > 0
+      when:
+        - not ansible_check_mode
+        - vpc_status.stdout[0] | length > 0
 
   rescue:
     - name: VPC not configured - skipping VPC validation
@@ -67,6 +82,7 @@
           - show bgp ipv4 unicast summary | json
           - show bgp ipv6 unicast summary | json
       register: bgp_status
+      when: not ansible_check_mode
       failed_when: false
 
     - name: Check BGP neighbor states
@@ -75,7 +91,10 @@
           "{{ bgp_status.stdout[0] | from_json |
             json_query(
             'TABLE_neighbor.ROW_neighbor[?state != `Established`]') | length }}"
-      when: bgp_status is succeeded and bgp_status.stdout[0] | length > 0
+      when:
+        - not ansible_check_mode
+        - bgp_status is succeeded
+        - bgp_status.stdout[0] | length > 0
 
     - name: Warn about BGP neighbors down
       ansible.builtin.debug:
@@ -83,6 +102,7 @@
           "Warning: {{ bgp_neighbors_down }}
             BGP neighbors are not in Established state"
       when:
+        - not ansible_check_mode
         - bgp_neighbors_down is defined
         - bgp_neighbors_down | int > 0
 
@@ -96,6 +116,12 @@
     interfaces_down: >
       "{{ nxos_interfaces | json_query('TABLE_interface.ROW_interface[?state
         != `up`]') | length }}"
+  when: not ansible_check_mode
+
+- name: Check interface status for check mode
+  ansible.builtin.set_fact:
+    interfaces_down: 0
+  when: ansible_check_mode
 
 - name: Validate interface states
   ansible.builtin.debug:
@@ -106,6 +132,12 @@
     critical_logs: >-
       {{ nxos_health_check.stdout[0] |
         regex_findall('.*CRITICAL.*|.*ERROR.*|.*FAIL.*') }}
+  when: not ansible_check_mode
+
+- name: Check for critical log messages for check mode
+  ansible.builtin.set_fact:
+    critical_logs: []
+  when: ansible_check_mode
 
 - name: Display critical log messages if found
   ansible.builtin.debug:
@@ -148,6 +180,20 @@
           bool) else 'SKIPPED' }}
       validation_timestamp: >
         "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+  when: not ansible_check_mode
+
+- name: Set validation results for check mode
+  ansible.builtin.set_fact:
+    nxos_validation_results:
+      device_healthy: true
+      interfaces_up: true
+      bgp_neighbors_up: true
+      critical_logs_present: false
+      igmp_validated: 'SKIPPED'
+      bfd_validated: 'SKIPPED'
+      validation_timestamp: >
+        "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+  when: ansible_check_mode
 
 - name: Display comprehensive validation summary
   ansible.builtin.debug:

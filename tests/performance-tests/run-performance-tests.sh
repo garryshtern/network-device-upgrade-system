@@ -42,15 +42,21 @@ run_performance_test() {
     log "Performance Testing: $test_name (limit: ${time_limit}s)"
 
     start_time=$(date +%s)
-    if timeout "$time_limit" "$@" >/dev/null 2>&1; then
+    # Run the command without timeout on macOS for now
+    if "$@" >/dev/null 2>&1; then
         end_time=$(date +%s)
         duration=$((end_time - start_time))
-        success "$test_name (${duration}s)"
-        return 0
+        if [[ $duration -le $time_limit ]]; then
+            success "$test_name (${duration}s)"
+            return 0
+        else
+            error "$test_name (${duration}s - exceeded ${time_limit}s limit)"
+            return 1
+        fi
     else
         end_time=$(date +%s)
         duration=$((end_time - start_time))
-        error "$test_name (${duration}s - exceeded ${time_limit}s limit)"
+        error "$test_name (${duration}s - command failed)"
         return 1
     fi
 }
@@ -95,7 +101,7 @@ main() {
 
     # Test 7: Collection requirements processing
     run_performance_test "Collection requirements processing" 10 \
-        python3 -c "import yaml; data=yaml.safe_load(open('ansible-content/collections/requirements.yml')); print(f'Loaded {len(data.get(\"collections\", []))} collections')"
+        bash -c "cd '$PROJECT_ROOT' && python3 -c \"import yaml; data=yaml.safe_load(open('ansible-content/collections/requirements.yml')); print(f'Loaded {len(data.get(\\\"collections\\\", []))} collections')\""
 
     # Summary
     echo ""
