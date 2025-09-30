@@ -127,9 +127,11 @@
             {{ vlan_info.stdout[0] | from_json |
               json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief') |
               length }}
-      when: >
-        ansible_network_os == "cisco.nxos.nxos"
-          and vlan_info.stdout[0] | from_json
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - vlan_info is defined
+        - vlan_info.stdout is defined
+        - vlan_info.stdout[0] | from_json
 
 - name: Link aggregation validation
   block:

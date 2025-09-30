@@ -15,13 +15,23 @@
     path: "{{ firmware_source_path }}/{{ firmware_version }}"
   register: firmware_file
   delegate_to: localhost
+  when: not ansible_check_mode
+
+- name: Simulate firmware file validation in check mode
+  ansible.builtin.set_fact:
+    firmware_file:
+      stat:
+        exists: true
+  when: ansible_check_mode
 
 - name: Fail if firmware file not found
   ansible.builtin.fail:
     msg: >-
       Firmware file not found:
       {{ firmware_source_path }}/{{ firmware_version }}
-  when: not firmware_file.stat.exists
+  when:
+    - not ansible_check_mode
+    - not firmware_file.stat.exists
 
 - name: Check device storage capacity
   ansible.builtin.include_tasks:

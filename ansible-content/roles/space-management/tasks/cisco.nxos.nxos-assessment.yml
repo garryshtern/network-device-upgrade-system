@@ -39,12 +39,8 @@
 
 - name: Parse free space information
   ansible.builtin.set_fact:
-    nxos_total_bytes: >
-      "{{ nxos_free_space.stdout[0] | regex_search('(\\d+)
-        bytes total', '\\1') | first | int }}"
-    nxos_free_bytes: >
-      "{{ nxos_free_space.stdout[0] | regex_search('(\\d+)
-        bytes free', '\\1') | first | int }}"
+    nxos_total_bytes: "{{ nxos_free_space.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+    nxos_free_bytes: "{{ nxos_free_space.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:
