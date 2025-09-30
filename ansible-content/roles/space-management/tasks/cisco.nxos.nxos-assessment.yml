@@ -1,6 +1,17 @@
 ---
 # Cisco NX-OS Storage Assessment
 
+- name: Initialize storage_info if not defined
+  ansible.builtin.set_fact:
+    storage_info:
+      platform: "{{ ansible_network_os | default('nxos') }}"
+      total_space_gb: 0
+      free_space_gb: 0
+      used_space_gb: 0
+      images_found: []
+      cleanup_candidates: []
+  when: storage_info is not defined
+
 - name: Get bootflash directory information
   cisco.nxos.nxos_command:
     commands:

@@ -156,9 +156,11 @@
             {{ pc.group }}: {{ pc.port_channel }} ({{ pc.protocol }}) -
             {{ pc.ports | length }} members
           {% endfor %}
-      when: >
-        ansible_network_os == "cisco.nxos.nxos" and
-          portchannel_info is defined and portchannel_info.rc == 0
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - portchannel_info is defined
+        - portchannel_info.rc is defined
+        - portchannel_info.rc == 0
 
 - name: Optics diagnostics validation
   block:

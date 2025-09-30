@@ -17,6 +17,14 @@
           password: "{{ opengear_password }}"
         validate_certs: false
       register: opengear_auth
+      when: not ansible_check_mode
+
+    - name: Simulate authentication in check mode
+      ansible.builtin.set_fact:
+        opengear_auth:
+          json:
+            token: "simulated-token-for-check-mode"
+      when: ansible_check_mode
 
     - name: Store authentication token
       ansible.builtin.set_fact:

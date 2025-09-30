@@ -1,6 +1,17 @@
 ---
 # Cisco IOS-XE Storage Assessment
 
+- name: Initialize storage_info if not defined
+  ansible.builtin.set_fact:
+    storage_info:
+      platform: "{{ ansible_network_os | default('ios') }}"
+      total_space_gb: 0
+      free_space_gb: 0
+      used_space_gb: 0
+      images_found: []
+      cleanup_candidates: []
+  when: storage_info is not defined
+
 - name: Get bootflash directory information
   cisco.ios.ios_command:
     commands:
@@ -38,12 +49,8 @@
 
 - name: Parse free space information
   ansible.builtin.set_fact:
-    ios_total_bytes: >
-      "{{ ios_free_space.stdout[0] | regex_search('(\\d+)
-        bytes total', '\\1') | first | int }}"
-    ios_free_bytes: >
-      "{{ ios_free_space.stdout[0] | regex_search('(\\d+)
-        bytes free', '\\1') | first | int }}"
+    ios_total_bytes: "{{ ios_free_space.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+    ios_free_bytes: "{{ ios_free_space.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:
