@@ -46,13 +46,13 @@
   ansible.builtin.assert:
     that:
       - >
-        (ansible_network_os == 'nxos' and
+        ((ansible_network_os == 'cisco.nxos.nxos' or ansible_network_os == 'nxos') and
           target_firmware.endswith(('.bin', '.nxos'))) or
-        (ansible_network_os == 'ios' and
+        ((ansible_network_os == 'cisco.ios.ios' or ansible_network_os == 'ios') and
           target_firmware.endswith(('.bin', '.spa', '.pkg'))) or
-        (ansible_network_os == 'fortios' and
+        ((ansible_network_os == 'fortinet.fortios.fortios' or ansible_network_os == 'fortios') and
           target_firmware.endswith('.out')) or
-        (ansible_network_os == 'mos' and
+        ((ansible_network_os == 'metamako.mos' or ansible_network_os == 'mos') and
           target_firmware.endswith(('.mos', '.tar.gz'))) or
         (ansible_network_os == 'opengear' and
           target_firmware.endswith(('.dgz', '.bin')))

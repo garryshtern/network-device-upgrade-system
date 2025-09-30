@@ -1,0 +1,6 @@
+---
+# Health Check Tasks
+# Task-only version for include_tasks compatibility
+
+- name: Include health check tasks
+  ansible.builtin.include_tasks: ../roles/common/tasks/health-check.yml

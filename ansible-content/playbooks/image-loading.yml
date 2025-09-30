@@ -6,7 +6,6 @@
 - name: Firmware Image Loading
   hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
-  # Connection method determined by inventory per platform
   vars:
     firmware_source_path: "{{ firmware_base_path }}/{{ ansible_network_os }}"
     device_storage_path: "/var/lib/firmware"

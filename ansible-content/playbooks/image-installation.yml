@@ -6,7 +6,6 @@
 - name: Phase 2 - Firmware Installation
   hosts: "{{ target_hosts | default('all') }}"
   gather_facts: false
-  # Connection method determined by inventory per platform
   vars:
     installation_start_time: "{{ ansible_date_time.iso8601 }}"
     reboot_required: true
