@@ -18,9 +18,17 @@
 - name: Simulate storage data for check mode
   ansible.builtin.set_fact:
     nxos_bootflash_dir:
-      stdout: ["       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576    Oct 01 09:00:00 2025  test-image.bin\n    2097152 bytes total\n    1048576 bytes free"]
+      stdout:
+        - |
+               4096    Oct 01 10:00:00 2025  .bootflash/
+            1048576    Oct 01 09:00:00 2025  test-image.bin
+      rc: 0
     nxos_free_space:
-      stdout: ["    2097152 bytes total\n    1048576 bytes free"]
+      stdout:
+        - |
+          2097152 bytes total
+          1048576 bytes free
+      rc: 0
   when: ansible_check_mode
 
 - name: Parse bootflash directory listing
