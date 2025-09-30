@@ -1,6 +1,10 @@
 ---
-# Health Check Tasks
-# Task-only version for include_tasks compatibility
+# Health Check Playbook
+# Standalone playbook version for direct execution
 
-- name: Include health check tasks
-  ansible.builtin.include_tasks: ../roles/common/tasks/health-check.yml
+- name: Health Check Playbook
+  hosts: "{{ target_hosts | default('all') }}"
+  gather_facts: false
+  tasks:
+    - name: Include health check tasks
+      ansible.builtin.include_tasks: ../roles/common/tasks/health-check.yml
