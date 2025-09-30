@@ -13,6 +13,8 @@
   gather_facts: false
   serial: "{{ max_concurrent | default(5) }}"
   vars:
+    # Connection override for unsupported network OS in check mode
+    ansible_connection: "{{ 'local' if (ansible_check_mode | default(false) and ansible_network_os | default('') in ['metamako.mos', 'mos']) else omit }}"
     # Workflow control variables
     # Options: full, loading, installation, validation, rollback
     upgrade_phase: "{{ phase | default('full') }}"
@@ -44,14 +46,6 @@
     validate: "../roles/image-validation/tasks"
     space: "../roles/space-management/tasks"
   pre_tasks:
-    - name: Override connection for unsupported network OS in check mode
-      ansible.builtin.set_fact:
-        ansible_connection: local
-      when:
-        - ansible_check_mode
-        - ansible_network_os is defined
-        - ansible_network_os in ['metamako.mos', 'mos']
-
     - name: Validate required variables
       ansible.builtin.assert:
         that:

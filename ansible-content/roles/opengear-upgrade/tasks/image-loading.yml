@@ -38,6 +38,15 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: storage_info
+      when: not ansible_check_mode
+
+    - name: Simulate storage check in check mode
+      ansible.builtin.set_fact:
+        storage_info:
+          json:
+            available_mb: 500
+            total_mb: 1000
+      when: ansible_check_mode
 
     - name: Validate sufficient storage space
       ansible.builtin.assert:
@@ -46,7 +55,7 @@
             storage_info.json.available_mb | int >
               (target_firmware_size_mb | default(100) | int)
         fail_msg: >-
-          Insufficient storage space: {{ storage_info.json.available_mb }}MB
+          Insufficient storage space: {{ storage_info.json.available_mb | default('unknown') }}MB
           available, {{ target_firmware_size_mb |
             default(100) }}MB required
 
@@ -97,6 +106,14 @@
               firmware_checksum is defined else omit }}
         validate_certs: false
       register: upload_session
+      when: not ansible_check_mode
+
+    - name: Simulate upload session in check mode
+      ansible.builtin.set_fact:
+        upload_session:
+          json:
+            session_id: "simulated-session-id"
+      when: ansible_check_mode
 
     - name: Push firmware file from server via API (Server-Initiated PUSH)
       ansible.builtin.uri:
@@ -113,7 +130,9 @@
         validate_certs: false
       register: secure_chunk_upload
       delegate_to: localhost
-      when: local_firmware_path is defined
+      when:
+        - local_firmware_path is defined
+        - not ansible_check_mode
       vars:
         ansible_connection: local
 
@@ -127,6 +146,8 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: upload_complete
+      when: not ansible_check_mode
+
 - name: Verify firmware upload/download
   block:
     - name: Get list of available firmware images
@@ -137,6 +158,17 @@
           Authorization: "Token {{ opengear_api_token }}"
         validate_certs: false
       register: firmware_list
+      when: not ansible_check_mode
+
+    - name: Simulate firmware list in check mode
+      ansible.builtin.set_fact:
+        firmware_list:
+          json:
+            - filename: "{{ target_firmware_filename }}"
+              status: "ready"
+              checksum: "{{ firmware_checksum.stat.checksum if firmware_checksum is defined else 'simulated-checksum' }}"
+              size_mb: 100
+      when: ansible_check_mode
 
     - name: Verify target firmware is available
       ansible.builtin.assert:
@@ -148,9 +180,7 @@
 
     - name: Extract firmware information
       ansible.builtin.set_fact:
-        uploaded_firmware_info: >
-          "{{ firmware_list.json | selectattr('filename',
-            'equalto', target_firmware_filename) | first }}"
+        uploaded_firmware_info: "{{ firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | first }}"
 
     - name: Validate firmware integrity
       ansible.builtin.assert:
