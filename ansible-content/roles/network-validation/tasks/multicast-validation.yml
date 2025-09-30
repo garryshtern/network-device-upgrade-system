@@ -147,9 +147,10 @@
           - "ping {{ item.rp_addr }} count 3 timeout 5"
       register: rp_reachability
       loop: "{{ pim_rp_info[:5] }}"  # Test first 5 RPs
-      when: >
-        ansible_network_os == "cisco.nxos.nxos" and
-          pim_rp_info is defined and pim_rp_info | length > 0
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - pim_rp_info is defined and pim_rp_info | length > 0
+        - not ansible_check_mode
       failed_when: false
 
     - name: Report RP reachability results

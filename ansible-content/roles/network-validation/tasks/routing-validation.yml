@@ -86,9 +86,10 @@
             count 3 timeout 5
       register: static_route_ping
       loop: "{{ static_routes[:5] }}"  # Test first 5 static routes
-      when: >
-        ansible_network_os == "cisco.nxos.nxos" and
-          static_routes is defined and static_routes | length > 0
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - static_routes is defined and static_routes | length > 0
+        - not ansible_check_mode
       failed_when: false
 
     - name: Validate static route reachability
@@ -132,10 +133,11 @@
         commands:
           - "ping {{ default_route_info.next_hop }} count 3 timeout 5"
       register: default_route_ping
-      when: >
-        ansible_network_os == "cisco.nxos.nxos" and
-          default_route_info.next_hop is defined and
-          default_route_info.next_hop != 'None'
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - default_route_info.next_hop is defined
+        - default_route_info.next_hop != 'None'
+        - not ansible_check_mode
       failed_when: false
 
 - name: Route table health validation
@@ -163,7 +165,9 @@
         commands:
           - show ip route summary vrf all
       register: vrf_routing_summary
-      when: ansible_network_os == "cisco.nxos.nxos"
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - not ansible_check_mode
       failed_when: false
 
 - name: OSPF validation (if configured)

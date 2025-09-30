@@ -111,7 +111,9 @@
         commands:
           - show vlan brief | json
       register: vlan_info
-      when: ansible_network_os == "cisco.nxos.nxos"
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - not ansible_check_mode
 
     - name: Validate VLAN assignments
       ansible.builtin.debug:
@@ -136,7 +138,9 @@
         commands:
           - show port-channel summary | json
       register: portchannel_info
-      when: ansible_network_os == "cisco.nxos.nxos"
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - not ansible_check_mode
       failed_when: false
 
     - name: Validate port-channel states
@@ -161,7 +165,9 @@
         commands:
           - show interface transceiver details | json
       register: transceiver_info
-      when: ansible_network_os == "cisco.nxos.nxos"
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - not ansible_check_mode
       failed_when: false
 
     - name: Check SFP/QSFP status

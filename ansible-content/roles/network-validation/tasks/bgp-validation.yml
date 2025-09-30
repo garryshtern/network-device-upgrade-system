@@ -98,6 +98,7 @@
       when:
         - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
         - bgp_neighbors is defined
+        - not ansible_check_mode
       failed_when: false
 
     - name: Get BGP neighbor advertised routes
@@ -111,6 +112,7 @@
       when:
         - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
         - bgp_neighbors is defined
+        - not ansible_check_mode
       failed_when: false
 
   rescue:
