@@ -76,9 +76,10 @@
          if opengear_temp_files.stdout_lines is defined
          else [] }}
 
-- name: Initialize storage_info for opengear
+- name: Initialize storage_info for opengear if not defined
   ansible.builtin.set_fact:
     storage_info: {}
+  when: storage_info is not defined
 
 - name: Convert storage sizes to GB
   ansible.builtin.set_fact:
