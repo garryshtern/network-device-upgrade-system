@@ -1,0 +1,66 @@
+# YAML Lint Configuration for Network Device Upgrade System
+---
+extends: default
+
+rules:
+  line-length:
+    max: 180
+    level: warning
+
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Allow --- document start markers (used in Ansible)
+  document-start:
+    present: false
+
+  # Allow multiple --- in same file (Ansible multi-doc files)
+  document-end: disable
+
+  # Don't require quotes
+  quoted-strings:
+    quote-type: any
+    required: false
+
+  # Allow inline mappings
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  # Allow inline sequences
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+
+  # Allow duplicate keys (Ansible overrides)
+  key-duplicates: disable
+
+  # Truthy values (yes/no/on/off common in Ansible)
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
+
+  # Comments
+  comments:
+    min-spaces-from-content: 1
+
+  # Empty values allowed for defaults
+  empty-values:
+    forbid-in-block-mappings: false
+    forbid-in-flow-mappings: false
+
+  # New lines
+  new-line-at-end-of-file: enable
+  new-lines:
+    type: unix
+
+# Files to ignore
+ignore: |
+  .github/
+  .venv/
+  venv/
+  node_modules/
+  build/
+  dist/
