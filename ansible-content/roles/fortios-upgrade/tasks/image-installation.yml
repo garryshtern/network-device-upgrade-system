@@ -139,6 +139,14 @@
       register: post_install_performance
       failed_when: false
 
+    - name: Log performance check failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to check system performance: {{ post_install_performance.msg | default('Unknown error') }}"
+      when:
+        - post_install_performance is defined
+        - post_install_performance.failed is defined
+        - post_install_performance.failed | bool
+
 - name: Validate security functionality
   block:
     - name: Check firewall policies status
@@ -160,12 +168,28 @@
       register: post_install_vpn
       failed_when: false
 
+    - name: Log VPN status check failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to check VPN tunnel status: {{ post_install_vpn.msg | default('Unknown error') }}"
+      when:
+        - post_install_vpn is defined
+        - post_install_vpn.failed is defined
+        - post_install_vpn.failed | bool
+
     - name: Verify routing table
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "router_info_routing_table_all"
       register: post_install_routing
       failed_when: false
+
+    - name: Log routing table check failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to verify routing table: {{ post_install_routing.msg | default('Unknown error') }}"
+      when:
+        - post_install_routing is defined
+        - post_install_routing.failed is defined
+        - post_install_routing.failed | bool
 
 - name: HA cluster specific validation
   block:
@@ -192,6 +216,14 @@
       register: post_install_ha_peers
       when: fortios_upgrade_state.ha_mode != "standalone"
       failed_when: false
+
+    - name: Log HA peer check failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to check HA peer status: {{ post_install_ha_peers.msg | default('Unknown error') }}"
+      when:
+        - post_install_ha_peers is defined
+        - post_install_ha_peers.failed is defined
+        - post_install_ha_peers.failed | bool
 
 - name: Licensing and feature validation
   block:

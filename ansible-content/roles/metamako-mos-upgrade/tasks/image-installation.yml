@@ -31,7 +31,16 @@
     - name: Set installation mode
       ansible.netcommon.cli_command:
         command: system install-mode fast-reboot
+      register: install_mode_result
       failed_when: false
+
+    - name: Log installation mode failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to set installation mode: {{ install_mode_result.msg | default('Unknown error') }}"
+      when:
+        - install_mode_result is defined
+        - install_mode_result.failed is defined
+        - install_mode_result.failed | bool
 
     - name: Execute image installation
       ansible.netcommon.cli_command:
@@ -98,6 +107,14 @@
       failed_when: false
       when: metamako_upgrade_state.metawatch_enabled
 
+    - name: Log Metawatch status check failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to check Metawatch status: {{ post_metawatch_status.msg | default('Unknown error') }}"
+      when:
+        - post_metawatch_status is defined
+        - post_metawatch_status.failed is defined
+        - post_metawatch_status.failed | bool
+
     - name: Re-check Metamux status (if equipped)
       ansible.netcommon.cli_command:
 
@@ -107,6 +124,14 @@
       register: post_metamux_status
       failed_when: false
       when: metamako_upgrade_state.metamux_enabled
+
+    - name: Log Metamux status check failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to check Metamux status: {{ post_metamux_status.msg | default('Unknown error') }}"
+      when:
+        - post_metamux_status is defined
+        - post_metamux_status.failed is defined
+        - post_metamux_status.failed | bool
 
     - name: Validate component functionality
       ansible.builtin.assert:

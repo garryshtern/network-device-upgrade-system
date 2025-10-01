@@ -14,6 +14,14 @@
       register: token_refresh
       failed_when: false
 
+    - name: Log token refresh failures
+      ansible.builtin.debug:
+        msg: "Warning: API token refresh failed: {{ token_refresh.msg | default('Unknown error') }}"
+      when:
+        - token_refresh is defined
+        - token_refresh.failed is defined
+        - token_refresh.failed | bool
+
     - name: Update API token if refreshed
       ansible.builtin.set_fact:
         opengear_api_token: >-
@@ -78,6 +86,14 @@
       register: critical_power_check
       when: opengear_upgrade_state.device_type == "smart_pdu"
       failed_when: false
+
+    - name: Log critical power check failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to check critical power outlets: {{ critical_power_check.msg | default('Unknown error') }}"
+      when:
+        - critical_power_check is defined
+        - critical_power_check.failed is defined
+        - critical_power_check.failed | bool
 
     - name: Warn about critical power outlets
       ansible.builtin.debug:

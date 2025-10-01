@@ -65,6 +65,14 @@
       delegate_to: "{{ inventory_hostname }}"
       failed_when: false
 
+    - name: Log active session check failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to check active console sessions: {{ active_sessions_check.stderr | default(active_sessions_check.stdout) | default('Unknown error') }}"
+      when:
+        - active_sessions_check is defined
+        - active_sessions_check.rc is defined
+        - active_sessions_check.rc != 0
+
     - name: Warn about active sessions
       ansible.builtin.debug:
         msg: |
