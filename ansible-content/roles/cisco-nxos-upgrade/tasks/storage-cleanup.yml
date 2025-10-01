@@ -71,6 +71,17 @@
   register: cleanup_result
   failed_when: false
 
+- name: Log cleanup failures if any occurred
+  ansible.builtin.debug:
+    msg: "Warning: Failed to remove {{ item.item }}: {{ item.msg | default('Unknown error') }}"
+  loop: "{{ cleanup_result.results | default([]) }}"
+  when:
+    - cleanup_result is defined
+    - item.failed is defined
+    - item.failed | bool
+  loop_control:
+    label: "{{ item.item | default('unknown') }}"
+
 - name: Verify storage space after cleanup
   cisco.nxos.nxos_command:
     commands:

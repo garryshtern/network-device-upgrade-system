@@ -66,6 +66,17 @@
   register: cleanup_result
   failed_when: false
 
+- name: Log firmware removal failures if any occurred
+  ansible.builtin.debug:
+    msg: "Warning: Failed to remove firmware {{ item.item }}: {{ item.msg | default('Unknown error') }}"
+  loop: "{{ cleanup_result.results | default([]) }}"
+  when:
+    - cleanup_result is defined
+    - item.failed is defined
+    - item.failed | bool
+  loop_control:
+    label: "{{ item.item | default('unknown') }}"
+
 - name: Clear FortiOS logs to free space
   fortinet.fortios.fortios_log_setting:
     vdom: "{{ vdom | default('root') }}"
@@ -73,7 +84,16 @@
       resolve_ip: "enable"
       log_invalid_packet: "disable"
   when: cleanup_needed
+  register: log_clear_result
   failed_when: false
+
+- name: Log failures if log clearing failed
+  ansible.builtin.debug:
+    msg: "Warning: Failed to clear FortiOS logs: {{ log_clear_result.msg | default('Unknown error') }}"
+  when:
+    - log_clear_result is defined
+    - log_clear_result.failed is defined
+    - log_clear_result.failed | bool
 
 - name: Execute garbage collection
   fortinet.fortios.fortios_system_global:
@@ -81,7 +101,16 @@
     system_global:
       admin_sport: "{{ ansible_port | default(443) }}"
   when: cleanup_needed
+  register: gc_result
   failed_when: false
+
+- name: Log failures if garbage collection failed
+  ansible.builtin.debug:
+    msg: "Warning: Failed to execute garbage collection: {{ gc_result.msg | default('Unknown error') }}"
+  when:
+    - gc_result is defined
+    - gc_result.failed is defined
+    - gc_result.failed | bool
 
 - name: Verify storage space after cleanup
   fortinet.fortios.fortios_configuration_fact:

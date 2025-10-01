@@ -90,6 +90,17 @@
   register: cleanup_result
   failed_when: false
 
+- name: Log cleanup failures if any occurred
+  ansible.builtin.debug:
+    msg: "Warning: Failed to remove {{ item.item }}: {{ item.stderr | default(item.stdout) }}"
+  loop: "{{ cleanup_result.results | default([]) }}"
+  when:
+    - cleanup_result is defined
+    - item.rc is defined
+    - item.rc != 0
+  loop_control:
+    label: "{{ item.item | default('unknown') }}"
+
 - name: Verify storage space after cleanup
   ansible.builtin.raw: "df -h /tmp"
   register: post_cleanup_storage
