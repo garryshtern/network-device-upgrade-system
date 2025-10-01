@@ -116,9 +116,17 @@ display_test_outputs() {
     # Read results from temp file to find failures
     if [[ -f "$JOB_RESULTS_FILE" ]]; then
         while IFS='|' read -r suite_name exit_code; do
-            if [[ -n "$suite_name" && $exit_code -ne 0 ]]; then
-                local log_file="/tmp/container-test-${suite_name// /_}.log"
-                if [[ -f "$log_file" ]]; then
+            local log_file="/tmp/container-test-${suite_name// /_}.log"
+
+            # In debug mode, show all output; otherwise only failures
+            if [[ "${DEBUG_SSH_KEY_TEST:-}" == "true" ]]; then
+                if [[ -n "$suite_name" && -f "$log_file" ]]; then
+                    echo -e "${CYAN}=== Full Test Output: $suite_name (exit code: $exit_code) ===${NC}"
+                    cat "$log_file"
+                    echo ""
+                fi
+            else
+                if [[ -n "$suite_name" && $exit_code -ne 0 && -f "$log_file" ]]; then
                     echo -e "${RED}=== Failed Test Output: $suite_name ===${NC}"
                     tail -50 "$log_file"
                     echo ""
@@ -246,18 +254,24 @@ main() {
     # Run test suites in parallel (with job limit)
     set +e  # Don't exit on test failures
 
-    # Group 1: Light tests (fast)
-    run_test_suite_async "Local Entrypoint Tests" "$SCRIPT_DIR/test-entrypoint-locally.sh"
-    run_test_suite_async "Environment Variable Tests" "$SCRIPT_DIR/test-container-env-vars.sh"
-    run_test_suite_async "SSH Key Privilege Drop Tests" "$SCRIPT_DIR/test-ssh-key-privilege-drop.sh"
+    # DEBUG MODE: Only run SSH Key Privilege Drop Tests with verbose output
+    if [[ "${DEBUG_SSH_KEY_TEST:-}" == "true" ]]; then
+        log "DEBUG MODE: Running only SSH Key Privilege Drop Tests with verbose output"
+        run_test_suite_async "SSH Key Privilege Drop Tests" "$SCRIPT_DIR/test-ssh-key-privilege-drop.sh"
+    else
+        # Group 1: Light tests (fast)
+        run_test_suite_async "Local Entrypoint Tests" "$SCRIPT_DIR/test-entrypoint-locally.sh"
+        run_test_suite_async "Environment Variable Tests" "$SCRIPT_DIR/test-container-env-vars.sh"
+        run_test_suite_async "SSH Key Privilege Drop Tests" "$SCRIPT_DIR/test-ssh-key-privilege-drop.sh"
 
-    # Wait for first group before starting heavy tests
-    sleep 2
+        # Wait for first group before starting heavy tests
+        sleep 2
 
-    # Group 2: Heavy tests (may take longer)
-    run_test_suite_async "Comprehensive Functionality Tests" "$SCRIPT_DIR/test-comprehensive-container-functionality.sh"
-    run_test_suite_async "Mock Device Interaction Tests" "$SCRIPT_DIR/test-mock-device-interactions.sh"
-    run_test_suite_async "Specific Functionality Tests" "$SCRIPT_DIR/test-specific-functionality.sh"
+        # Group 2: Heavy tests (may take longer)
+        run_test_suite_async "Comprehensive Functionality Tests" "$SCRIPT_DIR/test-comprehensive-container-functionality.sh"
+        run_test_suite_async "Mock Device Interaction Tests" "$SCRIPT_DIR/test-mock-device-interactions.sh"
+        run_test_suite_async "Specific Functionality Tests" "$SCRIPT_DIR/test-specific-functionality.sh"
+    fi
 
     # Wait for all jobs to complete
     wait_for_jobs

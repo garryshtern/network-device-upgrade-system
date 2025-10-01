@@ -40,12 +40,27 @@ run_test() {
 
     log "Testing: $test_name"
 
-    if "$@" >/dev/null 2>&1; then
-        success "$test_name"
-        return 0
+    # Enable verbose output if DEBUG_SSH_KEY_TEST is set
+    if [[ "${DEBUG_SSH_KEY_TEST:-}" == "true" ]]; then
+        echo "DEBUG: Running command: $*"
+        if "$@"; then
+            success "$test_name"
+            return 0
+        else
+            local exit_code=$?
+            error "$test_name (exit code: $exit_code)"
+            echo "DEBUG: Command failed with exit code $exit_code"
+            echo "DEBUG: Command was: $*"
+            return 1
+        fi
     else
-        error "$test_name"
-        return 1
+        if "$@" >/dev/null 2>&1; then
+            success "$test_name"
+            return 0
+        else
+            error "$test_name"
+            return 1
+        fi
     fi
 }
 
@@ -70,6 +85,17 @@ test_privilege_drop_mechanism() {
 
     # Test the entrypoint script's SSH key handling functions
     cd "$PROJECT_ROOT"
+
+    # Debug: Check if docker-entrypoint.sh exists
+    if [[ "${DEBUG_SSH_KEY_TEST:-}" == "true" ]]; then
+        echo "DEBUG: PROJECT_ROOT=$PROJECT_ROOT"
+        echo "DEBUG: Checking for docker-entrypoint.sh..."
+        ls -la docker-entrypoint.sh || echo "ERROR: docker-entrypoint.sh not found!"
+        echo "DEBUG: Extracting copy_ssh_key_as_root function..."
+        sed -n '/^copy_ssh_key_as_root()/,/^}/p' docker-entrypoint.sh
+        echo "DEBUG: Extracting setup_ssh_keys_as_root function..."
+        sed -n '/^setup_ssh_keys_as_root()/,/^}/p' docker-entrypoint.sh
+    fi
 
     # Source the entrypoint functions for testing
     source <(sed -n '/^copy_ssh_key_as_root()/,/^}/p' docker-entrypoint.sh)
