@@ -146,6 +146,14 @@
       register: post_install_errors
       failed_when: false
 
+    - name: Log error check command failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to check installation errors: {{ post_install_errors.msg | default('Unknown error') }}"
+      when:
+        - post_install_errors is defined
+        - post_install_errors.failed is defined
+        - post_install_errors.failed | bool
+
     - name: Verify interfaces are operational
       cisco.ios.ios_command:
         commands:
@@ -158,6 +166,14 @@
           - "ping {{ ansible_host }} repeat 3"
       register: connectivity_test
       failed_when: false
+
+    - name: Log connectivity test failures
+      ansible.builtin.debug:
+        msg: "Warning: Post-installation connectivity test failed: {{ connectivity_test.msg | default('Unknown error') }}"
+      when:
+        - connectivity_test is defined
+        - connectivity_test.failed is defined
+        - connectivity_test.failed | bool
 
 - name: Log installation completion
   ansible.builtin.debug:

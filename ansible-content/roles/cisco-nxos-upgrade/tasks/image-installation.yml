@@ -37,6 +37,14 @@
       register: issu_compatibility_check
       failed_when: false
 
+    - name: Log ISSU compatibility check failures
+      ansible.builtin.debug:
+        msg: "Warning: ISSU compatibility check failed: {{ issu_compatibility_check.msg | default('Unknown error') }}"
+      when:
+        - issu_compatibility_check is defined
+        - issu_compatibility_check.failed is defined
+        - issu_compatibility_check.failed | bool
+
     - name: Set ISSU capability flag
       ansible.builtin.set_fact:
         issu_supported: >
