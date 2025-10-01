@@ -292,8 +292,8 @@ setup_mock_tokens() {
     echo "mock-fortios-api-token-12345678" > "$MOCKUP_DIR/tokens/fortios-token"
     echo "mock-opengear-api-token-87654321" > "$MOCKUP_DIR/tokens/opengear-token"
 
-    # Set permissions
-    chmod 600 "$MOCKUP_DIR/tokens"/* 2>/dev/null || true
+    # Set permissions (644 for tokens - readable, 600 for keys - owner only)
+    chmod 644 "$MOCKUP_DIR/tokens"/* 2>/dev/null || true
     chmod 600 "$MOCKUP_DIR/keys"/* 2>/dev/null || true
 
     success "Mock tokens and keys setup completed"
