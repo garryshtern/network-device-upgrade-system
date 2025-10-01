@@ -149,6 +149,7 @@
       when: not ansible_check_mode
 
 - name: Verify firmware upload/download
+  when: target_firmware_filename is defined
   block:
     - name: Get list of available firmware images
       ansible.builtin.uri:

@@ -45,7 +45,11 @@
         routing_summary: "{{ nxos_routing_info.stdout[0] | from_json }}"
         routing_table: "{{ nxos_routing_info.stdout[1] | from_json }}"
         default_route: "{{ nxos_routing_info.stdout[2] | from_json }}"
-      when: ansible_network_os == "cisco.nxos.nxos"
+      when:
+        - ansible_network_os == "cisco.nxos.nxos"
+        - not ansible_check_mode
+        - nxos_routing_info is defined
+        - nxos_routing_info.stdout is defined
 
     - name: Parse route counts
       set_fact:
