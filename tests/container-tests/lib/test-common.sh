@@ -245,7 +245,7 @@ setup_mock_environment() {
         warn "sudo not available. SSH key permissions may need manual adjustment."
     fi
 
-    chmod 600 "$script_dir/mockups/tokens"/* 2>/dev/null || true
+    chmod 644 "$script_dir/mockups/tokens"/* 2>/dev/null || true
     chmod 600 "$script_dir/mockups/keys"/* 2>/dev/null || true
 
     success "Mock environment setup completed"
