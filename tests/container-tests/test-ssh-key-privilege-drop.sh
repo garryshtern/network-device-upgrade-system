@@ -153,9 +153,9 @@ test_entrypoint_integration() {
     run_test "privilege drop is called before main" \
         bash -c "grep -A5 -B5 'main \"\$@\"' docker-entrypoint.sh | grep -q 'handle_privilege_drop'"
 
-    # Test the updated setup_ssh_keys function
+    # Test the updated setup_ssh_keys function (checks for copied key references)
     run_test "setup_ssh_keys updated for copied keys" \
-        bash -c "grep -A10 'setup_ssh_keys()' docker-entrypoint.sh | grep -q 'keys already copied by root'"
+        bash -c "grep -A10 'setup_ssh_keys()' docker-entrypoint.sh | grep -q 'cisco_nxos_key\|cisco_iosxe_key\|opengear_key\|metamako_key'"
 }
 
 # Main execution

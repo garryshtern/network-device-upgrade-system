@@ -132,54 +132,21 @@ jobs:
         run: |
           cd tests/container-tests
           export CONTAINER_IMAGE="network-device-upgrade-system:test"
-          export DEBUG_SSH_KEY_TEST="true"
-          echo "=== CONTAINER FUNCTIONALITY DEBUG SESSION ==="
-          echo "Container functionality is REQUIRED - testing Docker and Podman compatibility"
-          echo "DEBUG MODE: Only running SSH Key Privilege Drop Tests with verbose output"
+          echo "=== RUNNING PARALLEL CONTAINER TESTS ==="
+          echo "Container functionality testing with parallel execution"
+          echo "Running all 6 test suites concurrently"
           echo ""
 
-          echo "=== ENVIRONMENT INFO ==="
-          echo "PWD: $(pwd)"
-          echo "USER: $(whoami)"
-          echo "CONTAINER_IMAGE: $CONTAINER_IMAGE"
-          echo "DEBUG_SSH_KEY_TEST: $DEBUG_SSH_KEY_TEST"
-          echo ""
-
-          echo "=== DOCKER INFO ==="
-          docker --version || echo "Docker command failed"
-          docker info || echo "Docker info failed"
-          echo ""
-
-          echo "=== CONTAINER IMAGES ==="
-          docker images || echo "Docker images command failed"
-          echo ""
-
-          echo "=== CHECKING FOR TEST IMAGE ==="
-          docker images | grep network-device-upgrade-system || echo "Test image not found"
-          echo ""
-
-          echo "=== FILE SYSTEM CHECK ==="
-          ls -la . || echo "Directory listing failed"
-          ls -la *.sh || echo "Shell script listing failed"
-          echo ""
-
-          echo "=== RUNNING SSH KEY PRIVILEGE DROP TEST IN DEBUG MODE ==="
-          set -x  # Enable command tracing
-
-          if bash -x ./run-all-container-tests-parallel.sh 2>&1; then
-            echo "=== CONTAINER TESTS COMPLETED SUCCESSFULLY ==="
-            set +x  # Disable command tracing
+          if ./run-all-container-tests-parallel.sh 2>&1; then
+            echo "=== ALL CONTAINER TESTS PASSED ==="
           else
             exit_code=$?
-            echo "=== CONTAINER TEST FAILED - CAPTURING ERROR STATE ==="
+            echo "=== CONTAINER TESTS FAILED ==="
             echo "Exit code: $exit_code"
-            echo "=== END CONTAINER TEST FAILURE DEBUG ==="
-            set +x  # Disable command tracing
             exit 1
           fi
         env:
           CONTAINER_IMAGE: "network-device-upgrade-system:test"
-          DEBUG_SSH_KEY_TEST: "true"
 
       - name: Upload container test results
         uses: actions/upload-artifact@v4
