@@ -13,8 +13,6 @@
   gather_facts: false
   serial: "{{ max_concurrent | default(5) }}"
   vars:
-    # Connection override for unsupported network OS in check mode
-    ansible_connection: "{{ 'local' if (ansible_check_mode | default(false) and ansible_network_os | default('') in ['metamako.mos', 'mos']) else omit }}"
     # Workflow control variables
     # Options: full, loading, installation, validation, rollback
     upgrade_phase: "{{ phase | default('full') }}"
