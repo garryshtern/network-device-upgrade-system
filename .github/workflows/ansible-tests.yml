@@ -97,7 +97,7 @@ jobs:
   container-tests:
     name: Container Functionality Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -160,10 +160,10 @@ jobs:
           ls -la *.sh || echo "Shell script listing failed"
           echo ""
 
-          echo "=== RUNNING TESTS WITH FULL DEBUG ==="
+          echo "=== RUNNING TESTS WITH PARALLEL EXECUTION ==="
           set -x  # Enable command tracing
 
-          if bash -x ./run-all-container-tests.sh 2>&1; then
+          if bash -x ./run-all-container-tests-parallel.sh 2>&1; then
             echo "=== CONTAINER TESTS COMPLETED SUCCESSFULLY ==="
             set +x  # Disable command tracing
           else
