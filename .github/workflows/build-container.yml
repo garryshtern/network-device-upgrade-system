@@ -322,7 +322,7 @@ jobs:
             echo "Testing command: dry-run"
             docker run --rm \
               -e TARGET_FIRMWARE="test-firmware.bin" \
-              -e TARGET_HOSTS="test-device" \
+              -e TARGET_HOSTS="localhost" \
               "$IMAGE_TAG" dry-run || {
               echo "❌ Command dry-run failed"
               exit 1
