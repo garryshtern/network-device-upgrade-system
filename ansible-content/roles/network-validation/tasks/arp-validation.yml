@@ -38,8 +38,12 @@
       | default([]) }}'
     arp_summary: '{{ nxos_arp_info.stdout[1] | from_json }}'
     arp_statistics: '{{ nxos_arp_info.stdout[2] | from_json }}'
-  when: >
-    ansible_network_os == "cisco.nxos.nxos" and nxos_arp_info.stdout[0] != ""
+  when:
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
+    - nxos_arp_info is defined
+    - nxos_arp_info.stdout is defined
+    - nxos_arp_info.stdout[0] != ""
 - name: Classify ARP entries
   set_fact:
     static_arp_entries: >

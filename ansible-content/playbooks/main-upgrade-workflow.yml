@@ -175,9 +175,45 @@
             upgrade_phase in ['full', 'installation'] and not skip_validation
             and ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios', 'arista.eos.eos']
 
-        - name: Install firmware image
-          ansible.builtin.include_tasks: image-installation.yml
-          when: upgrade_phase in ['full', 'installation']
+        - name: Install firmware - Cisco NX-OS
+          ansible.builtin.include_role:
+            name: cisco-nxos-upgrade
+            tasks_from: image-installation
+          when:
+            - upgrade_phase in ['full', 'installation']
+            - ansible_network_os == 'cisco.nxos.nxos'
+
+        - name: Install firmware - Cisco IOS-XE
+          ansible.builtin.include_role:
+            name: cisco-iosxe-upgrade
+            tasks_from: image-installation
+          when:
+            - upgrade_phase in ['full', 'installation']
+            - ansible_network_os == 'cisco.ios.ios'
+
+        - name: Install firmware - Metamako MOS
+          ansible.builtin.include_role:
+            name: metamako-mos-upgrade
+            tasks_from: image-installation
+          when:
+            - upgrade_phase in ['full', 'installation']
+            - ansible_network_os == 'metamako.mos'
+
+        - name: Install firmware - Opengear
+          ansible.builtin.include_role:
+            name: opengear-upgrade
+            tasks_from: image-installation
+          when:
+            - upgrade_phase in ['full', 'installation']
+            - ansible_network_os == 'opengear'
+
+        - name: Install firmware - FortiOS
+          ansible.builtin.include_role:
+            name: fortios-upgrade
+            tasks_from: image-installation
+          when:
+            - upgrade_phase in ['full', 'installation']
+            - ansible_network_os == 'fortinet.fortios.fortios'
 
       rescue:
         - name: Installation failure - trigger rollback
