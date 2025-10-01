@@ -197,8 +197,8 @@ check_docker_availability() {
         return 1
     fi
 
-    # Check for local image first
-    if docker images | grep -q "network-device-upgrade-system"; then
+    # Check for local image first (by name or by full reference)
+    if docker images | grep -q "network-device-upgrade-system" || docker image inspect "$CONTAINER_IMAGE" &>/dev/null; then
         success "Container image found locally"
         return 0
     fi
@@ -208,11 +208,17 @@ check_docker_availability() {
     if docker pull "$CONTAINER_IMAGE" 2>/dev/null; then
         success "Container image pulled successfully"
         return 0
-    else
-        error "Failed to pull container image: $CONTAINER_IMAGE"
-        error "Container functionality tests require a working container image"
-        return 1
     fi
+
+    # If pull fails, check once more if image exists (might have been built concurrently)
+    if docker image inspect "$CONTAINER_IMAGE" &>/dev/null; then
+        warn "Image pull failed but image exists locally - continuing"
+        return 0
+    fi
+
+    error "Failed to pull container image: $CONTAINER_IMAGE"
+    error "Container functionality tests require a working container image"
+    return 1
 }
 
 # Setup mock environment
