@@ -24,7 +24,17 @@
 - name: Set optimal transfer parameters
   ansible.netcommon.cli_command:
     ansible.builtin.command: system transfer-mode optimized
+  register: transfer_mode_result
   failed_when: false
+
+- name: Log transfer mode setting failures
+  ansible.builtin.debug:
+    msg: "Warning: Failed to set optimal transfer parameters: {{ transfer_mode_result.msg | default('Unknown error') }}"
+  when:
+    - transfer_mode_result is defined
+    - transfer_mode_result.failed is defined
+    - transfer_mode_result.failed | bool
+
 - name: Push firmware image from server to device (SCP)
   ansible.builtin.command:
     cmd: >

@@ -142,6 +142,15 @@
       delegate_to: "{{ inventory_hostname }}"
       failed_when: false
 
+    - name: Log existing firmware check failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to check for existing firmware: {{ existing_firmware.stderr | default(existing_firmware.stdout) | default('Unknown error') }}"
+      when:
+        - existing_firmware is defined
+        - existing_firmware.rc is defined
+        - existing_firmware.rc != 0
+        - existing_firmware.rc != 2  # rc=2 means file not found, which is expected
+
     - name: Remove existing firmware if present
       ansible.builtin.raw: |
         rm -f {{ opengear_storage_path }}/\

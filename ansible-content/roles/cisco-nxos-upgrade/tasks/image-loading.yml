@@ -113,6 +113,14 @@
   register: firmware_exists_check
   failed_when: false
 
+- name: Log firmware check failures
+  ansible.builtin.debug:
+    msg: "Warning: Failed to check existing firmware: {{ firmware_exists_check.msg | default('Unknown error') }}"
+  when:
+    - firmware_exists_check is defined
+    - firmware_exists_check.failed is defined
+    - firmware_exists_check.failed | bool
+
 - name: Set firmware exists flag
   ansible.builtin.set_fact:
     target_firmware_exists: >
@@ -132,7 +140,16 @@
       cisco.nxos.nxos_config:
         lines:
           - feature scp-server
+      register: scp_enable_result
       failed_when: false  # May already be enabled
+
+    - name: Log SCP server enable failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to enable SCP server: {{ scp_enable_result.msg | default('Unknown error') }}"
+      when:
+        - scp_enable_result is defined
+        - scp_enable_result.failed is defined
+        - scp_enable_result.failed | bool
 
     - name: Push firmware image from server to device via SCP
       cisco.nxos.nxos_file_copy:
