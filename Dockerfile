@@ -35,6 +35,11 @@ RUN addgroup -g 1000 ansible \
     && adduser -D -u 1000 -G ansible -s /bin/bash ansible \
     && echo 'ansible ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/ansible
 
+# Create runtime directory with proper permissions for ansible user
+RUN mkdir -p /var/lib/network-upgrade \
+    && chown -R ansible:ansible /var/lib/network-upgrade \
+    && chmod 755 /var/lib/network-upgrade
+
 # Set working directory
 WORKDIR /opt/network-upgrade
 
