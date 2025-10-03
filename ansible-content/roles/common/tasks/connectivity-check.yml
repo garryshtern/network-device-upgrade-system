@@ -37,94 +37,63 @@
 # Each platform uses appropriate module and command
 # All wrapped in single block with single rescue handler
 
+- name: Initialize CLI connectivity status
+  ansible.builtin.set_fact:
+    cli_connectivity: true
+
 - name: Platform-specific CLI connectivity tests
   when: not ansible_check_mode
   block:
-    - name: Cisco NX-OS CLI connectivity test
+    - name: Execute basic NX-OS command
+      cisco.nxos.nxos_command:
+        commands:
+          - show clock
+      register: nxos_cli_test
+      changed_when: false
       when:
         - ansible_network_os is defined
         - ansible_network_os == 'cisco.nxos.nxos'
-      block:
-        - name: Execute basic NX-OS command
-          cisco.nxos.nxos_command:
-            commands:
-              - show clock
-          register: nxos_cli_test
-          changed_when: false
 
-        - name: Set NX-OS CLI connectivity status
-          ansible.builtin.set_fact:
-            cli_connectivity: true
-
-    - name: Cisco IOS-XE CLI connectivity test
+    - name: Execute basic IOS-XE command
+      cisco.ios.ios_command:
+        commands:
+          - show clock
+      register: ios_cli_test
+      changed_when: false
       when:
         - ansible_network_os is defined
         - ansible_network_os == 'cisco.ios.ios'
-      block:
-        - name: Execute basic IOS-XE command
-          cisco.ios.ios_command:
-            commands:
-              - show clock
-          register: ios_cli_test
-          changed_when: false
 
-        - name: Set IOS-XE CLI connectivity status
-          ansible.builtin.set_fact:
-            cli_connectivity: true
-
-    - name: FortiOS API connectivity test
+    - name: Test FortiOS API connection
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_status"
+      register: fortios_api_test
       when:
         - ansible_network_os is defined
         - ansible_network_os == 'fortinet.fortios.fortios'
-      block:
-        - name: Test FortiOS API connection
-          fortinet.fortios.fortios_monitor_fact:
-            vdom: "root"
-            selector: "system_status"
-          register: fortios_api_test
 
-        - name: Set FortiOS API connectivity status
-          ansible.builtin.set_fact:
-            cli_connectivity: true
-
-    - name: Metamako MOS CLI connectivity test
+    - name: Execute basic Metamako command
+      ansible.netcommon.cli_command:
+        command: show system info
+      register: mos_cli_test
+      changed_when: false
       when:
         - platform_type is defined
         - platform_type == 'metamako_mos'
-      block:
-        - name: Execute basic Metamako command
-          ansible.netcommon.cli_command:
-            command: show system info
-          register: mos_cli_test
-          changed_when: false
 
-        - name: Set Metamako CLI connectivity status
-          ansible.builtin.set_fact:
-            cli_connectivity: true
-
-    - name: Opengear connectivity test
+    - name: Execute basic Opengear command
+      ansible.builtin.raw: config -g config.version
+      register: opengear_cli_test
+      changed_when: false
       when:
         - platform_type is defined
         - platform_type == 'opengear'
-      block:
-        - name: Execute basic Opengear command
-          ansible.builtin.raw: config -g config.version
-          register: opengear_cli_test
-          changed_when: false
-
-        - name: Set Opengear CLI connectivity status
-          ansible.builtin.set_fact:
-            cli_connectivity: true
 
   rescue:
     - name: CLI connectivity failed for any platform
       ansible.builtin.set_fact:
         cli_connectivity: false
-
-- name: Set CLI connectivity for check mode
-  ansible.builtin.set_fact:
-    cli_connectivity: true
-  when: ansible_check_mode
 
 - name: Set overall connectivity status
   ansible.builtin.set_fact:
