@@ -79,53 +79,29 @@
 - name: Gather BGP summary information
   when: bgp_validation.bgp_configured
   block:
-    - name: Get BGP summary (Cisco)
-      cisco.nxos.nxos_command:
-        commands:
-          - show bgp all summary
-      register: bgp_summary_raw
+    - name: Gather BGP facts using nxos_facts module
+      cisco.nxos.nxos_facts:
+        gather_subset:
+          - '!all'
+          - '!min'
+        gather_network_resources:
+          - bgp_global
+          - bgp_address_family
+      register: bgp_facts
       when:
-        - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
+        - ansible_network_os == 'cisco.nxos.nxos'
         - not ansible_check_mode
 
-    - name: Get BGP summary (Arista)
-      arista.eos.eos_command:
-        commands:
-          - show bgp summary
-      register: bgp_summary_raw
-      when:
-        - ansible_network_os == 'arista.eos.eos'
-        - not ansible_check_mode
-
-    - name: Parse BGP neighbor states
+    - name: Extract BGP configuration from facts
       ansible.builtin.set_fact:
-        bgp_neighbors: >-
-          {%- set neighbors = [] -%}
-          {%- if bgp_summary_raw is defined and bgp_summary_raw.stdout is defined -%}
-          {%- for line in bgp_summary_raw.stdout[0].split('\n') -%}
-            {%- if line | regex_search('^\d+\.\d+\.\d+\.\d+') -%}
-              {%- set parts = line.split() -%}
-              {%- if parts | length >= 6 -%}
-                {%- set neighbor = {
-                  'neighbor_ip': parts[0],
-                  'version': parts[1] | default('4'),
-                  'as_number': parts[2],
-                  'msg_received':
-                    parts[3] | int if parts[3] | regex_search('^\d+$') else 0,
-                  'msg_sent':
-                    parts[4] | int if parts[4] | regex_search('^\d+$') else 0,
-                  'state': parts[5],
-                  'uptime': parts[6] if parts | length > 6 else 'unknown',
-                  'received_prefixes':
-                    parts[7] | int if parts | length > 7
-                      and parts[7] | regex_search('^\d+$') else 0
-                } -%}
-                {%- set _ = neighbors.append(neighbor) -%}
-              {%- endif -%}
-            {%- endif -%}
-          {%- endfor -%}
-          {%- endif -%}
-          {{ neighbors }}
+        bgp_asn: "{{ ansible_net_resources.bgp_global.as_number | default('') }}"
+        bgp_router_id: "{{ ansible_net_resources.bgp_global.router_id | default('') }}"
+        bgp_neighbors: "{{ ansible_net_resources.bgp_global.neighbors | default([]) }}"
+      when:
+        - bgp_facts is defined
+        - ansible_net_resources is defined
+        - ansible_net_resources.bgp_global is defined
+        - not ansible_check_mode
 
   rescue:
     - name: Handle BGP command failure
@@ -134,36 +110,20 @@
           'errors': bgp_validation.errors + ['Failed to retrieve BGP summary: ' + (ansible_failed_result.msg | default('Unknown error'))]
         }) }}"
 
-- name: Collect detailed BGP statistics
+- name: Analyze BGP neighbor states
   when: bgp_validation.bgp_configured
   block:
-    - name: Get BGP neighbor received routes
-      cisco.nxos.nxos_command:
-        commands:
-          - >
-            "show bgp all neighbors {{ item.neighbor_ip }}
-            received-routes summary"
-      register: bgp_received_routes
-      loop: "{{ bgp_neighbors | default([]) }}"
+    - name: Count BGP neighbor states
+      ansible.builtin.set_fact:
+        bgp_neighbors_established: >-
+          {{ bgp_neighbors |
+             selectattr('neighbor_state', 'defined') |
+             selectattr('neighbor_state', 'equalto', 'Established') |
+             list | length }}
+        bgp_neighbors_total: "{{ bgp_neighbors | length }}"
       when:
-        - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
         - bgp_neighbors is defined
         - not ansible_check_mode
-      failed_when: false
-
-    - name: Get BGP neighbor advertised routes
-      cisco.nxos.nxos_command:
-        commands:
-          - >
-            "show bgp all neighbors {{ item.neighbor_ip }}
-            advertised-routes summary"
-      register: bgp_advertised_routes
-      loop: "{{ bgp_neighbors | default([]) }}"
-      when:
-        - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
-        - bgp_neighbors is defined
-        - not ansible_check_mode
-      failed_when: false
 
   rescue:
     - name: Log BGP detailed statistics failure
@@ -175,7 +135,6 @@
         }) }}"
 
 - name: Analyze BGP neighbor states
-  when: bgp_validation.bgp_configured
   ansible.builtin.set_fact:
     bgp_analysis:
       total_neighbors: "{{ bgp_neighbors | length }}"
@@ -196,10 +155,11 @@
       down_neighbors: >
         "{{ bgp_neighbors | rejectattr('state',
           'equalto', 'Established') | list }}"
-  when: bgp_neighbors is defined
+  when:
+    - bgp_validation.bgp_configured
+    - bgp_neighbors is defined
 
 - name: Store current BGP state
-  when: bgp_validation.bgp_configured
   ansible.builtin.set_fact:
     bgp_validation: "{{ bgp_validation | combine({
       'current': {
@@ -208,6 +168,8 @@
         'collection_time': lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')
       }
     }) }}"
+  when:
+    - bgp_validation.bgp_configured
 
 - name: Load baseline BGP state if available
   when: bgp_validation.bgp_configured
