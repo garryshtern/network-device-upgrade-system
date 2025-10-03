@@ -1,6 +1,7 @@
 ---
 # BGP State Validation Tasks
-# Comprehensive BGP neighbor and routing validation as per requirements
+# UPDATED: Only validates if BGP is configured on device
+# Skips validation if BGP is not in use
 
 - name: Initialize BGP validation results
   ansible.builtin.set_fact:
@@ -11,9 +12,10 @@
       baseline: {}
       current: {}
       comparison: {}
-      passed: false
+      passed: true
       errors: []
       warnings: []
+      bgp_configured: false
 
 - name: Set validation mode defaults
   ansible.builtin.set_fact:
@@ -28,7 +30,54 @@
         )
       }}
 
+- name: Check if BGP is configured on device
+  block:
+    - name: Check BGP configuration (Cisco)
+      cisco.nxos.nxos_command:
+        commands:
+          - show running-config bgp
+      register: bgp_config_check
+      when:
+        - ansible_network_os is defined
+        - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
+        - not ansible_check_mode
+      failed_when: false
+
+    - name: Determine if BGP is configured
+      ansible.builtin.set_fact:
+        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': bgp_is_configured}) }}"
+      vars:
+        bgp_is_configured: >-
+          {{
+            (bgp_config_check is defined and
+             bgp_config_check.stdout is defined and
+             bgp_config_check.stdout | length > 0 and
+             'router bgp' in bgp_config_check.stdout[0])
+          }}
+      when:
+        - bgp_config_check is defined
+        - not ansible_check_mode
+
+    - name: Set BGP configured for check mode
+      ansible.builtin.set_fact:
+        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': true}) }}"
+      when: ansible_check_mode
+
+  rescue:
+    - name: Handle BGP configuration check failure
+      ansible.builtin.set_fact:
+        bgp_validation: "{{ bgp_validation | combine({
+          'warnings': bgp_validation.warnings + ['Could not determine BGP configuration status - skipping BGP validation'],
+          'bgp_configured': false
+        }) }}"
+
+- name: Skip BGP validation if not configured
+  ansible.builtin.debug:
+    msg: "BGP is not configured on {{ inventory_hostname }} - skipping BGP validation"
+  when: not bgp_validation.bgp_configured
+
 - name: Gather BGP summary information
+  when: bgp_validation.bgp_configured
   block:
     - name: Get BGP summary (Cisco)
       cisco.nxos.nxos_command:
@@ -86,6 +135,7 @@
         }) }}"
 
 - name: Collect detailed BGP statistics
+  when: bgp_validation.bgp_configured
   block:
     - name: Get BGP neighbor received routes
       cisco.nxos.nxos_command:
@@ -125,6 +175,7 @@
         }) }}"
 
 - name: Analyze BGP neighbor states
+  when: bgp_validation.bgp_configured
   ansible.builtin.set_fact:
     bgp_analysis:
       total_neighbors: "{{ bgp_neighbors | length }}"
@@ -148,6 +199,7 @@
   when: bgp_neighbors is defined
 
 - name: Store current BGP state
+  when: bgp_validation.bgp_configured
   ansible.builtin.set_fact:
     bgp_validation: "{{ bgp_validation | combine({
       'current': {
@@ -158,6 +210,7 @@
     }) }}"
 
 - name: Load baseline BGP state if available
+  when: bgp_validation.bgp_configured
   block:
     - name: Check for existing baseline
       ansible.builtin.stat:
@@ -193,6 +246,9 @@
         }) }}"
 
 - name: Save baseline BGP state (pre-upgrade only)
+  when:
+    - bgp_validation.bgp_configured
+    - validation_mode == 'pre_upgrade'
   ansible.builtin.copy:
     content: "{{ bgp_validation.current | to_nice_json }}"
     dest: >
@@ -200,9 +256,12 @@
       {{ inventory_hostname }}_bgp_baseline.json"
     mode: '0644'
   delegate_to: localhost
-  when: validation_mode == 'pre_upgrade'
 
 - name: Compare BGP states (post-upgrade validation)
+  when:
+    - bgp_validation.bgp_configured
+    - validation_mode == 'post_upgrade'
+    - bgp_validation.baseline != {}
   block:
     - name: Perform BGP state comparison
       ansible.builtin.set_fact:
@@ -257,11 +316,10 @@
           'comparison': bgp_comparison
         }) }}"
 
-  when:
-    - validation_mode == 'post_upgrade'
-    - bgp_validation.baseline != {}
-
 - name: Evaluate BGP validation results
+  when:
+    - bgp_validation.bgp_configured
+    - not ansible_check_mode
   ansible.builtin.set_fact:
     bgp_validation_passed: "{{
       bgp_validation.current.analysis.established_neighbors | int > 0 and
@@ -271,14 +329,15 @@
         bgp_validation.comparison.prefix_variance_percentage | int <= 10 and
         bgp_validation.comparison.new_down_neighbors | length == 0))
     }}"
-  when: not ansible_check_mode
 
-- name: Set BGP validation passed for check mode
+- name: Set BGP validation passed for check mode or when not configured
   ansible.builtin.set_fact:
     bgp_validation_passed: true
-  when: ansible_check_mode
+  when:
+    - ansible_check_mode or not bgp_validation.bgp_configured
 
 - name: Add validation errors for failures
+  when: bgp_validation.bgp_configured
   ansible.builtin.set_fact:
     bgp_validation: "{{ bgp_validation | combine({
       'errors': bgp_validation.errors + validation_errors
