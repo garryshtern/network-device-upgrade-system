@@ -8,9 +8,26 @@ name: Build Container Image
 #   cancel-in-progress: true
 
 on:
+  # Enable building from any branch
+  push:
+    branches:
+      - '**'  # All branches
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/cleanup-*.yml'
+
+  pull_request:
+    branches:
+      - '**'  # All branches
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
   # TEMPORARILY DISABLED - Manual trigger only during refactoring
   # release:
   #   types: [published]
+
   workflow_dispatch:
     inputs:
       push_image:
@@ -108,16 +125,18 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' && matrix.platform.primary }},suffix=-${{ matrix.platform.suffix }}
-            type=ref,event=branch,enable=${{ github.ref == 'refs/heads/main' && matrix.platform.primary }}
-            type=ref,event=pr,enable=false
+            type=ref,event=branch,suffix=-${{ matrix.platform.suffix }}
+            type=ref,event=branch,enable=${{ matrix.platform.primary }}
+            type=ref,event=pr,suffix=-${{ matrix.platform.suffix }},prefix=pr-
+            type=ref,event=pr,enable=${{ matrix.platform.primary }},prefix=pr-
             type=semver,pattern={{version}},suffix=-${{ matrix.platform.suffix }}
             type=semver,pattern={{version}},enable=${{ matrix.platform.primary }}
             type=semver,pattern={{major}}.{{minor}},suffix=-${{ matrix.platform.suffix }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ matrix.platform.primary }}
             type=raw,value=latest-${{ matrix.platform.suffix }},enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' && matrix.platform.primary }}
-            type=sha,prefix={{branch}}-${{ matrix.platform.suffix }}-,format=short,enable=${{ github.event_name != 'workflow_dispatch' }}
+            type=sha,prefix={{branch}}-,suffix=-${{ matrix.platform.suffix }},format=short
+            type=sha,prefix={{branch}}-,format=short,enable=${{ matrix.platform.primary }}
             type=raw,value=${{ inputs.image_tag }}-${{ matrix.platform.suffix }},enable=${{ inputs.image_tag != '' }}
           labels: |
             org.opencontainers.image.title=Network Device Upgrade System
@@ -155,6 +174,24 @@ jobs:
           echo "📦 Target platforms: $PLATFORMS"
           echo "platforms=$PLATFORMS" >> $GITHUB_OUTPUT
 
+      - name: Determine push behavior
+        id: push-config
+        run: |
+          # Determine if we should push to registry
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # PRs: build only, don't push
+            echo "should_push=false" >> $GITHUB_OUTPUT
+            echo "📦 Pull Request build - will NOT push to registry"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual trigger: use input parameter
+            echo "should_push=${{ inputs.push_image }}" >> $GITHUB_OUTPUT
+            echo "🔧 Manual trigger - push=${{ inputs.push_image }}"
+          else
+            # Branch push: always push for all branches
+            echo "should_push=true" >> $GITHUB_OUTPUT
+            echo "🚀 Branch push - will push to registry"
+          fi
+
       - name: Build and push container image
         id: build
         uses: docker/build-push-action@v6
@@ -162,7 +199,7 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: ${{ steps.platforms.outputs.platforms }}
-          push: ${{ inputs.push_image }}
+          push: ${{ steps.push-config.outputs.should_push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -175,7 +212,7 @@ jobs:
             REVISION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.revision'] }}
 
       - name: Verify container metadata
-        if: inputs.push_image
+        if: steps.push-config.outputs.should_push == 'true'
         run: |
           echo "🔍 Verifying container metadata was applied correctly..."
 
@@ -220,7 +257,7 @@ jobs:
           docker inspect "$IMAGE_TAG" --format='{{range $k, $v := .Config.Labels}}{{printf "%s=%s\n" $k $v}}{{end}}' | grep "org.opencontainers.image" | sort
 
       - name: Generate container SBOM
-        if: inputs.push_image && github.event_name != 'pull_request'
+        if: steps.push-config.outputs.should_push == 'true' && github.event_name != 'pull_request'
         uses: anchore/sbom-action@v0
         with:
           image: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
@@ -228,14 +265,14 @@ jobs:
           output-file: sbom.spdx.json
 
       - name: Upload SBOM artifact
-        if: inputs.push_image && github.event_name != 'pull_request'
+        if: steps.push-config.outputs.should_push == 'true' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: container-sbom-${{ matrix.platform.suffix }}-${{ github.run_number }}
           path: sbom.spdx.json
 
       - name: Test container functionality
-        if: inputs.push_image
+        if: steps.push-config.outputs.should_push == 'true'
         run: |
           echo "Testing container functionality for ${{ matrix.platform.name }}..."
 
@@ -344,7 +381,7 @@ jobs:
           fi
 
       - name: Test podman compatibility
-        if: inputs.push_image && runner.os == 'Linux' && matrix.platform.name != 'ARM64'
+        if: steps.push-config.outputs.should_push == 'true' && runner.os == 'Linux' && matrix.platform.name != 'ARM64'
         run: |
           echo "Testing podman compatibility for ${{ matrix.platform.name }}..."
 
@@ -397,7 +434,7 @@ jobs:
           echo "✅ Podman compatibility test completed successfully"
 
       - name: Test ARM64 emulation compatibility
-        if: inputs.push_image && matrix.platform.name == 'ARM64'
+        if: steps.push-config.outputs.should_push == 'true' && matrix.platform.name == 'ARM64'
         run: |
           echo "Testing ARM64 container with emulation..."
 
@@ -424,13 +461,13 @@ jobs:
           echo "  - Target platforms: ${{ matrix.platform.platforms }}"
           echo "  - Platform suffix: ${{ matrix.platform.suffix }}"
           echo "  - Primary build: ${{ matrix.platform.primary }}"
-          echo "  - Push to registry: ${{ inputs.push_image }}"
+          echo "  - Push to registry: ${{ steps.push-config.outputs.should_push }}"
           echo "  - Image digest: ${{ steps.build.outputs.digest }}"
           echo ""
           echo "🏷️ Image Tags:"
           echo '${{ steps.meta.outputs.tags }}' | sed 's/^/  - /'
           echo ""
-          if [ "${{ inputs.push_image }}" = "true" ]; then
+          if [ "${{ steps.push-config.outputs.should_push }}" = "true" ]; then
             echo "📦 Usage Examples for ${{ matrix.platform.name }}:"
             IMAGE_TAG=$(echo '${{ steps.meta.outputs.tags }}' | head -1)
             echo "  # Docker"
