@@ -1,13 +1,15 @@
 ---
 # Common Connectivity Check Tasks
-# Tests basic device connectivity and responsiveness
+# Platform-specific basic connectivity validation
+# REDESIGNED: Uses platform-appropriate commands (not generic "show version")
 
 - name: Override connection type for FortiOS in check mode
   ansible.builtin.set_fact:
     ansible_connection: local
   when:
     - ansible_check_mode
-    - ansible_network_os == 'fortios'
+    - ansible_network_os is defined
+    - ansible_network_os == 'fortinet.fortios.fortios'
 
 - name: Test basic connectivity to device
   ansible.builtin.wait_for_connection:
@@ -31,95 +33,149 @@
     ping_result: {"changed": false, "failed": false}
   when: ansible_check_mode
 
-- name: Test SSH connectivity
-  block:
-    - name: Execute simple command to test SSH
-      ansible.builtin.raw: echo "SSH connectivity test"
-      register: ssh_test
-      changed_when: false
-      when: not ansible_check_mode
+# Platform-specific CLI tests
+# Each platform uses appropriate module and command
 
-    - name: Set SSH connectivity status
+- name: Cisco NX-OS CLI connectivity test
+  block:
+    - name: Execute basic NX-OS command
+      cisco.nxos.nxos_command:
+        commands:
+          - show clock
+      register: nxos_cli_test
+      changed_when: false
+
+    - name: Set NX-OS CLI connectivity status
       ansible.builtin.set_fact:
-        ssh_connectivity: true
+        cli_connectivity: true
 
   rescue:
-    - name: SSH connectivity failed
-      ansible.builtin.set_fact:
-        ssh_connectivity: false
-  when: ansible_connection != 'httpapi'
-
-- name: Set SSH connectivity status for httpapi
-  ansible.builtin.set_fact:
-    ssh_connectivity: true
-  when: ansible_connection == 'httpapi'
-
-- name: Network CLI connectivity test (for network devices)
-  block:
-    - name: Test network CLI connection
-      ansible.builtin.raw: show version
-      register: cli_test
-      changed_when: false
-      when:
-        - ansible_connection == 'network_cli'
-        - not ansible_check_mode
-
-    - name: Set CLI connectivity status
-      ansible.builtin.set_fact:
-        cli_connectivity: "{{ (cli_test is succeeded) if (cli_test is defined) else true }}"
-      when: ansible_connection == 'network_cli'
-
-  rescue:
-    - name: CLI connectivity failed
+    - name: NX-OS CLI connectivity failed
       ansible.builtin.set_fact:
         cli_connectivity: false
-  when: ansible_connection == 'network_cli'
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == 'cisco.nxos.nxos'
+    - not ansible_check_mode
 
-- name: Set CLI connectivity status for httpapi
+- name: Cisco IOS-XE CLI connectivity test
+  block:
+    - name: Execute basic IOS-XE command
+      cisco.ios.ios_command:
+        commands:
+          - show clock
+      register: ios_cli_test
+      changed_when: false
+
+    - name: Set IOS-XE CLI connectivity status
+      ansible.builtin.set_fact:
+        cli_connectivity: true
+
+  rescue:
+    - name: IOS-XE CLI connectivity failed
+      ansible.builtin.set_fact:
+        cli_connectivity: false
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == 'cisco.ios.ios'
+    - not ansible_check_mode
+
+- name: FortiOS API connectivity test
+  block:
+    - name: Test FortiOS API connection
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_status"
+      register: fortios_api_test
+
+    - name: Set FortiOS API connectivity status
+      ansible.builtin.set_fact:
+        cli_connectivity: true
+
+  rescue:
+    - name: FortiOS API connectivity failed
+      ansible.builtin.set_fact:
+        cli_connectivity: false
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == 'fortinet.fortios.fortios'
+    - not ansible_check_mode
+
+- name: Metamako MOS CLI connectivity test
+  block:
+    - name: Execute basic Metamako command
+      ansible.netcommon.cli_command:
+        command: show system info
+      register: mos_cli_test
+      changed_when: false
+
+    - name: Set Metamako CLI connectivity status
+      ansible.builtin.set_fact:
+        cli_connectivity: true
+
+  rescue:
+    - name: Metamako CLI connectivity failed
+      ansible.builtin.set_fact:
+        cli_connectivity: false
+  when:
+    - platform_type is defined
+    - platform_type == 'metamako_mos'
+    - not ansible_check_mode
+
+- name: Opengear connectivity test
+  block:
+    - name: Execute basic Opengear command
+      ansible.builtin.raw: config -g config.version
+      register: opengear_cli_test
+      changed_when: false
+
+    - name: Set Opengear CLI connectivity status
+      ansible.builtin.set_fact:
+        cli_connectivity: true
+
+  rescue:
+    - name: Opengear CLI connectivity failed
+      ansible.builtin.set_fact:
+        cli_connectivity: false
+  when:
+    - platform_type is defined
+    - platform_type == 'opengear'
+    - not ansible_check_mode
+
+- name: Set CLI connectivity for check mode
   ansible.builtin.set_fact:
     cli_connectivity: true
-  when: ansible_connection == 'httpapi'
+  when: ansible_check_mode
 
 - name: Set overall connectivity status
   ansible.builtin.set_fact:
     device_connectivity:
       device: "{{ inventory_hostname }}"
+      platform: "{{ platform_type | default(ansible_network_os) | default('unknown') }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       basic_connectivity: "{{ connectivity_test is succeeded }}"
       ping_successful: "{{ ping_result is succeeded }}"
-      ssh_connectivity: "{{ ssh_connectivity | default(true) }}"
-      cli_connectivity: "{{ cli_connectivity | default(true) }}"
-      overall_status: "
-      {{ (connectivity_test is succeeded) and (ping_result is succeeded) and
-         (ssh_connectivity | default(true)) and
-         (cli_connectivity | default(true)) }}
-        "
+      cli_connectivity: "{{ cli_connectivity | default(false) }}"
+      overall_status: >-
+        {{
+          (connectivity_test is succeeded) and
+          (ping_result is succeeded) and
+          (cli_connectivity | default(false))
+        }}
 
 - name: Display connectivity results
   ansible.builtin.debug:
     msg:
       - "=== Connectivity Check Results ==="
       - "Device: {{ inventory_hostname }}"
-      - >-
-        Basic Connectivity: {{ 'PASS' if
-        device_connectivity.basic_connectivity else 'FAIL' }}
-      - >-
-        Ping Test: {{ 'PASS' if
-        device_connectivity.ping_successful else 'FAIL' }}
-      - >-
-        SSH Connectivity: {{ 'PASS' if
-        device_connectivity.ssh_connectivity else 'FAIL' }}
-      - >-
-        CLI Connectivity: {{ 'PASS' if
-        device_connectivity.cli_connectivity else 'FAIL' }}
-      - >-
-        Overall Status: {{ 'CONNECTED' if
-        device_connectivity.overall_status else 'CONNECTION FAILED' }}
+      - "Platform: {{ device_connectivity.platform }}"
+      - "Basic Connectivity: {{ 'PASS' if device_connectivity.basic_connectivity else 'FAIL' }}"
+      - "Ping Test: {{ 'PASS' if device_connectivity.ping_successful else 'FAIL' }}"
+      - "CLI Connectivity: {{ 'PASS' if device_connectivity.cli_connectivity else 'FAIL' }}"
+      - "Overall Status: {{ 'CONNECTED' if device_connectivity.overall_status else 'CONNECTION FAILED' }}"
       - "================================="
 
 - name: Fail if device is not reachable
   ansible.builtin.fail:
-    msg: >
-      "Device {{ inventory_hostname }} is not
-        reachable - connectivity check failed"
+    msg: "Device {{ inventory_hostname }} is not reachable - connectivity check failed"
   when: not device_connectivity.overall_status
