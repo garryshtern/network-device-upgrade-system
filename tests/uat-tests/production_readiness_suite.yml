@@ -4,10 +4,10 @@
 
 - name: Production Readiness UAT Tests
   hosts: localhost
-  gather_facts: yes
+  gather_facts: no
   vars:
-    # Project root directory - works regardless of execution context
-    project_root: "{{ ansible_env.PWD if ansible_env.PWD.endswith('ansible-content') else (ansible_env.PWD + '/../..') if ansible_env.PWD.endswith('uat-tests') else (ansible_env.PWD + '/..') if ansible_env.PWD.endswith('tests') else ansible_env.PWD }}"
+    # Project root directory - playbook is in tests/uat-tests/
+    project_root: "{{ playbook_dir + '/../..' }}"
     ansible_content_dir: "{{ project_root }}/ansible-content"
     test_inventory_dir: "{{ project_root }}/tests/mock-inventories"
     mock_device_port_base: 2250

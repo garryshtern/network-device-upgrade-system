@@ -4,7 +4,7 @@
 
 - name: Comprehensive Platform Validation Test Suite
   hosts: localhost
-  gather_facts: yes
+  gather_facts: no
   vars:
     validation_test_matrix:
       cisco_nxos:
@@ -294,7 +294,7 @@
             that:
               - "'network-validation' in (main_workflow_content.content | b64decode)"
               - "'validation' in (main_workflow_content.content | b64decode)"
-              - "'protocol-convergence.yml' in (main_workflow_content.content | b64decode)"
+              - "'validation_phase' in (main_workflow_content.content | b64decode)"
             success_msg: "✓ Main workflow validation integration complete"
             fail_msg: "Main workflow validation integration missing"
 

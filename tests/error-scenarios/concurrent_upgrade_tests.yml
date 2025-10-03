@@ -4,7 +4,7 @@
 
 - name: Concurrent Upgrade Error Tests
   hosts: localhost
-  gather_facts: true
+  gather_facts: false
   vars:
     base_port: 2230
     concurrent_scenarios:
