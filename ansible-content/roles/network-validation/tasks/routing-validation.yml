@@ -180,29 +180,48 @@
 
 - name: Check if OSPF is configured
   block:
-    - name: Check OSPF configuration (Cisco)
-      cisco.nxos.nxos_command:
-        commands:
-          - show running-config ospf
-      register: ospf_config_check
+    - name: Gather OSPF configuration facts (NX-OS)
+      cisco.nxos.nxos_facts:
+        gather_subset:
+          - '!all'
+          - '!min'
+        gather_network_resources:
+          - ospfv2
+      register: ospf_facts
       when:
         - ansible_network_os is defined
-        - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
+        - ansible_network_os == 'cisco.nxos.nxos'
         - not ansible_check_mode
       failed_when: false
 
-    - name: Determine if OSPF is configured
+    - name: Determine if OSPF is configured (NX-OS)
       ansible.builtin.set_fact:
-        ospf_configured: >-
-          {{
-            (ospf_config_check is defined and
-             ospf_config_check.stdout is defined and
-             ospf_config_check.stdout | length > 0 and
-             'router ospf' in ospf_config_check.stdout[0])
-          }}
+        ospf_configured: "{{ ansible_net_resources.ospfv2 is defined and ansible_net_resources.ospfv2.processes is defined and ansible_net_resources.ospfv2.processes | length > 0 }}"
       when:
-        - ospf_config_check is defined
+        - ansible_network_os is defined
+        - ansible_network_os == 'cisco.nxos.nxos'
         - not ansible_check_mode
+        - ospf_facts is succeeded
+
+    - name: Check OSPF configuration (IOS-XE fallback)
+      cisco.ios.ios_command:
+        commands:
+          - show running-config | section router ospf
+      register: ios_ospf_config_check
+      when:
+        - ansible_network_os is defined
+        - ansible_network_os == 'cisco.ios.ios'
+        - not ansible_check_mode
+      failed_when: false
+
+    - name: Determine if OSPF is configured (IOS-XE)
+      ansible.builtin.set_fact:
+        ospf_configured: "{{ ios_ospf_config_check is defined and ios_ospf_config_check.stdout is defined and ios_ospf_config_check.stdout | length > 0 and 'router ospf' in ios_ospf_config_check.stdout[0] }}"
+      when:
+        - ansible_network_os is defined
+        - ansible_network_os == 'cisco.ios.ios'
+        - not ansible_check_mode
+        - ios_ospf_config_check is defined
 
     - name: Set OSPF configured for check mode
       ansible.builtin.set_fact:

@@ -1,50 +1,61 @@
 ---
 # Check ISSU Capability for Cisco NX-OS Devices
 # Determines if In-Service Software Upgrade is supported
+# REFACTORED: Uses nxos_facts instead of show commands
 
-- name: Check current system mode
-  cisco.nxos.nxos_command:
-    commands:
-      - show system mode
-  register: system_mode_output
-- name: Check installed modules for dual-sup
-  cisco.nxos.nxos_command:
-    commands:
-      - show module
-  register: module_output
-- name: Check current ISSU state
+- name: Gather hardware facts for ISSU capability check
+  cisco.nxos.nxos_facts:
+    gather_subset:
+      - hardware
+  register: hardware_facts
+  when:
+    - not ansible_check_mode
+
+- name: Check current ISSU state impact
   cisco.nxos.nxos_command:
     commands:
       - show install all impact
   register: issu_impact
   failed_when: false
-- name: Analyze dual supervisor setup
+  when:
+    - not ansible_check_mode
+
+- name: Analyze dual supervisor setup from facts
   ansible.builtin.set_fact:
-    has_dual_sup: >
-      {{ 'Supervisor' in module_output.stdout[0] and
-         module_output.stdout[0].count('Supervisor') >= 2 }}
+    has_dual_sup: "{{ ansible_net_model is search('N[679]K.*-C.*-SUP') or ansible_net_model is search('N77-C') }}"
+  when:
+    - not ansible_check_mode
+    - ansible_net_model is defined
+
+- name: Set has_dual_sup for check mode
+  ansible.builtin.set_fact:
+    has_dual_sup: false
+  when:
+    - ansible_check_mode
+
 - name: Check platform ISSU support
   ansible.builtin.set_fact:
-    platform_supports_issu: >-
-      {{
-        'N9K' in ansible_net_platform or
-        'N7K' in ansible_net_platform or
-        'N6K' in ansible_net_platform
-      }}
+    platform_supports_issu: "{{ ansible_net_platform is search('N[679]K') }}"
+  when:
+    - not ansible_check_mode
+    - ansible_net_platform is defined
+
+- name: Set platform_supports_issu for check mode
+  ansible.builtin.set_fact:
+    platform_supports_issu: false
+  when:
+    - ansible_check_mode
+
 - name: Determine ISSU compatibility
   ansible.builtin.set_fact:
-    nxos_upgrade_state: >
-      {{ nxos_upgrade_state | combine({
-        'issu_capable': (has_dual_sup and platform_supports_issu and
-                        'impact' in issu_impact.stdout[0] | default('')),
-        'upgrade_method': 'issu' if (has_dual_sup and platform_supports_issu)
-                          else 'disruptive'
-      }) }}
+    nxos_upgrade_state: "{{ nxos_upgrade_state | combine({'issu_capable': (has_dual_sup and platform_supports_issu and (issu_impact is defined and issu_impact.rc | default(1) == 0)), 'upgrade_method': 'issu' if (has_dual_sup and platform_supports_issu) else 'disruptive'}) }}"
+
 - name: Display ISSU capability assessment
   ansible.builtin.debug:
     msg: |
       ISSU Capability Assessment:
-      - Platform: {{ ansible_net_platform }}
+      - Platform: {{ ansible_net_platform | default('unknown') }}
+      - Model: {{ ansible_net_model | default('unknown') }}
       - Dual Supervisors: {{ has_dual_sup }}
       - Platform ISSU Support: {{ platform_supports_issu }}
       - ISSU Capable: {{ nxos_upgrade_state.issu_capable }}
