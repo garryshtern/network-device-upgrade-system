@@ -12,7 +12,7 @@
   ansible.builtin.set_fact:
     running_image_file: >-
       {{ running_image_result.stdout[0] |
-        regex_search('bootflash:///(.+\\.bin)', '\\1') | first }}
+        regex_search('bootflash:///(.+\\.(bin|img))', '\\1') | first }}
   when: running_image_result.stdout[0] is defined
 
 - name: Get bootflash directory listing
@@ -26,11 +26,11 @@
     bootflash_images: >
       "{{ bootflash_dir.stdout[0] |
         regex_findall(
-        '\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+\\.bin)') }}"
+        '\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(bin|img))') }}"
     bootflash_files: >
       "{{ bootflash_dir.stdout[0] |
         regex_findall(
-        '\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+(.+)') }}"
+        '\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+)') }}"
 
 - name: Calculate current storage usage
   ansible.builtin.set_fact:
