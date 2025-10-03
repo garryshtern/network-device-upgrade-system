@@ -1,8 +1,11 @@
 ---
 # Interface State Validation
 # Validates interface operational status, error counters, and optics
+# UPDATED: Removed mgt0 checks (not connected on most devices)
+# UPDATED: Removed admin_state parsing (not available in NXOS commands)
+# UPDATED: Removed generic device support
 
-- name: Gather interface information
+- name: Gather interface information (NX-OS)
   block:
     - name: Get interface status (NX-OS)
       cisco.nxos.nxos_command:
@@ -11,10 +14,13 @@
           - show interface status | json
           - show interface counters errors | json
       register: nxos_interface_info
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
 
+- name: Gather interface information (IOS-XE)
+  block:
     - name: Get interface status (IOS-XE)
       cisco.ios.ios_command:
         commands:
@@ -22,21 +28,10 @@
           - show interfaces summary
           - show interfaces counters errors
       register: ios_interface_info
-      when:
-        - ansible_network_os == "cisco.ios.ios"
-        - not ansible_check_mode
-
-    - name: Get interface status (Generic)
-      ansible.netcommon.cli_command:
-        command: "{{ item }}"
-      register: generic_interface_info
-      loop:
-        - "show interface brief"
-        - "show interface status"
-      when:
-        - ansible_network_os not in ["cisco.nxos.nxos", "cisco.ios.ios"]
-        - not ansible_check_mode
-      failed_when: false
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == "cisco.ios.ios"
+    - not ansible_check_mode
 
 - name: Parse interface status for NX-OS
   block:
@@ -45,10 +40,6 @@
         interface_brief: "{{ nxos_interface_info.stdout[0] | from_json }}"
         interface_status: "{{ nxos_interface_info.stdout[1] | from_json }}"
         interface_errors: "{{ nxos_interface_info.stdout[2] | from_json }}"
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - nxos_interface_info is defined
-        - not ansible_check_mode
 
     - name: Parse interface states
       ansible.builtin.set_fact:
@@ -58,35 +49,21 @@
         down_interfaces: >-
           {{ interface_brief.TABLE_interface.ROW_interface |
             selectattr('state', 'equalto', 'down') | list }}
-        admin_down_interfaces: >-
-          {{ interface_brief.TABLE_interface.ROW_interface |
-            selectattr('admin_state', 'equalto', 'down') | list }}
-      when: >
-        ansible_network_os == "cisco.nxos.nxos" and
-          interface_brief.TABLE_interface is defined and
-          not ansible_check_mode
+      when:
+        - interface_brief.TABLE_interface is defined
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == "cisco.nxos.nxos"
+    - nxos_interface_info is defined
+    - not ansible_check_mode
 
-- name: Interface operational validation
+- name: Interface operational validation (NX-OS)
   block:
     - name: Check critical interface states
       ansible.builtin.assert:
         that:
           - up_interfaces | default([]) | length > 0
         fail_msg: "No interfaces are in 'up' state"
-      when: not ansible_check_mode
-
-    - name: Validate management interface is up
-      ansible.builtin.assert:
-        that:
-          - >
-            interface_brief.TABLE_interface.ROW_interface |
-              selectattr('interface', 'match', 'mgmt.*') |
-              selectattr('state', 'equalto', 'up') | list | length > 0
-        fail_msg: "Management interface is not operational"
-      when: >
-        ansible_network_os == "cisco.nxos.nxos" and
-          interface_brief.TABLE_interface is defined
-      failed_when: false
 
     - name: Check for interface errors
       ansible.builtin.debug:
@@ -100,20 +77,20 @@
               intf.in_error }}, Out Errors: {{ intf.out_error }}
           {% endif %}
           {% endfor %}
-      when: >
-        ansible_network_os == "cisco.nxos.nxos" and
-          interface_errors.TABLE_interface is defined
+      when:
+        - interface_errors.TABLE_interface is defined
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
 
-- name: VLAN assignment validation
+- name: VLAN assignment validation (NX-OS)
   block:
     - name: Get VLAN information
       cisco.nxos.nxos_command:
         commands:
           - show vlan brief | json
       register: vlan_info
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
 
     - name: Validate VLAN assignments
       ansible.builtin.debug:
@@ -128,21 +105,21 @@
               json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief') |
               length }}
       when:
-        - ansible_network_os == "cisco.nxos.nxos"
         - vlan_info is defined
         - vlan_info.stdout is defined
         - vlan_info.stdout[0] | from_json
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
 
-- name: Link aggregation validation
+- name: Link aggregation validation (NX-OS)
   block:
     - name: Check port-channel status
       cisco.nxos.nxos_command:
         commands:
           - show port-channel summary | json
       register: portchannel_info
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
       failed_when: false
 
     - name: Validate port-channel states
@@ -157,23 +134,22 @@
             {{ pc.ports | length }} members
           {% endfor %}
       when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
         - portchannel_info is defined
         - portchannel_info is not skipped
         - portchannel_info.stdout is defined
         - portchannel_info.stdout | length > 0
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
 
-- name: Optics diagnostics validation
+- name: Optics diagnostics validation (NX-OS)
   block:
     - name: Get transceiver information
       cisco.nxos.nxos_command:
         commands:
           - show interface transceiver details | json
       register: transceiver_info
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
       failed_when: false
 
     - name: Check SFP/QSFP status
@@ -189,11 +165,13 @@
           {% endif %}
           {% endfor %}
       when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
         - transceiver_info is defined
         - transceiver_info is not skipped
         - transceiver_info.stdout is defined
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
 
 - name: Store interface baseline (for comparison)
   ansible.builtin.set_fact:
@@ -205,11 +183,10 @@
         {{ up_interfaces | length }}
       down_interfaces: >-
         {{ down_interfaces | length }}
-      admin_down: >-
-        {{ admin_down_interfaces | length }}
       interface_list: >-
         {{ up_interfaces | map(attribute='interface') | list }}
-  when: not ansible_check_mode
+  when:
+    - not ansible_check_mode
 
 - name: Store interface baseline for check mode
   ansible.builtin.set_fact:
@@ -218,9 +195,9 @@
       total_interfaces: 0
       up_interfaces: 0
       down_interfaces: 0
-      admin_down: 0
       interface_list: []
-  when: ansible_check_mode
+  when:
+    - ansible_check_mode
 
 - name: Interface validation summary
   ansible.builtin.debug:
@@ -229,7 +206,6 @@
       - Total Interfaces: {{ interface_baseline.total_interfaces }}
       - Operational (Up): {{ interface_baseline.up_interfaces }}
       - Down: {{ interface_baseline.down_interfaces }}
-      - Admin Down: {{ interface_baseline.admin_down }}
       - >-
         Critical Interfaces Up: {{ 'PASS' if
           interface_baseline.up_interfaces | int > 0 else 'FAIL' }}
