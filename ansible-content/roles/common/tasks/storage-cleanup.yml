@@ -43,7 +43,10 @@
           vars:
             target_free_space: "{{ minimum_free_space_gb }}"
             preserve_running_image: "{{ preserve_current_image }}"
-          when: ansible_network_os == 'nxos' and cleanup_required
+          when:
+            - cleanup_required
+            - ansible_network_os is defined
+            - ansible_network_os == 'cisco.nxos.nxos'
 
         # Cisco IOS-XE Storage Cleanup
         - name: Cisco IOS-XE storage cleanup
@@ -53,7 +56,10 @@
           vars:
             target_free_space: "{{ minimum_free_space_gb }}"
             preserve_running_image: "{{ preserve_current_image }}"
-          when: ansible_network_os == 'ios' and cleanup_required
+          when:
+            - cleanup_required
+            - ansible_network_os is defined
+            - ansible_network_os == 'cisco.ios.ios'
 
         # Metamako MOS Storage Cleanup
         - name: Metamako MOS storage cleanup
@@ -62,7 +68,10 @@
             tasks_from: storage-cleanup
           vars:
             target_free_space: "{{ minimum_free_space_gb }}"
-          when: ansible_network_os == 'mos' and cleanup_required
+          when:
+            - cleanup_required
+            - platform_type is defined
+            - platform_type == 'metamako_mos'
 
         # Opengear Storage Cleanup
         - name: Opengear storage cleanup
@@ -71,7 +80,10 @@
             tasks_from: storage-cleanup
           vars:
             target_free_space: "{{ minimum_free_space_gb }}"
-          when: ansible_network_os == 'opengear' and cleanup_required
+          when:
+            - cleanup_required
+            - platform_type is defined
+            - platform_type == 'opengear'
 
         # FortiOS Storage Cleanup
         - name: FortiOS storage cleanup
@@ -80,7 +92,10 @@
             tasks_from: storage-cleanup
           vars:
             target_free_space: "{{ minimum_free_space_gb }}"
-          when: ansible_network_os == 'fortios' and cleanup_required
+          when:
+            - cleanup_required
+            - ansible_network_os is defined
+            - ansible_network_os == 'fortinet.fortios.fortios'
 
     - name: Verify storage space after cleanup
       ansible.builtin.include_role:
@@ -108,7 +123,7 @@
         metric_type: "storage_cleanup"
         metric_data:
           device_id: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform_type | default(ansible_network_os) | default('unknown') }}"
           cleanup_performed: "{{ cleanup_required }}"
           space_before_gb: >-
             {{ storage_info.free_space_gb
