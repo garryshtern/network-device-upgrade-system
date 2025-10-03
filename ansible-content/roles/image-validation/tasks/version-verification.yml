@@ -9,22 +9,17 @@
         '.*[-_]([0-9]+[0-9\\.\\-a-zA-Z]*)\\.(bin|nxos|spa|pkg|out|mos|tar\\.gz|dgz)$',
         '\\1') }}"
 
-- name: Gather device facts to get current version
-  ansible.builtin.gather_facts:
-    gather_subset: min
-  when: ansible_connection == 'network_cli'
-
-- name: Get current firmware version (Cisco NX-OS)
-  cisco.nxos.nxos_command:
-    commands:
-      - show version | json
+- name: Gather device facts to get current version (Cisco NX-OS)
+  cisco.nxos.nxos_facts:
+    gather_subset:
+      - hardware
   register: nxos_version_output
   when: ansible_network_os == 'nxos'
 
-- name: Get current firmware version (Cisco IOS-XE)
-  cisco.ios.ios_command:
-    commands:
-      - show version
+- name: Gather device facts to get current version (Cisco IOS-XE)
+  cisco.ios.ios_facts:
+    gather_subset:
+      - hardware
   register: ios_version_output
   when: ansible_network_os == 'ios'
 
@@ -50,12 +45,9 @@
   ansible.builtin.set_fact:
     actual_firmware_version: |-
       {%- if ansible_network_os == 'nxos' -%}
-        {{ (nxos_version_output.stdout[0] | from_json).sys_ver_str |
-        default('unknown') }}
+        {{ ansible_net_version | default('unknown') }}
       {%- elif ansible_network_os == 'ios' -%}
-        {{ ios_version_output.stdout[0] |
-        regex_search('Cisco IOS XE Software, Version ([0-9\\.]+)', '\\1') |
-        first | default('unknown') }}
+        {{ ansible_net_version | default('unknown') }}
       {%- elif ansible_network_os == 'fortios' -%}
         {{ fortios_version_output.meta.results.version | default('unknown') }}
       {%- elif ansible_network_os == 'opengear' -%}

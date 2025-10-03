@@ -6,20 +6,32 @@
 # UPDATED: Removed generic device support
 
 - name: Gather interface information (NX-OS)
-  block:
-    - name: Get interface status (NX-OS)
-      cisco.nxos.nxos_command:
-        commands:
-          - show interface brief | json
-          - show interface status | json
-          - show interface counters errors | json
-      register: nxos_interface_info
   when:
     - ansible_network_os is defined
     - ansible_network_os == "cisco.nxos.nxos"
     - not ansible_check_mode
+  block:
+    - name: Get interface configuration using nxos_facts
+      cisco.nxos.nxos_facts:
+        gather_subset:
+          - '!all'
+          - '!min'
+        gather_network_resources:
+          - interfaces
+          - l3_interfaces
+      register: nxos_interface_facts
+
+    - name: Get interface operational state (error counters)
+      cisco.nxos.nxos_command:
+        commands:
+          - show interface counters errors | json
+      register: nxos_interface_errors
 
 - name: Gather interface information (IOS-XE)
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == "cisco.ios.ios"
+    - not ansible_check_mode
   block:
     - name: Get interface status (IOS-XE)
       cisco.ios.ios_command:
@@ -28,36 +40,35 @@
           - show interfaces summary
           - show interfaces counters errors
       register: ios_interface_info
-  when:
-    - ansible_network_os is defined
-    - ansible_network_os == "cisco.ios.ios"
-    - not ansible_check_mode
 
 - name: Parse interface status for NX-OS
-  block:
-    - name: Extract NX-OS interface data
-      ansible.builtin.set_fact:
-        interface_brief: "{{ nxos_interface_info.stdout[0] | from_json }}"
-        interface_status: "{{ nxos_interface_info.stdout[1] | from_json }}"
-        interface_errors: "{{ nxos_interface_info.stdout[2] | from_json }}"
-
-    - name: Parse interface states
-      ansible.builtin.set_fact:
-        up_interfaces: >-
-          {{ interface_brief.TABLE_interface.ROW_interface |
-            selectattr('state', 'equalto', 'up') | list }}
-        down_interfaces: >-
-          {{ interface_brief.TABLE_interface.ROW_interface |
-            selectattr('state', 'equalto', 'down') | list }}
-      when:
-        - interface_brief.TABLE_interface is defined
   when:
     - ansible_network_os is defined
     - ansible_network_os == "cisco.nxos.nxos"
-    - nxos_interface_info is defined
+    - nxos_interface_facts is defined
     - not ansible_check_mode
+  block:
+    - name: Extract NX-OS interface data from facts
+      ansible.builtin.set_fact:
+        all_interfaces: "{{ ansible_net_resources.interfaces | default([]) }}"
+        interface_errors: "{{ nxos_interface_errors.stdout[0] | from_json }}"
+
+    - name: Parse interface states from facts
+      ansible.builtin.set_fact:
+        up_interfaces: >-
+          {{ all_interfaces |
+            selectattr('enabled', 'equalto', true) | list }}
+        down_interfaces: >-
+          {{ all_interfaces |
+            selectattr('enabled', 'equalto', false) | list }}
+      when:
+        - all_interfaces | length > 0
 
 - name: Interface operational validation (NX-OS)
+  when:
+    - ansible_network_os is defined
+    - ansible_network_os == "cisco.nxos.nxos"
+    - not ansible_check_mode
   block:
     - name: Check critical interface states
       ansible.builtin.assert:
@@ -79,71 +90,66 @@
           {% endfor %}
       when:
         - interface_errors.TABLE_interface is defined
+
+- name: VLAN assignment validation (NX-OS)
   when:
     - ansible_network_os is defined
     - ansible_network_os == "cisco.nxos.nxos"
     - not ansible_check_mode
-
-- name: VLAN assignment validation (NX-OS)
   block:
-    - name: Get VLAN information
-      cisco.nxos.nxos_command:
-        commands:
-          - show vlan brief | json
-      register: vlan_info
+    - name: Get VLAN configuration using nxos_facts
+      cisco.nxos.nxos_facts:
+        gather_subset:
+          - '!all'
+          - '!min'
+        gather_network_resources:
+          - vlans
+      register: vlan_facts
 
     - name: Validate VLAN assignments
       ansible.builtin.debug:
         msg: |
           VLAN Summary:
-          Active VLANs:
-            {{ vlan_info.stdout[0] | from_json |
-              json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief[?
-                vlanshowbr_vlanstate==`active`]') | length }}
-          Total VLANs: >
-            {{ vlan_info.stdout[0] | from_json |
-              json_query('TABLE_vlanbriefxbrief.ROW_vlanbriefxbrief') |
-              length }}
+          Active VLANs: {{ ansible_net_resources.vlans |
+            selectattr('enabled', 'equalto', true) | list | length }}
+          Total VLANs: {{ ansible_net_resources.vlans | length }}
       when:
-        - vlan_info is defined
-        - vlan_info.stdout is defined
-        - vlan_info.stdout[0] | from_json
+        - vlan_facts is defined
+        - ansible_net_resources.vlans is defined
+
+- name: Link aggregation validation (NX-OS)
   when:
     - ansible_network_os is defined
     - ansible_network_os == "cisco.nxos.nxos"
     - not ansible_check_mode
-
-- name: Link aggregation validation (NX-OS)
   block:
-    - name: Check port-channel status
-      cisco.nxos.nxos_command:
-        commands:
-          - show port-channel summary | json
-      register: portchannel_info
+    - name: Get port-channel configuration using nxos_facts
+      cisco.nxos.nxos_facts:
+        gather_subset:
+          - '!all'
+          - '!min'
+        gather_network_resources:
+          - lag_interfaces
+      register: portchannel_facts
       failed_when: false
 
     - name: Validate port-channel states
       ansible.builtin.debug:
         msg: |
           Port-Channel Summary:
-          {% for pc in portchannel_info.stdout[0] | from_json |
-            json_query('TABLE_channel.ROW_channel') |
-            default([]) %}
+          {% for pc in ansible_net_resources.lag_interfaces | default([]) %}
           - >-
-            {{ pc.group }}: {{ pc.port_channel }} ({{ pc.protocol }}) -
-            {{ pc.ports | length }} members
+            {{ pc.name }}: {{ pc.members | length }} members
           {% endfor %}
       when:
-        - portchannel_info is defined
-        - portchannel_info is not skipped
-        - portchannel_info.stdout is defined
-        - portchannel_info.stdout | length > 0
+        - portchannel_facts is defined
+        - ansible_net_resources.lag_interfaces is defined
+
+- name: Optics diagnostics validation (NX-OS)
   when:
     - ansible_network_os is defined
     - ansible_network_os == "cisco.nxos.nxos"
     - not ansible_check_mode
-
-- name: Optics diagnostics validation (NX-OS)
   block:
     - name: Get transceiver information
       cisco.nxos.nxos_command:
@@ -168,23 +174,15 @@
         - transceiver_info is defined
         - transceiver_info is not skipped
         - transceiver_info.stdout is defined
-  when:
-    - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
-    - not ansible_check_mode
 
 - name: Store interface baseline (for comparison)
   ansible.builtin.set_fact:
     interface_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      total_interfaces: >-
-        {{ interface_brief.TABLE_interface.ROW_interface | length }}
-      up_interfaces: >-
-        {{ up_interfaces | length }}
-      down_interfaces: >-
-        {{ down_interfaces | length }}
-      interface_list: >-
-        {{ up_interfaces | map(attribute='interface') | list }}
+      total_interfaces: "{{ all_interfaces | length }}"
+      up_interfaces: "{{ up_interfaces | length }}"
+      down_interfaces: "{{ down_interfaces | length }}"
+      interface_list: "{{ up_interfaces | map(attribute='name') | list }}"
   when:
     - not ansible_check_mode
 
