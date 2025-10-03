@@ -8,8 +8,9 @@ name: Build Container Image
 #   cancel-in-progress: true
 
 on:
-  release:
-    types: [published]
+  # TEMPORARILY DISABLED - Manual trigger only during refactoring
+  # release:
+  #   types: [published]
   workflow_dispatch:
     inputs:
       push_image:
