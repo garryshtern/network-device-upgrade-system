@@ -1,16 +1,11 @@
 ---
 # Storage Assessment Tasks
-# Cross-platform storage space assessment
-
-- name: Gather device platform information
-  ansible.builtin.setup:
-    gather_subset: ["!all", "!min", "network"]
-  when: ansible_network_os is not defined
+# Platform-specific storage space assessment for supported platforms only
 
 - name: Initialize storage assessment variables
   ansible.builtin.set_fact:
     storage_info:
-      platform: "{{ ansible_network_os | default('unknown') }}"
+      platform: "{{ platform_type if (platform_type is defined and platform_type in ['opengear', 'metamako_mos']) else ansible_network_os }}"
       total_space_gb: 0
       free_space_gb: 0
       used_space_gb: 0
@@ -19,11 +14,6 @@
 
 - name: Platform-specific storage assessment
   ansible.builtin.include_tasks: "{{ storage_info.platform }}-assessment.yml"
-  when: storage_info.platform != 'unknown'
-
-- name: Generic storage assessment fallback
-  ansible.builtin.include_tasks: generic-assessment.yml
-  when: storage_info.platform == 'unknown'
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:

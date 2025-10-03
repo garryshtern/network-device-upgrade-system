@@ -7,6 +7,19 @@
     commands:
       - show version | include image
   register: running_image_result
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+    - ansible_connection is defined
+    - ansible_connection != 'local'
+
+- name: Simulate running image for check mode or localhost
+  ansible.builtin.set_fact:
+    running_image_result:
+      stdout:
+        - "system image file is: bootflash:///test-image.bin"
+      rc: 0
+  when: ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined and ansible_connection == 'local')
 
 - name: Parse running image filename
   ansible.builtin.set_fact:
@@ -20,6 +33,19 @@
     commands:
       - dir bootflash:
   register: bootflash_dir
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+    - ansible_connection is defined
+    - ansible_connection != 'local'
+
+- name: Simulate bootflash directory for check mode or localhost
+  ansible.builtin.set_fact:
+    bootflash_dir:
+      stdout:
+        - "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576    Oct 01 09:00:00 2025  test-image.bin"
+      rc: 0
+  when: ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined and ansible_connection == 'local')
 
 - name: Parse bootflash directory for image files
   ansible.builtin.set_fact:
@@ -43,6 +69,19 @@
     commands:
       - "dir bootflash: | include free"
   register: free_space_result
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+    - ansible_connection is defined
+    - ansible_connection != 'local'
+
+- name: Simulate free space for check mode or localhost
+  ansible.builtin.set_fact:
+    free_space_result:
+      stdout:
+        - "2097152 bytes total\n1048576 bytes free"
+      rc: 0
+  when: ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined and ansible_connection == 'local')
 
 - name: Parse free space information
   ansible.builtin.set_fact:

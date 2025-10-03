@@ -17,16 +17,24 @@
     commands:
       - "dir bootflash:"
   register: nxos_bootflash_dir
-  when: not ansible_check_mode
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+    - ansible_connection is defined
+    - ansible_connection != 'local'
 
 - name: Get free space information
   cisco.nxos.nxos_command:
     commands:
       - "dir bootflash: | include free"
   register: nxos_free_space
-  when: not ansible_check_mode
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+    - ansible_connection is defined
+    - ansible_connection != 'local'
 
-- name: Simulate storage data for check mode
+- name: Simulate storage data for check mode or localhost
   ansible.builtin.set_fact:
     nxos_bootflash_dir:
       stdout:
@@ -36,7 +44,7 @@
       stdout:
         - "2097152 bytes total\n1048576 bytes free"
       rc: 0
-  when: ansible_check_mode
+  when: ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined and ansible_connection == 'local')
 
 - name: Parse bootflash directory listing
   ansible.builtin.set_fact:
