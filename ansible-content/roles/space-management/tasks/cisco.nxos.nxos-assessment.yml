@@ -100,7 +100,9 @@
       ansible.builtin.set_fact:
         nxos_free_bytes_post: "{{ nxos_bootflash_dir_post.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
         storage_cleanup_performed: true
-      when: nxos_bootflash_dir_post is defined
+      when:
+        - nxos_bootflash_dir_post is defined
+        - nxos_bootflash_dir_post.stdout is defined
 
     - name: Update final storage info
       ansible.builtin.set_fact:
