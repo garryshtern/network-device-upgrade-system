@@ -30,8 +30,12 @@ baseline_capture_enabled: true
 convergence_monitoring: true
 
 # Storage paths
-firmware_base_path: "/var/lib/network-upgrade/firmware"
-backup_base_path: "/var/lib/network-upgrade/backups"
+network_upgrade_base_path: "/var/lib/network-upgrade"
+firmware_base_path: "{{ network_upgrade_base_path }}/firmware"
+backup_base_path: "{{ network_upgrade_base_path }}/backups"
+baseline_base_path: "{{ network_upgrade_base_path }}/baselines"
+validation_results_path: "{{ network_upgrade_base_path }}/validation"
+compliance_results_path: "{{ network_upgrade_base_path }}/compliance"
 log_base_path: "/var/log/network-upgrade"
 
 # Timing settings

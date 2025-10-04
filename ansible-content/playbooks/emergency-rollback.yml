@@ -165,7 +165,7 @@
 
         - name: Find latest configuration backup
           ansible.builtin.find:
-            paths: "/var/lib/network-upgrade/backups/{{ inventory_hostname }}"
+            paths: "{{ backup_base_path }}/{{ inventory_hostname }}"
             patterns: "*.tar.gz"
             age: "-7d"
             use_regex: false

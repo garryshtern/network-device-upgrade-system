@@ -8,7 +8,6 @@
   ansible.builtin.set_fact:
     health_check_timestamp: >
       "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-    baseline_data_path: "/var/lib/network-upgrade/baselines"
     validation_timeout: 300
 
 - name: Ensure baseline directory exists

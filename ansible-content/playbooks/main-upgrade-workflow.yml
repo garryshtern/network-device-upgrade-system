@@ -39,11 +39,6 @@
     reboot_wait_time: 600
     max_retry_attempts: 3
 
-    # Paths
-    firmware_base_path: "/var/lib/network-upgrade/firmware"
-    backup_base_path: "/var/lib/network-upgrade/backups"
-    baseline_base_path: "/var/lib/network-upgrade/baselines"
-
   pre_tasks:
     - name: Override connection for Metamako in check mode
       ansible.builtin.set_fact:

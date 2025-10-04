@@ -10,8 +10,7 @@
   vars:
     validation_timestamp: "{{ ansible_date_time.iso8601 }}"
     validation_type: "{{ validation_type | default('post_upgrade') }}"
-    baseline_data_path: "/var/lib/network-upgrade/baselines"
-    validation_results_path: "/var/lib/network-upgrade/validation"
+    baseline_data_path: "{{ baseline_base_path }}"
     compare_with_baseline: "{{ network_state_comparison | default(true) }}"
     validation_timeout: 300
 

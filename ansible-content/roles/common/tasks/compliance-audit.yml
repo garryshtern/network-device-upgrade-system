@@ -19,7 +19,7 @@
 
 - name: Create compliance audit directory
   ansible.builtin.file:
-    path: "/var/lib/network-upgrade/compliance/{{ inventory_hostname }}"
+    path: "{{ compliance_results_path }}/{{ inventory_hostname }}"
     state: directory
     mode: "0755"
   delegate_to: localhost

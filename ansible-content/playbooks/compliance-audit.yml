@@ -9,7 +9,6 @@
   connection: network_cli
   vars:
     audit_timestamp: "{{ ansible_date_time.iso8601 }}"
-    audit_results_path: "/var/lib/network-upgrade/compliance"
     compliance_standards: >
       {{ compliance_standards |
         default(['security_baseline', 'network_hardening']) }}
@@ -17,7 +16,7 @@
   pre_tasks:
     - name: Create compliance audit directory
       ansible.builtin.file:
-        path: "{{ audit_results_path }}/{{ inventory_hostname }}"
+        path: "{{ compliance_results_path }}/{{ inventory_hostname }}"
         state: directory
         mode: "0755"
       delegate_to: localhost

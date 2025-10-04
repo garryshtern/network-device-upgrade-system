@@ -9,7 +9,6 @@
   connection: network_cli
   vars:
     backup_timestamp: "{{ ansible_date_time.iso8601 }}"
-    backup_base_path: "/var/lib/network-upgrade/backups"
     backup_type: "{{ backup_type | default('pre_upgrade') }}"
     include_startup_config: "{{ include_startup_config | default(true) }}"
     include_running_config: true
