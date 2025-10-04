@@ -156,6 +156,8 @@
     # Server-initiated PUSH only (no device-initiated pulls)
     # MUST PASS or workflow STOPS
     - name: "STEP 3: Image Upload"
+      when:
+        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Verify firmware image availability
           ansible.builtin.include_role:
@@ -187,6 +189,8 @@
     # Optional protocols handled conditionally
     # MUST PASS or workflow STOPS
     - name: "STEP 4: Pre-Upgrade Validation"
+      when:
+        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Capture pre-upgrade network state
           ansible.builtin.include_role:
@@ -211,6 +215,8 @@
     # Platform-specific installation
     # MUST PASS or workflow STOPS
     - name: "STEP 5: Firmware Installation"
+      when:
+        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Install firmware - Cisco NX-OS
           ansible.builtin.include_role:
@@ -266,6 +272,8 @@
     # Compare to pre-upgrade state
     # Failure triggers OPTIONAL rollback (does not stop workflow)
     - name: "STEP 6: Post-Upgrade Validation"
+      when:
+        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Capture post-upgrade network state
           ansible.builtin.include_role:
