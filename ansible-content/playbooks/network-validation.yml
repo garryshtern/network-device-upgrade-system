@@ -285,7 +285,7 @@
   post_tasks:
     - name: Generate validation summary
       ansible.builtin.template:
-        src: "{{ playbook_dir }}/../validation-templates/validation-summary.j2"
+        src: templates/validation-summary.j2
         dest: >
           "{{ validation_results_path }}/{{ inventory_hostname
             }}/validation_summary_{{ validation_timestamp }}.json"
@@ -305,7 +305,9 @@
           validation_results.tests_failed | length) > 0
 
     - name: Record validation metrics
-      ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: metrics-export
       vars:
         metric_type: "network_validation"
         metric_data:

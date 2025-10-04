@@ -94,3 +94,70 @@
         'images_found': opengear_firmware_images + opengear_temp_file_list,
         'cleanup_candidates': opengear_firmware_images + opengear_temp_file_list
       }) }}
+
+- name: Check if cleanup is needed
+  ansible.builtin.set_fact:
+    cleanup_needed: "{{ (minimum_free_space_gb is defined) and (storage_info.free_space_gb < minimum_free_space_gb) }}"
+
+- name: Storage cleanup block
+  when: cleanup_needed
+  block:
+    - name: Get current firmware version
+      ansible.builtin.raw: "config -g config.version"
+      register: opengear_version_result
+      changed_when: false
+
+    - name: Parse current version
+      ansible.builtin.set_fact:
+        opengear_current_version: "{{ opengear_version_result.stdout | trim }}"
+
+    - name: Identify current running firmware
+      ansible.builtin.set_fact:
+        running_firmware: "opengear-{{ opengear_current_version }}.img"
+
+    - name: Identify obsolete files for cleanup
+      ansible.builtin.set_fact:
+        cleanup_candidates: "{{ (opengear_firmware_images + opengear_temp_file_list) | difference([running_firmware]) | list }}"
+
+    - name: Remove obsolete firmware files
+      ansible.builtin.raw: "rm -f {{ opengear_storage_path }}/{{ item }}"
+      loop: "{{ cleanup_candidates }}"
+      when:
+        - preserve_current_image | default(true)
+        - item != running_firmware
+        - cleanup_candidates | length > 0
+      register: cleanup_result
+      failed_when: false
+
+    - name: Log cleanup actions
+      ansible.builtin.debug:
+        msg: "Removed {{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }} obsolete file(s)"
+      when: cleanup_result is defined
+
+    - name: Re-assess storage after cleanup
+      ansible.builtin.raw: "df -h {{ opengear_storage_path }}"
+      register: opengear_storage_post
+      changed_when: false
+
+    - name: Parse post-cleanup storage
+      ansible.builtin.set_fact:
+        opengear_available_size_post: >-
+          {{ opengear_storage_post.stdout |
+             regex_search('{{ opengear_storage_path | regex_escape }}\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first
+             if opengear_storage_post.stdout is defined
+             else opengear_available_size }}
+      when: opengear_storage_post is defined
+
+    - name: Update storage metrics after cleanup
+      ansible.builtin.set_fact:
+        opengear_available_gb_post: >-
+          {{ (opengear_available_size_post | regex_replace('[KMG]', '') |
+              float * (0.000001 if 'K' in opengear_available_size_post else
+              (0.001 if 'M' in opengear_available_size_post else 1))) | round(2) }}
+        storage_cleanup_performed: true
+      when: opengear_available_size_post is defined
+
+    - name: Update final storage info
+      ansible.builtin.set_fact:
+        storage_info: "{{ storage_info | combine({'free_space_gb': opengear_available_gb_post}) }}"
+      when: opengear_available_gb_post is defined

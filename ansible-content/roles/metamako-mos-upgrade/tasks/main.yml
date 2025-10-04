@@ -2,17 +2,6 @@
 # Metamako MOS Upgrade Role - Main Tasks
 # Ultra-low latency switch upgrade procedures
 
-- name: Initialize Metamako upgrade variables
-  ansible.builtin.set_fact:
-    metamako_upgrade_state:
-      device: "{{ inventory_hostname }}"
-      current_version: ""
-      target_version: "{{ target_firmware_version }}"
-      device_type: ""
-      latency_mode: "normal"
-      metawatch_enabled: false
-      metamux_enabled: false
-
 - name: Gather Metamako device facts
   ansible.netcommon.cli_command:
 
@@ -54,12 +43,6 @@
         metamako_upgrade_state.target_version is
         match("^[0-9]+\.[0-9]+\.[0-9]+")
     fail_msg: "Invalid upgrade path or target version format (expected: x.y.z)"
-
-- name: Execute latency-sensitive upgrade
-  ansible.builtin.include_tasks: latency-validation.yml
-
-- name: Post-upgrade service validation
-  ansible.builtin.include_tasks: post-upgrade-service-validation.yml
 
 - name: Post-upgrade application management (if requested)
   ansible.builtin.include_tasks: application-management.yml

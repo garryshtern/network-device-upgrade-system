@@ -25,8 +25,9 @@
       when: not firmware_file.stat.exists
 
     - name: Check device storage capacity
-      ansible.builtin.include_tasks:
-        ../roles/space-management/tasks/space-check.yml
+      ansible.builtin.include_role:
+        name: space-management
+        tasks_from: space-check
       vars:
         required_space_gb: "{{ firmware_size_gb | default(2) }}"
 
@@ -68,11 +69,14 @@
           when: ansible_network_os == 'fortinet.fortios.fortios'
 
     - name: Verify image integrity
-      ansible.builtin.include_tasks:
-        ../roles/image-validation/tasks/hash-verification.yml
+      ansible.builtin.include_role:
+        name: image-validation
+        tasks_from: hash-verification
 
     - name: Record image loading completion
-      ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: metrics-export
       vars:
         metric_type: "image_loading"
         metric_data:

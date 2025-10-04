@@ -23,54 +23,13 @@
         mode: "0755"
       delegate_to: localhost
 
-    - name: Platform-specific configuration backup
-      ansible.builtin.debug:
-        msg: "Starting configuration backup for {{ inventory_hostname }}"
-
-    - name: Cisco NX-OS Configuration Backup
+    - name: Configuration backup (all platforms)
       ansible.builtin.include_role:
-        name: cisco-nxos-upgrade
+        name: common
         tasks_from: config-backup
       vars:
         backup_destination: >
           {{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}
-      when: ansible_network_os == 'nxos'
-
-    - name: Cisco IOS-XE Configuration Backup
-      ansible.builtin.include_role:
-        name: cisco-iosxe-upgrade
-        tasks_from: config-backup
-      vars:
-        backup_destination: >
-          {{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}
-      when: ansible_network_os == 'ios'
-
-    - name: Metamako MOS Configuration Backup
-      ansible.builtin.include_role:
-        name: metamako-mos-upgrade
-        tasks_from: config-backup
-      vars:
-        backup_destination: >
-          {{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}
-      when: ansible_network_os == 'mos'
-
-    - name: Opengear Configuration Backup
-      ansible.builtin.include_role:
-        name: opengear-upgrade
-        tasks_from: config-backup
-      vars:
-        backup_destination: >
-          {{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}
-      when: ansible_network_os == 'opengear'
-
-    - name: FortiOS Configuration Backup
-      ansible.builtin.include_role:
-        name: fortios-upgrade
-        tasks_from: config-backup
-      vars:
-        backup_destination: >
-          {{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp }}
-      when: ansible_network_os == 'fortios'
 
     - name: Verify backup files were created
       ansible.builtin.find:
@@ -101,7 +60,9 @@
       delegate_to: localhost
 
     - name: Record backup metrics
-      ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: metrics-export
       vars:
         metric_type: "configuration_backup"
         metric_data:

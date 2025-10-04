@@ -1,11 +1,6 @@
 ---
 # Space Management Role - Main Tasks
-# Manages storage across different network device platforms
+# Manages storage across supported network device platforms only
 
 - name: Include platform-specific storage assessment
   ansible.builtin.include_tasks: "{{ ansible_network_os }}-assessment.yml"
-  when: ansible_network_os is defined
-
-- name: Default storage assessment for unknown platforms
-  ansible.builtin.include_tasks: generic-assessment.yml
-  when: ansible_network_os is not defined

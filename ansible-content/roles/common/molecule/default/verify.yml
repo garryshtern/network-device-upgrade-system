@@ -121,7 +121,6 @@
       loop:
         - "{{ role_path }}/tasks/connectivity-check.yml"
         - "{{ role_path }}/tasks/health-check.yml"
-        - "{{ role_path }}/tasks/storage-cleanup.yml"
         - "{{ role_path }}/tasks/metrics-export.yml"
         - "{{ role_path }}/tasks/error-handling.yml"
 

@@ -62,3 +62,13 @@ metamako_rollback_timeout: 600
 timing_stabilization_delay: 60
 performance_measurement_duration: 30
 baseline_capture_timeout: 120
+
+# Upgrade state initialization
+metamako_upgrade_state:
+  device: "{{ inventory_hostname }}"
+  current_version: ""
+  target_version: "{{ target_firmware_version | default('') }}"
+  device_type: ""
+  latency_mode: "normal"
+  metawatch_enabled: false
+  metamux_enabled: false

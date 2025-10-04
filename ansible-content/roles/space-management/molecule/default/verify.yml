@@ -130,9 +130,12 @@
       register: platform_task_files
       loop:
         - "{{ role_path }}/tasks/main.yml"
-        - "{{ role_path }}/tasks/generic-assessment.yml"
-        - "{{ role_path }}/tasks/ios-assessment.yml"
-        - "{{ role_path }}/tasks/fortios-assessment.yml"
+        - "{{ role_path }}/tasks/storage-assessment.yml"
+        - "{{ role_path }}/tasks/cisco.nxos.nxos-assessment.yml"
+        - "{{ role_path }}/tasks/cisco.ios.ios-assessment.yml"
+        - "{{ role_path }}/tasks/fortinet.fortios.fortios-assessment.yml"
+        - "{{ role_path }}/tasks/opengear-assessment.yml"
+        - "{{ role_path }}/tasks/metamako_mos-assessment.yml"
 
     - name: Verify platform task files exist
       ansible.builtin.assert:

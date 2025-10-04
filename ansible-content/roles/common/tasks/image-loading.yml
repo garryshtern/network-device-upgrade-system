@@ -5,7 +5,7 @@
 
 - name: Set image loading variables
   ansible.builtin.set_fact:
-    firmware_source_path: "{{ firmware_base_path }}/{{ platform_type | default(ansible_network_os) | default('unknown') }}"
+    firmware_source_path: "{{ firmware_base_path }}/{{ ansible_network_os }}"
     device_storage_path: "/var/lib/firmware"
     integrity_check_required: true
     cleanup_old_images: true
@@ -34,8 +34,9 @@
     - not firmware_file.stat.exists
 
 - name: Check device storage capacity
-  ansible.builtin.include_tasks:
-    ../roles/space-management/tasks/space-check.yml
+  ansible.builtin.include_role:
+    name: space-management
+    tasks_from: space-check
   vars:
     required_space_gb: "{{ firmware_size_gb | default(2) }}"
 
@@ -65,8 +66,8 @@
         name: metamako-mos-upgrade
         tasks_from: image-loading
       when:
-        - platform_type is defined
-        - platform_type == 'metamako_mos'
+        - ansible_network_os is defined
+        - ansible_network_os == 'metamako_mos'
 
     # Opengear Image Loading
     - name: Load Opengear image
@@ -74,8 +75,8 @@
         name: opengear-upgrade
         tasks_from: image-loading
       when:
-        - platform_type is defined
-        - platform_type == 'opengear'
+        - ansible_network_os is defined
+        - ansible_network_os == 'opengear'
 
     # FortiOS Image Loading
     - name: Load FortiOS image
@@ -88,17 +89,20 @@
         - not ansible_check_mode
 
 - name: Verify image integrity
-  ansible.builtin.include_tasks:
-    ../roles/image-validation/tasks/hash-verification.yml
+  ansible.builtin.include_role:
+    name: image-validation
+    tasks_from: hash-verification
 
 - name: Record image loading completion
-  ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: metrics-export
   vars:
     metric_type: "image_loading"
     metric_data:
       device_id: "{{ inventory_hostname }}"
       firmware_version: "{{ firmware_version }}"
-      platform: "{{ platform_type | default(ansible_network_os) | default('unknown') }}"
+      platform: "{{ ansible_network_os }}"
       status: "success"
       timestamp: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')) }}"
 
@@ -107,7 +111,7 @@
     msg:
       - "=== Image Loading Complete ==="
       - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ platform_type | default(ansible_network_os) | default('unknown') }}"
+      - "Platform: {{ ansible_network_os }}"
       - "Firmware: {{ firmware_version }}"
       - "Status: LOADED"
       - "=============================="

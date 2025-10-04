@@ -2,16 +2,6 @@
 # Cisco NX-OS Upgrade Role - Main Tasks
 # Handles ISSU-capable upgrades with comprehensive validation
 
-- name: Initialize NX-OS upgrade variables
-  ansible.builtin.set_fact:
-    nxos_upgrade_state:
-      device: "{{ inventory_hostname }}"
-      current_version: ""
-      target_version: "{{ target_firmware_version }}"
-      issu_capable: false
-      upgrade_method: "disruptive"
-      boot_variables: []
-
 - name: Gather NX-OS device facts
   cisco.nxos.nxos_facts:
     gather_subset:

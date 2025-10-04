@@ -1,16 +1,5 @@
 ---
-# Cisco IOS-XE Storage Assessment
-
-- name: Initialize storage_info if not defined
-  ansible.builtin.set_fact:
-    storage_info:
-      platform: "{{ ansible_network_os | default('ios') }}"
-      total_space_gb: 0
-      free_space_gb: 0
-      used_space_gb: 0
-      images_found: []
-      cleanup_candidates: []
-  when: storage_info is not defined
+# Cisco IOS-XE Storage Assessment and Cleanup
 
 - name: Get bootflash directory information
   cisco.ios.ios_command:
@@ -19,45 +8,88 @@
   register: ios_bootflash_dir
   when: not ansible_check_mode
 
-- name: Get free space information
-  cisco.ios.ios_command:
-    commands:
-      - "dir bootflash: | include bytes free"
-  register: ios_free_space
-  when: not ansible_check_mode
-
 - name: Simulate storage data for check mode
   ansible.builtin.set_fact:
     ios_bootflash_dir:
       stdout:
         - "Directory of bootflash:/\n\n    11  -rw-   536870912  Jan 01 2025 12:00:00 +00:00  test-image.bin\n\n2097152 bytes total (1048576 bytes free)"
       rc: 0
-    ios_free_space:
-      stdout:
-        - "2097152 bytes total (1048576 bytes free)"
-      rc: 0
   when: ansible_check_mode
 
-- name: Parse bootflash directory listing
+- name: Parse bootflash directory listing and space information
   ansible.builtin.set_fact:
-    ios_files: >-
-      {{ ios_bootflash_dir.stdout[0] |
-        regex_findall('\\s+(\\d+)\\s+.+\\s+(.+)') }}
-    ios_images: >-
-      {{ ios_bootflash_dir.stdout[0] |
-        regex_findall('\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}
+    ios_files: "{{ ios_bootflash_dir.stdout[0] | regex_findall('\\s+(\\d+)\\s+.+\\s+(.+)') }}"
+    ios_images: "{{ ios_bootflash_dir.stdout[0] | regex_findall('\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}"
+    ios_total_bytes: "{{ ios_bootflash_dir.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+    ios_free_bytes: "{{ ios_bootflash_dir.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
 
-- name: Parse free space information
+- name: Calculate initial storage metrics
   ansible.builtin.set_fact:
-    ios_total_bytes: "{{ ios_free_space.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
-    ios_free_bytes: "{{ ios_free_space.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
+    storage_info: "{{ storage_info | combine({'total_space_gb': (ios_total_bytes / 1024 / 1024 / 1024) | round(2), 'free_space_gb': (ios_free_bytes / 1024 / 1024 / 1024) | round(2), 'images_found': ios_images, 'cleanup_candidates': ios_images}) }}"
 
-- name: Calculate storage metrics
+- name: Check if cleanup is needed
   ansible.builtin.set_fact:
-    storage_info: "{{ storage_info | combine({
+    cleanup_needed: "{{ (minimum_free_space_gb is defined) and (storage_info.free_space_gb < minimum_free_space_gb) }}"
 
-      'total_space_gb': (ios_total_bytes / 1024 / 1024 / 1024) | round(2),
-      'free_space_gb': (ios_free_bytes / 1024 / 1024 / 1024) | round(2),
-      'images_found': ios_images,
-      'cleanup_candidates': ios_images
-    }) }}"
+- name: Storage cleanup block
+  when: cleanup_needed
+  block:
+    - name: Get current running image
+      cisco.ios.ios_command:
+        commands:
+          - show version | include image
+      register: running_image_result
+      when: not ansible_check_mode
+
+    - name: Simulate running image for check mode
+      ansible.builtin.set_fact:
+        running_image_result:
+          stdout:
+            - "System image file is bootflash:test-image.bin"
+          rc: 0
+      when: ansible_check_mode
+
+    - name: Parse running image filename
+      ansible.builtin.set_fact:
+        running_image_file: "{{ running_image_result.stdout[0] | regex_search('bootflash:(.+\\.bin)', '\\1') | first }}"
+      when: running_image_result.stdout[0] is defined
+
+    - name: Identify obsolete images for cleanup
+      ansible.builtin.set_fact:
+        cleanup_candidates: "{{ ios_images | difference([running_image_file]) | list }}"
+
+    - name: Remove obsolete image files
+      cisco.ios.ios_command:
+        commands:
+          - delete /force bootflash:{{ item }}
+      loop: "{{ cleanup_candidates }}"
+      when:
+        - preserve_current_image | default(true)
+        - item != running_image_file
+        - cleanup_candidates | length > 0
+        - not ansible_check_mode
+      register: cleanup_result
+      failed_when: false
+
+    - name: Log cleanup actions
+      ansible.builtin.debug:
+        msg: "Removed {{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }} obsolete image(s)"
+      when: cleanup_result is defined
+
+    - name: Re-assess storage after cleanup
+      cisco.ios.ios_command:
+        commands:
+          - dir bootflash:
+      register: ios_bootflash_dir_post
+      when: not ansible_check_mode
+
+    - name: Update storage metrics after cleanup
+      ansible.builtin.set_fact:
+        ios_free_bytes_post: "{{ ios_bootflash_dir_post.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
+        storage_cleanup_performed: true
+      when: ios_bootflash_dir_post is defined
+
+    - name: Update final storage info
+      ansible.builtin.set_fact:
+        storage_info: "{{ storage_info | combine({'free_space_gb': (ios_free_bytes_post / 1024 / 1024 / 1024) | round(2)}) }}"
+      when: ios_free_bytes_post is defined

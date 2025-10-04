@@ -10,7 +10,6 @@
     test_scenarios:
       - name: "Latency Critical MetaConnect-48"
         device_vars:
-          platform_type: "metamako_mos"
           device_model: "MetaConnect-48"
           firmware_version: "0.39.1"
           target_version: "0.39.11"
@@ -26,7 +25,6 @@
 
       - name: "Standard MetaConnect-24"
         device_vars:
-          platform_type: "metamako_mos"
           device_model: "MetaConnect-24"
           firmware_version: "0.39.5"
           target_version: "0.39.11"
@@ -42,7 +40,6 @@
 
       - name: "Basic MetaConnect-12"
         device_vars:
-          platform_type: "metamako_mos"
           device_model: "MetaConnect-12"
           firmware_version: "0.39.8"
           target_version: "0.39.11"
@@ -58,7 +55,6 @@
 
       - name: "MetaConnect-48 with Application Management"
         device_vars:
-          platform_type: "metamako_mos"
           device_model: "MetaConnect-48"
           firmware_version: "0.39.3"
           target_version: "0.39.11"

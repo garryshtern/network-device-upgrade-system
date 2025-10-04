@@ -12,7 +12,6 @@
     test_scenarios:
       - name: "ISSU Capable with EPLD Upgrade"
         device_vars:
-          platform_type: "cisco_nxos"
           device_model: "N9K-C93180YC-EX"
           firmware_version: "9.3.10"
           target_version: "10.1.2"
@@ -30,7 +29,6 @@
 
       - name: "Non-ISSU Device without EPLD"
         device_vars:
-          platform_type: "cisco_nxos"
           device_model: "N9K-C9336C-FX2"
           firmware_version: "9.2.4"
           target_version: "10.1.2"
@@ -47,7 +45,6 @@
 
       - name: "ISSU with Multiple EPLD Images"
         device_vars:
-          platform_type: "cisco_nxos"
           device_model: "N9K-C93240YC-FX2"
           firmware_version: "10.0.1"
           target_version: "10.2.3"
@@ -87,7 +84,7 @@
         - "tasks/image-loading.yml"
         - "tasks/image-installation.yml"
         - "tasks/issu-procedures.yml"
-        - "tasks/validation.yml"
+        - "defaults/main.yml"
         - "vars/main.yml"
 
     - name: Assert all required NX-OS files exist
@@ -105,28 +102,31 @@
         loop_var: nxos_scenario
         label: "{{ nxos_scenario.name }}"
 
-    - name: Test NX-OS validation capabilities
+    - name: Test NX-OS validation is centralized
       block:
-        - name: Validate BGP validation exists
+        - name: Verify validation removed from NX-OS role
           stat:
             path: "{{ role_path }}/tasks/validation.yml"
-          register: bgp_validation_check
+          register: nxos_validation_check
 
-        - name: Read validation task content
-          slurp:
-            src: "{{ role_path }}/tasks/validation.yml"
-          register: validation_content
-          when: bgp_validation_check.stat.exists
-
-        - name: Assert NX-OS validation capabilities
+        - name: Assert validation is not in NX-OS role
           assert:
             that:
-              - bgp_validation_check.stat.exists
-              - "'bgp' in validation_content.content | b64decode"
-              - "'bfd' in validation_content.content | b64decode"
-              - "'igmp' in validation_content.content | b64decode"
-            fail_msg: "NX-OS validation capabilities missing"
-            success_msg: "✓ NX-OS validation capabilities confirmed (BGP, BFD, IGMP)"
+              - not nxos_validation_check.stat.exists
+            success_msg: "✓ Validation correctly removed from NX-OS role (now centralized)"
+            fail_msg: "Validation should be centralized, not in NX-OS role"
+
+        - name: Verify centralized network validation exists
+          stat:
+            path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/tasks/bgp-validation.yml"
+          register: centralized_validation_check
+
+        - name: Assert centralized validation capabilities exist
+          assert:
+            that:
+              - centralized_validation_check.stat.exists
+            success_msg: "✓ Network validation is properly centralized"
+            fail_msg: "Centralized network validation missing"
 
     - name: Test NX-OS EPLD upgrade capability
       block:

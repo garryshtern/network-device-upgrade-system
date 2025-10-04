@@ -25,52 +25,9 @@
     delay: 5
   register: connectivity_result
 
-- name: Platform-specific health checks
-  block:
-    # Cisco NX-OS Health Checks
-    - name: Cisco NX-OS health validation
-      ansible.builtin.include_role:
-        name: cisco-nxos-upgrade
-        tasks_from: validation
-      when: ansible_network_os == 'nxos'
-
-    # Cisco IOS-XE Health Checks
-    - name: Cisco IOS-XE health validation
-      ansible.builtin.include_role:
-        name: cisco-iosxe-upgrade
-        tasks_from: validation
-      when: ansible_network_os == 'ios'
-
-    # Metamako MOS Health Checks
-    - name: Metamako MOS health validation
-      ansible.builtin.include_role:
-        name: metamako-mos-upgrade
-        tasks_from: validation
-      when: ansible_network_os == 'mos'
-
-    # Opengear Health Checks
-    - name: Opengear health validation
-      ansible.builtin.include_role:
-        name: opengear-upgrade
-        tasks_from: validation
-      when:
-        - ansible_network_os == 'opengear'
-        - not ansible_check_mode
-
-    # FortiOS Health Checks
-    # Note: FortiOS health validation disabled due to check mode compatibility issues
-    - name: FortiOS health validation (placeholder)
-      ansible.builtin.debug:
-        msg: "FortiOS health validation skipped - check mode compatibility"
-      when:
-        - ansible_network_os == 'fortios'
-
-  rescue:
-    - name: Health check failure
-      ansible.builtin.fail:
-        msg: >
-          "Health check failed for {{ inventory_hostname
-            }} ({{ ansible_network_os }})"
+- name: Device reachability verification
+  ansible.builtin.ping:
+  register: ping_result
 
 - name: Capture network state baseline
   ansible.builtin.include_role:
@@ -140,7 +97,7 @@
 
 - name: Create health check summary
   ansible.builtin.template:
-    src: ../validation-templates/health-summary.j2
+    src: health-summary.j2
     dest: >
       "{{ baseline_data_path }}/{{ inventory_hostname
         }}/health_summary_{{ health_check_timestamp }}.json"

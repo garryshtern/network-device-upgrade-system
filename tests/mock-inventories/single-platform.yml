@@ -9,8 +9,7 @@ all:
         test-nxos-01:
           ansible_host: localhost
           ansible_connection: local
-          ansible_network_os: nxos
-          platform_type: cisco_nxos
+          ansible_network_os: cisco.nxos.nxos
           firmware_version: "9.3.10"
           target_version: "10.1.2"
           device_model: "N9K-C93180YC-EX"
@@ -25,8 +24,7 @@ all:
         test-metamako-01:
           ansible_host: localhost
           ansible_connection: local
-          ansible_network_os: mos
-          platform_type: metamako_mos
+          ansible_network_os: metamako_mos
           firmware_version: "0.39.1"
           target_version: "0.39.11"
           device_model: "MetaConnect-48"

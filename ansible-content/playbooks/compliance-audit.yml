@@ -258,19 +258,6 @@
       delegate_to: localhost
       when: generate_report
 
-    - name: Generate human-readable compliance report
-      ansible.builtin.template:
-        src: "templates/compliance-report.html.j2"
-        dest: >
-          "{{ audit_results_path }}/{{ inventory_hostname
-            }}/compliance_report_{{ audit_timestamp }}.html"
-        mode: "0644"
-      vars:
-        report_data: "{{ compliance_results }}"
-        compliance_score: "{{ compliance_percentage }}"
-        total_checks_run: "{{ total_checks }}"
-      delegate_to: localhost
-      when: generate_report
 
     - name: Record compliance metrics to InfluxDB
       ansible.builtin.uri:

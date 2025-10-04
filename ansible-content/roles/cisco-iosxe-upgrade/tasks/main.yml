@@ -2,17 +2,6 @@
 # Cisco IOS-XE Upgrade Role - Main Tasks
 # Handles both install mode and bundle mode upgrades
 
-- name: Initialize IOS-XE upgrade variables
-  ansible.builtin.set_fact:
-    iosxe_upgrade_state:
-      device: "{{ inventory_hostname }}"
-      current_version: ""
-      target_version: "{{ target_firmware_version }}"
-      install_mode: false
-      boot_mode: "bundle"
-      available_space: 0
-      required_space: 0
-
 - name: Gather IOS-XE device facts
   cisco.ios.ios_facts:
     gather_subset:

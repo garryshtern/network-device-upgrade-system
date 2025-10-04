@@ -41,18 +41,21 @@
               }) }}
 
         - name: Verify Phase 1 completion
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/phase-validation.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: phase-validation
           vars:
             required_phase: "phase_1_complete"
 
         - name: Validate network convergence
-          ansible.builtin.include_tasks:
-            ../roles/network-validation/tasks/protocol-convergence.yml
+          ansible.builtin.include_role:
+            name: network-validation
+            tasks_from: protocol-convergence
 
         - name: Final device health check
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/health-check.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: health-check
           vars:
             check_type: "pre_installation"
 
@@ -127,8 +130,9 @@
           when: reboot_required | bool
 
         - name: Verify device responsiveness
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/connectivity-check.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: connectivity-check
 
     # Step 4: Post-installation validation
     - name: Step 4 - Post-installation validation
@@ -141,12 +145,14 @@
               }) }}
 
         - name: Verify firmware version
-          ansible.builtin.include_tasks:
-            ../roles/image-validation/tasks/version-verification.yml
+          ansible.builtin.include_role:
+            name: image-validation
+            tasks_from: version-verification
 
         - name: Run post-installation health check
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/health-check.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: health-check
           vars:
             check_type: "post_installation"
 
@@ -174,8 +180,9 @@
               }) }}
 
         - name: Record installation metrics
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/metrics-export.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: metrics-export
           vars:
             metric_type: "installation_completion"
             metric_data:
@@ -186,8 +193,9 @@
               reboot_required: "{{ reboot_required }}"
 
         - name: Update device inventory
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/inventory-update.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: inventory-update
 
   post_tasks:
     - name: Calculate installation duration

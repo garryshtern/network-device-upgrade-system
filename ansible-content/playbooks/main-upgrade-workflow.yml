@@ -44,12 +44,6 @@
     backup_base_path: "/var/lib/network-upgrade/backups"
     baseline_base_path: "/var/lib/network-upgrade/baselines"
 
-    # Task paths
-    common: "../roles/common/tasks"
-    validate: "../roles/image-validation/tasks"
-    space: "../roles/space-management/tasks"
-    network: "../roles/network-validation/tasks"
-
   pre_tasks:
     - name: Override connection for Metamako in check mode
       ansible.builtin.set_fact:
@@ -57,8 +51,8 @@
       when:
         - ansible_check_mode is defined
         - ansible_check_mode
-        - platform_type is defined
-        - platform_type == 'metamako_mos'
+        - ansible_network_os is defined
+        - ansible_network_os == 'metamako_mos'
 
     - name: Validate required variables
       ansible.builtin.assert:
@@ -73,7 +67,7 @@
       ansible.builtin.set_fact:
         resolved_firmware_version: >-
           {% if platform_specific_firmware != {} %}
-            {%- set platform_key = platform_type | default('unknown') -%}
+            {%- set platform_key = ansible_network_os -%}
             {%- set device_model_key = device_model | default('default') -%}
             {%- if platform_key in platform_specific_firmware -%}
               {%- if device_model_key in platform_specific_firmware[platform_key] -%}
@@ -112,8 +106,7 @@
         msg:
           - "=== Network Device Upgrade Workflow ==="
           - "Target Device: {{ inventory_hostname }}"
-          - "Platform Type: {{ platform_type | default('unknown') }}"
-          - "Network OS: {{ ansible_network_os | default('N/A') }}"
+          - "Network OS: {{ ansible_network_os }}"
           - "Target Firmware: {{ firmware_version }}"
           - "Maintenance Window: {{ maintenance_window }}"
           - "Batch ID: {{ batch_id }}"
@@ -127,7 +120,9 @@
     - name: "STEP 1: Connectivity Check"
       block:
         - name: Platform-specific connectivity validation
-          ansible.builtin.include_tasks: "{{ common }}/connectivity-check.yml"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: connectivity-check
 
       rescue:
         - name: Connectivity check failed - STOP workflow
@@ -139,20 +134,12 @@
     # MUST PASS or workflow STOPS
     - name: "STEP 2: Storage Space Validation"
       block:
-        - name: Check available storage space
-          ansible.builtin.include_tasks: "{{ space }}/space-check.yml"
-
-        - name: Conditional cleanup if insufficient space
-          ansible.builtin.include_tasks: "{{ common }}/storage-cleanup.yml"
-          when:
-            - storage_info is defined
-            - storage_info.free_space_gb < (required_space_gb | default(4))
-
-        - name: Recheck space after cleanup
-          ansible.builtin.include_tasks: "{{ space }}/space-check.yml"
-          when:
-            - storage_info is defined
-            - storage_info.free_space_gb < (required_space_gb | default(4))
+        - name: Storage assessment with automatic cleanup if needed
+          ansible.builtin.include_role:
+            name: space-management
+            tasks_from: storage-assessment
+          vars:
+            minimum_free_space_gb: "{{ required_space_gb | default(4) }}"
 
         - name: Verify sufficient space available
           ansible.builtin.assert:
@@ -174,16 +161,24 @@
     - name: "STEP 3: Image Upload"
       block:
         - name: Verify firmware image availability
-          ansible.builtin.include_tasks: "{{ validate }}/integrity-audit.yml"
+          ansible.builtin.include_role:
+            name: image-validation
+            tasks_from: integrity-audit
 
         - name: Backup current configuration
-          ansible.builtin.include_tasks: "{{ common }}/config-backup.yml"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: config-backup
 
         - name: Upload firmware image to device
-          ansible.builtin.include_tasks: "{{ common }}/image-loading.yml"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: image-loading
 
         - name: Verify uploaded image integrity
-          ansible.builtin.include_tasks: "{{ validate }}/hash-verification.yml"
+          ansible.builtin.include_role:
+            name: image-validation
+            tasks_from: hash-verification
 
       rescue:
         - name: Image upload failed - STOP workflow
@@ -249,16 +244,16 @@
             name: metamako-mos-upgrade
             tasks_from: image-installation
           when:
-            - platform_type is defined
-            - platform_type == 'metamako_mos'
+            - ansible_network_os is defined
+            - ansible_network_os == 'metamako_mos'
 
         - name: Install firmware - Opengear
           ansible.builtin.include_role:
             name: opengear-upgrade
             tasks_from: image-installation
           when:
-            - platform_type is defined
-            - platform_type == 'opengear'
+            - ansible_network_os is defined
+            - ansible_network_os == 'opengear'
 
         - name: Wait for device to come back online
           ansible.builtin.wait_for_connection:
@@ -293,7 +288,9 @@
         - name: Post-validation failed - trigger optional rollback
           block:
             - name: Execute rollback procedure
-              ansible.builtin.include_tasks: "{{ common }}/emergency-rollback.yml"
+              ansible.builtin.include_role:
+                name: common
+                tasks_from: emergency-rollback
               when: rollback_on_failure | bool
 
             - name: Log post-validation failure
@@ -321,7 +318,9 @@
           }}
 
     - name: Export final metrics
-      ansible.builtin.include_tasks: "{{ common }}/metrics-export.yml"
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: metrics-export
       vars:
         metric_type: "upgrade_summary"
         duration_seconds: "{{ upgrade_duration }}"

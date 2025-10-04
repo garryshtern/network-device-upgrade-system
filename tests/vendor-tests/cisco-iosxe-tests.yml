@@ -12,7 +12,6 @@
     test_scenarios:
       - name: "Install Mode Capable Device"
         device_vars:
-          platform_type: "cisco_iosxe"
           device_model: "ISR4431"
           firmware_version: "16.12.07"
           target_version: "17.06.04"
@@ -24,7 +23,6 @@
 
       - name: "Bundle Mode Device"
         device_vars:
-          platform_type: "cisco_iosxe"
           device_model: "C9300-48U"
           firmware_version: "16.12.08"
           target_version: "17.06.04"
@@ -36,7 +34,6 @@
 
       - name: "Legacy Device (Bundle Only)"
         device_vars:
-          platform_type: "cisco_iosxe"
           device_model: "C3850-48T"
           firmware_version: "16.09.08"
           target_version: "16.12.09"
@@ -129,7 +126,6 @@
             dest: "/tmp/test_{{ item | basename }}"
           vars:
             ansible_host: "127.0.0.1"
-            platform_type: "cisco_iosxe"
             firmware_version: "16.12.07"
             target_version: "17.06.04"
             install_mode: true

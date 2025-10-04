@@ -15,7 +15,6 @@ ansible_ssh_common_args: >
   -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 
 # Platform specific settings
-platform_type: "cisco_nxos"
 vendor: "cisco"
 device_family: "nexus"
 

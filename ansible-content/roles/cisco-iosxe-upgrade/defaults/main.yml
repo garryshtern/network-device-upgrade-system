@@ -29,3 +29,13 @@ convergence_wait: 120  # Wait time for protocol convergence (seconds)
 # File paths
 validation_output_dir: "/tmp"
 baseline_storage_dir: "/tmp/baselines"
+
+# Upgrade state initialization
+iosxe_upgrade_state:
+  device: "{{ inventory_hostname }}"
+  current_version: ""
+  target_version: "{{ target_firmware_version | default('') }}"
+  install_mode: false
+  boot_mode: "bundle"
+  available_space: 0
+  required_space: 0

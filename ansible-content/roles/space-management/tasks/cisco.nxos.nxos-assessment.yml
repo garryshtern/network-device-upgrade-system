@@ -1,16 +1,5 @@
 ---
-# Cisco NX-OS Storage Assessment
-
-- name: Initialize storage_info if not defined
-  ansible.builtin.set_fact:
-    storage_info:
-      platform: "{{ ansible_network_os | default('nxos') }}"
-      total_space_gb: 0
-      free_space_gb: 0
-      used_space_gb: 0
-      images_found: []
-      cleanup_candidates: []
-  when: storage_info is not defined
+# Cisco NX-OS Storage Assessment and Cleanup
 
 - name: Get bootflash directory information
   cisco.nxos.nxos_command:
@@ -23,50 +12,97 @@
     - ansible_connection is defined
     - ansible_connection != 'local'
 
-- name: Get free space information
-  cisco.nxos.nxos_command:
-    commands:
-      - "dir bootflash: | include free"
-  register: nxos_free_space
-  when:
-    - not ansible_check_mode
-    - inventory_hostname != 'localhost'
-    - ansible_connection is defined
-    - ansible_connection != 'local'
-
 - name: Simulate storage data for check mode or localhost
   ansible.builtin.set_fact:
     nxos_bootflash_dir:
       stdout:
-        - "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576    Oct 01 09:00:00 2025  test-image.bin"
-      rc: 0
-    nxos_free_space:
-      stdout:
-        - "2097152 bytes total\n1048576 bytes free"
+        - "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576    Oct 01 09:00:00 2025  test-image.bin\n\n2097152 bytes total (1048576 bytes free)"
       rc: 0
   when: ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined and ansible_connection == 'local')
 
-- name: Parse bootflash directory listing
+- name: Parse bootflash directory listing and space information
   ansible.builtin.set_fact:
-    nxos_files: >-
-      {{ nxos_bootflash_dir.stdout[0] |
-        regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+)') }}
-    nxos_images: >-
-      {{ nxos_bootflash_dir.stdout[0] |
-        regex_findall(
-        '\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(bin|img))') }}
+    nxos_files: "{{ nxos_bootflash_dir.stdout[0] | regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+)') }}"
+    nxos_images: "{{ nxos_bootflash_dir.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(bin|img))') }}"
+    nxos_total_bytes: "{{ nxos_bootflash_dir.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+    nxos_free_bytes: "{{ nxos_bootflash_dir.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
 
-- name: Parse free space information
+- name: Calculate initial storage metrics
   ansible.builtin.set_fact:
-    nxos_total_bytes: "{{ nxos_free_space.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
-    nxos_free_bytes: "{{ nxos_free_space.stdout[0] | regex_search('(\\d+) bytes free', '\\1') | first | int }}"
+    storage_info: "{{ storage_info | combine({'total_space_gb': (nxos_total_bytes / 1024 / 1024 / 1024) | round(2), 'free_space_gb': (nxos_free_bytes / 1024 / 1024 / 1024) | round(2), 'images_found': nxos_images, 'cleanup_candidates': nxos_images}) }}"
 
-- name: Calculate storage metrics
+- name: Check if cleanup is needed
   ansible.builtin.set_fact:
-    storage_info: >-
-      {{ storage_info | combine({
-        'total_space_gb': (nxos_total_bytes / 1024 / 1024 / 1024) | round(2),
-        'free_space_gb': (nxos_free_bytes / 1024 / 1024 / 1024) | round(2),
-        'images_found': nxos_images,
-        'cleanup_candidates': nxos_images
-      }) }}
+    cleanup_needed: "{{ (minimum_free_space_gb is defined) and (storage_info.free_space_gb < minimum_free_space_gb) }}"
+
+- name: Storage cleanup block
+  when: cleanup_needed
+  block:
+    - name: Get current running image
+      cisco.nxos.nxos_command:
+        commands:
+          - show version | include image
+      register: running_image_result
+      when:
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
+        - ansible_connection is defined
+        - ansible_connection != 'local'
+
+    - name: Simulate running image for check mode or localhost
+      ansible.builtin.set_fact:
+        running_image_result:
+          stdout:
+            - "system image file is: bootflash:///test-image.bin"
+          rc: 0
+      when: ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined and ansible_connection == 'local')
+
+    - name: Parse running image filename
+      ansible.builtin.set_fact:
+        running_image_file: "{{ running_image_result.stdout[0] | regex_search('bootflash:///(.+\\.(bin|img))', '\\1') | first }}"
+      when: running_image_result.stdout[0] is defined
+
+    - name: Identify obsolete images for cleanup
+      ansible.builtin.set_fact:
+        cleanup_candidates: "{{ nxos_images | difference([running_image_file]) | list }}"
+
+    - name: Remove obsolete image files
+      cisco.nxos.nxos_command:
+        commands:
+          - delete bootflash:{{ item }} no-prompt
+      loop: "{{ cleanup_candidates }}"
+      when:
+        - preserve_current_image | default(true)
+        - item != running_image_file
+        - cleanup_candidates | length > 0
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
+      register: cleanup_result
+      failed_when: false
+
+    - name: Log cleanup actions
+      ansible.builtin.debug:
+        msg: "Removed {{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }} obsolete image(s)"
+      when: cleanup_result is defined
+
+    - name: Re-assess storage after cleanup
+      cisco.nxos.nxos_command:
+        commands:
+          - "dir bootflash:"
+      register: nxos_bootflash_dir_post
+      when:
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
+        - ansible_connection is defined
+        - ansible_connection != 'local'
+
+    - name: Update storage metrics after cleanup
+      ansible.builtin.set_fact:
+        nxos_free_bytes_post: "{{ nxos_bootflash_dir_post.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+        storage_cleanup_performed: true
+      when: nxos_bootflash_dir_post is defined
+
+    - name: Update final storage info
+      ansible.builtin.set_fact:
+        storage_info: "{{ storage_info | combine({'free_space_gb': (nxos_free_bytes_post / 1024 / 1024 / 1024) | round(2)}) }}"
+      when: nxos_free_bytes_post is defined

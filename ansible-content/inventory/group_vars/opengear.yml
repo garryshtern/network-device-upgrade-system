@@ -3,6 +3,7 @@
 # For console servers and smart PDUs
 
 # Connection settings - SSH key and API token auth preferred over passwords
+ansible_network_os: opengear
 ansible_connection: ssh  # Default to SSH, overridden for modern API devices
 ansible_host: "{{ inventory_hostname }}"
 ansible_user: "{{ opengear_username }}"
@@ -19,7 +20,6 @@ opengear_password: "{{ vault_opengear_password | default(omit) }}"
 opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
 
 # Platform specific settings
-platform_type: "opengear"
 vendor: "opengear"
 device_family: "console_server"  # or smart_pdu
 

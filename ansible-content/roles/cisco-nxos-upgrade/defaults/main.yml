@@ -91,3 +91,12 @@ nxos_image_patterns:
   - "*.bin"
   - "nxos*.bin"
   - "*-n[397]000-*.bin"
+
+# Upgrade state initialization
+nxos_upgrade_state:
+  device: "{{ inventory_hostname }}"
+  current_version: ""
+  target_version: "{{ target_firmware_version | default('') }}"
+  issu_capable: false
+  upgrade_method: "disruptive"
+  boot_variables: []

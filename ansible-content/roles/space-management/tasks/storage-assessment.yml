@@ -2,18 +2,8 @@
 # Storage Assessment Tasks
 # Platform-specific storage space assessment for supported platforms only
 
-- name: Initialize storage assessment variables
-  ansible.builtin.set_fact:
-    storage_info:
-      platform: "{{ platform_type if (platform_type is defined and platform_type in ['opengear', 'metamako_mos']) else ansible_network_os }}"
-      total_space_gb: 0
-      free_space_gb: 0
-      used_space_gb: 0
-      images_found: []
-      cleanup_candidates: []
-
 - name: Platform-specific storage assessment
-  ansible.builtin.include_tasks: "{{ storage_info.platform }}-assessment.yml"
+  ansible.builtin.include_tasks: "{{ ansible_network_os }}-assessment.yml"
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:

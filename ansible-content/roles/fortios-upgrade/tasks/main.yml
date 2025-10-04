@@ -2,21 +2,6 @@
 # FortiOS Upgrade Role - Main Tasks
 # Handles Fortinet firewall upgrades with HA cluster support
 
-- name: Initialize FortiOS upgrade variables
-  ansible.builtin.set_fact:
-    fortios_upgrade_state:
-      device: "{{ inventory_hostname }}"
-      current_version: ""
-      target_version: "{{ target_firmware_version }}"
-      ha_mode: "standalone"
-      ha_role: "master"
-      cluster_member: ""
-      license_status: "unknown"
-      vdom_mode: false
-      multi_step_required: "{{ multi_step_upgrade_required | default(false) }}"
-      upgrade_path: "{{ upgrade_path | default([target_firmware_version]) }}"
-      current_step: "{{ current_step | default(0) }}"
-
 - name: Skip FortiOS upgrade in check mode
   ansible.builtin.debug:
     msg: "FortiOS upgrade skipped in check mode - requires API connectivity"
@@ -44,9 +29,6 @@
     - name: Check HA cluster configuration
       ansible.builtin.include_tasks: ha-coordination.yml
       when: fortios_upgrade_state.ha_mode != "standalone"
-
-    - name: Validate FortiCare license
-      ansible.builtin.include_tasks: license-validation.yml
 
     - name: Display upgrade plan
       ansible.builtin.debug:

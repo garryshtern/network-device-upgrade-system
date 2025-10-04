@@ -45,7 +45,6 @@
     - name: Test variable consistency
       set_fact:
         test_vars:
-          platform_type: "cisco_nxos"
           firmware_version: "9.3.10"
           target_version: "10.1.2"
 

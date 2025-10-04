@@ -44,12 +44,12 @@
 
     - name: Check validation template directory
       ansible.builtin.stat:
-        path: "{{ playbook_dir }}/../../ansible-content/validation-templates"
+        path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/templates"
       register: validation_templates_dir
 
     - name: Find validation templates
       ansible.builtin.find:
-        paths: "{{ playbook_dir }}/../../ansible-content/validation-templates"
+        paths: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/templates"
         patterns: "*.j2"
       register: validation_templates
       when: validation_templates_dir.stat.exists

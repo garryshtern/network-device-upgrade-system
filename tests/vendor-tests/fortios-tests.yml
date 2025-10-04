@@ -10,7 +10,6 @@
     test_scenarios:
       - name: "HA Primary Firewall"
         device_vars:
-          platform_type: "fortios"
           device_model: "FortiGate-600E"
           firmware_version: "7.0.8"
           target_version: "7.2.4"
@@ -24,7 +23,6 @@
 
       - name: "HA Secondary Firewall"
         device_vars:
-          platform_type: "fortios"
           device_model: "FortiGate-600E"
           firmware_version: "7.0.8"
           target_version: "7.2.4"
@@ -38,7 +36,6 @@
 
       - name: "Standalone Firewall"
         device_vars:
-          platform_type: "fortios"
           device_model: "FortiGate-200F"
           firmware_version: "7.0.12"
           target_version: "7.2.4"

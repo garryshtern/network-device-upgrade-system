@@ -40,7 +40,9 @@
       delegate_to: localhost
 
 - name: Record backup completion
-  ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: metrics-export
   vars:
     metric_type: "config_backup"
     metric_data:

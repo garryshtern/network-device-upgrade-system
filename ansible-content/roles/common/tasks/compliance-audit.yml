@@ -201,7 +201,9 @@
       - "==============================="
 
 - name: Record compliance completion
-  ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: metrics-export
   vars:
     metric_type: "compliance_audit"
     metric_data:

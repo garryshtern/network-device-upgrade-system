@@ -79,16 +79,16 @@
       register: mos_cli_test
       changed_when: false
       when:
-        - platform_type is defined
-        - platform_type == 'metamako_mos'
+        - ansible_network_os is defined
+        - ansible_network_os == 'metamako_mos'
 
     - name: Execute basic Opengear command
       ansible.builtin.raw: config -g config.version
       register: opengear_cli_test
       changed_when: false
       when:
-        - platform_type is defined
-        - platform_type == 'opengear'
+        - ansible_network_os is defined
+        - ansible_network_os == 'opengear'
 
   rescue:
     - name: CLI connectivity failed for any platform
@@ -99,7 +99,7 @@
   ansible.builtin.set_fact:
     device_connectivity:
       device: "{{ inventory_hostname }}"
-      platform: "{{ platform_type | default(ansible_network_os) | default('unknown') }}"
+      platform: "{{ ansible_network_os }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       basic_connectivity: "{{ connectivity_test is succeeded }}"
       ping_successful: "{{ ping_result is succeeded }}"

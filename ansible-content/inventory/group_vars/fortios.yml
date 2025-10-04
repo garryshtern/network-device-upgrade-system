@@ -16,7 +16,6 @@ ansible_httpapi_validate_certs: false
 ansible_httpapi_port: 443
 
 # Platform specific settings
-platform_type: "fortios"
 vendor: "fortinet"
 device_family: "fortigate"
 

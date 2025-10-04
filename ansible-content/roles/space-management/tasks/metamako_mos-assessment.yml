@@ -21,38 +21,81 @@
 
 - name: Parse storage information
   ansible.builtin.set_fact:
-    mos_total_size: >
-      "{{ mos_storage_info.stdout |
-        regex_search('/flash\\s+(\\S+)', '\\1') | first }}"
-    mos_available_size: >
-      "{{ mos_storage_info.stdout |
-        regex_search('/flash\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
-    mos_usage_percent: >
-      "{{ mos_storage_info.stdout |
-        regex_search('/flash\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%',
-          '\\1') | first }}"
+    mos_total_size: "{{ mos_storage_info.stdout | regex_search('/flash\\s+(\\S+)', '\\1') | first }}"
+    mos_available_size: "{{ mos_storage_info.stdout | regex_search('/flash\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
+    mos_usage_percent: "{{ mos_storage_info.stdout | regex_search('/flash\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\d+)%', '\\1') | first }}"
 
 - name: Parse firmware file listings
   ansible.builtin.set_fact:
-    mos_firmware_images: >-
-      {{ mos_firmware_files.stdout_lines |
-        select('match', '.*\\.mos$') |
-        map('regex_replace', '.* ([^/]+\\.mos)$', '\\1') | list }}
-    mos_application_images: "
-      {{ mos_app_files.stdout_lines | select('match', '.*(tgz|tar\\.gz)$') |
-        map('regex_replace', '.* ([^/]+\\.(tgz|tar\\.gz))$', '\\1') | list }}
-      "
+    mos_firmware_images: "{{ mos_firmware_files.stdout_lines | select('match', '.*\\.mos$') | map('regex_replace', '.* ([^/]+\\.mos)$', '\\1') | list }}"
+    mos_application_images: "{{ mos_app_files.stdout_lines | select('match', '.*(tgz|tar\\.gz)$') | map('regex_replace', '.* ([^/]+\\.(tgz|tar\\.gz))$', '\\1') | list }}"
 
-- name: Convert storage sizes to GB
+- name: Calculate storage sizes in GB
   ansible.builtin.set_fact:
-    storage_info: "{{ storage_info | combine({
+    mos_total_gb: "{{ (mos_total_size | regex_replace('[GM]', '') | float * (1 if 'G' in mos_total_size else 0.001)) | round(2) }}"
+    mos_available_gb: "{{ (mos_available_size | regex_replace('[GM]', '') | float * (1 if 'G' in mos_available_size else 0.001)) | round(2) }}"
+    mos_all_images: "{{ mos_firmware_images + mos_application_images }}"
 
-      'total_space_gb': >
-        (mos_total_size | regex_replace('[GM]', '') | float
-          * (1 if 'G' in mos_total_size else 0.001)) | round(2),
-      'free_space_gb': >
-        (mos_available_size | regex_replace('[GM]', '') | float
-          * (1 if 'G' in mos_available_size else 0.001)) | round(2),
-      'images_found': mos_firmware_images + mos_application_images,
-      'cleanup_candidates': mos_firmware_images + mos_application_images
-    }) }}"
+- name: Update storage_info with calculated values
+  ansible.builtin.set_fact:
+    storage_info: "{{ storage_info | combine({'total_space_gb': mos_total_gb, 'free_space_gb': mos_available_gb, 'images_found': mos_all_images, 'cleanup_candidates': mos_all_images}) }}"
+
+- name: Check if cleanup is needed
+  ansible.builtin.set_fact:
+    cleanup_needed: "{{ (minimum_free_space_gb is defined) and (storage_info.free_space_gb < minimum_free_space_gb) }}"
+
+- name: Storage cleanup block
+  when: cleanup_needed
+  block:
+    - name: Get current MOS version
+      ansible.builtin.raw: "cat /etc/version"
+      register: mos_version_result
+      changed_when: false
+
+    - name: Parse current version
+      ansible.builtin.set_fact:
+        mos_current_version: "{{ mos_version_result.stdout | trim }}"
+
+    - name: Identify current running image
+      ansible.builtin.set_fact:
+        running_image: "mos-{{ mos_current_version }}.mos"
+
+    - name: Identify obsolete images for cleanup
+      ansible.builtin.set_fact:
+        cleanup_candidates: "{{ mos_all_images | difference([running_image]) | list }}"
+
+    - name: Remove obsolete image files
+      ansible.builtin.raw: "rm -f /flash/{{ item }}"
+      loop: "{{ cleanup_candidates }}"
+      when:
+        - preserve_current_image | default(true)
+        - item != running_image
+        - cleanup_candidates | length > 0
+      register: cleanup_result
+      failed_when: false
+
+    - name: Log cleanup actions
+      ansible.builtin.debug:
+        msg: "Removed {{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }} obsolete image(s)"
+      when: cleanup_result is defined
+
+    - name: Re-assess storage after cleanup
+      ansible.builtin.raw: "df -h /flash"
+      register: mos_storage_post
+      changed_when: false
+
+    - name: Parse post-cleanup storage
+      ansible.builtin.set_fact:
+        mos_available_size_post: "{{ mos_storage_post.stdout | regex_search('/flash\\s+\\S+\\s+\\S+\\s+(\\S+)', '\\1') | first }}"
+      when: mos_storage_post is defined
+
+    - name: Update storage metrics after cleanup
+      ansible.builtin.set_fact:
+        mos_available_gb_post: "{{ (mos_available_size_post | regex_replace('[GM]', '') | float * (1 if 'G' in mos_available_size_post else 0.001)) | round(2) }}"
+        storage_cleanup_performed: true
+      when: mos_available_size_post is defined
+
+    - name: Update final storage info
+      ansible.builtin.set_fact:
+        storage_info: "{{ storage_info | combine({'free_space_gb': mos_available_gb_post}) }}"
+      when: mos_available_gb_post is defined
