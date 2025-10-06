@@ -37,6 +37,30 @@ This guide provides complete testing capabilities for the Network Device Upgrade
 
 ---
 
+## ⚠️ MANDATORY TEST UPDATE POLICY
+
+**CRITICAL**: ALL code changes REQUIRE corresponding test updates. This is NON-NEGOTIABLE.
+
+### Zero Tolerance Requirements
+- ✅ **Test Synchronization**: Tests MUST be updated with code changes
+- ✅ **Verification Accuracy**: Tests MUST verify new/modified behavior
+- ✅ **Correctness Validation**: Tests MUST actually test the changes, not just pass
+- ✅ **Coverage Maintenance**: Code changes MUST NOT reduce test coverage
+- 🚫 **No Exceptions**: Commits without test updates are BLOCKED
+
+### Quick Reference
+When you change code in:
+- **Roles** → Update `tests/vendor-tests/` for that platform
+- **Variables** → Update `tests/unit-tests/variable-validation.yml`
+- **Templates** → Update `tests/unit-tests/template-rendering.yml`
+- **Playbooks** → Update `tests/integration-tests/` and `tests/playbook-tests/`
+- **Platforms** → Update `tests/mock-inventories/` and platform tests
+- **Security** → Update `tests/unit-tests/authentication-validation.yml`
+
+**See [Test Maintenance](#-test-maintenance) section for complete requirements.**
+
+---
+
 ## 📊 Testing Framework Structure
 
 ```
@@ -427,11 +451,130 @@ ansible-playbook --check ../tests/validation-tests/comprehensive-validation-test
 
 ## 📋 Test Maintenance
 
-### **Regular Test Updates**
+### ⚠️ **MANDATORY: Test Updates for ALL Code Changes**
+
+**CRITICAL REQUIREMENT**: ALL code changes MUST be accompanied by corresponding test updates. This is NON-NEGOTIABLE.
+
+#### **Test Update Policy (ZERO TOLERANCE)**
+
+**Enforcement**: Code changes without test updates are BLOCKED from commit.
+
+**Requirements**:
+1. **Test Synchronization**: Tests MUST be updated in parallel with code changes
+2. **Verification Accuracy**: Tests MUST accurately verify new/modified behavior
+3. **Correctness Validation**: Tests MUST actually test the code changes, not just pass
+4. **Coverage Maintenance**: Code changes MUST NOT reduce test coverage
+5. **Regression Prevention**: Updated tests MUST prevent regression of fixed issues
+
+#### **Test Update Process (MANDATORY)**
+
+##### **Phase 1: Pre-Development Analysis**
+Before making ANY code changes:
+1. **Identify Affected Tests**: Determine ALL test files that need updates
+   - Unit tests: `tests/unit-tests/`
+   - Integration tests: `tests/integration-tests/`
+   - Vendor tests: `tests/vendor-tests/`
+   - Validation tests: `tests/validation-tests/`
+   - Mock inventories: `tests/mock-inventories/`
+   - Error scenarios: `tests/error-scenarios/`
+   - Playbook tests: `tests/playbook-tests/`
+
+2. **Document Test Impact**: Create checklist of tests requiring updates
+3. **Baseline Testing**: Run affected tests to establish current behavior
+4. **Plan Test Updates**: Document what test changes are needed
+
+##### **Phase 2: Parallel Development**
+During code development:
+1. **Update Tests Immediately**: Don't wait until code is "done"
+2. **Add New Test Cases**: For new functionality or modified behavior
+3. **Update Existing Tests**: Modify tests to match new behavior
+4. **Add Negative Tests**: Test error conditions and edge cases
+5. **Verify Test Correctness**: Ensure tests actually test modified code paths
+
+##### **Phase 3: Post-Development Verification**
+After code changes complete:
+1. **Run Full Test Suite**: `./tests/run-all-tests.sh`
+2. **Verify 100% Pass Rate**: ALL 23 test suites MUST pass
+3. **Confirm Test Coverage**: Verify tests cover modified code
+4. **Validate Test Behavior**: Tests verify correct behavior, not just pass
+5. **Update Test Documentation**: If test structure changed
+
+#### **Test Update Examples by Change Type**
+
+| Code Change Type | Required Test Updates | Test Files to Update |
+|-----------------|----------------------|---------------------|
+| **Variable Changes** | Update variable validation tests | `tests/unit-tests/variable-validation.yml` |
+| **Template Changes** | Update template rendering tests | `tests/unit-tests/template-rendering.yml` |
+| **Role Modifications** | Update vendor-specific tests | `tests/vendor-tests/cisco-nxos-tests.yml`, etc. |
+| **Playbook Changes** | Update workflow and check-mode tests | `tests/integration-tests/check-mode-tests.yml` |
+| **Platform Updates** | Update platform tests and mock inventories | `tests/mock-inventories/all-platforms.yml` |
+| **Security Changes** | Update authentication and transfer tests | `tests/unit-tests/authentication-validation.yml` |
+| **Error Handling** | Add/update error scenario tests | `tests/error-scenarios/*.yml` |
+| **Network Validation** | Update validation playbook tests | `tests/playbook-tests/network-validation/` |
+| **Firmware Loading** | Update image loading tests | `tests/playbook-tests/image-loading/` |
+| **Backup/Restore** | Update config backup tests | `tests/playbook-tests/config-backup/` |
+
+#### **Test Verification Checklist (MANDATORY)**
+
+Before committing code changes, verify:
+- [ ] ALL affected test files identified and updated
+- [ ] New test cases added for new functionality
+- [ ] Existing test cases updated for modified behavior
+- [ ] Negative test cases added for error conditions
+- [ ] All 23 test suites pass: `./tests/run-all-tests.sh`
+- [ ] Tests actually test modified code (not just pass)
+- [ ] Test coverage maintained or improved
+- [ ] Mock inventories updated if device configs changed
+- [ ] Test documentation updated if structure changed
+- [ ] No test regressions introduced
+
+#### **Common Test Update Scenarios**
+
+##### **Scenario 1: Platform Identifier Standardization**
+**Code Change**: Changed platform identifiers from `cisco_nxos` to `nxos`
+**Required Test Updates**:
+- Update ALL test files using old platform identifiers
+- Search entire `tests/` directory for old patterns
+- Update mock inventories with new identifiers
+- Verify consistency across all test categories
+**Files Updated**: 9+ test files across multiple categories
+
+##### **Scenario 2: Firmware Version Format Changes**
+**Code Change**: Modified NX-OS version format to support optional `.M` suffix
+**Required Test Updates**:
+- Update version validation tests
+- Modify mock inventories with both formats
+- Add test cases for standard and maintenance versions
+- Update filename matching tests
+**Files Updated**: Mock inventories, vendor tests, validation tests
+
+##### **Scenario 3: New Authentication Method**
+**Code Change**: Added SSH key authentication support
+**Required Test Updates**:
+- Add authentication validation test cases
+- Update secure transfer tests
+- Add mock SSH key configurations
+- Test authentication preference order
+**Files Updated**: Authentication tests, integration tests, mock inventories
+
+#### **Test Failure Response Protocol**
+
+If tests fail after code changes:
+1. **DO NOT commit**: Fix issues before committing
+2. **Analyze Failure**: Determine if code or test is incorrect
+3. **Fix Root Cause**: Update code or tests as needed
+4. **Verify Fix**: Re-run full test suite
+5. **Document Changes**: Update test documentation if needed
+
+#### **Regular Test Maintenance Schedule**
+
+Beyond code-change-driven updates, perform regular maintenance:
 - **Platform Updates**: When new platform versions are supported
 - **Feature Enhancements**: When new validation capabilities are added
 - **Architecture Changes**: When deployment methods evolve
 - **Performance Optimization**: When scalability improvements are made
+- **Quarterly Review**: Verify test coverage and relevance
+- **Annual Audit**: Comprehensive test framework assessment
 
 ### **Continuous Integration**
 The test framework is designed for CI/CD integration:
@@ -439,6 +582,7 @@ The test framework is designed for CI/CD integration:
 - **Logging**: Structured logging for analysis
 - **Reporting**: Machine-readable test results
 - **Parallelization**: Multiple test suites can run concurrently
+- **Automated Enforcement**: CI/CD blocks commits without test updates
 
 ---
 

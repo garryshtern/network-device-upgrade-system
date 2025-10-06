@@ -93,20 +93,29 @@ yamllint ansible-content/
 **⚠️ ZERO TOLERANCE: Any failures below BLOCK all commits**
 
 ```bash
-# 1. Syntax validation (exit code MUST be 0)
+# 1. Test update verification (MANDATORY - exit code MUST be 0)
+# CRITICAL: Verify ALL tests updated to match code changes
+./tests/run-all-tests.sh
+# - Verify tests pass with your changes
+# - Confirm tests actually test modified code
+# - Check test coverage includes new/modified functionality
+# - Ensure tests verify correct behavior, not just pass
+
+# 2. Syntax validation (exit code MUST be 0)
 find ansible-content -name "*.yml" -exec ansible-playbook --syntax-check {} \;
 
-# 2. Linting validation (exit code MUST be 0)
+# 3. Linting validation (exit code MUST be 0)
 ansible-lint ansible-content/ --offline --parseable-severity
 yamllint ansible-content/
 
-# 3. Test suite validation (MUST achieve 100% pass rate)
+# 4. Test suite validation (MUST achieve 100% pass rate)
 ./tests/run-all-tests.sh | grep "Passed:" | grep "23"
 
-# 4. Check mode validation
+# 5. Check mode validation
 ansible-playbook --check --diff ansible-content/playbooks/main-upgrade-workflow.yml
 
 # ALL CHECKS MUST PASS BEFORE COMMIT
+# CODE CHANGES WITHOUT CORRESPONDING TEST UPDATES ARE BLOCKED
 ```
 
 ### Troubleshooting
@@ -230,20 +239,73 @@ Comprehensive testing for Mac/Linux development without physical devices:
 
 ### **Testing Standards**
 
+**⚠️ MANDATORY: ALL CODE CHANGES REQUIRE TEST UPDATES**
+
+#### Test Update Requirements (ZERO TOLERANCE)
+- **Test Synchronization**: ALL code changes MUST be accompanied by corresponding test updates
+- **Verification Accuracy**: Tests MUST accurately verify the new/modified behavior
+- **Test Correctness**: Tests MUST be updated to ensure they test code changes correctly
+- **Coverage Maintenance**: Code changes MUST NOT reduce test coverage
+- **Regression Prevention**: Updated tests MUST prevent regression of fixed issues
+- **NO EXCEPTIONS**: Commits without test updates are BLOCKED
+
+#### Mandatory Test Update Process
+1. **BEFORE Code Changes**:
+   - Identify ALL affected test files (unit, integration, validation, vendor)
+   - Document which tests need updates to verify changes
+   - Run baseline tests to establish current behavior
+
+2. **DURING Development**:
+   - Update test files in parallel with code changes
+   - Ensure tests verify new behavior, not just old behavior
+   - Add new test cases for new functionality
+   - Update existing test cases to match modified behavior
+   - Add negative test cases for error scenarios
+
+3. **AFTER Code Changes**:
+   - Verify ALL affected tests pass with changes
+   - Confirm tests actually test the modified code paths
+   - Run complete test suite to detect regressions
+   - Update test documentation if test structure changed
+   - Verify 100% test pass rate maintained
+
+#### Test File Categories Requiring Updates
+- **Unit Tests** (`tests/unit-tests/`): Variable validation, template rendering, workflow logic
+- **Integration Tests** (`tests/integration-tests/`): End-to-end workflow testing
+- **Vendor Tests** (`tests/vendor-tests/`): Platform-specific functionality
+- **Validation Tests** (`tests/validation-tests/`): Comprehensive validation suites
+- **Mock Inventories** (`tests/mock-inventories/`): Test device configurations
+- **Error Scenario Tests** (`tests/error-scenarios/`): Failure condition testing
+- **Playbook Tests** (`tests/playbook-tests/`): Individual playbook validation
+
+#### Test Update Examples (MANDATORY PATTERNS)
+- **Variable Changes**: Update `variable-validation.yml` with new/modified variables
+- **Template Changes**: Update `template-rendering.yml` to test new template logic
+- **Role Changes**: Update corresponding vendor test files (`cisco-nxos-tests.yml`, etc.)
+- **Playbook Changes**: Update `check-mode-tests.yml` and workflow test files
+- **Platform Changes**: Update platform-specific tests and mock inventories
+- **Security Changes**: Update authentication and secure transfer tests
+- **Error Handling**: Add/update error scenario tests
+
+#### Test Verification Requirements
 - **Unit Tests**: All new functionality MUST have corresponding unit tests
 - **Integration Tests**: Complex workflows MUST have integration test coverage
 - **Syntax Tests**: ALL Ansible files MUST pass syntax validation
 - **Linting Tests**: ALL files MUST pass ansible-lint and yamllint
 - **Functional Tests**: Code MUST demonstrate working functionality
 - **Error Scenarios**: Error handling MUST be tested with negative test cases
+- **Correctness Validation**: Tests MUST verify behavior matches code changes
 
 ### **Enforcement Mechanisms**
 
 - **Automated Validation**: CI/CD pipeline MUST block deployments with any failures
 - **Manual Verification**: Code reviewers MUST verify all quality standards
 - **Test Suite Integration**: All changes MUST maintain or improve test pass rates
+- **Test Update Verification**: Code reviewers MUST verify tests updated for code changes
+- **Test Correctness Review**: Verify tests actually test modified code, not just pass
 - **Documentation Updates**: Technical documentation MUST reflect all changes
 - **Quality Gates**: No commits allowed without passing ALL validation steps
+- **Test Synchronization Gate**: No commits allowed without corresponding test updates
 
 ### **Systematic Code Review Process (MANDATORY)**
 
