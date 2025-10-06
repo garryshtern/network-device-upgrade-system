@@ -60,7 +60,7 @@ architecture_detection:
 firmware_upload_timeout: 3600
 firmware_chunk_size: 1048576  # 1MB chunks
 verify_firmware_checksum: true
-local_firmware_path: "{{ firmware_base_path }}/opengear"
+local_firmware_path: "{{ firmware_base_path }}"
 
 # Firmware filename patterns by device model
 firmware_filename_patterns:

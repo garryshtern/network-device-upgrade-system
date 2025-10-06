@@ -3,24 +3,7 @@
 
 - name: Determine firmware filename for validation
   ansible.builtin.set_fact:
-    firmware_filename_for_validation: >-
-      {%- if target_firmware.endswith(('.bin', '.nxos', '.spa', '.pkg', '.out', '.mos', '.tar.gz', '.dgz')) -%}
-        {{ target_firmware }}
-      {%- else -%}
-        {%- if platform == 'nxos' -%}
-          nxos-{{ target_firmware }}.bin
-        {%- elif platform == 'ios' -%}
-          iosxe-{{ target_firmware }}.bin
-        {%- elif platform == 'fortios' -%}
-          fortios-{{ target_firmware }}.out
-        {%- elif platform == 'metamako_mos' -%}
-          mos-{{ target_firmware }}.mos
-        {%- elif platform == 'opengear' -%}
-          opengear-{{ target_firmware }}.dgz
-        {%- else -%}
-          {{ target_firmware }}
-        {%- endif -%}
-      {%- endif -%}
+    firmware_filename_for_validation: "{{ target_firmware }}"
 
 - name: Check if firmware image file exists
   ansible.builtin.stat:
@@ -68,20 +51,23 @@
     that:
       - >
         (platform == 'nxos' and
-          firmware_filename_for_validation.endswith(('.bin', '.nxos'))) or
+          (firmware_filename_for_validation.endswith('.bin') or
+           firmware_filename_for_validation.endswith('.img'))) or
         (platform == 'ios' and
-          firmware_filename_for_validation.endswith(('.bin', '.spa', '.pkg'))) or
+          (firmware_filename_for_validation.endswith('.bin') or
+           firmware_filename_for_validation.endswith('.SPA.bin'))) or
         (platform == 'fortios' and
           firmware_filename_for_validation.endswith('.out')) or
         (platform == 'metamako_mos' and
-          firmware_filename_for_validation.endswith(('.mos', '.tar.gz'))) or
+          firmware_filename_for_validation.endswith('.iso')) or
         (platform == 'opengear' and
-          firmware_filename_for_validation.endswith(('.dgz', '.bin')))
+          (firmware_filename_for_validation.endswith('.flash') or
+           firmware_filename_for_validation.endswith('.raucb')))
     fail_msg: >
-      "Firmware file extension not valid for platform: >-
-          {{ platform }}: {{ firmware_filename_for_validation }}"
+      "Firmware file extension not valid for platform {{ platform }}: {{ firmware_filename_for_validation }}.
+      Expected: nxos=(.bin|.img), ios=(.bin|.SPA.bin), fortios=(.out), metamako_mos=(.iso), opengear=(.flash|.raucb)"
     success_msg: >
-      "Firmware file extension validation passed for {{ platform }}"
+      "Firmware file extension validation passed for {{ platform }}: {{ firmware_filename_for_validation }}"
 
 - name: Set integrity check result
   ansible.builtin.set_fact:

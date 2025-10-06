@@ -5,7 +5,7 @@
 
 - name: Set image loading variables
   ansible.builtin.set_fact:
-    firmware_source_path: "{{ firmware_base_path }}/{{ platform }}"
+    firmware_source_path: "{{ firmware_base_path }}"
     device_storage_path: "/var/lib/firmware"
     integrity_check_required: true
     cleanup_old_images: true

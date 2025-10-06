@@ -42,7 +42,7 @@ license_grace_period_days: 30
 
 # Firmware management - Server-initiated PUSH only
 firmware_upload_method: "server_push"  # Only server-initiated uploads supported
-local_firmware_path: "{{ firmware_base_path }}/fortios"
+local_firmware_path: "{{ firmware_base_path }}"
 verify_firmware_signature: true
 
 # Security service validation

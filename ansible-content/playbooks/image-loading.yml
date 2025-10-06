@@ -7,7 +7,7 @@
   hosts: "{{ target_hosts }}"
   gather_facts: false
   vars:
-    firmware_source_path: "{{ firmware_base_path }}/{{ platform }}"
+    firmware_source_path: "{{ firmware_base_path }}"
     device_storage_path: "/var/lib/firmware"
     integrity_check_required: true
     cleanup_old_images: true
