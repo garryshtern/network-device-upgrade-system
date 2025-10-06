@@ -42,10 +42,10 @@
 - name: Skip multicast validation if PIM not configured
   ansible.builtin.debug:
     msg: "PIM/IGMP not configured on {{ inventory_hostname }} - skipping multicast validation"
-  when: not (pim_configured | default(false))
+  when: not (pim_configured)
 
 - name: Gather PIM neighbor information
-  when: pim_configured | default(false)
+  when: pim_configured
   block:
     - name: Get PIM neighbor status (NX-OS)
       cisco.nxos.nxos_command:
@@ -55,7 +55,7 @@
           - show ip pim rp | json
       register: nxos_pim_info
       when:
-        - ansible_network_os == "cisco.nxos.nxos"
+        - ansible_network_os | is_platform('nxos')
         - not ansible_check_mode
       failed_when: false
 
@@ -67,27 +67,27 @@
           - show ip pim rp mapping
       register: ios_pim_info
       when:
-        - ansible_network_os == "cisco.ios.ios"
+        - ansible_network_os | is_platform('ios')
         - not ansible_check_mode
       failed_when: false
 
 - name: Parse PIM information for NX-OS
-  when: pim_configured | default(false)
+  when: pim_configured
   block:
     - name: Extract PIM data
       ansible.builtin.set_fact:
         pim_neighbors: >
           "{{ nxos_pim_info.stdout[0] | from_json |
-            json_query('TABLE_neighbor.ROW_neighbor') | default([]) }}"
+            json_query('TABLE_neighbor.ROW_neighbor')  }}"
         pim_interfaces: >
           "{{ nxos_pim_info.stdout[1] | from_json |
-            json_query('TABLE_intf.ROW_intf') | default([]) }}"
+            json_query('TABLE_intf.ROW_intf')  }}"
         pim_rp_info: >
           "{{ nxos_pim_info.stdout[2] | from_json |
-            json_query('TABLE_rp.ROW_rp') | default([]) }}"
+            json_query('TABLE_rp.ROW_rp')  }}"
       when:
         - not ansible_check_mode
-        - ansible_network_os == "cisco.nxos.nxos"
+        - ansible_network_os | is_platform('nxos')
         - nxos_pim_info.rc == 0
 
     - name: Classify PIM neighbor states
@@ -103,10 +103,12 @@
             'equalto', 'sparse') | list }}"
         pim_dense_mode: >
           "{{ pim_interfaces | selectattr('mode', 'equalto', 'dense') | list }}"
-      when: pim_neighbors is defined and pim_interfaces is defined
+      when:
+        - pim_neighbors is defined
+        - pim_interfaces is defined
 
 - name: PIM neighbor validation
-  when: pim_configured | default(false)
+  when: pim_configured
   block:
     - name: Check PIM neighbor adjacencies
       ansible.builtin.debug:
@@ -136,7 +138,7 @@
       when: pim_interfaces is defined
 
 - name: IGMP group validation
-  when: pim_configured | default(false)
+  when: pim_configured
   block:
     - name: Get IGMP group memberships
       cisco.nxos.nxos_command:
@@ -145,7 +147,7 @@
           - show ip igmp interface | json
       register: igmp_info
       when:
-        - ansible_network_os == "cisco.nxos.nxos"
+        - ansible_network_os | is_platform('nxos')
         - not ansible_check_mode
       failed_when: false
 
@@ -153,10 +155,10 @@
       ansible.builtin.set_fact:
         igmp_groups: >
           "{{ igmp_info.stdout[0] | from_json |
-            json_query('TABLE_group.ROW_group') | default([]) }}"
+            json_query('TABLE_group.ROW_group')  }}"
         igmp_interfaces: >
           "{{ igmp_info.stdout[1] | from_json |
-            json_query('TABLE_intf.ROW_intf') | default([]) }}"
+            json_query('TABLE_intf.ROW_intf')  }}"
       when:
         - not ansible_check_mode
         - igmp_info is defined
@@ -176,7 +178,7 @@
       when: igmp_groups is defined
 
 - name: Rendezvous Point (RP) validation
-  when: pim_configured | default(false)
+  when: pim_configured
   block:
     - name: Validate RP configuration
       ansible.builtin.debug:
@@ -195,7 +197,7 @@
       register: rp_reachability
       loop: "{{ pim_rp_info[:5] }}"
       when:
-        - ansible_network_os == "cisco.nxos.nxos"
+        - ansible_network_os | is_platform('nxos')
         - pim_rp_info is defined and pim_rp_info | length > 0
         - not ansible_check_mode
       failed_when: false
@@ -204,7 +206,7 @@
       ansible.builtin.debug:
         msg: |
           RP Reachability Test Results:
-          {% for result in rp_reachability.results | default([]) %}
+          {% for result in rp_reachability.results  %}
           - >-
             RP {{ loop.index }}: {{ 'REACHABLE' if result.stdout[0] |
               regex_search('Success rate is [^0]') else 'UNREACHABLE' }}
@@ -212,7 +214,7 @@
       when: rp_reachability is defined
 
 - name: Anycast RP validation
-  when: pim_configured | default(false)
+  when: pim_configured
   block:
     - name: Check for Anycast RP configuration
       cisco.nxos.nxos_command:
@@ -220,7 +222,7 @@
           - show ip pim anycast-rp | json
       register: anycast_rp_info
       when:
-        - ansible_network_os == "cisco.nxos.nxos"
+        - ansible_network_os | is_platform('nxos')
         - not ansible_check_mode
       failed_when: false
 
@@ -228,7 +230,7 @@
       ansible.builtin.set_fact:
         anycast_rp_sets: >
           "{{ anycast_rp_info.stdout[0] | from_json |
-            json_query('TABLE_anycast_rp.ROW_anycast_rp') | default([]) }}"
+            json_query('TABLE_anycast_rp.ROW_anycast_rp')  }}"
       when:
         - not ansible_check_mode
         - anycast_rp_info is defined
@@ -251,7 +253,7 @@
       when: anycast_rp_sets is defined
 
 - name: Multicast routing table validation
-  when: pim_configured | default(false)
+  when: pim_configured
   block:
     - name: Get multicast routing table
       cisco.nxos.nxos_command:
@@ -260,7 +262,7 @@
           - show ip mroute | json
       register: mroute_info
       when:
-        - ansible_network_os == "cisco.nxos.nxos"
+        - ansible_network_os | is_platform('nxos')
         - not ansible_check_mode
       failed_when: false
 
@@ -269,7 +271,7 @@
         mroute_summary: "{{ mroute_info.stdout[0] | from_json }}"
         mroute_entries: >
           "{{ mroute_info.stdout[1] | from_json |
-            json_query('TABLE_mroute.ROW_mroute') | default([]) }}"
+            json_query('TABLE_mroute.ROW_mroute')  }}"
       when:
         - not ansible_check_mode
         - mroute_info is defined
@@ -280,7 +282,7 @@
         msg: |
           Multicast Routing Status:
           {% if mroute_summary is defined %}
-          Total Entries: {{ mroute_summary.total_entries | default(0) }}
+          Total Entries: {{ mroute_summary.total_entries  }}
           Active Entries: {{ mroute_entries | length }}
           {% for route in mroute_entries[:5] %}
           - >-
@@ -297,7 +299,7 @@
   ansible.builtin.set_fact:
     multicast_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      pim_configured: "{{ pim_configured | default(false) }}"
+      pim_configured: "{{ pim_configured }}"
       pim_neighbors_total: >
         "{{ pim_neighbors | length if pim_neighbors is defined else 0 }}"
       pim_neighbors_up: >
@@ -316,7 +318,7 @@
   ansible.builtin.debug:
     msg: |
       Multicast Protocol Validation Results:
-      {% if pim_configured | default(false) %}
+      {% if pim_configured %}
       - >
         PIM Neighbors: {{ multicast_baseline.pim_neighbors_up
           }}/{{ multicast_baseline.pim_neighbors_total }}

@@ -41,7 +41,7 @@
           - item.available_space_mb is defined
           - item.firmware_size_mb is defined
         fail_msg: >-
-          Test platform {{ item.platform | default('unknown') }}
+          Test platform {{ item.platform }}
           missing required fields
       loop: "{{ test_platforms }}"
 
@@ -64,7 +64,7 @@
             item.expected_result in
             ['proceed', 'cleanup_required', 'upgrade_blocked']
         fail_msg: >-
-          Space scenario {{ item.name | default('unknown') }}
+          Space scenario {{ item.name }}
           has invalid structure
       loop: "{{ space_scenarios }}"
 
@@ -76,9 +76,9 @@
             available: 2048
             required: 1000
             margin: >-
-              {{ (1000 * (safety_margin_percent | default(20) / 100)) | int }}
+              {{ (1000 * (safety_margin_percent / 100)) | int }}
             total_needed: >-
-              {{ 1000 + (1000 * (safety_margin_percent | default(20) / 100))
+              {{ 1000 + (1000 * (safety_margin_percent / 100))
                 | int }}
           insufficient_case:
             available: 512

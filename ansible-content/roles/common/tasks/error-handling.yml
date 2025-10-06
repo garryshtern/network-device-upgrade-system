@@ -6,9 +6,9 @@
   ansible.builtin.debug:
     msg:
       - "=== TASK FAILURE DETECTED ==="
-      - "Failed Task: {{ ansible_failed_task.name | default('Unknown') }}"
+      - "Failed Task: {{ ansible_failed_task.name }}"
       - "Host: {{ inventory_hostname }}"
-      - "Error: {{ ansible_failed_result.msg | default('No error message') }}"
+      - "Error: {{ ansible_failed_result.msg }}"
       - "Timestamp: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       - "=========================="
 
@@ -16,9 +16,9 @@
   ansible.builtin.set_fact:
     task_failed: true
     failure_details:
-      failed_task: "{{ ansible_failed_task.name | default('Unknown task') }}"
+      failed_task: "{{ ansible_failed_task.name }}"
       error_message: >
-        "{{ ansible_failed_result.msg | default('Unknown error') }}"
+        "{{ ansible_failed_result.msg }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       host: "{{ inventory_hostname }}"
 
@@ -26,5 +26,7 @@
   ansible.builtin.debug:
     msg: >-
       ALERT: Task failure on {{ inventory_hostname }} - {{
-        ansible_failed_task.name | default('Unknown task') }}
-  when: task_failed is defined and task_failed
+        ansible_failed_task.name }}
+  when:
+    - task_failed is defined
+    - task_failed

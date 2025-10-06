@@ -34,10 +34,10 @@
       ansible.builtin.set_fact:
         total_power_usage: >
           "{{ outlet_status.results | map(attribute='json.power_draw') |
-            map('float') | sum | default(0) }}"
+            map('float') | sum  }}"
         active_outlets: >
           "{{ outlet_status.results | selectattr('json.status',
-            'equalto', 'on') | list | length | default(0) }}"
+            'equalto', 'on') | list | length  }}"
       when: outlet_status is defined
 
     - name: Check power capacity
@@ -56,14 +56,16 @@
         power_utilization: >
           "{{ (total_power_usage | float /
             power_capacity.json.max_capacity | float * 100) | round(1) }}"
-      when: power_capacity is defined and total_power_usage is defined
+      when:
+        - power_capacity is defined
+        - total_power_usage is defined
 
     - name: Warn about high power utilization
       ansible.builtin.debug:
         msg: |
           WARNING: Power utilization is {{ power_utilization }}%.
           High utilization may affect upgrade stability.
-      when: power_utilization | default(0) | float > 80
+      when: power_utilization  | float > 80
 
 - name: Check environmental sensors (if available)
   ansible.builtin.uri:
@@ -81,10 +83,10 @@
       Smart PDU Assessment:
       - Model: {{ opengear_upgrade_state.device_model }}
       - Power Outlets: {{ opengear_upgrade_state.power_ports | length }}
-      - Active Outlets: {{ active_outlets | default(0) }}
+      - Active Outlets: {{ active_outlets  }}
       - >-
         Power Usage: {{ total_power_usage |
-          default(0) }}W ({{ power_utilization | default(0) }}%)
+          default(0) }}W ({{ power_utilization  }}%)
       - >-
         Environmental Sensors: {{ environmental_sensors.json |
           length if environmental_sensors.json is defined else 0 }}

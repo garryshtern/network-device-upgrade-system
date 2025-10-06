@@ -38,13 +38,19 @@
   tasks:
     - name: Test main upgrade workflow playbook syntax
       ansible.builtin.shell: |
-        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/main-upgrade-workflow.yml -i /dev/null
+        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/main-upgrade-workflow.yml -i /dev/null \
+          --extra-vars "target_hosts=all target_firmware=test.bin platform_firmware={} \
+          maintenance_window=true max_concurrent=5"
       register: main_workflow_syntax
       failed_when: main_workflow_syntax.rc != 0
 
     - name: Test phase-specific playbook syntax (except network-validation)
       ansible.builtin.shell: |
-        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/{{ item }} -i /dev/null
+        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/{{ item }} -i /dev/null \
+          --extra-vars "target_hosts=all target_firmware=test.bin backup_type=pre_upgrade \
+          restore_config=true restore_firmware=true emergency_mode=false rollback_reason=test \
+          compliance_standards=['security_baseline'] current_firmware_version=test \
+          site_name=test vendor=test validation_score=0"
       register: phase_workflow_syntax
       loop:
         - "image-loading.yml"
@@ -156,13 +162,17 @@
 
     - name: Test validation workflow
       ansible.builtin.shell: |
-        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/network-validation.yml -i /dev/null
+        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/network-validation.yml -i /dev/null \
+          --extra-vars "target_hosts=all validation_type=pre_upgrade multicast_enabled=true \
+          bgp_enabled=true compare_with_baseline=false"
       register: validation_workflow_test
       failed_when: validation_workflow_test.rc != 0
 
     - name: Test rollback workflow
       ansible.builtin.shell: |
-        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/emergency-rollback.yml -i /dev/null
+        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/emergency-rollback.yml -i /dev/null \
+          --extra-vars "target_hosts=all restore_config=true restore_firmware=true \
+          emergency_mode=false rollback_reason=test"
       register: rollback_workflow_test
       failed_when: rollback_workflow_test.rc != 0
 

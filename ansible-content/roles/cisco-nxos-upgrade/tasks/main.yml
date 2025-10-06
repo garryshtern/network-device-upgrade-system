@@ -38,7 +38,9 @@
 
 - name: Handle EPLD upgrade (if required)
   ansible.builtin.include_tasks: epld-upgrade.yml
-  when: upgrade_epld | default(false) and target_epld_image is defined
+  when:
+    - upgrade_epld
+    - target_epld_image is defined
 
 - name: Execute upgrade based on ISSU capability
   ansible.builtin.include_tasks: "{{ upgrade_task_file }}"

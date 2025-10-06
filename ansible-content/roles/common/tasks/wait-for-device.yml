@@ -1,0 +1,21 @@
+---
+# Wait for Device Connection
+# Reusable task for waiting for device connectivity
+#
+# Required variables:
+#   wait_timeout: Maximum time to wait in seconds
+#
+# Optional variables:
+#   wait_delay: Seconds to wait before starting checks (default: 5)
+#   wait_sleep: Seconds between retries (default: 5)
+#   connection_check_failed_when: Override failure condition (default: not set)
+#   connection_check_when: Additional conditional (default: true)
+
+- name: Wait for device connection
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ wait_timeout }}"
+    delay: "{{ wait_delay }}"
+    sleep: "{{ wait_sleep }}"
+  register: connection_wait_result
+  failed_when: connection_check_failed_when if connection_check_failed_when is defined else connection_wait_result.failed
+  when: connection_check_when

@@ -8,11 +8,17 @@ ansible_command_timeout: 300
 ansible_connect_timeout: 30
 
 # Upgrade workflow settings
+target_hosts: all  # Default hosts pattern for playbooks
 max_concurrent_devices: 5
+max_concurrent: 5  # Serial execution limit for playbooks
 max_retry_attempts: 3
 connectivity_timeout: 300
 reboot_wait_time: 600
 validation_timeout: 300
+required_space_gb: 4  # Minimum free space required for upgrades (GB)
+firmware_size_gb: 2  # Expected firmware image size (GB)
+target_firmware: ""  # Must be set at runtime
+platform_firmware: {}  # Platform-specific firmware mappings
 
 # Phase control
 phase_1_timeout: 3600  # Image loading phase (1 hour)
@@ -22,6 +28,14 @@ phase_2_timeout: 1800  # Installation phase (30 minutes)
 backup_enabled: true
 rollback_on_failure: true
 keep_backup_count: 3
+maintenance_window: false  # MUST be explicitly set to true for upgrades (safety)
+backup_type: "pre_upgrade"  # Type of backup: pre_upgrade, post_upgrade, scheduled
+include_startup_config: true  # Include startup config in backups
+include_running_config: true  # Include running config in backups
+restore_config: true  # Restore config during rollback
+restore_firmware: true  # Restore firmware during rollback
+emergency_mode: false  # Emergency rollback mode
+rollback_reason: "upgrade_failure"  # Default rollback reason
 
 # Validation settings
 skip_validation: false
@@ -68,8 +82,30 @@ power_threshold_percent: 85
 ping_test_enabled: true
 ping_test_host: "8.8.8.8"
 ping_test_count: 3
+bgp_enabled: true  # Enable BGP validation checks
+multicast_enabled: true  # Enable multicast validation checks
+validation_type: "post_upgrade"  # Default validation type: pre_upgrade or post_upgrade
 
 # Logging
 log_level: "info"  # debug, info, warning, error
 structured_logging: true
 log_retention_days: 30
+
+# Compliance and reporting
+generate_report: true  # Generate compliance/validation reports
+send_metrics: true  # Send metrics to monitoring systems
+log_metrics_locally: false  # Log metrics to local files
+compliance_standards: ['security_baseline', 'network_hardening']  # Default compliance standards
+current_firmware_version: "unknown"  # Current firmware version (detected at runtime)
+site_name: "unknown"  # Site/location name
+vendor: "unknown"  # Device vendor
+validation_score: 0  # Validation score (calculated at runtime)
+
+# Common upgrade state base (extended by vendor roles)
+common_upgrade_state:
+  device: "{{ inventory_hostname }}"
+  current_version: ""
+  target_version: "{{ target_firmware }}"
+  upgrade_start_time: ""
+  upgrade_end_time: ""
+  upgrade_status: "not_started"

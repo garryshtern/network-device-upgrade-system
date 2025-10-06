@@ -14,49 +14,49 @@
     gather_subset:
       - hardware
   register: nxos_version_output
-  when: ansible_network_os == 'nxos'
+  when: ansible_network_os | is_platform('nxos')
 
 - name: Gather device facts to get current version (Cisco IOS-XE)
   cisco.ios.ios_facts:
     gather_subset:
       - hardware
   register: ios_version_output
-  when: ansible_network_os == 'ios'
+  when: ansible_network_os | is_platform('ios')
 
 - name: Get current firmware version (FortiOS)
   fortinet.fortios.fortios_monitor_fact:
     selector: 'system_status'
   register: fortios_version_output
-  when: ansible_network_os == 'fortios'
+  when: ansible_network_os | is_platform('fortios')
 
 - name: Get current firmware version (Opengear)
   ansible.builtin.raw: "config show system.label 2>/dev/null || echo 'Unknown'"
   register: opengear_version_output
   changed_when: false
-  when: ansible_network_os == 'opengear'
+  when: ansible_network_os | is_platform('opengear')
 
 - name: Get current firmware version (Metamako MOS)
   ansible.builtin.raw: "cat /etc/mos-release 2>/dev/null || echo 'Unknown'"
   register: mos_version_output
   changed_when: false
-  when: ansible_network_os == 'mos'
+  when: ansible_network_os | is_platform('mos')
 
 - name: Extract actual version from device output
   ansible.builtin.set_fact:
     actual_firmware_version: |-
-      {%- if ansible_network_os == 'nxos' -%}
-        {{ ansible_net_version | default('unknown') }}
-      {%- elif ansible_network_os == 'ios' -%}
-        {{ ansible_net_version | default('unknown') }}
-      {%- elif ansible_network_os == 'fortios' -%}
-        {{ fortios_version_output.meta.results.version | default('unknown') }}
-      {%- elif ansible_network_os == 'opengear' -%}
+      {%- if ansible_network_os | is_platform('nxos') -%}
+        {{ ansible_net_version }}
+      {%- elif ansible_network_os | is_platform('ios') -%}
+        {{ ansible_net_version }}
+      {%- elif ansible_network_os | is_platform('fortios') -%}
+        {{ fortios_version_output.meta.results.version }}
+      {%- elif ansible_network_os | is_platform('opengear') -%}
         {{ opengear_version_output.stdout |
-        regex_search('([0-9\\.]+)', '\\1') | first | default('unknown') }}
-      {%- elif ansible_network_os == 'mos' -%}
+        regex_search('([0-9\\.]+)', '\\1') | first }}
+      {%- elif ansible_network_os | is_platform('mos') -%}
         {{ mos_version_output.stdout |
         regex_search('VERSION=([0-9\\.]+)', '\\1') |
-        first | default('unknown') }}
+        first }}
       {%- else -%}
         unknown
       {%- endif -%}
@@ -90,7 +90,7 @@
     success_msg: >
       "Firmware version verification passed: {{ actual_firmware_version }}"
   when:
-    - strict_version_check | default(true) | bool
+    - strict_version_check  | bool
     - actual_firmware_version != 'unknown'
 
 - name: Warning for version check in non-strict mode
@@ -100,7 +100,7 @@
       Expected: {{ expected_firmware_version }}
       Actual:   {{ actual_firmware_version }}
       Match:    {{ version_matches }}
-  when: not (strict_version_check | default(true) | bool)
+  when: not (strict_version_check  | bool)
 
 - name: Set version verification result
   ansible.builtin.set_fact:

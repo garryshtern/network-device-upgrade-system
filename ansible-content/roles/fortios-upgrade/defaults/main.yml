@@ -64,16 +64,14 @@ policy_sync_timeout: 300
 signature_update_timeout: 600
 ha_failover_timeout: 120
 
-# Upgrade state initialization
-fortios_upgrade_state:
-  device: "{{ inventory_hostname }}"
-  current_version: ""
-  target_version: "{{ target_firmware_version | default('') }}"
-  ha_mode: "standalone"
-  ha_role: "master"
-  cluster_member: ""
-  license_status: "unknown"
-  vdom_mode: false
-  multi_step_required: "{{ multi_step_upgrade_required | default(false) }}"
-  upgrade_path: "{{ upgrade_path | default([target_firmware_version | default('')]) }}"
-  current_step: "{{ current_step | default(0) }}"
+# Upgrade state initialization (extends common_upgrade_state from group_vars)
+fortios_upgrade_state: "{{
+  common_upgrade_state | combine({'ha_mode': 'standalone',
+    'ha_role': 'master',
+    'cluster_member': '',
+    'license_status': 'unknown',
+    'vdom_mode': false,
+    'multi_step_required': multi_step_upgrade_required | default(false),
+    'upgrade_path': upgrade_path | default([target_firmware]),
+    'current_step': current_step | default(0)})
+}}"

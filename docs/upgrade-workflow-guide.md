@@ -9,8 +9,8 @@ The system implements a **three-phase upgrade approach** designed for operationa
 ```mermaid
 graph LR
     subgraph "Phase 1: Image Loading 🕐"
-        A1[Health Check]
-        A2[Storage Cleanup]
+        A1[Connectivity Check]
+        A2[Storage Assessment]
         A3[Image Transfer]
         A4[Hash Verification]
         A1 --> A2 --> A3 --> A4

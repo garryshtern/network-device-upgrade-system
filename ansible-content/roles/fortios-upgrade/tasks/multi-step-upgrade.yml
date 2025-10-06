@@ -139,6 +139,4 @@
       Upgrade Path: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}
       Final Version: {{ fortios_upgrade_state.current_version }}
       Total Steps Completed: {{ fortios_upgrade_state.upgrade_path | length }}
-  when: >
-    fortios_upgrade_state.current_version ==
-      fortios_upgrade_state.target_version
+  when: fortios_upgrade_state.current_version == fortios_upgrade_state.target_version

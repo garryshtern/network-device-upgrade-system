@@ -214,9 +214,8 @@ File operations require CLI commands or `raw` module:
 Why CLI: Filesystem operations (dir, delete, copy) aren't managed by resource modules.
 
 **Files Using CLI for File Operations:**
-- `storage-cleanup.yml` - Delete old images
+- `storage-assessment.yml` - Check disk space and cleanup (integrated)
 - `image-loading.yml` - Copy firmware files
-- `space-management.yml` - Check disk space
 
 #### 4. **ARP/MAC/Neighbor Tables**
 
@@ -301,9 +300,8 @@ Based on comprehensive codebase analysis, these files **legitimately require** `
 - `interface-validation.yml` - Error counters (partial: config uses facts)
 
 ### File System Operations
-- `storage-cleanup.yml` - Delete old images
+- `storage-assessment.yml` - Check disk space and cleanup (integrated)
 - `image-loading.yml` - Copy firmware files
-- `space-management.yml` - Check disk space
 
 ### System Operations
 - `reboot.yml` - Device reload commands
@@ -311,7 +309,12 @@ Based on comprehensive codebase analysis, these files **legitimately require** `
 - `check-issu-capability.yml` - ISSU capability checks
 
 ### Monitoring & Validation
-- `validation.yml` - Mixed operational validation
+- `bgp-validation.yml` - BGP operational state validation
+- `interface-validation.yml` - Interface state and counters
+- `routing-validation.yml` - Route tables and protocol states
+- `arp-validation.yml` - ARP/MAC/neighbor tables
+- `multicast-validation.yml` - PIM/IGMP operational state
+- `protocol-convergence.yml` - Convergence monitoring
 - `connectivity-check.yml` - Ping/reachability tests
 
 ## Best Practices

@@ -8,15 +8,13 @@
     backup_timestamp: >-
       {{ ansible_date_time.iso8601 if ansible_date_time is defined
          else lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-    backup_type: "{{ backup_type | default('pre_upgrade') }}"
-    include_startup_config: "{{ include_startup_config | default(true) }}"
+    backup_type: "{{ backup_type }}"
+    include_startup_config: "{{ include_startup_config  }}"
     include_running_config: true
 
 - name: Create backup directory structure
   ansible.builtin.file:
-    path: >-
-      {{ backup_base_path }}/{{ inventory_hostname }}/
-      {{ backup_timestamp | regex_replace(':', '-') }}
+    path: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}"
     state: directory
     mode: '0755'
   delegate_to: localhost
@@ -32,9 +30,7 @@
           # Device: {{ inventory_hostname }}
           # Timestamp: {{ backup_timestamp }}
           # Platform: {{ ansible_network_os }}
-        dest: >-
-          {{ backup_base_path }}/{{ inventory_hostname }}/
-          {{ backup_timestamp | regex_replace(':', '-') }}/config_backup.txt
+        dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/config_backup.txt"
         mode: '0644'
       delegate_to: localhost
 

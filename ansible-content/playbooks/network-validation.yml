@@ -4,15 +4,13 @@
 # Validates BGP, interfaces, routing, multicast, and ARP states
 
 - name: Network State Validation
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
   connection: network_cli
   vars:
     validation_timestamp: "{{ ansible_date_time.iso8601 }}"
-    validation_type: "{{ validation_type | default('post_upgrade') }}"
     baseline_data_path: "{{ baseline_base_path }}"
-    compare_with_baseline: "{{ network_state_comparison | default(true) }}"
-    validation_timeout: 300
+    # validation_type, network_state_comparison, validation_timeout inherited from group_vars
 
   pre_tasks:
     - name: Create validation results directory
@@ -172,7 +170,7 @@
                 }}/multicast_current_{{ validation_timestamp }}.json
           when:
             - ansible_network_os in ['nxos', 'ios']
-            - multicast_enabled | default(true) | bool
+            - multicast_enabled  | bool
 
         - name: Compare multicast with baseline
           ansible.builtin.include_role:
@@ -187,7 +185,7 @@
                 }}/multicast_current_{{ validation_timestamp }}.json"
           when:
             - ansible_network_os in ['nxos', 'ios']
-            - multicast_enabled | default(true) | bool
+            - multicast_enabled  | bool
             - compare_with_baseline
 
         - name: Mark multicast validation as passed
@@ -198,7 +196,7 @@
                     + ['multicast_validation']}) }}"
           when:
             - ansible_network_os in ['nxos', 'ios']
-            - multicast_enabled | default(true) | bool
+            - multicast_enabled  | bool
 
         - name: Mark multicast validation as skipped
           ansible.builtin.set_fact:
@@ -207,7 +205,7 @@
                 validation_results.tests_skipped + ['multicast_validation']}) }}
           when: >
             not (ansible_network_os in ['nxos', 'ios']
-              and multicast_enabled | default(true) | bool)
+              and multicast_enabled  | bool)
 
       rescue:
         - name: Mark multicast validation as failed
@@ -313,7 +311,7 @@
           device_id: "{{ inventory_hostname }}"
           platform: "{{ ansible_network_os }}"
           validation_type: "{{ validation_type }}"
-          validation_score: "{{ validation_score | default(0) }}"
+          validation_score: "{{ validation_score  }}"
           tests_passed: "{{ validation_results.tests_passed | length }}"
           tests_failed: "{{ validation_results.tests_failed | length }}"
           tests_skipped: "{{ validation_results.tests_skipped | length }}"
@@ -333,7 +331,7 @@
           - "Tests Passed: {{ validation_results.tests_passed | length }}"
           - "Tests Failed: {{ validation_results.tests_failed | length }}"
           - "Tests Skipped: {{ validation_results.tests_skipped | length }}"
-          - "Validation Score: {{ validation_score | default('N/A') }}%"
+          - "Validation Score: {{ validation_score  }}%"
           - "Overall Status: {{ 'PASS' if validation_passed else 'FAIL' }}"
           - >-
             Results Location: {{ validation_results_path }}/{{
@@ -345,4 +343,6 @@
         msg: |
           Network validation failed for {{ inventory_hostname }}
           Failed tests: {{ validation_results.tests_failed | join(', ') }}
-      when: not validation_passed and validation_type == 'post_upgrade'
+      when:
+        - not validation_passed
+        - validation_type == 'post_upgrade'

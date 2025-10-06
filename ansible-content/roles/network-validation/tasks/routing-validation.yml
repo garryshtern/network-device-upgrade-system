@@ -15,7 +15,7 @@
       register: nxos_routing_info
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
 
 - name: Gather routing table information (IOS-XE)
@@ -29,7 +29,7 @@
       register: ios_routing_info
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.ios.ios"
+    - ansible_network_os | is_platform('ios')
     - not ansible_check_mode
 
 - name: Parse routing information for NX-OS
@@ -42,22 +42,22 @@
 
     - name: Parse route counts
       ansible.builtin.set_fact:
-        total_routes: "{{ routing_summary.total_routes | default(0) }}"
+        total_routes: "{{ routing_summary.total_routes  }}"
         static_routes: >
           {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
              TABLE_prefix.ROW_prefix |
              selectattr('ucast_nhops.TABLE_path.ROW_path.clientname',
-                        'equalto', 'static') | list | default([]) }}
+                        'equalto', 'static') | list  }}
         connected_routes: >
           {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
              TABLE_prefix.ROW_prefix |
              selectattr('ucast_nhops.TABLE_path.ROW_path.clientname',
-                        'equalto', 'direct') | list | default([]) }}
+                        'equalto', 'direct') | list  }}
       when:
         - routing_table.TABLE_vrf is defined
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
     - nxos_routing_info is defined
     - nxos_routing_info.stdout is defined
@@ -94,7 +94,7 @@
       ansible.builtin.debug:
         msg: |
           Static Route Reachability:
-          {% for result in static_route_ping.results | default([]) %}
+          {% for result in static_route_ping.results  %}
           - >-
             Route {{ loop.index }}: {{ 'REACHABLE' if result.stdout[0] |
               regex_search('Success rate is [^0]') else 'UNREACHABLE' }}
@@ -103,7 +103,7 @@
         - static_route_ping is defined
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
 
 - name: Default route validation (NX-OS)
@@ -119,17 +119,17 @@
     - name: Extract default route information
       ansible.builtin.set_fact:
         default_route_info:
-          present: "{{ has_default_route | default(false) }}"
+          present: "{{ has_default_route }}"
           next_hop: >
             {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.
                ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.
-               TABLE_path.ROW_path.ipnexthop | default('None') }}
+               TABLE_path.ROW_path.ipnexthop }}
           interface: >
             {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.
                ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.
-               TABLE_path.ROW_path.ifname | default('None') }}
+               TABLE_path.ROW_path.ifname }}
       when:
-        - has_default_route | default(false)
+        - has_default_route
 
     - name: Validate default route next-hop
       cisco.nxos.nxos_command:
@@ -142,7 +142,7 @@
       failed_when: false
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
 
 - name: Route table health validation (NX-OS)
@@ -175,7 +175,7 @@
       failed_when: false
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
 
 - name: Check if OSPF is configured
@@ -190,7 +190,7 @@
       register: ospf_facts
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'cisco.nxos.nxos'
+        - ansible_network_os | is_platform('nxos')
         - not ansible_check_mode
       failed_when: false
 
@@ -199,7 +199,7 @@
         ospf_configured: "{{ ansible_net_resources.ospfv2 is defined and ansible_net_resources.ospfv2.processes is defined and ansible_net_resources.ospfv2.processes | length > 0 }}"
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'cisco.nxos.nxos'
+        - ansible_network_os | is_platform('nxos')
         - not ansible_check_mode
         - ospf_facts is succeeded
 
@@ -210,7 +210,7 @@
       register: ios_ospf_config_check
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'cisco.ios.ios'
+        - ansible_network_os | is_platform('ios')
         - not ansible_check_mode
       failed_when: false
 
@@ -219,7 +219,7 @@
         ospf_configured: "{{ ios_ospf_config_check is defined and ios_ospf_config_check.stdout is defined and ios_ospf_config_check.stdout | length > 0 and 'router ospf' in ios_ospf_config_check.stdout[0] }}"
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'cisco.ios.ios'
+        - ansible_network_os | is_platform('ios')
         - not ansible_check_mode
         - ios_ospf_config_check is defined
 
@@ -238,7 +238,7 @@
   ansible.builtin.debug:
     msg: "OSPF not configured on {{ inventory_hostname }} - skipping OSPF validation"
   when:
-    - not (ospf_configured | default(false))
+    - not (ospf_configured)
 
 - name: OSPF validation
   block:
@@ -254,16 +254,16 @@
         msg: |
           OSPF Neighbor Status:
           {% for neighbor in ospf_neighbors.stdout[0] | from_json |
-            json_query('TABLE_neighbor.ROW_neighbor') | default([]) %}
+            json_query('TABLE_neighbor.ROW_neighbor')  %}
           - {{ neighbor.rid }}: {{ neighbor.state }} ({{ neighbor.interface }})
           {% endfor %}
       when:
         - ospf_neighbors is defined
         - ospf_neighbors.rc == 0
   when:
-    - ospf_configured | default(false)
+    - ospf_configured
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
 
 - name: Check if EIGRP is configured
@@ -307,7 +307,7 @@
   ansible.builtin.debug:
     msg: "EIGRP not configured on {{ inventory_hostname }} - skipping EIGRP validation"
   when:
-    - not (eigrp_configured | default(false))
+    - not (eigrp_configured)
 
 - name: EIGRP validation
   block:
@@ -323,41 +323,41 @@
         msg: |
           EIGRP Neighbor Status:
           {% for neighbor in eigrp_neighbors.stdout[0] | from_json |
-            json_query('TABLE_neighbor.ROW_neighbor') | default([]) %}
+            json_query('TABLE_neighbor.ROW_neighbor')  %}
           - {{ neighbor.ipaddr }}: {{ neighbor.state }} AS {{ neighbor.as }}
           {% endfor %}
       when:
         - eigrp_neighbors is defined
         - eigrp_neighbors.rc == 0
   when:
-    - eigrp_configured | default(false)
+    - eigrp_configured
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
 
 - name: Store routing baseline
   ansible.builtin.set_fact:
     routing_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      total_routes: "{{ total_routes | default(0) }}"
+      total_routes: "{{ total_routes  }}"
       static_routes_count: >
         "{{ static_routes | length if static_routes is defined else 0 }}"
       connected_routes_count: >
         "{{ connected_routes | length if connected_routes is defined else 0 }}"
-      default_route_present: "{{ default_route_info.present | default(false) }}"
+      default_route_present: "{{ default_route_info.present  }}"
       default_route_next_hop: >
-        "{{ default_route_info.next_hop | default('None') }}"
-      ospf_configured: "{{ ospf_configured | default(false) }}"
+        "{{ default_route_info.next_hop }}"
+      ospf_configured: "{{ ospf_configured }}"
       ospf_neighbors: >
         {{ ospf_neighbors.stdout[0] | from_json |
            json_query('TABLE_neighbor.ROW_neighbor') | length
-           if (ospf_configured | default(false)) and ospf_neighbors is defined and ospf_neighbors.rc == 0
+           if (ospf_configured) and ospf_neighbors is defined and ospf_neighbors.rc == 0
            else 0 }}
-      eigrp_configured: "{{ eigrp_configured | default(false) }}"
+      eigrp_configured: "{{ eigrp_configured }}"
       eigrp_neighbors: >
         {{ eigrp_neighbors.stdout[0] | from_json |
            json_query('TABLE_neighbor.ROW_neighbor') | length
-           if (eigrp_configured | default(false)) and eigrp_neighbors is defined and eigrp_neighbors.rc == 0
+           if (eigrp_configured) and eigrp_neighbors is defined and eigrp_neighbors.rc == 0
            else 0 }}
   when:
     - not ansible_check_mode

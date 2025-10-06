@@ -25,7 +25,7 @@
 - name: Execute installation based on mode
   block:
     - name: Install mode installation
-      when: iosxe_upgrade_state.install_mode | default(false)
+      when: iosxe_upgrade_state.install_mode
 
       block:
         - name: Execute install mode upgrade
@@ -43,7 +43,7 @@
             fail_msg: "Install mode installation failed"
 
     - name: Bundle mode installation
-      when: not iosxe_upgrade_state.install_mode | default(false)
+      when: not iosxe_upgrade_state.install_mode
 
       block:
         - name: Verify boot system configuration
@@ -73,7 +73,7 @@
         commands:
           - reload
       register: reboot_command
-      when: bundle_mode_reboot_required | default(false)
+      when: bundle_mode_reboot_required
 
     - name: Wait for device to become unreachable
       ansible.builtin.wait_for:
@@ -83,7 +83,7 @@
         timeout: 300
         delay: 30
       delegate_to: localhost
-      when: bundle_mode_reboot_required | default(false)
+      when: bundle_mode_reboot_required
 
     - name: Wait for device to come back online
       ansible.builtin.wait_for:
@@ -93,12 +93,12 @@
         timeout: 900
         delay: 60
       delegate_to: localhost
-      when: bundle_mode_reboot_required | default(false)
+      when: bundle_mode_reboot_required
 
     - name: Wait for device initialization
       ansible.builtin.pause:
         seconds: 120
-      when: bundle_mode_reboot_required | default(false)
+      when: bundle_mode_reboot_required
 
 - name: Post-installation validation
   block:
@@ -128,14 +128,14 @@
         commands:
           - show boot
       register: post_boot_check
-      when: bundle_mode_reboot_required | default(false)
+      when: bundle_mode_reboot_required
 
     - name: Validate boot configuration
       ansible.builtin.assert:
         that:
           - target_image_filename in post_boot_check.stdout[0]
         fail_msg: "Boot configuration validation failed"
-      when: bundle_mode_reboot_required | default(false)
+      when: bundle_mode_reboot_required
 
 - name: Installation cleanup and verification
   block:
@@ -148,7 +148,7 @@
 
     - name: Log error check command failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check installation errors: {{ post_install_errors.msg | default('Unknown error') }}"
+        msg: "Warning: Failed to check installation errors: {{ post_install_errors.msg if post_install_errors.msg is defined else 'Unknown error' }}"
       when:
         - post_install_errors is defined
         - post_install_errors.failed is defined
@@ -169,7 +169,7 @@
 
     - name: Log connectivity test failures
       ansible.builtin.debug:
-        msg: "Warning: Post-installation connectivity test failed: {{ connectivity_test.msg | default('Unknown error') }}"
+        msg: "Warning: Post-installation connectivity test failed: {{ connectivity_test.msg if connectivity_test.msg is defined else 'Unknown error' }}"
       when:
         - connectivity_test is defined
         - connectivity_test.failed is defined
@@ -184,7 +184,7 @@
       - >-
         Installation Method: {{ 'Install Mode' if
           iosxe_upgrade_state.install_mode else 'Bundle Mode' }}
-      - Reboot Required: {{ bundle_mode_reboot_required | default(false) }}
+      - Reboot Required: {{ bundle_mode_reboot_required }}
       - >
         System Responsive:
         {{ 'YES' if post_install_version is defined else 'CHECK' }}

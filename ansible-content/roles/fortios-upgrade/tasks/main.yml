@@ -17,14 +17,12 @@
 
     - name: Parse device information
       ansible.builtin.set_fact:
-        fortios_upgrade_state: >
-          "{{ fortios_upgrade_state | combine({'current_version': >
-            fortios_facts.meta.results.version,
-            'ha_mode': fortios_facts.meta.results.ha_mode,
-          'ha_role': >
-            fortios_facts.meta.results.ha_group_name
-              | default('standalone'), 'vdom_mode': >
-              fortios_facts.meta.results.vdom_mode == 'enable'}) }}"
+        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
+          'current_version': fortios_facts.meta.results.version,
+          'ha_mode': fortios_facts.meta.results.ha_mode,
+          'ha_role': fortios_facts.meta.results.ha_group_name,
+          'vdom_mode': (fortios_facts.meta.results.vdom_mode == 'enable')
+        }) }}"
 
     - name: Check HA cluster configuration
       ansible.builtin.include_tasks: ha-coordination.yml

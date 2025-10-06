@@ -4,7 +4,7 @@
 # Includes reboot and service disruption
 
 - name: Phase 2 - Firmware Installation
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
   vars:
     installation_start_time: "{{ ansible_date_time.iso8601 }}"
@@ -73,31 +73,31 @@
           ansible.builtin.include_role:
             name: cisco-nxos-upgrade
             tasks_from: image-installation
-          when: ansible_network_os == 'cisco.nxos.nxos'
+          when: ansible_network_os | is_platform('nxos')
 
         - name: Install firmware - Cisco IOS-XE
           ansible.builtin.include_role:
             name: cisco-iosxe-upgrade
             tasks_from: image-installation
-          when: ansible_network_os == 'cisco.ios.ios'
+          when: ansible_network_os | is_platform('ios')
 
         - name: Install firmware - Metamako MOS
           ansible.builtin.include_role:
             name: metamako-mos-upgrade
             tasks_from: image-installation
-          when: ansible_network_os == 'metamako.mos'
+          when: ansible_network_os | is_platform('mos')
 
         - name: Install firmware - Opengear
           ansible.builtin.include_role:
             name: opengear-upgrade
             tasks_from: image-installation
-          when: ansible_network_os == 'opengear'
+          when: ansible_network_os | is_platform('opengear')
 
         - name: Install firmware - FortiOS
           ansible.builtin.include_role:
             name: fortios-upgrade
             tasks_from: image-installation
-          when: ansible_network_os == 'fortinet.fortios.fortios'
+          when: ansible_network_os | is_platform('fortios')
 
         - name: Mark pre-reboot tasks complete
           ansible.builtin.set_fact:

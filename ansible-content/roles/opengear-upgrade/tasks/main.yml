@@ -9,7 +9,7 @@
         url: "https://{{ ansible_host }}/api/v1/system/info"
         method: GET
         headers:
-          Authorization: "Token {{ opengear_api_token | default('') }}"
+          Authorization: "Token {{ opengear_api_token  }}"
         validate_certs: false
         timeout: 10
       register: api_test

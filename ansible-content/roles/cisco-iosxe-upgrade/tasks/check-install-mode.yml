@@ -28,7 +28,9 @@
       {{
         install_mode_check.rc == 0 and
         'packages.conf' in current_boot_mode.stdout[0] or
-        'install mode' in install_mode_check.stdout[0] | default('')
+        (install_mode_check.stdout is defined and
+         install_mode_check.stdout | length > 0 and
+         'install mode' in install_mode_check.stdout[0])
       }}
 
 - name: Check available storage space

@@ -68,7 +68,7 @@
       ansible.builtin.raw: "rm -f /flash/{{ item }}"
       loop: "{{ cleanup_candidates }}"
       when:
-        - preserve_current_image | default(true)
+        - preserve_current_image
         - item != running_image
         - cleanup_candidates | length > 0
       register: cleanup_result

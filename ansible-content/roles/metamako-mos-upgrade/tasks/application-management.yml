@@ -34,7 +34,7 @@
         ansible_ssh_private_key_file is defined else '' }}
       "{{ application_source }}"
       "{{ ansible_user }}@{{ ansible_host }}:/flash/{{
-        application_filename | default(application_source | basename) }}"
+        application_filename }}"
     timeout: 1800
   delegate_to: localhost
   register: app_upload_result
@@ -46,7 +46,7 @@
 - name: Verify application file exists
   ansible.netcommon.cli_command:
     command: >
-      dir flash:{{ application_filename | default(application_source | basename)
+      dir flash:{{ application_filename
       }}
   changed_when: false
   register: app_file_check
@@ -54,9 +54,7 @@
 - name: Install application from flash
   ansible.netcommon.cli_config:
     config: >
-      'install application flash:{{
-        application_filename | default(application_source
-      | basename) }}
+      'install application flash:{{ application_filename }}
 
       '
   register: app_install_result
@@ -68,13 +66,17 @@
     command: show application {{ application_name }}
   changed_when: false
   register: app_verify
-  when: application_name is defined and application_action == 'install'
+  when:
+    - application_name is defined
+    - application_action == 'install'
 - name: Enable installed application
   ansible.netcommon.cli_config:
     config: |
       app {{ application_name }}
       no shutdown
-  when: application_name is defined and application_action == 'install'
+  when:
+    - application_name is defined
+    - application_action == 'install'
 - name: Shutdown application before removal
   ansible.netcommon.cli_config:
     config: |
@@ -100,7 +102,7 @@
         ansible_ssh_private_key_file is defined else '' }}
       "{{ eos_extension_source }}"
       "{{ ansible_user }}@{{ ansible_host }}:/flash/{{
-        eos_extension_filename | default(eos_extension_source | basename) }}"
+        eos_extension_filename }}"
     timeout: 1800
   delegate_to: localhost
   register: eos_upload_result
@@ -111,17 +113,14 @@
     - eos_extension_source is defined
 - name: Verify EOS extension file exists
   ansible.netcommon.cli_command:
-    ansible.builtin.command: >
-      dir flash:{{ eos_extension_filename | default(eos_extension_source
-      | basename) }}
+    command: >
+      dir flash:{{ eos_extension_filename }}
   register: eos_file_check
   when: eos_extension_action == 'install'
 - name: Install EOS extension from flash
   ansible.netcommon.cli_config:
     config: >
-      'install eos-extension flash:{{
-        eos_extension_filename | default(eos_extension_source
-      | basename) }}
+      'install eos-extension flash:{{ eos_extension_filename }}
 
       '
   register: eos_install_result
@@ -134,7 +133,9 @@
 
       '
   register: eos_remove_result
-  when: eos_extension_name is defined and eos_extension_action == 'remove'
+  when:
+    - eos_extension_name is defined
+    - eos_extension_action == 'remove'
 - name: Enable application
   ansible.netcommon.cli_config:
     config: 'app {{ item }}
@@ -142,7 +143,7 @@
       no shutdown
 
       '
-  loop: '{{ applications_to_enable | default([]) }}'
+  loop: '{{ applications_to_enable }}'
 - name: Disable application
   ansible.netcommon.cli_config:
     config: 'app {{ item }}
@@ -150,7 +151,7 @@
       shutdown
 
       '
-  loop: '{{ applications_to_disable | default([]) }}'
+  loop: '{{ applications_to_disable }}'
 - name: Force shutdown application
   ansible.netcommon.cli_config:
     config: 'app {{ item }}
@@ -158,7 +159,7 @@
       shutdown force
 
       '
-  loop: '{{ applications_to_force_shutdown | default([]) }}'
+  loop: '{{ applications_to_force_shutdown }}'
 - name: Final application status check
   ansible.netcommon.cli_command:
     command: show application

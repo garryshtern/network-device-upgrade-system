@@ -112,7 +112,7 @@
         Ports Tested:
         {{ port_connectivity_test.results |
         selectattr('json.status', 'equalto', 'ok') |
-        list | length | default(0) }}
+        list | length  }}
       - >-
         Status:
         {{ 'All Operational' if post_upgrade_port_status.results |

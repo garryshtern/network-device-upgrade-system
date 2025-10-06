@@ -53,9 +53,9 @@
         that:
           - >-
             storage_info.json.available_mb | int >
-              (target_firmware_size_mb | default(100) | int)
+              (target_firmware_size_mb | int)
         fail_msg: >-
-          Insufficient storage space: {{ storage_info.json.available_mb | default('unknown') }}MB
+          Insufficient storage space: {{ storage_info.json.available_mb }}MB
           available, {{ target_firmware_size_mb |
             default(100) }}MB required
 

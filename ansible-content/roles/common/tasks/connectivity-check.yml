@@ -9,13 +9,16 @@
   when:
     - ansible_check_mode
     - ansible_network_os is defined
-    - ansible_network_os == 'fortinet.fortios.fortios'
+    - ansible_network_os | is_platform('fortios')
 
 - name: Test basic connectivity to device
-  ansible.builtin.wait_for_connection:
-    timeout: 60
-    delay: 5
-  register: connectivity_test
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-for-device
+  vars:
+    wait_timeout: 60
+    wait_delay: 5
+    connection_check_when: not ansible_check_mode
   when: not ansible_check_mode
 
 - name: Simulate connectivity test in check mode
@@ -52,7 +55,7 @@
       changed_when: false
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'cisco.nxos.nxos'
+        - ansible_network_os | is_platform('nxos')
 
     - name: Execute basic IOS-XE command
       cisco.ios.ios_command:
@@ -62,7 +65,7 @@
       changed_when: false
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'cisco.ios.ios'
+        - ansible_network_os | is_platform('ios')
 
     - name: Test FortiOS API connection
       fortinet.fortios.fortios_monitor_fact:
@@ -71,7 +74,7 @@
       register: fortios_api_test
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'fortinet.fortios.fortios'
+        - ansible_network_os | is_platform('fortios')
 
     - name: Execute basic Metamako command
       ansible.netcommon.cli_command:
@@ -80,7 +83,7 @@
       changed_when: false
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'metamako_mos'
+        - ansible_network_os | is_platform('metamako_mos')
 
     - name: Execute basic Opengear command
       ansible.builtin.raw: config -g config.version
@@ -88,7 +91,7 @@
       changed_when: false
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'opengear'
+        - ansible_network_os | is_platform('opengear')
 
   rescue:
     - name: CLI connectivity failed for any platform
@@ -101,14 +104,14 @@
       device: "{{ inventory_hostname }}"
       platform: "{{ ansible_network_os }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      basic_connectivity: "{{ connectivity_test is succeeded }}"
+      basic_connectivity: "{{ connection_wait_result is succeeded }}"
       ping_successful: "{{ ping_result is succeeded }}"
-      cli_connectivity: "{{ cli_connectivity | default(false) }}"
+      cli_connectivity: "{{ cli_connectivity  }}"
       overall_status: >-
         {{
-          (connectivity_test is succeeded) and
+          (connection_wait_result is succeeded) and
           (ping_result is succeeded) and
-          (cli_connectivity | default(false))
+          (cli_connectivity )
         }}
 
 - name: Display connectivity results

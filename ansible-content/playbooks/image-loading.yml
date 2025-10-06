@@ -4,7 +4,7 @@
 # Business hours safe - does not disrupt operations
 
 - name: Firmware Image Loading
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
   vars:
     firmware_source_path: "{{ firmware_base_path }}/{{ ansible_network_os }}"
@@ -29,7 +29,7 @@
         name: space-management
         tasks_from: space-check
       vars:
-        required_space_gb: "{{ firmware_size_gb | default(2) }}"
+        required_space_gb: "{{ firmware_size_gb  }}"
 
     - name: Platform-specific image loading
       block:
@@ -38,35 +38,35 @@
           ansible.builtin.include_role:
             name: cisco-nxos-upgrade
             tasks_from: image-loading
-          when: ansible_network_os == 'cisco.nxos.nxos'
+          when: ansible_network_os | is_platform('nxos')
 
         # Cisco IOS-XE Image Loading
         - name: Load Cisco IOS-XE image
           ansible.builtin.include_role:
             name: cisco-iosxe-upgrade
             tasks_from: image-loading
-          when: ansible_network_os == 'cisco.ios.ios'
+          when: ansible_network_os | is_platform('ios')
 
         # Metamako MOS Image Loading
         - name: Load Metamako MOS image
           ansible.builtin.include_role:
             name: metamako-mos-upgrade
             tasks_from: image-loading
-          when: ansible_network_os == 'metamako.mos'
+          when: ansible_network_os | is_platform('mos')
 
         # Opengear Image Loading
         - name: Load Opengear image
           ansible.builtin.include_role:
             name: opengear-upgrade
             tasks_from: image-loading
-          when: ansible_network_os == 'opengear'
+          when: ansible_network_os | is_platform('opengear')
 
         # FortiOS Image Loading
         - name: Load FortiOS image
           ansible.builtin.include_role:
             name: fortios-upgrade
             tasks_from: image-loading
-          when: ansible_network_os == 'fortinet.fortios.fortios'
+          when: ansible_network_os | is_platform('fortios')
 
     - name: Verify image integrity
       ansible.builtin.include_role:

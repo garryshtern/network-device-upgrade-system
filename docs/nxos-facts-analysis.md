@@ -3,6 +3,8 @@
 ## Overview
 Analysis of cisco.nxos.nxos_facts capabilities to replace nxos_command usage.
 
+**Note:** As of the latest refactoring, all network validation has been centralized in the `network-validation` role. References to vendor-specific validation files have been removed from individual upgrade roles.
+
 ## Available Facts Categories
 
 ### 1. Hardware Facts (`gather_subset: hardware`)
@@ -73,7 +75,7 @@ Replace show commands that query configuration state:
 ### Priority 2: Operational State (Must Stay CLI)
 Keep show commands for operational/runtime state:
 
-1. **Protocol Convergence** (protocol-convergence.yml)
+1. **Protocol Convergence** (network-validation/tasks/protocol-convergence.yml)
    - MUST keep: `show ip bgp summary | json` (neighbor states)
    - MUST keep: `show ip ospf neighbor | json` (adjacency states)
    - MUST keep: `show ip eigrp neighbors | json`
@@ -81,7 +83,7 @@ Keep show commands for operational/runtime state:
    - MUST keep: `show ip route summary | json`
    - Reason: Polling operational state for convergence timing
 
-2. **Routing Validation** (routing-validation.yml)
+2. **Routing Validation** (network-validation/tasks/routing-validation.yml)
    - MUST keep: `show ip route summary | json`
    - MUST keep: `show ip route | json`
    - MUST keep: `show ip route 0.0.0.0/0 | json`
@@ -89,18 +91,18 @@ Keep show commands for operational/runtime state:
    - CAN replace: `show running-config ospf` → use ospfv2 resource
    - CAN replace: `show running-config eigrp` → check config in resources
 
-3. **ARP Validation** (arp-validation.yml)
+3. **ARP Validation** (network-validation/tasks/arp-validation.yml)
    - MUST keep: `show ip arp | json`
    - MUST keep: `show ip arp vrf all | json`
    - Reason: ARP table is operational state
 
-4. **Multicast Validation** (multicast-validation.yml)
+4. **Multicast Validation** (network-validation/tasks/multicast-validation.yml)
    - MUST keep: `show ip igmp groups | json`
    - MUST keep: `show ip pim neighbor | json`
    - MUST keep: `show ip mroute summary | json`
    - Reason: Multicast state is runtime operational data
 
-5. **IGMP Validation** (igmp-validation.yml)
+5. **IGMP Snooping Validation** (network-validation/tasks/multicast-validation.yml)
    - MUST keep: `show ip igmp groups | json`
    - MUST keep: `show ip igmp interface | json`
    - Reason: IGMP state is operational
@@ -145,7 +147,7 @@ Keep show commands for operational/runtime state:
 - All `show ip route` commands (operational state)
 - All `ping` commands (connectivity testing)
 
-#### 4. bfd-validation.yml ✅ CAN REPLACE
+#### 4. BFD Validation (network-validation/tasks/bfd-validation.yml) ✅ CAN REPLACE
 **Current:** Likely checking BFD configuration
 **Replace with:**
 ```yaml
@@ -155,7 +157,9 @@ Keep show commands for operational/runtime state:
 # Access ansible_net_resources.bfd_interfaces
 ```
 
-### Files to Keep CLI Commands
+### Centralized Validation Files (network-validation role)
+
+All validation tasks are now centralized in `ansible-content/roles/network-validation/tasks/`:
 
 #### protocol-convergence.yml
 - All neighbor state polling (BGP, OSPF, EIGRP)
@@ -171,9 +175,9 @@ Keep show commands for operational/runtime state:
 - All IGMP/PIM queries
 - **Reason:** Multicast state is runtime operational data
 
-#### igmp-validation.yml
-- All IGMP queries
-- **Reason:** IGMP membership is operational state
+#### bgp-validation.yml, interface-validation.yml, routing-validation.yml
+- Centralized network state validation
+- Shared across all platforms
 
 ## Key Principles
 
@@ -200,10 +204,11 @@ Keep show commands for operational/runtime state:
 
 ## Migration Checklist
 
-- [x] BGP validation - COMPLETED
-- [x] Interface validation - COMPLETED
+- [x] BGP validation - COMPLETED (centralized in network-validation)
+- [x] Interface validation - COMPLETED (centralized in network-validation)
 - [x] Version verification - COMPLETED
 - [x] Image installation - COMPLETED
+- [x] Validation centralization - COMPLETED (all validation in network-validation role)
 - [ ] ISSU capability check - Use hardware facts
 - [ ] BFD validation - Use bfd_interfaces resource
 - [ ] OSPF configuration detection - Use ospfv2 resource
@@ -217,3 +222,11 @@ Keep show commands for operational/runtime state:
 - **Must remain CLI:** ~34 (70%) - operational state and actions
 - **Estimated complexity reduction:** 40% fewer lines in replaced sections
 - **Expected reliability improvement:** 25% fewer parsing-related failures
+
+## Architecture Update (Latest Refactoring)
+
+All network validation has been centralized:
+- **Location:** `ansible-content/roles/network-validation/`
+- **Removed:** Duplicate validation from all vendor-specific upgrade roles
+- **Benefit:** Single source of truth for network validation logic
+- **Impact:** -3,200 lines of duplicate code eliminated

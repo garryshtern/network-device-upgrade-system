@@ -16,7 +16,7 @@
       priority: "{{ ha_status.meta.results.priority }}"
       role: "{{ ha_status.meta.results.role }}"
       sync_status: "{{ ha_status.meta.results.sync_status }}"
-      members: "{{ ha_status.meta.results.members | default([]) }}"
+      members: "{{ ha_status.meta.results.members  }}"
 
 - name: Update HA information in upgrade state
   ansible.builtin.set_fact:
@@ -89,7 +89,7 @@
         vdom: "root"
         selector: "system_ha_status"
       register: ha_readiness_check
-      until: ha_readiness_check.meta.results.upgrade_ready | default(false)
+      until: ha_readiness_check.meta.results.upgrade_ready
       retries: 30
       delay: 10
       when: ha_cluster_info.role == "secondary"

@@ -30,8 +30,10 @@
 
 - name: Use provided hash if no hash file exists
   ansible.builtin.set_fact:
-    expected_hash: "{{ firmware_expected_hash | default('') }}"
-  when: not hash_file_stat.stat.exists and firmware_expected_hash is defined
+    expected_hash: "{{ firmware_expected_hash  }}"
+  when:
+    - not hash_file_stat.stat.exists
+    - firmware_expected_hash is defined
 
 - name: Verify hash matches expected value
   ansible.builtin.assert:
@@ -42,7 +44,9 @@
       "Hash verification failed for {{ target_firmware }}: calculated {{
         firmware_file_hash.stat.checksum }} != expected {{ expected_hash }}"
     success_msg: "Hash verification passed for {{ target_firmware }}"
-  when: expected_hash is defined and expected_hash | length > 0
+  when:
+    - expected_hash is defined
+    - expected_hash | length > 0
 
 - name: Warning when no hash available
   ansible.builtin.debug:
@@ -60,4 +64,4 @@
       {{ expected_hash is defined and expected_hash | length > 0 and
          firmware_file_hash.stat.checksum == expected_hash }}
     calculated_hash: "{{ firmware_file_hash.stat.checksum }}"
-    expected_hash_value: "{{ expected_hash | default('not_provided') }}"
+    expected_hash_value: "{{ expected_hash }}"

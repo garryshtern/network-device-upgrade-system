@@ -84,7 +84,7 @@
   tasks:
     # Test connectivity check functionality
     - name: Test connectivity check utilities
-      when: test_connectivity | default(false)
+      when: test_connectivity
       block:
         - name: Mock connectivity test (simulated)
           ansible.builtin.debug:
@@ -108,7 +108,7 @@
 
     # Test health check functionality
     - name: Test health check utilities
-      when: test_health_checks | default(false)
+      when: test_health_checks
       block:
         - name: Simulate system health checks
           ansible.builtin.set_fact:
@@ -128,7 +128,7 @@
 
     # Test storage cleanup functionality
     - name: Test storage cleanup utilities
-      when: test_storage_cleanup | default(false)
+      when: test_storage_cleanup
       block:
         - name: Scan for files to cleanup
           ansible.builtin.find:
@@ -150,7 +150,7 @@
 
     # Test metrics export functionality
     - name: Test metrics export utilities
-      when: test_metrics_export | default(false)
+      when: test_metrics_export
       block:
         - name: Generate test metrics data
           ansible.builtin.set_fact:
@@ -193,7 +193,7 @@
 
     # Test error handling functionality
     - name: Test error handling utilities
-      when: test_error_handling | default(false)
+      when: test_error_handling
       block:
         - name: Test error scenario handling
           ansible.builtin.set_fact:

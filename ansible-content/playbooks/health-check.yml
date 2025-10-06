@@ -3,7 +3,7 @@
 # Standalone playbook version for direct execution
 
 - name: Health Check Playbook
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
   tasks:
     - name: Include health check tasks

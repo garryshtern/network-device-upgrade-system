@@ -7,7 +7,7 @@
     msg:
       - "=== NX-OS Device Reboot Required ==="
       - "Device: {{ inventory_hostname }}"
-      - "Reason: {{ reboot_reason | default('firmware_upgrade') }}"
+      - "Reason: {{ reboot_reason }}"
       - "Timeout: {{ nxos_reboot_timeout }}s"
       - "================================="
 
@@ -27,20 +27,26 @@
     ansible_command_timeout: 30
 
 - name: Wait for device to become unreachable
-  ansible.builtin.wait_for_connection:
-    timeout: 60
-    sleep: 5
-  failed_when: false
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-for-device
+  vars:
+    wait_timeout: 60
+    wait_sleep: 5
+    connection_check_failed_when: false
 
 - name: Wait additional time for complete shutdown
   ansible.builtin.pause:
     seconds: "{{ nxos_reboot_delay }}"
 
 - name: Wait for device to come back online
-  ansible.builtin.wait_for_connection:
-    timeout: "{{ nxos_reboot_timeout }}"
-    delay: 30
-    sleep: 10
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-for-device
+  vars:
+    wait_timeout: "{{ nxos_reboot_timeout }}"
+    wait_delay: 30
+    wait_sleep: 10
 
 - name: Wait for NX-OS services to stabilize
   ansible.builtin.pause:
@@ -73,7 +79,7 @@
       Device did not boot with target firmware version
       Expected: {{ target_firmware_version }}
       Actual version: {{ post_reboot_version }}
-  when: reboot_reason | default('firmware_upgrade') == 'firmware_upgrade'
+  when: reboot_reason == 'firmware_upgrade'
 
 - name: Check for boot issues in system logs
   cisco.nxos.nxos_command:
@@ -110,7 +116,7 @@
       uptime_after_reboot: "{{ post_reboot_uptime }}"
       interfaces_down_count: "{{ interfaces_down_post_reboot }}"
       boot_warnings_present: >
-        "{{ (boot_log_check.stdout[0] | default('') | length) > 0 }}"
+        "{{ (boot_log_check.stdout[0] if boot_log_check.stdout is defined and boot_log_check.stdout | length > 0 else '' | length) > 0 }}"
       reboot_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display reboot completion status

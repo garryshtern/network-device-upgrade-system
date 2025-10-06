@@ -4,15 +4,13 @@
 # Restores device to previous working state
 
 - name: Emergency Rollback Procedure
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
   connection: network_cli
   vars:
     rollback_timestamp: "{{ ansible_date_time.iso8601 }}"
     rollback_timeout: 600
-    restore_config: "{{ restore_config | default(true) }}"
-    restore_firmware: "{{ restore_firmware | default(true) }}"
-    emergency_mode: "{{ emergency_mode | default(false) }}"
+    # restore_config, restore_firmware, emergency_mode inherited from group_vars
   pre_tasks:
     - name: Initialize rollback tracking
       ansible.builtin.set_fact:
@@ -20,7 +18,7 @@
           device: "{{ inventory_hostname }}"
           platform: "{{ ansible_network_os }}"
           start_time: "{{ rollback_timestamp }}"
-          rollback_reason: "{{ rollback_reason | default('upgrade_failure') }}"
+          rollback_reason: "{{ rollback_reason }}"
           steps_completed: []
           steps_failed: []
           current_step: "initialization"
@@ -102,7 +100,9 @@
             tasks_from: rollback
           vars:
             rollback_type: "firmware"
-          when: ansible_network_os == 'nxos' and restore_firmware
+          when:
+            - ansible_network_os | is_platform('nxos')
+            - restore_firmware
 
         - name: Rollback Cisco IOS-XE firmware
           ansible.builtin.include_role:
@@ -110,7 +110,9 @@
             tasks_from: rollback
           vars:
             rollback_type: "firmware"
-          when: ansible_network_os == 'ios' and restore_firmware
+          when:
+            - ansible_network_os | is_platform('ios')
+            - restore_firmware
 
         - name: Rollback Metamako MOS firmware
           ansible.builtin.include_role:
@@ -118,7 +120,9 @@
             tasks_from: rollback
           vars:
             rollback_type: "firmware"
-          when: ansible_network_os == 'mos' and restore_firmware
+          when:
+            - ansible_network_os | is_platform('mos')
+            - restore_firmware
 
         - name: Rollback Opengear firmware
           ansible.builtin.include_role:
@@ -126,7 +130,9 @@
             tasks_from: rollback
           vars:
             rollback_type: "firmware"
-          when: ansible_network_os == 'opengear' and restore_firmware
+          when:
+            - ansible_network_os | is_platform('opengear')
+            - restore_firmware
 
         - name: Rollback FortiOS firmware
           ansible.builtin.include_role:
@@ -134,7 +140,9 @@
             tasks_from: rollback
           vars:
             rollback_type: "firmware"
-          when: ansible_network_os == 'fortios' and restore_firmware
+          when:
+            - ansible_network_os | is_platform('fortios')
+            - restore_firmware
 
         - name: Mark firmware rollback complete
           ansible.builtin.set_fact:
@@ -184,7 +192,9 @@
             tasks_from: config-restore
           vars:
             backup_file: "{{ latest_backup }}"
-          when: restore_config and latest_backup is defined
+          when:
+            - restore_config
+            - latest_backup is defined
 
         - name: Mark config rollback complete
           ansible.builtin.set_fact:
@@ -369,4 +379,6 @@
           Emergency rollback failed for {{ inventory_hostname }}
           Failed steps: {{ rollback_state.steps_failed | join(', ') }}
           Manual intervention required
-      when: not rollback_successful and not emergency_mode
+      when:
+        - not rollback_successful
+        - not emergency_mode

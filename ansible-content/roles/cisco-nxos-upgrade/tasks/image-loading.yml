@@ -50,36 +50,36 @@
     - name: Set EPLD firmware filename (if EPLD upgrade enabled)
       ansible.builtin.set_fact:
         epld_firmware_filename: >-
-          {%- if enable_epld_upgrade | default(false) -%}
+          {%- if enable_epld_upgrade -%}
             {%- if device_platform and
                 device_platform in epld_firmware_patterns -%}
               {{ epld_firmware_patterns[device_platform].default }}
             {%- else -%}
               n9000-epld.{{
-                target_epld_version |
-                default(target_firmware_version) }}.img
+                target_epld_version if target_epld_version != ''
+                else target_firmware_version }}.img
             {%- endif -%}
           {%- else -%}
 
           {%- endif -%}
         local_epld_path: >-
-          {%- if enable_epld_upgrade | default(false) -%}
+          {%- if enable_epld_upgrade -%}
             {{ firmware_base_path }}/{{ epld_firmware_filename }}
           {%- else -%}
 
           {%- endif -%}
-      when: enable_epld_upgrade | default(false)
+      when: enable_epld_upgrade
 
     - name: Display firmware selection
       ansible.builtin.debug:
         msg:
           - "Device Model: {{ device_model }}"
-          - "Platform Family: {{ device_platform | default('generic') }}"
+          - "Platform Family: {{ device_platform }}"
           - "Firmware File: {{ firmware_filename }}"
           - "Full Path: {{ local_firmware_path }}"
-          - "EPLD Enabled: {{ enable_epld_upgrade | default(false) }}"
-          - "EPLD File: {{ epld_firmware_filename | default('N/A') }}"
-          - "EPLD Path: {{ local_epld_path | default('N/A') }}"
+          - "EPLD Enabled: {{ enable_epld_upgrade }}"
+          - "EPLD File: {{ epld_firmware_filename if epld_firmware_filename != '' else 'N/A' }}"
+          - "EPLD Path: {{ local_epld_path if local_epld_path != '' else 'N/A' }}"
 
 - name: Get current storage information
   cisco.nxos.nxos_command:
@@ -96,7 +96,7 @@
     available_space_mb: >
       "{{ (nxos_storage_data.dir_size.free | int / 1024 / 1024) | int }}"
     required_space_mb: >
-      "{{ firmware_size_mb | default(nxos_minimum_free_space_mb) }}"
+      "{{ firmware_size_mb if firmware_size_mb > 0 else nxos_minimum_free_space_mb }}"
 
 - name: Verify sufficient storage space
   ansible.builtin.assert:
@@ -115,7 +115,7 @@
 
 - name: Log firmware check failures
   ansible.builtin.debug:
-    msg: "Warning: Failed to check existing firmware: {{ firmware_exists_check.msg | default('Unknown error') }}"
+    msg: "Warning: Failed to check existing firmware: {{ firmware_exists_check.msg if firmware_exists_check.msg is defined else 'Unknown error' }}"
   when:
     - firmware_exists_check is defined
     - firmware_exists_check.failed is defined
@@ -145,7 +145,7 @@
 
     - name: Log SCP server enable failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to enable SCP server: {{ scp_enable_result.msg | default('Unknown error') }}"
+        msg: "Warning: Failed to enable SCP server: {{ scp_enable_result.msg if scp_enable_result.msg is defined else 'Unknown error' }}"
       when:
         - scp_enable_result is defined
         - scp_enable_result.failed is defined
@@ -157,8 +157,8 @@
         local_file: "{{ local_firmware_path }}"
         remote_file: "{{ target_firmware_version }}"
         file_pull: false  # Server pushes to device
-        connect_ssh_port: "{{ ansible_ssh_port | default(22) }}"
-        vrf: "{{ management_vrf | default('management') }}"
+        connect_ssh_port: "{{ ansible_ssh_port }}"
+        vrf: "{{ management_vrf }}"
       register: nxos_file_copy_result
       delegate_to: localhost
       vars:

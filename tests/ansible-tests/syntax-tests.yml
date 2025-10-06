@@ -33,7 +33,14 @@
 
     - name: Test playbook syntax
       ansible.builtin.shell: |
-        ansible-playbook --syntax-check {{ item.path }}
+        ansible-playbook --syntax-check {{ item.path }} \
+          --extra-vars "target_hosts=all target_firmware=test.bin platform_firmware={} \
+          maintenance_window=true max_concurrent=5 emergency_mode=false \
+          rollback_reason=test backup_type=pre_upgrade restore_config=true \
+          restore_firmware=true compare_with_baseline=false \
+          compliance_standards=['security_baseline'] current_firmware_version=test \
+          site_name=test vendor=test validation_score=0 validation_type=pre_upgrade \
+          multicast_enabled=true bgp_enabled=true generate_report=true send_metrics=true"
       register: playbook_syntax_results
       loop: "{{ playbook_files.files }}"
       failed_when: playbook_syntax_results.rc != 0

@@ -37,7 +37,9 @@
         vdom: "root"
         selector: "system_firmware_list"
       register: firmware_list
-      when: local_firmware_path is defined and secure_upload is succeeded
+      when:
+        - local_firmware_path is defined
+        - secure_upload is succeeded
 
 - name: Validate staged firmware
   block:
@@ -79,7 +81,7 @@
         File Size: {{ available_firmware.meta.results |
           selectattr('version', 'equalto',
           fortios_upgrade_state.target_version) |
-          map(attribute='size_mb') | first | default('Unknown') }} MB
+          map(attribute='size_mb') | first }} MB
       - >-
         Integrity: {{ firmware_verification.meta.results.status |
           default('Not Verified') }}

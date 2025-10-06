@@ -52,7 +52,7 @@
     - name: Validate EPLD upgrade feasibility
       ansible.builtin.assert:
         that:
-          - has_dual_sup_for_epld or allow_disruptive_epld | default(false)
+          - has_dual_sup_for_epld or allow_disruptive_epld
         fail_msg: >-
           EPLD upgrade requires dual supervisors or explicit
           approval for disruptive upgrade
@@ -65,8 +65,8 @@
         local_file: "{{ epld_image_source }}"
         remote_file: "{{ target_epld_image }}"
         file_pull: false  # Server pushes to device
-        connect_ssh_port: "{{ ansible_ssh_port | default(22) }}"
-        vrf: "{{ management_vrf | default('management') }}"
+        connect_ssh_port: "{{ ansible_ssh_port }}"
+        vrf: "{{ management_vrf }}"
       register: epld_stage_result
       delegate_to: localhost
       when: target_epld_image is defined
@@ -85,7 +85,7 @@
         commands:
           - "install all epld {{ target_epld_image }} module {{ item }}"
       register: epld_upgrade_result
-      loop: "{{ epld_modules_to_upgrade | default(['all']) }}"
+      loop: "{{ epld_modules_to_upgrade }}"
       when: target_epld_image is defined
 
 - name: EPLD upgrade monitoring
@@ -132,7 +132,9 @@
           - Module {{ module_info[0] }}: {{
               'UPDATED' if module_info[1] !=
               (epld_modules | selectattr('0', 'equalto', module_info[0]) |
-               map(attribute='1') | first | default('unknown'))
+               map(attribute='1') | first if
+              (epld_modules | selectattr('0', 'equalto', module_info[0]) | list | length > 0)
+              else 'unknown')
               else 'UNCHANGED' }} ({{ module_info[1] }})
           {% endfor %}
       when: updated_epld_modules | length > 0
@@ -151,15 +153,16 @@
       cisco.nxos.nxos_command:
         commands:
           - "delete bootflash:{{ target_epld_image }}"
-      when: >
-        cleanup_epld_images | default(false) and target_epld_image is defined
+      when:
+        - cleanup_epld_images
+        - target_epld_image is defined
       failed_when: false
 
     - name: Document EPLD upgrade completion
       ansible.builtin.set_fact:
         epld_upgrade_summary:
           timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-          modules_upgraded: "{{ epld_modules_to_upgrade | default(['all']) }}"
+          modules_upgraded: "{{ epld_modules_to_upgrade }}"
           upgrade_method: >-
             {{ 'Non-disruptive' if has_dual_sup_for_epld else 'Disruptive' }}
           success: >-

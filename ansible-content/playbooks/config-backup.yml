@@ -4,14 +4,12 @@
 # Business hours safe - read-only operations
 
 - name: Configuration Backup
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
   connection: network_cli
   vars:
     backup_timestamp: "{{ ansible_date_time.iso8601 }}"
-    backup_type: "{{ backup_type | default('pre_upgrade') }}"
-    include_startup_config: "{{ include_startup_config | default(true) }}"
-    include_running_config: true
+    # backup_type, include_startup_config, include_running_config inherited from group_vars
 
   tasks:
     - name: Create backup directory structure

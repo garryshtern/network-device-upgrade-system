@@ -27,7 +27,19 @@ Network device upgrade management system for 1000+ heterogeneous network devices
    - Implement comprehensive error handling with block/rescue patterns
    - Validate all Ansible task syntax against current best practices
 
-4. **Testing Integration**:
+4. **Variable Management** (MANDATORY):
+   - **NEVER use `| default()` filter in playbooks or tasks**
+   - **NEVER use `| default()` filter in when conditionals**
+   - **NEVER use `and` in when conditionals** - use YAML list format instead
+   - ALL variables MUST be properly defined in `group_vars/all.yml` or role defaults
+   - Variables should have explicit values, not runtime defaults
+   - This ensures proper variable resolution during syntax checks and execution
+   - Exception: `| default(omit)` is allowed for optional Ansible module parameters only
+   - Exception: `| default()` is allowed ONLY in role defaults files (`roles/*/defaults/main.yml`)
+   - Conditionals must use defined variables from group_vars or role defaults
+   - When conditionals MUST use YAML list syntax (one condition per list item) for clarity and maintainability
+
+5. **Testing Integration**:
    - Run relevant tests after any code changes
    - Verify that changes don't break existing functionality
    - Maintain or improve overall system reliability

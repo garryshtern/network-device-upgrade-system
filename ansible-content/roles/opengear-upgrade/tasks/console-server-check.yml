@@ -24,14 +24,18 @@
     opengear_upgrade_state: >
       "{{ opengear_upgrade_state | combine({'serial_ports':
         serial_ports_info_api.json}) }}"
-  when: api_available and serial_ports_info_api.json is defined
+  when:
+    - api_available
+    - serial_ports_info_api.json is defined
 
 - name: Parse serial port information (CLI)
   ansible.builtin.set_fact:
     opengear_upgrade_state: >
       "{{ opengear_upgrade_state | combine({'serial_ports':
         serial_ports_info_cli.stdout | regex_findall('Serial\\d+') | list}) }}"
-  when: not api_available and serial_ports_info_cli.stdout is defined
+  when:
+    - not api_available
+    - serial_ports_info_cli.stdout is defined
 
 - name: Check active serial connections (Modern API)
   ansible.builtin.uri:
@@ -42,7 +46,9 @@
     validate_certs: false
   register: port_status_api
   loop: "{{ opengear_upgrade_state.serial_ports }}"
-  when: api_available and opengear_upgrade_state.serial_ports | length > 0
+  when:
+    - api_available
+    - opengear_upgrade_state.serial_ports | length > 0
 
 - name: Check active serial connections (Legacy CLI)
   ansible.builtin.raw: |
@@ -58,21 +64,25 @@
       ansible.builtin.set_fact:
         active_sessions: >
           "{{ port_status_api.results | selectattr('json.connected',
-            'equalto', true) | list | length | default(0) }}"
-      when: api_available and port_status_api is defined
+            'equalto', true) | list | length  }}"
+      when:
+        - api_available
+        - port_status_api is defined
 
     - name: Check for active console sessions (CLI)
       ansible.builtin.set_fact:
-        active_sessions: "{{ port_status_cli.stdout | default('0') | int }}"
-      when: not api_available and port_status_cli is defined
+        active_sessions: "{{ port_status_cli.stdout | int }}"
+      when:
+        - not api_available
+        - port_status_cli is defined
 
     - name: Warn about active sessions
       ansible.builtin.debug:
         msg: |
           WARNING: >
-            {{ active_sessions | default(0) }} active console sessions detected.
+            {{ active_sessions  }} active console sessions detected.
           These may be disconnected during the upgrade process.
-      when: active_sessions | default(0) | int > 0
+      when: active_sessions  | int > 0
 
 - name: Check network connectivity to managed devices
   ansible.builtin.uri:
@@ -85,7 +95,7 @@
     body:
       count: 3
   register: connectivity_check
-  loop: "{{ console_targets | default([]) }}"
+  loop: "{{ console_targets }}"
   failed_when: false
   when: console_targets is defined
 
@@ -97,7 +107,7 @@
       - Architecture: {{ opengear_upgrade_state.architecture | title }}
       - Detection Method: {{ 'API' if api_available else 'CLI' }}
       - Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}
-      - Active Sessions: {{ active_sessions | default(0) }}
+      - Active Sessions: {{ active_sessions  }}
       - >-
         Ready for Upgrade: {{ 'Yes' if active_sessions |
           default(0) | int == 0 else 'Caution - Active Sessions' }}

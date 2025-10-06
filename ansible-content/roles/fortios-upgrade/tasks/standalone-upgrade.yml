@@ -55,7 +55,7 @@
       fortinet.fortios.fortios_monitor:
         vdom: "root"
         selector: "vpn_ssl_disconnect_all"
-      when: force_vpn_disconnect | default(false)
+      when: force_vpn_disconnect
       failed_when: false
 
 - name: Execute standalone upgrade
@@ -132,14 +132,14 @@
           int < 50 else 'High Load' }}
       - >
         Active Policies:
-        {{ policy_stats.meta.results.total_policies | default(0) }}
+        {{ policy_stats.meta.results.total_policies  }}
       - >
         Interface Status: >
           {{ interface_status.meta.results |
           selectattr('status', 'equalto', 'up') | list | length }} up
       - >
         VPN Tunnels: >
-          {{ post_vpn_status.meta.results.active_sessions | default(0)
+          {{ post_vpn_status.meta.results.active_sessions
           if post_vpn_status.meta is defined else 'N/A' }}
       - Upgrade Method: Standalone
       - >

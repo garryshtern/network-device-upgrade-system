@@ -108,7 +108,7 @@
              float / 1024) | int }}
           {%- endif %}
         required_space_mb: >
-          {{ target_firmware_size_mb | default(100) | int + 50 }}
+          {{ target_firmware_size_mb | int + 50 }}
 
     - name: Validate sufficient storage space
       ansible.builtin.assert:
@@ -163,8 +163,7 @@
     - name: Start firmware transfer to storage location
       ansible.builtin.copy:
         src: "{{ local_firmware_path }}"
-        dest: >
-          {{ opengear_storage_path }}/{{ target_firmware_filename }}
+        dest: "{{ opengear_storage_path }}/{{ target_firmware_filename }}"
         mode: '0644'
       register: firmware_transfer
 
@@ -271,7 +270,7 @@
           - Backup Time:
             {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
           - CLI Result:
-            {{ config_backup_result.stdout | default('Success') }}
+            {{ config_backup_result.stdout }}
 
 
 - name: Log image loading completion

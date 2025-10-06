@@ -19,10 +19,12 @@
   run_once: true
 
 - name: Device reachability test
-  ansible.builtin.wait_for_connection:
-    timeout: 60
-    delay: 5
-  register: connectivity_result
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-for-device
+  vars:
+    wait_timeout: 60
+    wait_delay: 5
 
 - name: Device reachability verification
   ansible.builtin.ping:
@@ -78,7 +80,7 @@
         }}/multicast_baseline_{{ health_check_timestamp }}.json
   when:
     - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
-    - multicast_enabled | default(true) | bool
+    - multicast_enabled
     - not ansible_check_mode
 
 - name: Capture ARP tables
@@ -97,15 +99,14 @@
 - name: Create health check summary
   ansible.builtin.template:
     src: health-summary.j2
-    dest: >
-      "{{ baseline_data_path }}/{{ inventory_hostname
-        }}/health_summary_{{ health_check_timestamp }}.json"
+    dest: "{{ baseline_data_path }}/{{ inventory_hostname }}/health_summary_{{ health_check_timestamp }}.json"
+    mode: "0644"
   vars:
     check_timestamp: "{{ health_check_timestamp }}"
     device_name: "{{ inventory_hostname }}"
     platform: "{{ ansible_network_os }}"
     connectivity_status: >
-      "{{ 'success' if connectivity_result is succeeded else 'failed' }}"
+      "{{ 'success' if connection_wait_result is succeeded else 'failed' }}"
     baseline_files:
       - "bgp_baseline_{{ health_check_timestamp }}.json"
       - "interfaces_baseline_{{ health_check_timestamp }}.json"

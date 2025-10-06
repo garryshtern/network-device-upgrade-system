@@ -1,0 +1,55 @@
+---
+# Network Validation Role - Default Variables
+
+# Validation control
+validation_mode: "full"
+capture_mode: "snapshot"
+validation_type: "pre_upgrade"
+check_type: "baseline"
+compare_with_baseline: false
+
+# Protocol configuration flags
+bgp_enabled: false
+ospf_configured: false
+eigrp_configured: false
+pim_configured: false
+multicast_enabled: false
+
+# Baseline and comparison
+has_default_route: false
+
+# Validation state initialization
+bgp_validation:
+  errors: []
+  current: {}
+  baseline: {}
+
+bgp_comparison: {}
+bgp_baseline: {}
+bgp_neighbors: []
+bgp_analysis: {}
+
+routing_validation:
+  errors: []
+  current: {}
+  baseline: {}
+
+interface_validation:
+  errors: []
+  current: {}
+  baseline: {}
+
+# Network resources defaults
+ansible_net_resources:
+  bgp_global:
+    as_number: ""
+    router_id: ""
+    neighbors: []
+  interfaces: []
+
+# Routing summary defaults
+routing_summary:
+  total_routes: 0
+
+# Metrics control
+send_metrics: true

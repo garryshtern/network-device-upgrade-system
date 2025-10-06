@@ -123,7 +123,7 @@
       ansible.builtin.raw: "rm -f {{ opengear_storage_path }}/{{ item }}"
       loop: "{{ cleanup_candidates }}"
       when:
-        - preserve_current_image | default(true)
+        - preserve_current_image
         - item != running_firmware
         - cleanup_candidates | length > 0
       register: cleanup_result

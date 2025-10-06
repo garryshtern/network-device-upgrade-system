@@ -92,11 +92,31 @@ nxos_image_patterns:
   - "nxos*.bin"
   - "*-n[397]000-*.bin"
 
-# Upgrade state initialization
-nxos_upgrade_state:
-  device: "{{ inventory_hostname }}"
-  current_version: ""
-  target_version: "{{ target_firmware_version | default('') }}"
-  issu_capable: false
-  upgrade_method: "disruptive"
-  boot_variables: []
+# Upgrade state initialization (extends common_upgrade_state from group_vars)
+nxos_upgrade_state: "{{ common_upgrade_state | combine({'issu_capable': false, 'upgrade_method': 'disruptive', 'boot_variables': []}) }}"
+
+# EPLD Upgrade Settings
+enable_epld_upgrade: false  # Enable EPLD firmware upgrades
+allow_disruptive_epld: false  # Allow disruptive EPLD upgrades
+cleanup_epld_images: false  # Cleanup EPLD images after upgrade
+epld_modules_to_upgrade: ['all']  # Modules to upgrade (default all)
+epld_firmware_filename: ""  # EPLD firmware filename
+local_epld_path: ""  # Local path to EPLD firmware
+target_epld_version: ""  # Target EPLD version (defaults to target_firmware_version)
+
+# Platform and Connectivity
+device_platform: "generic"  # Platform family
+ansible_ssh_port: 22  # SSH port for device connections
+management_vrf: "management"  # Management VRF name
+
+# Image Management
+firmware_size_mb: 0  # Firmware size in MB (detected at runtime)
+
+# Installation Tracking
+boot_update_successful: false  # Boot variable update status
+
+# Reboot Tracking
+reboot_reason: "firmware_upgrade"  # Reason for reboot
+
+# EPLD Control
+upgrade_epld: false  # Trigger EPLD upgrade process

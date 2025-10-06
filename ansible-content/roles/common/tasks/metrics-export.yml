@@ -10,14 +10,14 @@
 
 - name: Prepare InfluxDB line protocol data
   ansible.builtin.set_fact:
-    influx_measurement: "{{ metric_type | default('generic_metric') }}"
+    influx_measurement: "{{ metric_type }}"
     influx_tags: >-
       device_id={{ inventory_hostname }},
-      device_type={{ ansible_network_os | default('unknown') }},
-      site_location={{ site_name | default('unknown') }},
-      vendor={{ vendor | default('unknown') }},
-      platform={{ ansible_network_os | default('unknown') }}
-    influx_fields: "{{ metric_data | default({}) }}"
+      device_type={{ ansible_network_os }},
+      site_location={{ site_name }},
+      vendor={{ vendor }},
+      platform={{ ansible_network_os }}
+    influx_fields: "{{ metric_data  }}"
 
 - name: Convert metric data to InfluxDB field format
   ansible.builtin.set_fact:
@@ -48,7 +48,7 @@
     - influxdb_url is defined
     - influxdb_token is defined
     - influx_line is defined
-    - send_metrics | default(true)
+    - send_metrics
   failed_when: false
 
 - name: Log InfluxDB export status
@@ -60,20 +60,12 @@
 
 - name: Export metrics to local file (backup/debugging)
   ansible.builtin.lineinfile:
-    path: "/var/log/network-upgrade/metrics.log"
-    line: "
-      {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-       |: >-
-        {{ inventory_hostname }}
-       |: >-
-        {{ metric_type | default('unknown') }}
-       |: >-
-        {{ metric_data | to_json }}
-      "
+    path: "{{ log_base_path }}/metrics.log"
+    line: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }} | {{ inventory_hostname }} | {{ metric_type }} | {{ metric_data | to_json }}"
     create: true
     mode: "0644"
   delegate_to: localhost
-  when: log_metrics_locally | default(false)
+  when: log_metrics_locally
   failed_when: false
 
 - name: Send metrics to external webhook (if configured)
@@ -82,18 +74,18 @@
     method: POST
     headers:
       Content-Type: "application/json"
-      Authorization: "Bearer {{ metrics_webhook_token | default('') }}"
+      Authorization: "Bearer {{ metrics_webhook_token  }}"
     body_format: json
     body:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       device_id: "{{ inventory_hostname }}"
-      metric_type: "{{ metric_type | default('unknown') }}"
-      platform: "{{ ansible_network_os | default('unknown') }}"
-      data: "{{ metric_data | default({}) }}"
+      metric_type: "{{ metric_type }}"
+      platform: "{{ ansible_network_os }}"
+      data: "{{ metric_data  }}"
   register: webhook_export_result
   when:
     - metrics_webhook_url is defined
-    - send_metrics | default(true)
+    - send_metrics
   failed_when: false
 
 - name: Update NetBox custom fields (if applicable)
@@ -106,26 +98,26 @@
     body_format: json
     body:
       name: "{{ inventory_hostname }}"
-      custom_fields: "{{ netbox_custom_fields | default({}) }}"
+      custom_fields: "{{ netbox_custom_fields  }}"
     status_code: [200, 201]
   when:
     - netbox_url is defined
     - netbox_token is defined
     - netbox_custom_fields is defined
-    - update_netbox | default(false)
+    - update_netbox
   failed_when: false
 
 - name: Set metrics export results
   ansible.builtin.set_fact:
     metrics_export_results:
-      metric_type: "{{ metric_type | default('unknown') }}"
+      metric_type: "{{ metric_type }}"
       influxdb_export: >-
         {{ 'success' if influx_export_result is succeeded else
           'failed' if influx_export_result is defined else 'skipped' }}
       webhook_export: >-
         {{ 'success' if webhook_export_result is succeeded else
           'failed' if webhook_export_result is defined else 'skipped' }}
-      local_log: "{{ log_metrics_locally | default(false) }}"
+      local_log: "{{ log_metrics_locally  }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display metrics export summary
@@ -136,4 +128,4 @@
       - "InfluxDB: {{ metrics_export_results.influxdb_export }}"
       - "Webhook: {{ metrics_export_results.webhook_export }}"
       - "Local log: {{ metrics_export_results.local_log }}"
-  when: debug_metrics | default(false)
+  when: debug_metrics

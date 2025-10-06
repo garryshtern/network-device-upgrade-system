@@ -56,7 +56,7 @@
       ansible.builtin.debug:
         msg:
           - "Device Model: {{ device_model }}"
-          - "Platform Family: {{ device_platform | default('generic') }}"
+          - "Platform Family: {{ device_platform }}"
           - "Firmware File: {{ firmware_filename }}"
           - "Local Path: {{ local_firmware_path }}"
           - "Target Path: {{ target_image_path }}"

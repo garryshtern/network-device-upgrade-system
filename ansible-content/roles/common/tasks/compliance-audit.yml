@@ -9,7 +9,7 @@
       device_name: "{{ inventory_hostname }}"
       platform: "{{ ansible_network_os }}"
       audit_timestamp: "{{ ansible_date_time.iso8601 if ansible_date_time is defined else lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      firmware_version: "{{ current_firmware_version | default('unknown') }}"
+      firmware_version: "{{ current_firmware_version }}"
       standards_tested: []
       compliance_checks:
         passed: []
@@ -25,7 +25,7 @@
   delegate_to: localhost
 
 - name: Security Baseline Compliance Check
-  when: "'security_baseline' in (compliance_standards | default(['security_baseline', 'network_hardening']))"
+  when: "'security_baseline' in (compliance_standards)"
   block:
     - name: Run security baseline audit placeholder
       ansible.builtin.set_fact:
@@ -74,7 +74,7 @@
           }}
 
 - name: Network Hardening Compliance Check
-  when: "'network_hardening' in (compliance_standards | default(['security_baseline', 'network_hardening']))"
+  when: "'network_hardening' in (compliance_standards)"
   block:
     - name: Run network hardening audit placeholder
       ansible.builtin.set_fact:

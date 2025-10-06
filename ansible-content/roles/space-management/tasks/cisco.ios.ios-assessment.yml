@@ -64,7 +64,7 @@
           - delete /force bootflash:{{ item }}
       loop: "{{ cleanup_candidates }}"
       when:
-        - preserve_current_image | default(true)
+        - preserve_current_image
         - item != running_image_file
         - cleanup_candidates | length > 0
         - not ansible_check_mode

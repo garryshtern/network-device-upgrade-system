@@ -3,7 +3,7 @@
 
 - name: Get system status including storage
   fortinet.fortios.fortios_facts:
-    vdom: "{{ vdom | default('root') }}"
+    vdom: "{{ vdom }}"
     gather_subset:
       - fact: "system_status"
   register: fortios_status
@@ -20,7 +20,7 @@
 
 - name: Get disk usage information
   fortinet.fortios.fortios_configuration_fact:
-    vdom: "{{ vdom | default('root') }}"
+    vdom: "{{ vdom }}"
     selector: "system_storage"
   register: fortios_storage
   when: not ansible_check_mode
@@ -36,8 +36,8 @@
 
 - name: Calculate initial storage metrics
   ansible.builtin.set_fact:
-    total_storage_mb: "{{ fortios_storage.meta.results.total_disk | default(8192) }}"
-    used_storage_mb: "{{ fortios_storage.meta.results.used_disk | default(2048) }}"
+    total_storage_mb: "{{ fortios_storage.meta.results.total_disk }}"
+    used_storage_mb: "{{ fortios_storage.meta.results.used_disk }}"
     free_storage_mb: "{{ total_storage_mb | int - used_storage_mb | int }}"
 
 - name: Update storage_info
@@ -53,7 +53,7 @@
   block:
     - name: Get firmware listing
       fortinet.fortios.fortios_configuration_fact:
-        vdom: "{{ vdom | default('root') }}"
+        vdom: "{{ vdom }}"
         selector: "system_firmware"
       register: firmware_info
       when: not ansible_check_mode
@@ -71,7 +71,7 @@
 
     - name: Remove obsolete firmware files
       fortinet.fortios.fortios_system_firmware:
-        vdom: "{{ vdom | default('root') }}"
+        vdom: "{{ vdom }}"
         system_firmware:
           filename: "{{ item }}"
           state: "absent"
@@ -89,7 +89,7 @@
 
     - name: Re-assess storage after cleanup
       fortinet.fortios.fortios_configuration_fact:
-        vdom: "{{ vdom | default('root') }}"
+        vdom: "{{ vdom }}"
         selector: "system_storage"
       register: fortios_storage_post
       when: not ansible_check_mode

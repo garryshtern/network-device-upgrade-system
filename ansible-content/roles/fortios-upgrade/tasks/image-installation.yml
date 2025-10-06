@@ -205,9 +205,9 @@
         that:
           - post_install_ha_status.meta.results.sync_status == "synchronized"
         fail_msg: "HA cluster not synchronized after installation"
-      when: >-
-        fortios_upgrade_state.ha_mode != "standalone" and
-        post_install_ha_status is defined
+      when:
+        - fortios_upgrade_state.ha_mode != "standalone"
+        - post_install_ha_status is defined
 
     - name: Check HA peer status
       fortinet.fortios.fortios_monitor_fact:
@@ -254,14 +254,14 @@
           {{ 'OK' if post_install_health.meta.results.cpu_usage | int < 50
           else 'High Load' }}
       - Active Policies: >-
-          {{ post_install_policies.meta.results.total_policies | default(0) }}
+          {{ post_install_policies.meta.results.total_policies  }}
       - Interface Status: >-
           {{ post_install_interfaces.meta.results |
           selectattr('status', 'equalto', 'up') | list | length }} up
       - VPN Tunnels: >-
-          {{ post_install_vpn.meta.results.active_sessions | default('N/A') }}
+          {{ post_install_vpn.meta.results.active_sessions }}
       - HA Sync Status: >-
-          {{ post_install_ha_status.meta.results.sync_status | default('N/A') }}
+          {{ post_install_ha_status.meta.results.sync_status }}
       - License Status: >-
-          {{ post_install_license.meta.results.status | default('Unknown') }}
+          {{ post_install_license.meta.results.status }}
       - Status: SUCCESS

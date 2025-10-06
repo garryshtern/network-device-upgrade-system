@@ -408,7 +408,7 @@ ssh admin@device-ip "systemctl status metawatch"
 The main upgrade workflow (`ansible-content/playbooks/main-upgrade-workflow.yml`) automatically selects the appropriate transfer method based on the platform type detected in the inventory. The system handles all platform-specific differences transparently while providing detailed logging for troubleshooting.
 
 ### Workflow Integration Points
-1. **Platform Detection**: Inventory variable `platform_type`
+1. **Platform Detection**: Inventory variable `ansible_network_os`
 2. **Method Selection**: Role-specific task includes
 3. **Error Handling**: Platform-aware error recovery
 4. **Validation**: Method-specific verification procedures

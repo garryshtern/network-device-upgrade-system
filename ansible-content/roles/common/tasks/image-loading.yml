@@ -38,7 +38,7 @@
     name: space-management
     tasks_from: space-check
   vars:
-    required_space_gb: "{{ firmware_size_gb | default(2) }}"
+    required_space_gb: "{{ firmware_size_gb }}"
 
 - name: Platform-specific image loading
   block:
@@ -49,7 +49,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'cisco.nxos.nxos'
+        - ansible_network_os | is_platform('nxos')
 
     # Cisco IOS-XE Image Loading
     - name: Load Cisco IOS-XE image
@@ -58,7 +58,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'cisco.ios.ios'
+        - ansible_network_os | is_platform('ios')
 
     # Metamako MOS Image Loading
     - name: Load Metamako MOS image
@@ -67,7 +67,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'metamako_mos'
+        - ansible_network_os | is_platform('metamako_mos')
 
     # Opengear Image Loading
     - name: Load Opengear image
@@ -76,7 +76,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'opengear'
+        - ansible_network_os | is_platform('opengear')
 
     # FortiOS Image Loading
     - name: Load FortiOS image
@@ -85,7 +85,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os == 'fortinet.fortios.fortios'
+        - ansible_network_os | is_platform('fortios')
         - not ansible_check_mode
 
 - name: Verify image integrity
@@ -104,7 +104,7 @@
       firmware_version: "{{ firmware_version }}"
       platform: "{{ ansible_network_os }}"
       status: "success"
-      timestamp: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')) }}"
+      timestamp: "{{ ansible_date_time.iso8601) }}"
 
 - name: Display loading results
   ansible.builtin.debug:

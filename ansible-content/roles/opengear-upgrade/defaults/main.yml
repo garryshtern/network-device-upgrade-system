@@ -52,13 +52,13 @@ validate_console_ports: true
 post_upgrade_delay: 60
 service_check_timeout: 120
 
+# Console server check settings
+console_targets: []
+
 # Upgrade state initialization
 opengear_upgrade_state:
-  device: "{{ inventory_hostname }}"
-  device_model: ""
-  current_version: ""
-  target_version: "{{ target_firmware_version | default('') }}"
-  device_type: "console_server"
+  device_model: ''
+  device_type: 'console_server'
   serial_ports: []
   power_ports: []
-  web_session: ""
+  web_session: ''

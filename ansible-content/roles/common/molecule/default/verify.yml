@@ -97,7 +97,7 @@
           - item.error_type in ['timeout', 'auth', 'command', 'network']
           - item.expected_behavior in ['retry', 'fail_fast', 'log_and_continue']
         fail_msg: >-
-          Error scenario {{ item.name | default('unknown') }} has invalid
+          Error scenario {{ item.name }} has invalid
           structure
       loop: "{{ error_scenarios }}"
 

@@ -121,7 +121,7 @@
 
       - Size: {{ image_verification.stdout |
         regex_search(''Size: ([\\d]+)'', ''\\1'')
-      | first | default(''Unknown'') }} bytes
+      | first }} bytes
 
       - Checksum: {{ ''Verified'' if
         expected_checksum is defined else ''Skipped''

@@ -18,7 +18,9 @@
       stdout:
         - "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576    Oct 01 09:00:00 2025  test-image.bin\n\n2097152 bytes total (1048576 bytes free)"
       rc: 0
-  when: ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined and ansible_connection == 'local')
+  when:
+    - ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined
+    - ansible_connection == 'local')
 
 - name: Parse bootflash directory listing and space information
   ansible.builtin.set_fact:
@@ -55,7 +57,9 @@
           stdout:
             - "system image file is: bootflash:///test-image.bin"
           rc: 0
-      when: ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined and ansible_connection == 'local')
+      when:
+        - ansible_check_mode or inventory_hostname == 'localhost' or (ansible_connection is defined
+        - ansible_connection == 'local')
 
     - name: Parse running image filename
       ansible.builtin.set_fact:
@@ -72,7 +76,7 @@
           - delete bootflash:{{ item }} no-prompt
       loop: "{{ cleanup_candidates }}"
       when:
-        - preserve_current_image | default(true)
+        - preserve_current_image
         - item != running_image_file
         - cleanup_candidates | length > 0
         - not ansible_check_mode

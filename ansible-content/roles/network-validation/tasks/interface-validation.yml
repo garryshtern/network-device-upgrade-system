@@ -8,7 +8,7 @@
 - name: Gather interface information (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Get interface configuration using nxos_facts
@@ -30,7 +30,7 @@
 - name: Gather interface information (IOS-XE)
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.ios.ios"
+    - ansible_network_os | is_platform('ios')
     - not ansible_check_mode
   block:
     - name: Get interface status (IOS-XE)
@@ -44,13 +44,13 @@
 - name: Parse interface status for NX-OS
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - nxos_interface_facts is defined
     - not ansible_check_mode
   block:
     - name: Extract NX-OS interface data from facts
       ansible.builtin.set_fact:
-        all_interfaces: "{{ ansible_net_resources.interfaces | default([]) }}"
+        all_interfaces: "{{ ansible_net_resources.interfaces  }}"
         interface_errors: "{{ nxos_interface_errors.stdout[0] | from_json }}"
 
     - name: Parse interface states from facts
@@ -67,13 +67,13 @@
 - name: Interface operational validation (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Check critical interface states
       ansible.builtin.assert:
         that:
-          - up_interfaces | default([]) | length > 0
+          - up_interfaces  | length > 0
         fail_msg: "No interfaces are in 'up' state"
 
     - name: Check for interface errors
@@ -81,7 +81,7 @@
         msg: |
           Interface Error Summary:
           {% for intf in interface_errors.TABLE_interface.ROW_interface
-            | default([]) %}
+             %}
           {% if intf.in_error | int > 0 or intf.out_error | int > 0 %}
           - >-
             {{ intf.interface }}: In Errors: {{
@@ -94,7 +94,7 @@
 - name: VLAN assignment validation (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Get VLAN configuration using nxos_facts
@@ -120,7 +120,7 @@
 - name: Link aggregation validation (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Get port-channel configuration using nxos_facts
@@ -137,7 +137,7 @@
       ansible.builtin.debug:
         msg: |
           Port-Channel Summary:
-          {% for pc in ansible_net_resources.lag_interfaces | default([]) %}
+          {% for pc in ansible_net_resources.lag_interfaces  %}
           - >-
             {{ pc.name }}: {{ pc.members | length }} members
           {% endfor %}
@@ -148,7 +148,7 @@
 - name: Optics diagnostics validation (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Get transceiver information
@@ -163,11 +163,11 @@
         msg: |
           Transceiver Status:
           {% for intf in transceiver_info.stdout[0] | from_json |
-            json_query('TABLE_interface.ROW_interface') | default([]) %}
+            json_query('TABLE_interface.ROW_interface')  %}
           {% if intf.sfp is defined %}
           - >-
             {{ intf.interface }}: {{ intf.sfp }}
-            ({{ intf.type | default('Unknown') }})
+            ({{ intf.type }})
           {% endif %}
           {% endfor %}
       when:

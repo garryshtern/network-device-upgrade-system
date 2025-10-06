@@ -62,7 +62,7 @@
           - item.expected_hash is defined
           - item.signature_valid is defined
         fail_msg: >-
-          Test firmware image {{ item.name | default('unknown') }} missing
+          Test firmware image {{ item.name }} missing
           required fields
       loop: "{{ test_firmware_images }}"
 

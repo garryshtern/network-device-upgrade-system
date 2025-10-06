@@ -28,7 +28,7 @@
 
 - name: Set installation method based on result
   ansible.builtin.set_fact:
-    installation_method: "{{ 'issu' if install_result.issu_attempted | default(false) else 'disruptive' }}"
+    installation_method: "{{ 'issu' if (install_result.issu_attempted is defined and install_result.issu_attempted) else 'disruptive' }}"
     boot_update_successful: true
 
 - name: Set installation completion status
@@ -36,7 +36,7 @@
     nxos_installation_results:
       target_firmware: "{{ target_firmware_version }}"
       installation_method: "{{ installation_method }}"
-      boot_variables_updated: "{{ boot_update_successful | default(false) }}"
+      boot_variables_updated: "{{ boot_update_successful }}"
       issu_performed: "{{ installation_method == 'issu' }}"
       reboot_required: "{{ installation_method == 'disruptive' }}"
       installation_timestamp: >

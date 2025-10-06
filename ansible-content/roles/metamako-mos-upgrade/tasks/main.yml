@@ -46,4 +46,4 @@
 
 - name: Post-upgrade application management (if requested)
   ansible.builtin.include_tasks: application-management.yml
-  when: manage_applications | default(false)
+  when: manage_applications

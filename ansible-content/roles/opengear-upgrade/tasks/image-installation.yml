@@ -102,9 +102,9 @@
           critical_power_check.json is defined else 0 }} critical power outlets
           detected.
           Firmware upgrade may cause brief power interruption.
-      when: >
-        opengear_upgrade_state.device_type == "smart_pdu"
-          and critical_power_check.json is defined
+      when:
+        - opengear_upgrade_state.device_type == "smart_pdu"
+        - critical_power_check.json is defined
 
 - name: Execute firmware installation
   block:

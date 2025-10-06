@@ -14,17 +14,17 @@
 # Step 6 failure triggers optional rollback only
 
 - name: Network Device Upgrade - Master Workflow
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
-  serial: "{{ max_concurrent | default(5) }}"
+  serial: "{{ max_concurrent  }}"
   vars:
     # Firmware configuration
     firmware_version: "{{ target_firmware }}"
-    platform_specific_firmware: "{{ platform_firmware | default({}) }}"
+    platform_specific_firmware: "{{ platform_firmware  }}"
 
     # Workflow control
-    maintenance_window: "{{ maintenance | default(false) | bool }}"
-    rollback_on_failure: "{{ auto_rollback | default(true) | bool }}"
+    maintenance_window: "{{ maintenance  | bool }}"
+    rollback_on_failure: "{{ auto_rollback  | bool }}"
 
     # Security - SSH keys preferred over passwords
     ansible_ssh_private_key_file: "{{ ssh_key_file | default(omit) }}"
@@ -32,7 +32,7 @@
 
     # Batch tracking
     batch_id: "{{ ansible_play_batch | hash('md5') }}"
-    operator_id: "{{ lookup('env', 'USER') | default('ansible') }}"
+    operator_id: "{{ lookup('env', 'USER')  }}"
 
     # Timeouts and retries
     connectivity_timeout: 300
@@ -47,7 +47,7 @@
         - ansible_check_mode is defined
         - ansible_check_mode
         - ansible_network_os is defined
-        - ansible_network_os == 'metamako_mos'
+        - ansible_network_os | is_platform('metamako_mos')
 
     - name: Validate required variables
       ansible.builtin.assert:
@@ -63,26 +63,26 @@
         resolved_firmware_version: >-
           {% if platform_specific_firmware != {} %}
             {%- set platform_key = ansible_network_os -%}
-            {%- set device_model_key = device_model | default('default') -%}
+            {%- set device_model_key = device_model if device_model is defined else 'default' -%}
             {%- if platform_key in platform_specific_firmware -%}
               {%- if device_model_key in platform_specific_firmware[platform_key] -%}
                 {{ platform_specific_firmware[platform_key][device_model_key] }}
               {%- elif 'default' in platform_specific_firmware[platform_key] -%}
                 {{ platform_specific_firmware[platform_key]['default'] }}
               {%- else -%}
-                {{ target_firmware | default('') }}
+                {{ target_firmware }}
               {%- endif -%}
             {%- else -%}
-              {{ target_firmware | default('') }}
+              {{ target_firmware }}
             {%- endif -%}
           {%- else -%}
-            {{ target_firmware | default('') }}
+            {{ target_firmware }}
           {%- endif -%}
 
     - name: Set final firmware version for workflow
       ansible.builtin.set_fact:
-        firmware_version: "{{ resolved_firmware_version | default(target_firmware) }}"
-        target_firmware_version: "{{ resolved_firmware_version | default(target_firmware) }}"
+        firmware_version: "{{ resolved_firmware_version if resolved_firmware_version is defined else target_firmware }}"
+        target_firmware_version: "{{ resolved_firmware_version if resolved_firmware_version is defined else target_firmware }}"
 
     - name: Set upgrade start timestamp
       ansible.builtin.set_fact:
@@ -134,16 +134,16 @@
             name: space-management
             tasks_from: storage-assessment
           vars:
-            minimum_free_space_gb: "{{ required_space_gb | default(4) }}"
+            minimum_free_space_gb: "{{ required_space_gb  }}"
 
         - name: Verify sufficient space available
           ansible.builtin.assert:
             that:
               - storage_info is defined
-              - storage_info.free_space_gb >= (required_space_gb | default(4))
+              - storage_info.free_space_gb >= (required_space_gb )
             fail_msg: >
               Insufficient storage space. Available: {{ storage_info.free_space_gb }}GB,
-              Required: {{ required_space_gb | default(4) }}GB
+              Required: {{ required_space_gb  }}GB
           when:
             - not ansible_check_mode or inventory_hostname != 'localhost'
 
@@ -224,7 +224,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os == 'cisco.nxos.nxos'
+            - ansible_network_os | is_platform('nxos')
 
         - name: Install firmware - Cisco IOS-XE
           ansible.builtin.include_role:
@@ -232,7 +232,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os == 'cisco.ios.ios'
+            - ansible_network_os | is_platform('ios')
 
         - name: Install firmware - FortiOS
           ansible.builtin.include_role:
@@ -240,7 +240,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os == 'fortinet.fortios.fortios'
+            - ansible_network_os | is_platform('fortios')
 
         - name: Install firmware - Metamako MOS
           ansible.builtin.include_role:
@@ -248,7 +248,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os == 'metamako_mos'
+            - ansible_network_os | is_platform('metamako_mos')
 
         - name: Install firmware - Opengear
           ansible.builtin.include_role:
@@ -256,7 +256,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os == 'opengear'
+            - ansible_network_os | is_platform('opengear')
 
         - name: Wait for device to come back online
           ansible.builtin.wait_for_connection:

@@ -11,9 +11,9 @@
 
 - name: BGP convergence monitoring
   when:
-    - bgp_validation.bgp_configured | default(false)
+    - bgp_validation.bgp_configured
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Check initial BGP state
@@ -59,7 +59,7 @@
       ansible.builtin.set_fact:
         convergence_results: "{{ convergence_results | combine({'bgp': {
           'converged': (bgp_convergence_check is defined and bgp_convergence_check is not failed),
-          'time_seconds': bgp_convergence_time | default(-1) | int,
+          'time_seconds': bgp_convergence_time | int,
           'neighbors_established': (bgp_convergence_check.stdout[0] | from_json | json_query('TABLE_vrf.ROW_vrf[0].TABLE_saf.ROW_saf[0].TABLE_neighbor.ROW_neighbor[?state==`Established`]') | length if bgp_convergence_check is defined else 0)
         }}) }}"
       when:
@@ -67,9 +67,9 @@
 
 - name: OSPF convergence monitoring
   when:
-    - ospf_configured | default(false)
+    - ospf_configured
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Check OSPF neighbor state
@@ -109,7 +109,7 @@
       ansible.builtin.set_fact:
         convergence_results: "{{ convergence_results | combine({'ospf': {
           'converged': (ospf_convergence_check is defined and ospf_convergence_check is not failed),
-          'time_seconds': ospf_convergence_time | default(-1) | int,
+          'time_seconds': ospf_convergence_time | int,
           'neighbors_full': (ospf_convergence_check.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor[?state==`Full`]') | length if ospf_convergence_check is defined else 0)
         }}) }}"
       when:
@@ -117,9 +117,9 @@
 
 - name: EIGRP convergence monitoring
   when:
-    - eigrp_configured | default(false)
+    - eigrp_configured
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Check EIGRP neighbor state
@@ -159,7 +159,7 @@
       ansible.builtin.set_fact:
         convergence_results: "{{ convergence_results | combine({'eigrp': {
           'converged': (eigrp_convergence_check is defined and eigrp_convergence_check is not failed),
-          'time_seconds': eigrp_convergence_time | default(-1) | int,
+          'time_seconds': eigrp_convergence_time | int,
           'neighbors_up': (eigrp_convergence_check.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') | length if eigrp_convergence_check is defined else 0)
         }}) }}"
       when:
@@ -168,7 +168,7 @@
 - name: Interface convergence monitoring (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Check interface recovery
@@ -185,7 +185,7 @@
       until: >
         interface_stability_check.stdout[0] | from_json |
           json_query('TABLE_interface.ROW_interface[?state==`up`]') | length ==
-        (interface_baseline.up_interfaces | default(0) | int)
+        (interface_baseline.up_interfaces  | int)
       retries: 20
       delay: 5
       when:
@@ -204,15 +204,15 @@
       ansible.builtin.set_fact:
         convergence_results: "{{ convergence_results | combine({'interfaces': {
           'converged': (interface_stability_check is defined and interface_stability_check is not failed),
-          'time_seconds': interface_convergence_time | default(-1) | int,
+          'time_seconds': interface_convergence_time | int,
           'interfaces_up': (interface_stability_check.stdout[0] | from_json | json_query('TABLE_interface.ROW_interface[?state==`up`]') | length if interface_stability_check is defined else 0),
-          'expected_up': interface_baseline.up_interfaces | default(0)
+          'expected_up': interface_baseline.up_interfaces
         }}) }}"
 
 - name: Route table convergence monitoring (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os == "cisco.nxos.nxos"
+    - ansible_network_os | is_platform('nxos')
     - not ansible_check_mode
   block:
     - name: Check route table convergence
@@ -228,7 +228,7 @@
       register: route_stability_check
       until: >
         (route_stability_check.stdout[0] | from_json).total_routes | int >=
-        (routing_baseline.total_routes | default(0) | int * 0.95)
+        (routing_baseline.total_routes  | int * 0.95)
       retries: 25
       delay: 10
       when:
@@ -247,9 +247,9 @@
       ansible.builtin.set_fact:
         convergence_results: "{{ convergence_results | combine({'routing': {
           'converged': (route_stability_check is defined and route_stability_check is not failed),
-          'time_seconds': routing_convergence_time | default(-1) | int,
-          'current_routes': ((route_stability_check.stdout[0] | from_json).total_routes | default(0) if route_stability_check is defined else 0),
-          'expected_routes': routing_baseline.total_routes | default(0)
+          'time_seconds': routing_convergence_time | int,
+          'current_routes': ((route_stability_check.stdout[0] | from_json).total_routes  if route_stability_check is defined else 0),
+          'expected_routes': routing_baseline.total_routes
         }}) }}"
 
 - name: Overall convergence assessment
@@ -264,11 +264,11 @@
       ansible.builtin.set_fact:
         overall_convergence_success: >-
           {{
-            (convergence_results.bgp.converged | default(true)) and
-            (convergence_results.ospf.converged | default(true)) and
-            (convergence_results.eigrp.converged | default(true)) and
-            (convergence_results.interfaces.converged | default(true)) and
-            (convergence_results.routing.converged | default(true))
+            (convergence_results.bgp.converged ) and
+            (convergence_results.ospf.converged ) and
+            (convergence_results.eigrp.converged ) and
+            (convergence_results.interfaces.converged ) and
+            (convergence_results.routing.converged )
           }}
 
 - name: Protocol convergence summary

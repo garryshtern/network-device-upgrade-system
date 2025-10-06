@@ -77,17 +77,17 @@
       ansible.builtin.debug:
         msg: |
           WARNING: >
-            {{ active_sessions_check.stdout | default('0') | trim }}
+            {{ active_sessions_check.stdout | trim }}
             active console sessions detected.
           These sessions will be disconnected during the upgrade.
-      when: active_sessions_check.stdout | default('0') | trim | int > 0
+      when: active_sessions_check.stdout | trim | int > 0
 
     - name: Send maintenance message to users
       ansible.builtin.raw: |
         wall 'MAINTENANCE: Firmware upgrade starting in 60 seconds.
           All sessions will be disconnected.'
       delegate_to: "{{ inventory_hostname }}"
-      when: active_sessions_check.stdout | default('0') | trim | int > 0
+      when: active_sessions_check.stdout | trim | int > 0
 
     - name: Wait for users to prepare
       ansible.builtin.pause:
@@ -95,7 +95,7 @@
         prompt: >
           Allowing time for active session users to prepare
           for disconnection
-      when: active_sessions_check.stdout | default('0') | trim | int > 0
+      when: active_sessions_check.stdout | trim | int > 0
 
 - name: Execute firmware installation based on device architecture
   block:
@@ -117,7 +117,7 @@
 
     - name: Execute modern puginstall command for firmware installation
       ansible.builtin.raw: |
-        puginstall {{ upgrade_config.options | default('') }}
+        puginstall {{ upgrade_config.options  }}
           {{ opengear_firmware_ready_path }}
       register: upgrade_execution
       delegate_to: "{{ inventory_hostname }}"
