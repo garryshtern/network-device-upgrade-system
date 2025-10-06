@@ -66,7 +66,7 @@ provisioner:
             expected_hash: "invalid_hash"
             signature_valid: false
           - name: "fortios_image"
-            filename: "fortios.7.4.1.out"
+            filename: "FGT_VM64_KVM-v7.4.1-build1234-FORTINET.out"
             vendor: "fortinet"
             platform: "fortios"
             size_mb: 512

@@ -67,12 +67,12 @@
       vars:
         mock_images:
           - type: "primary"
-            filename: "nxos.9.3.7.bin"
+            filename: "nxos64-cs.9.3.7.M.bin"
             version: "9.3.7"
             size_mb: 1450
             checksum: "sha512:abc123def456"
           - type: "backup"
-            filename: "nxos.9.3.6.bin"
+            filename: "nxos64-cs.9.3.6.M.bin"
             version: "9.3.6"
             size_mb: 1420
             checksum: "sha512:def789abc012"
@@ -90,14 +90,14 @@
           # Generated for testing purposes
 
           # Primary Images
-          sha512:abc123def456  nxos.9.3.7.bin
-          sha256:1a2b3c4d5e6f  nxos.9.3.7.bin
-          md5:9f8e7d6c5b4a    nxos.9.3.7.bin
+          sha512:abc123def456  nxos64-cs.9.3.7.M.bin
+          sha256:1a2b3c4d5e6f  nxos64-cs.9.3.7.M.bin
+          md5:9f8e7d6c5b4a    nxos64-cs.9.3.7.M.bin
 
           # Backup Images
-          sha512:def789abc012  nxos.9.3.6.bin
-          sha256:2b3c4d5e6f7g  nxos.9.3.6.bin
-          md5:8e7d6c5b4a39    nxos.9.3.6.bin
+          sha512:def789abc012  nxos64-cs.9.3.6.M.bin
+          sha256:2b3c4d5e6f7g  nxos64-cs.9.3.6.M.bin
+          md5:8e7d6c5b4a39    nxos64-cs.9.3.6.M.bin
 
           # Bootloader Images
           sha512:fed321cba987  n9000-epld.9.3.7.img
@@ -377,8 +377,8 @@
         path: "{{ image_results_path }}/images/{{ item }}"
       register: image_file_stats
       loop:
-        - "nxos.9.3.7.bin"
-        - "nxos.9.3.6.bin"
+        - "nxos64-cs.9.3.7.M.bin"
+        - "nxos64-cs.9.3.6.M.bin"
         - "n9000-epld.9.3.7.img"
 
     - name: Validate mock image files were created

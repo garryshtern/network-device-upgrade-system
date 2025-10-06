@@ -40,7 +40,7 @@
               {{ platform_patterns.default }}
             {%- endif -%}
           {%- else -%}
-            nxos.{{ target_firmware_version }}.bin
+            nxos64-cs.{{ target_firmware_version }}.M.bin
           {%- endif -%}
 
     - name: Set firmware paths

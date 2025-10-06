@@ -124,7 +124,7 @@ measure_task_performance \
     "Metamako Secure Transfer" \
     "$ROOT_DIR/ansible-content/roles/metamako-mos-upgrade/tasks/image-loading.yml" \
     "$TEST_DIR/mock-inventories/single-platform.yml" \
-    "--extra-vars 'local_image_path=/tmp/mock-image.bin target_image_filename=metamako-2.1.0.bin'"
+    "--extra-vars 'local_image_path=/tmp/mock-image.bin target_image_filename=mos-2.1.0.iso'"
 
 echo -e "${BLUE}6. Testing Opengear secure transfer performance${NC}"
 measure_task_performance \

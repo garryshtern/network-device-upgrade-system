@@ -46,6 +46,30 @@ min_free_space_mb: 2000
 cleanup_old_images: true
 keep_image_count: 2
 
+# Firmware filename patterns (MANDATORY - per docs/firmware-naming-standards.md)
+device_model_patterns:
+  - regex: "N9K-C92.*"
+    platform: "nexus_9000"
+    model_prefix: "N9K-C92"
+  - regex: "N9K-C93.*"
+    platform: "nexus_9000"
+    model_prefix: "N9K-C93"
+  - regex: "N3K-C354.*"
+    platform: "nexus_3548"
+    model_prefix: "N3K-C354"
+
+firmware_filename_patterns:
+  nexus_9000:
+    default: "nxos64-cs.{{ target_firmware_version }}.M.bin"
+  nexus_3548:
+    default: "nxos64-msll.{{ target_firmware_version }}.M.bin"
+  default: "nxos64-cs.{{ target_firmware_version }}.M.bin"
+
+epld_firmware_patterns:
+  nexus_9000:
+    default: "n9000-epld.{{ target_epld_version if target_epld_version != '' else target_firmware_version }}.img"
+  default: "n9000-epld.{{ target_epld_version if target_epld_version != '' else target_firmware_version }}.img"
+
 # Validation specific to NX-OS
 validate_vdc_mode: true
 validate_feature_set: true
@@ -74,9 +98,10 @@ check_rp_reachability: true
 vdc_mode: false
 target_vdc: "{{ ansible_host }}-vdc"
 
-# Boot variables
-primary_boot_image: "bootflash:///nxos.{{ target_firmware_version }}.bin"
-secondary_boot_image: "bootflash:///nxos.backup.bin"
+# Boot variables (MANDATORY: Use compliant naming per docs/firmware-naming-standards.md)
+# Default to nxos64-cs pattern for Nexus 9000 (most common)
+primary_boot_image: "bootflash:///nxos64-cs.{{ target_firmware_version }}.M.bin"
+secondary_boot_image: "bootflash:///nxos64-cs.backup.M.bin"
 
 # Feature validation
 required_features:

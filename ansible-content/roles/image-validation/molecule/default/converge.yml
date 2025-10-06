@@ -45,7 +45,7 @@
             Valid firmware content would be here
             CISCO_NXOS_IMAGE_SIGNATURE_END
 
-        - filename: "fortinet/fortios.7.4.1.out"
+        - filename: "fortinet/FGT_VM64_KVM-v7.4.1-build1234-FORTINET.out"
           content: |
             # Mock FortiOS firmware image v7.4.1
             # This is a test image for validation testing
@@ -72,10 +72,10 @@
             a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef
             123456789012345678901234567890abcdef1234567890abcdef
             nxos.10.1.2.bin
-        - filename: "fortios.7.4.1.out.sha512"
+        - filename: "FGT_VM64_KVM-v7.4.1-build1234-FORTINET.out.sha512"
           content: >-
             f9e8d7c6b5a4321098765432109876543210fedcba0987654321fedcba
-            098765432109876543210fedcba0987654321fedcba098765  fortios.7.4.1.out
+            098765432109876543210fedcba0987654321fedcba098765  FGT_VM64_KVM-v7.4.1-build1234-FORTINET.out
 
     - name: Create mock digital signature files
       ansible.builtin.copy:
@@ -89,7 +89,7 @@
             MockCiscoDigitalSignatureForTesting
             This would be a real cryptographic signature
             -----END CISCO SIGNATURE-----
-        - filename: "fortios.7.4.1.out.sig"
+        - filename: "FGT_VM64_KVM-v7.4.1-build1234-FORTINET.out.sig"
           content: |
             -----BEGIN FORTINET SIGNATURE-----
             MockFortinetDigitalSignatureForTesting

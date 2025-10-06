@@ -46,7 +46,7 @@
           hostname test-device-01
 
           # System configuration
-          boot nxos bootflash:nxos.9.3.7.bin
+          boot nxos bootflash:nxos64-cs.9.3.7.M.bin
           feature interface-vlan
           feature hsrp
           feature lacp
@@ -92,7 +92,7 @@
           hostname test-device-01
 
           # Basic configuration
-          boot nxos bootflash:nxos.9.3.7.bin
+          boot nxos bootflash:nxos64-cs.9.3.7.M.bin
           feature interface-vlan
           feature hsrp
 
