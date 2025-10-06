@@ -295,78 +295,9 @@ DOCUMENTATION:
 EOF
 }
 
-# Validate environment
-validate_environment() {
-    log "Validating container environment..."
+# Validate environment (old version - removed, see line 686 for current implementation with TARGET_HOSTS validation)
 
-    # Check Ansible installation
-    if ! command -v ansible-playbook &> /dev/null; then
-        error "Ansible not found in container"
-        exit 1
-    fi
-
-    # Check ansible-galaxy command
-    if ! command -v ansible-galaxy &> /dev/null; then
-        error "ansible-galaxy command not found in container"
-        exit 1
-    fi
-
-    # Check Ansible collections with more robust validation
-    local collections_check=false
-    if ansible-galaxy collection list --collections-path ~/.ansible/collections &> /dev/null; then
-        collections_check=true
-    elif [[ -d ~/.ansible/collections ]] && [[ $(find ~/.ansible/collections -name "*.yml" -o -name "*.yaml" | wc -l) -gt 0 ]]; then
-        warn "Collections list command failed but collections exist - proceeding with caution"
-        collections_check=true
-    fi
-
-    if [[ "$collections_check" != "true" ]]; then
-        error "Ansible collections not properly installed"
-        exit 1
-    fi
-
-    # Verify working directory structure
-    if [[ ! -d "ansible-content" ]]; then
-        error "Ansible content directory not found"
-        exit 1
-    fi
-
-    if [[ ! -d "ansible-content/playbooks" ]]; then
-        error "Ansible playbooks directory not found"
-        exit 1
-    fi
-
-    # Check for main playbook
-    if [[ ! -f "${DEFAULT_PLAYBOOK}" ]]; then
-        error "Default playbook not found: ${DEFAULT_PLAYBOOK}"
-        exit 1
-    fi
-
-    # Verify Ansible configuration
-    if [[ -n "${ANSIBLE_CONFIG:-}" ]] && [[ ! -f "${ANSIBLE_CONFIG}" ]]; then
-        warn "ANSIBLE_CONFIG points to non-existent file: ${ANSIBLE_CONFIG}"
-    fi
-
-    success "Environment validation passed"
-}
-
-# Execute syntax check
-run_syntax_check() {
-    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
-    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
-    log "Running syntax check on: $playbook"
-    log "Using inventory: $inventory"
-    log "Extra variables: "
-
-    ansible-playbook \
-        --syntax-check \
-        -i "$inventory" \
-        --extra-vars "target_hosts=localhost" \
-        --extra-vars "max_concurrent=1" \
-        --extra-vars "target_firmware=test.bin" \
-        "$playbook"
-    success "Syntax check completed successfully"
-}
+# Execute syntax check (old version - removed, see line 715 for current implementation)
 
 # Setup SSH key variables (keys already copied by root process)
 setup_ssh_keys() {
@@ -599,19 +530,7 @@ run_playbook() {
     success "Playbook execution completed"
 }
 
-# Run test suite
-run_tests() {
-    log "Running comprehensive test suite..."
-    
-    if [[ -x "tests/run-all-tests.sh" ]]; then
-        ./tests/run-all-tests.sh
-    else
-        error "Test runner not found or not executable"
-        exit 1
-    fi
-    
-    success "Test suite completed"
-}
+# Run test suite (old version - removed, see line 741 for current implementation)
 
 # Start interactive shell or execute command
 start_shell() {
@@ -703,6 +622,35 @@ validate_target_hosts() {
 validate_environment() {
     log "Validating environment..."
 
+    # Check Ansible installation
+    if ! command -v ansible-playbook &> /dev/null; then
+        error "Ansible not found in container"
+        exit 1
+    fi
+
+    # Check ansible-galaxy command
+    if ! command -v ansible-galaxy &> /dev/null; then
+        error "ansible-galaxy command not found in container"
+        exit 1
+    fi
+
+    # Verify working directory structure
+    if [[ ! -d "ansible-content" ]]; then
+        error "Ansible content directory not found"
+        exit 1
+    fi
+
+    if [[ ! -d "ansible-content/playbooks" ]]; then
+        error "Ansible playbooks directory not found"
+        exit 1
+    fi
+
+    # Check for main playbook
+    if [[ ! -f "${DEFAULT_PLAYBOOK}" ]]; then
+        error "Default playbook not found: ${DEFAULT_PLAYBOOK}"
+        exit 1
+    fi
+
     # Validate TARGET_HOSTS against inventory
     if ! validate_target_hosts; then
         exit 1
@@ -732,6 +680,14 @@ run_syntax_check() {
     opts_and_vars=$(build_ansible_options)
     local ansible_opts="${opts_and_vars%|*}"
     local extra_vars="${opts_and_vars#*|}"
+
+    # Add required runtime variables for syntax check if not already provided
+    if [[ ! "$extra_vars" =~ target_hosts ]]; then
+        extra_vars="target_hosts=localhost ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ target_firmware ]]; then
+        extra_vars="target_firmware=test.bin ${extra_vars}"
+    fi
 
     log "Extra variables: $extra_vars"
 
