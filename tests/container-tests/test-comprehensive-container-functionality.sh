@@ -269,7 +269,7 @@ test_epld_functionality() {
     run_comprehensive_container_test "EPLD upgrade enabled" "success" "syntax-check" \
         -e TARGET_HOSTS="cisco-switch-01" \
         -e ENABLE_EPLD_UPGRADE="true" \
-        -e TARGET_EPLD_IMAGE="n9000-epld.9.3.16.img" \
+        -e TARGET_EPLD_IMAGE="n9000-epld.9.3.16.M.img" \
         -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key"
 
     # Test disruptive EPLD upgrade

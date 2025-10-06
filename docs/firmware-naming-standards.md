@@ -60,13 +60,13 @@ This document defines the **authoritative** and **MANDATORY** firmware filename 
 #### EPLD Upgrades (All Nexus 9000)
 **Pattern**: `n9000-epld.{version}.img`
 
-**Version Format**: `X.Y.Z` (e.g., `9.3.16`) - NOTE: EPLD versions do NOT use `.M` suffix
+**Version Format**: `X.Y.Z.M` (e.g., `9.3.16.M`) - NOTE: EPLD uses SAME version format as NX-OS (includes `.M`)
 
 **Examples**:
-- `n9000-epld.9.3.16.img` (version: `9.3.16`)
-- `n9000-epld.10.4.1.img` (version: `10.4.1`)
+- `n9000-epld.9.3.16.M.img` (version: `9.3.16.M`)
+- `n9000-epld.10.4.1.M.img` (version: `10.4.1.M`)
 
-**Regex Pattern**: `^n9000-epld\.[0-9]+\.[0-9]+\.[0-9]+\.img$`
+**Regex Pattern**: `^n9000-epld\.[0-9]+\.[0-9]+\.[0-9]+\.M\.img$`
 
 ### Hardware Platform Detection
 
@@ -74,9 +74,10 @@ The system automatically detects Nexus hardware platforms and selects the correc
 
 | Device Model | Firmware Pattern | Example |
 |-------------|------------------|---------|
-| N9K-C92384 | `nxos64-cs.*.M.bin` | `nxos64-cs.10.4.5.M.bin` |
-| N9K-C93180 | `nxos64-cs.*.M.bin` | `nxos64-cs.10.4.5.M.bin` |
-| N3K-C3548 | `nxos64-msll.*.M.bin` | `nxos64-msll.10.4.6.M.bin` |
+| N9K-C92384 | `nxos64-cs.*.M.bin` | `nxos64-cs.10.4.5.M.bin` (version: `10.4.5.M`) |
+| N9K-C93180 | `nxos64-cs.*.M.bin` | `nxos64-cs.10.4.5.M.bin` (version: `10.4.5.M`) |
+| N3K-C3548 | `nxos64-msll.*.M.bin` | `nxos64-msll.10.4.6.M.bin` (version: `10.4.6.M`) |
+| Any (EPLD) | `n9000-epld.*.M.img` | `n9000-epld.10.4.1.M.img` (version: `10.4.1.M`) |
 
 ---
 

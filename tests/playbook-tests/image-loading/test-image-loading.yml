@@ -77,7 +77,7 @@
             size_mb: 1420
             checksum: "sha512:def789abc012"
           - type: "bootloader"
-            filename: "n9000-epld.9.3.7.img"
+            filename: "n9000-epld.9.3.7.M.img"
             version: "9.3.7"
             size_mb: 75
             checksum: "sha512:fed321cba987"
@@ -100,9 +100,9 @@
           md5:8e7d6c5b4a39    nxos64-cs.9.3.6.M.bin
 
           # Bootloader Images
-          sha512:fed321cba987  n9000-epld.9.3.7.img
-          sha256:3c4d5e6f7g8h  n9000-epld.9.3.7.img
-          md5:7d6c5b4a3928    n9000-epld.9.3.7.img
+          sha512:fed321cba987  n9000-epld.9.3.7.M.img
+          sha256:3c4d5e6f7g8h  n9000-epld.9.3.7.M.img
+          md5:7d6c5b4a3928    n9000-epld.9.3.7.M.img
         dest: "{{ image_results_path }}/checksums/image-checksums.txt"
         mode: '0644'
 
@@ -379,7 +379,7 @@
       loop:
         - "nxos64-cs.9.3.7.M.bin"
         - "nxos64-cs.9.3.6.M.bin"
-        - "n9000-epld.9.3.7.img"
+        - "n9000-epld.9.3.7.M.img"
 
     - name: Validate mock image files were created
       ansible.builtin.assert:

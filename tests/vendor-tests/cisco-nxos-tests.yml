@@ -20,7 +20,7 @@
           current_epld_version: "1.2.3"
           target_epld_version: "1.3.1"
           epld_images:
-            - "n9000-epld.10.1.2.img"
+            - "n9000-epld.10.1.2.M.img"
           nxapi_enabled: true
         expected_results:
           upgrade_method: "issu"
@@ -53,8 +53,8 @@
           current_epld_version: "2.1.0"
           target_epld_version: "2.2.1"
           epld_images:
-            - "n9000-epld.10.2.3.img"
-            - "n9000-module-epld.10.2.3.img"
+            - "n9000-epld.10.2.3.M.img"
+            - "n9000-module-epld.10.2.3.M.img"
           nxapi_enabled: true
         expected_results:
           upgrade_method: "issu"

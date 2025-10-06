@@ -257,10 +257,10 @@ test_epld_configurations() {
 
     # Test EPLD image specification
     run_test "EPLD image specification" \
-        bash -c 'export TARGET_EPLD_IMAGE="n9000-epld.9.3.16.img" && \
+        bash -c 'export TARGET_EPLD_IMAGE="n9000-epld.9.3.16.M.img" && \
                  export TARGET_HOSTS="cisco-switch-01" && \
                  export ANSIBLE_INVENTORY="tests/container-tests/mockups/inventory/production.yml" && \
-                 bash docker-entrypoint.sh syntax-check 2>&1 | grep -q "target_epld_image=n9000-epld.9.3.16.img"'
+                 bash docker-entrypoint.sh syntax-check 2>&1 | grep -q "target_epld_image=n9000-epld.9.3.16.M.img"'
 
     # Test disruptive EPLD upgrade
     run_test "Disruptive EPLD upgrade" \

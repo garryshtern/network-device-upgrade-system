@@ -46,7 +46,7 @@ This guide provides comprehensive documentation of file transfer methods and upg
 - **Nexus 92384/93180**: `nxos64-cs.{version}.bin` (e.g., `nxos64-cs.10.4.5.M.bin` where version = `10.4.5.M`)
 - **Nexus 3548**: `nxos64-msll.{version}.bin` (e.g., `nxos64-msll.10.4.6.M.bin` where version = `10.4.6.M`)
 - **Nexus 7000 Series**: `n7000-s2-dk9.{version}.bin` (e.g., `n7000-s2-dk9.9.3.12.bin`)
-- **EPLD Images**: `n9000-epld.{version}.img` (e.g., `n9000-epld.9.3.16.img`)
+- **EPLD Images**: `n9000-epld.{version}.img` (e.g., `n9000-epld.9.3.16.M.img` where version = `9.3.16.M`)
 
 **Automatic Platform Selection**:
 The system automatically detects device models and selects appropriate firmware patterns:

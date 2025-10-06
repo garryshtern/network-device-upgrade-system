@@ -856,7 +856,7 @@ docker run --rm \
 | Nexus 5000 Series | `n5000-uk9.{version}.bin` | `n5000-uk9.9.3.12.bin` |
 | Nexus 3548 | `nxos64-msll.{version}.bin` | `nxos64-msll.10.4.6.M.bin` (version: `10.4.6.M`) |
 | Nexus 3000 Other | `n3000-uk9.{version}.bin` | `n3000-uk9.9.3.12.bin` |
-| **NX-OS EPLD** | `n9000-epld.{version}.img` | `n9000-epld.9.3.16.img` |
+| **NX-OS EPLD** | `n9000-epld.{version}.img` | `n9000-epld.9.3.16.M.img` (version: `9.3.16.M`) |
 | **Cisco IOS-XE** | **Platform-Specific Patterns** | |
 | Catalyst 9000 Series | `cat9k_iosxe.{version}.SPA.bin` | `cat9k_iosxe.17.09.04a.SPA.bin` |
 | Catalyst 9200/9300 | `cat9k_lite_iosxe.{version}.SPA.bin` | `cat9k_lite_iosxe.17.09.04a.SPA.bin` |
@@ -917,7 +917,8 @@ docker run --rm \
 ```
 
 **EPLD Upgrade Notes:**
-- EPLD files use `.img` extension (e.g., `n9000-epld.9.3.16.img`)
+- EPLD files use `.img` extension (e.g., `n9000-epld.9.3.16.M.img`)
+- EPLD versions follow SAME format as NX-OS (include `.M` suffix)
 - System automatically detects correct EPLD filename based on device platform
 - EPLD upgrades can be disruptive and may require maintenance windows
 - Use `ALLOW_DISRUPTIVE_EPLD=true` only during maintenance windows
