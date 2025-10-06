@@ -122,6 +122,19 @@ class MockDeviceEngine:
     
     def _load_device_behavior(self) -> 'DeviceBehavior':
         """Load platform-specific behavior"""
+        # Platform name mapping: Support both standardized names (nxos, ios)
+        # and legacy names (cisco_nxos, cisco_iosxe) for backward compatibility
+        platform_aliases = {
+            'nxos': 'cisco_nxos',
+            'ios': 'cisco_iosxe',
+            'iosxe': 'cisco_iosxe',
+            'cisco_nxos': 'cisco_nxos',
+            'cisco_iosxe': 'cisco_iosxe',
+            'fortios': 'fortios',
+            'opengear': 'opengear',
+            'metamako_mos': 'metamako_mos'
+        }
+
         behavior_map = {
             'cisco_nxos': CiscoNXOSBehavior,
             'cisco_iosxe': CiscoIOSXEBehavior,
@@ -129,11 +142,14 @@ class MockDeviceEngine:
             'opengear': OpengearBehavior,
             'metamako_mos': MetamakoMOSBehavior
         }
-        
-        behavior_class = behavior_map.get(self.config.platform_type)
+
+        # Normalize platform name using aliases
+        normalized_platform = platform_aliases.get(self.config.platform_type, self.config.platform_type)
+
+        behavior_class = behavior_map.get(normalized_platform)
         if not behavior_class:
-            raise ValueError(f"Unsupported platform: {self.config.platform_type}")
-        
+            raise ValueError(f"Unsupported platform: {self.config.platform_type} (normalized: {normalized_platform})")
+
         return behavior_class(self)
     
     def process_command(self, command: str, **kwargs) -> Dict[str, Any]:
@@ -1233,8 +1249,9 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Mock Network Device Engine')
     parser.add_argument('--test-platform', default='cisco_nxos',
-                        choices=['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos'],
-                        help='Platform to test')
+                        choices=['cisco_nxos', 'cisco_iosxe', 'nxos', 'ios', 'iosxe',
+                                'fortios', 'opengear', 'metamako_mos'],
+                        help='Platform to test (supports both standardized and legacy names)')
     parser.add_argument('--interactive', action='store_true',
                         help='Run interactive test mode')
     parser.add_argument('--port', type=int, default=2222,
