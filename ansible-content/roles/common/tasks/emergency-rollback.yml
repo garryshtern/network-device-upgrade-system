@@ -7,7 +7,7 @@
   ansible.builtin.set_fact:
     rollback_state:
       device: "{{ inventory_hostname }}"
-      platform: "{{ ansible_network_os }}"
+      platform: "{{ platform }}"
       start_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       rollback_reason: "{{ rollback_reason }}"
       steps_completed: []
@@ -19,7 +19,7 @@
     msg:
       - "=== EMERGENCY ROLLBACK INITIATED ==="
       - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ ansible_network_os }}"
+      - "Platform: {{ platform }}"
       - "Reason: {{ rollback_state.rollback_reason }}"
       - "=================================="
 
@@ -77,7 +77,7 @@
       vars:
         rollback_type: "firmware"
       when:
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - restore_firmware
 
     - name: Rollback Cisco IOS-XE firmware
@@ -87,7 +87,7 @@
       vars:
         rollback_type: "firmware"
       when:
-        - ansible_network_os | is_platform('ios')
+        - platform == 'ios'
         - restore_firmware
 
     - name: Mark firmware rollback complete
@@ -149,7 +149,7 @@
     msg:
       - "=== ROLLBACK SUMMARY ==="
       - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ ansible_network_os }}"
+      - "Platform: {{ platform }}"
       - "Reason: {{ rollback_state.rollback_reason }}"
       - "Steps Completed: {{ rollback_state.steps_completed | join(', ') }}"
       - "Steps Failed: {{ rollback_state.steps_failed | join(', ') }}"

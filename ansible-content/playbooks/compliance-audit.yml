@@ -23,7 +23,7 @@
       ansible.builtin.set_fact:
         compliance_results:
           device_name: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform }}"
           audit_timestamp: "{{ audit_timestamp }}"
           firmware_version: >
             {{ current_firmware_version  }}
@@ -144,7 +144,7 @@
             audit_output: >
               "{{ audit_results_path }}/{{ inventory_hostname
                 }}/nxos_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os | is_platform('nxos')
+          when: platform == 'nxos'
 
         # Cisco IOS-XE Compliance
         - name: Cisco IOS-XE compliance validation
@@ -155,7 +155,7 @@
             audit_output: >
               "{{ audit_results_path }}/{{ inventory_hostname
                 }}/iosxe_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os | is_platform('ios')
+          when: platform == 'ios'
 
         # Metamako MOS Compliance
         - name: Metamako MOS compliance validation
@@ -166,7 +166,7 @@
             audit_output: >
               "{{ audit_results_path }}/{{ inventory_hostname
                 }}/mos_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os | is_platform('mos')
+          when: platform == 'metamako_mos'
 
         # Opengear Compliance
         - name: Opengear compliance validation
@@ -177,7 +177,7 @@
             audit_output: >
               "{{ audit_results_path }}/{{ inventory_hostname
                 }}/opengear_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os | is_platform('opengear')
+          when: platform == 'opengear'
 
         # FortiOS Compliance
         - name: FortiOS compliance validation
@@ -188,7 +188,7 @@
             audit_output: >
               "{{ audit_results_path }}/{{ inventory_hostname
                 }}/fortios_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os | is_platform('fortios')
+          when: platform == 'fortios'
 
         - name: Update compliance results - platform specific
           ansible.builtin.set_fact:
@@ -265,10 +265,10 @@
           Authorization: "Token {{ influxdb_token }}"
         body: >-
           compliance_audit,device_id={{ inventory_hostname }},
-          device_type={{ ansible_network_os }},
+          device_type={{ platform }},
           site_location={{ site_name  }},
           vendor={{ vendor  }},
-          platform={{ ansible_network_os }}
+          platform={{ platform }}
           compliance_score={{ compliance_percentage }},
           checks_passed={{
             compliance_results.compliance_checks.passed | length }},
@@ -308,7 +308,7 @@
         msg:
           - "=== Compliance Audit Results ==="
           - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
+          - "Platform: {{ platform }}"
           - "Firmware Version: {{ compliance_results.firmware_version }}"
           - "Audit Timestamp: {{ audit_timestamp }}"
           - >-

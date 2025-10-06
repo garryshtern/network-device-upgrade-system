@@ -7,15 +7,15 @@
       {%- if target_firmware.endswith(('.bin', '.nxos', '.spa', '.pkg', '.out', '.mos', '.tar.gz', '.dgz')) -%}
         {{ target_firmware }}
       {%- else -%}
-        {%- if ansible_network_os in ['cisco.nxos.nxos', 'nxos'] -%}
+        {%- if platform == 'nxos' -%}
           nxos-{{ target_firmware }}.bin
-        {%- elif ansible_network_os in ['cisco.ios.ios', 'ios'] -%}
+        {%- elif platform == 'ios' -%}
           iosxe-{{ target_firmware }}.bin
-        {%- elif ansible_network_os in ['fortinet.fortios.fortios', 'fortios'] -%}
+        {%- elif platform == 'fortios' -%}
           fortios-{{ target_firmware }}.out
-        {%- elif ansible_network_os in ['metamako.mos', 'mos'] -%}
+        {%- elif platform == 'metamako_mos' -%}
           mos-{{ target_firmware }}.mos
-        {%- elif ansible_network_os | is_platform('opengear') -%}
+        {%- elif platform == 'opengear' -%}
           opengear-{{ target_firmware }}.dgz
         {%- else -%}
           {{ target_firmware }}
@@ -67,21 +67,21 @@
   ansible.builtin.assert:
     that:
       - >
-        ((ansible_network_os | is_platform('nxos') or ansible_network_os | is_platform('nxos')) and
+        (platform == 'nxos' and
           firmware_filename_for_validation.endswith(('.bin', '.nxos'))) or
-        ((ansible_network_os | is_platform('ios') or ansible_network_os | is_platform('ios')) and
+        (platform == 'ios' and
           firmware_filename_for_validation.endswith(('.bin', '.spa', '.pkg'))) or
-        ((ansible_network_os | is_platform('fortios') or ansible_network_os | is_platform('fortios')) and
+        (platform == 'fortios' and
           firmware_filename_for_validation.endswith('.out')) or
-        ((ansible_network_os | is_platform('mos') or ansible_network_os | is_platform('mos')) and
+        (platform == 'metamako_mos' and
           firmware_filename_for_validation.endswith(('.mos', '.tar.gz'))) or
-        (ansible_network_os | is_platform('opengear') and
+        (platform == 'opengear' and
           firmware_filename_for_validation.endswith(('.dgz', '.bin')))
     fail_msg: >
       "Firmware file extension not valid for platform: >-
-          {{ ansible_network_os }}: {{ firmware_filename_for_validation }}"
+          {{ platform }}: {{ firmware_filename_for_validation }}"
     success_msg: >
-      "Firmware file extension validation passed for {{ ansible_network_os }}"
+      "Firmware file extension validation passed for {{ platform }}"
 
 - name: Set integrity check result
   ansible.builtin.set_fact:

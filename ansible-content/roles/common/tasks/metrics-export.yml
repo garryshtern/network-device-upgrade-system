@@ -13,10 +13,10 @@
     influx_measurement: "{{ metric_type }}"
     influx_tags: >-
       device_id={{ inventory_hostname }},
-      device_type={{ ansible_network_os }},
+      device_type={{ platform }},
       site_location={{ site_name }},
       vendor={{ vendor }},
-      platform={{ ansible_network_os }}
+      platform={{ platform }}
     influx_fields: "{{ metric_data  }}"
 
 - name: Convert metric data to InfluxDB field format
@@ -80,7 +80,7 @@
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       device_id: "{{ inventory_hostname }}"
       metric_type: "{{ metric_type }}"
-      platform: "{{ ansible_network_os }}"
+      platform: "{{ platform }}"
       data: "{{ metric_data  }}"
   register: webhook_export_result
   when:

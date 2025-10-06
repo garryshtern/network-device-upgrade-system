@@ -36,7 +36,7 @@
       register: bgp_config_check
       when:
         - ansible_network_os is defined
-        - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
+        - platform in ['nxos', 'ios']
         - not ansible_check_mode
       failed_when: false
 
@@ -83,7 +83,7 @@
           - bgp_address_family
       register: bgp_facts
       when:
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - not ansible_check_mode
 
     - name: Extract BGP configuration from facts

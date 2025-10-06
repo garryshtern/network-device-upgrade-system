@@ -3,7 +3,7 @@
 # Platform-specific storage space assessment for supported platforms only
 
 - name: Platform-specific storage assessment
-  ansible.builtin.include_tasks: "{{ ansible_network_os }}-assessment.yml"
+  ansible.builtin.include_tasks: "{{ platform }}-assessment.yml"
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:

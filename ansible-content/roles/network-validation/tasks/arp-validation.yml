@@ -15,7 +15,7 @@
       register: nxos_arp_info
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 
 - name: Get ARP table (IOS-XE)
@@ -28,7 +28,7 @@
       register: ios_arp_info
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('ios')
+    - platform == 'ios'
     - not ansible_check_mode
 - name: Extract ARP data (NX-OS)
   block:
@@ -57,7 +57,7 @@
         - arp_entries | length > 0
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
     - nxos_arp_info is defined
     - nxos_arp_info.stdout is defined
@@ -127,7 +127,7 @@
         - default_route_info.stdout[0] != ""
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 - name: Verify default gateway in ARP table
   ansible.builtin.debug:
@@ -175,7 +175,7 @@
         - dhcp_snooping_info.rc == 0
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 - name: Validate DHCP snooping bindings
   ansible.builtin.debug:
@@ -222,7 +222,7 @@
         - ipv6_neighbor_info.rc == 0
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 - name: Validate IPv6 neighbor discovery
   ansible.builtin.debug:
@@ -269,7 +269,7 @@
         - mac_table_info.rc == 0
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 - name: Validate ARP-MAC correlation
   ansible.builtin.debug:

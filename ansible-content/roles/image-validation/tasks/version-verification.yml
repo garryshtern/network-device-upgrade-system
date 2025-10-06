@@ -14,46 +14,46 @@
     gather_subset:
       - hardware
   register: nxos_version_output
-  when: ansible_network_os | is_platform('nxos')
+  when: platform == 'nxos'
 
 - name: Gather device facts to get current version (Cisco IOS-XE)
   cisco.ios.ios_facts:
     gather_subset:
       - hardware
   register: ios_version_output
-  when: ansible_network_os | is_platform('ios')
+  when: platform == 'ios'
 
 - name: Get current firmware version (FortiOS)
   fortinet.fortios.fortios_monitor_fact:
     selector: 'system_status'
   register: fortios_version_output
-  when: ansible_network_os | is_platform('fortios')
+  when: platform == 'fortios'
 
 - name: Get current firmware version (Opengear)
   ansible.builtin.raw: "config show system.label 2>/dev/null || echo 'Unknown'"
   register: opengear_version_output
   changed_when: false
-  when: ansible_network_os | is_platform('opengear')
+  when: platform == 'opengear'
 
 - name: Get current firmware version (Metamako MOS)
   ansible.builtin.raw: "cat /etc/mos-release 2>/dev/null || echo 'Unknown'"
   register: mos_version_output
   changed_when: false
-  when: ansible_network_os | is_platform('mos')
+  when: platform == 'metamako_mos'
 
 - name: Extract actual version from device output
   ansible.builtin.set_fact:
     actual_firmware_version: |-
-      {%- if ansible_network_os | is_platform('nxos') -%}
+      {%- if platform == 'nxos' -%}
         {{ ansible_net_version }}
-      {%- elif ansible_network_os | is_platform('ios') -%}
+      {%- elif platform == 'ios' -%}
         {{ ansible_net_version }}
-      {%- elif ansible_network_os | is_platform('fortios') -%}
+      {%- elif platform == 'fortios' -%}
         {{ fortios_version_output.meta.results.version }}
-      {%- elif ansible_network_os | is_platform('opengear') -%}
+      {%- elif platform == 'opengear' -%}
         {{ opengear_version_output.stdout |
         regex_search('([0-9\\.]+)', '\\1') | first }}
-      {%- elif ansible_network_os | is_platform('mos') -%}
+      {%- elif platform == 'metamako_mos' -%}
         {{ mos_version_output.stdout |
         regex_search('VERSION=([0-9\\.]+)', '\\1') |
         first }}

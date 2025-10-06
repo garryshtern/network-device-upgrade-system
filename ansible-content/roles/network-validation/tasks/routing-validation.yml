@@ -15,7 +15,7 @@
       register: nxos_routing_info
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 
 - name: Gather routing table information (IOS-XE)
@@ -29,7 +29,7 @@
       register: ios_routing_info
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('ios')
+    - platform == 'ios'
     - not ansible_check_mode
 
 - name: Parse routing information for NX-OS
@@ -57,7 +57,7 @@
         - routing_table.TABLE_vrf is defined
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
     - nxos_routing_info is defined
     - nxos_routing_info.stdout is defined
@@ -103,7 +103,7 @@
         - static_route_ping is defined
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 
 - name: Default route validation (NX-OS)
@@ -142,7 +142,7 @@
       failed_when: false
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 
 - name: Route table health validation (NX-OS)
@@ -175,7 +175,7 @@
       failed_when: false
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 
 - name: Check if OSPF is configured
@@ -190,7 +190,7 @@
       register: ospf_facts
       when:
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - not ansible_check_mode
       failed_when: false
 
@@ -199,7 +199,7 @@
         ospf_configured: "{{ ansible_net_resources.ospfv2 is defined and ansible_net_resources.ospfv2.processes is defined and ansible_net_resources.ospfv2.processes | length > 0 }}"
       when:
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - not ansible_check_mode
         - ospf_facts is succeeded
 
@@ -210,7 +210,7 @@
       register: ios_ospf_config_check
       when:
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('ios')
+        - platform == 'ios'
         - not ansible_check_mode
       failed_when: false
 
@@ -219,7 +219,7 @@
         ospf_configured: "{{ ios_ospf_config_check is defined and ios_ospf_config_check.stdout is defined and ios_ospf_config_check.stdout | length > 0 and 'router ospf' in ios_ospf_config_check.stdout[0] }}"
       when:
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('ios')
+        - platform == 'ios'
         - not ansible_check_mode
         - ios_ospf_config_check is defined
 
@@ -263,7 +263,7 @@
   when:
     - ospf_configured
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 
 - name: Check if EIGRP is configured
@@ -275,7 +275,7 @@
       register: eigrp_config_check
       when:
         - ansible_network_os is defined
-        - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
+        - platform in ['nxos', 'ios']
         - not ansible_check_mode
       failed_when: false
 
@@ -332,7 +332,7 @@
   when:
     - eigrp_configured
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
 
 - name: Store routing baseline

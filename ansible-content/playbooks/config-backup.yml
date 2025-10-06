@@ -64,7 +64,7 @@
         metric_type: "configuration_backup"
         metric_data:
           device_id: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform }}"
           backup_timestamp: "{{ backup_timestamp }}"
           backup_type: "{{ backup_type }}"
           file_count: "{{ backup_files.files | length }}"

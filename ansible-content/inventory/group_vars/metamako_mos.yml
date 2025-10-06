@@ -5,6 +5,10 @@
 # Connection settings - SSH key authentication preferred over passwords
 ansible_network_os: metamako_mos
 ansible_connection: ansible.netcommon.network_cli
+
+# Platform identifier (use this in playbooks, NOT ansible_network_os)
+platform: metamako_mos
+
 ansible_user: "{{ vault_metamako_username | default('admin') }}"
 # SSH key authentication (preferred)
 ansible_ssh_private_key_file: "{{ vault_metamako_ssh_key | default(omit) }}"

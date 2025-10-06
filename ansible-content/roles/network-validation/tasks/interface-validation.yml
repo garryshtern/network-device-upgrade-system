@@ -8,7 +8,7 @@
 - name: Gather interface information (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Get interface configuration using nxos_facts
@@ -30,7 +30,7 @@
 - name: Gather interface information (IOS-XE)
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('ios')
+    - platform == 'ios'
     - not ansible_check_mode
   block:
     - name: Get interface status (IOS-XE)
@@ -44,7 +44,7 @@
 - name: Parse interface status for NX-OS
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - nxos_interface_facts is defined
     - not ansible_check_mode
   block:
@@ -67,7 +67,7 @@
 - name: Interface operational validation (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Check critical interface states
@@ -94,7 +94,7 @@
 - name: VLAN assignment validation (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Get VLAN configuration using nxos_facts
@@ -120,7 +120,7 @@
 - name: Link aggregation validation (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Get port-channel configuration using nxos_facts
@@ -148,7 +148,7 @@
 - name: Optics diagnostics validation (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Get transceiver information

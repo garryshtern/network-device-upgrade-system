@@ -25,7 +25,7 @@
       ansible.builtin.set_fact:
         validation_results:
           device_name: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform }}"
           validation_type: "{{ validation_type }}"
           timestamp: "{{ validation_timestamp }}"
           tests_passed: []
@@ -169,7 +169,7 @@
               {{ validation_results_path }}/{{ inventory_hostname
                 }}/multicast_current_{{ validation_timestamp }}.json
           when:
-            - ansible_network_os in ['nxos', 'ios']
+            - platform in ['nxos', 'ios']
             - multicast_enabled  | bool
 
         - name: Compare multicast with baseline
@@ -184,7 +184,7 @@
               "{{ validation_results_path }}/{{ inventory_hostname
                 }}/multicast_current_{{ validation_timestamp }}.json"
           when:
-            - ansible_network_os in ['nxos', 'ios']
+            - platform in ['nxos', 'ios']
             - multicast_enabled  | bool
             - compare_with_baseline
 
@@ -195,7 +195,7 @@
                   validation_results.tests_passed
                     + ['multicast_validation']}) }}"
           when:
-            - ansible_network_os in ['nxos', 'ios']
+            - platform in ['nxos', 'ios']
             - multicast_enabled  | bool
 
         - name: Mark multicast validation as skipped
@@ -204,7 +204,7 @@
               {{ validation_results | combine({'tests_skipped':
                 validation_results.tests_skipped + ['multicast_validation']}) }}
           when: >
-            not (ansible_network_os in ['nxos', 'ios']
+            not (platform in ['nxos', 'ios']
               and multicast_enabled  | bool)
 
       rescue:
@@ -309,7 +309,7 @@
         metric_type: "network_validation"
         metric_data:
           device_id: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform }}"
           validation_type: "{{ validation_type }}"
           validation_score: "{{ validation_score  }}"
           tests_passed: "{{ validation_results.tests_passed | length }}"
@@ -325,7 +325,7 @@
         msg:
           - "=== Network Validation Results ==="
           - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
+          - "Platform: {{ platform }}"
           - "Validation Type: {{ validation_type }}"
           - "Timestamp: {{ validation_timestamp }}"
           - "Tests Passed: {{ validation_results.tests_passed | length }}"

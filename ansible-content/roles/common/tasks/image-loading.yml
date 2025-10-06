@@ -5,7 +5,7 @@
 
 - name: Set image loading variables
   ansible.builtin.set_fact:
-    firmware_source_path: "{{ firmware_base_path }}/{{ ansible_network_os }}"
+    firmware_source_path: "{{ firmware_base_path }}/{{ platform }}"
     device_storage_path: "/var/lib/firmware"
     integrity_check_required: true
     cleanup_old_images: true
@@ -49,7 +49,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
 
     # Cisco IOS-XE Image Loading
     - name: Load Cisco IOS-XE image
@@ -58,7 +58,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('ios')
+        - platform == 'ios'
 
     # Metamako MOS Image Loading
     - name: Load Metamako MOS image
@@ -67,7 +67,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('metamako_mos')
+        - platform == 'metamako_mos'
 
     # Opengear Image Loading
     - name: Load Opengear image
@@ -76,7 +76,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('opengear')
+        - platform == 'opengear'
 
     # FortiOS Image Loading
     - name: Load FortiOS image
@@ -85,7 +85,7 @@
         tasks_from: image-loading
       when:
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('fortios')
+        - platform == 'fortios'
         - not ansible_check_mode
 
 - name: Verify image integrity
@@ -102,7 +102,7 @@
     metric_data:
       device_id: "{{ inventory_hostname }}"
       firmware_version: "{{ firmware_version }}"
-      platform: "{{ ansible_network_os }}"
+      platform: "{{ platform }}"
       status: "success"
       timestamp: "{{ ansible_date_time.iso8601) }}"
 
@@ -111,7 +111,7 @@
     msg:
       - "=== Image Loading Complete ==="
       - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ ansible_network_os }}"
+      - "Platform: {{ platform }}"
       - "Firmware: {{ firmware_version }}"
       - "Status: LOADED"
       - "=============================="

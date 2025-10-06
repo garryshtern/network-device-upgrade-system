@@ -13,7 +13,7 @@ required_space_gb: "{{ firmware_size_gb | default(2) }}"
 
 # Storage info initialization
 storage_info:
-  platform: "{{ ansible_network_os }}"
+  platform: "{{ platform }}"
   total_space_gb: 0
   free_space_gb: 0
   used_space_gb: 0
@@ -23,7 +23,7 @@ storage_info:
 # Space check results initialization
 space_check_results:
   device: "{{ inventory_hostname }}"
-  platform: "{{ ansible_network_os }}"
+  platform: "{{ platform }}"
   timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   required_space: "{{ required_space_gb | default(2) }}"
   available_space: 0

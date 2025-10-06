@@ -353,9 +353,18 @@ validate_environment() {
 # Execute syntax check
 run_syntax_check() {
     local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
+    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
     log "Running syntax check on: $playbook"
-    
-    ansible-playbook --syntax-check "$playbook"
+    log "Using inventory: $inventory"
+    log "Extra variables: "
+
+    ansible-playbook \
+        --syntax-check \
+        -i "$inventory" \
+        --extra-vars "target_hosts=localhost" \
+        --extra-vars "max_concurrent=1" \
+        --extra-vars "target_firmware=test.bin" \
+        "$playbook"
     success "Syntax check completed successfully"
 }
 

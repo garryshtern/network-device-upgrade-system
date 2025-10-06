@@ -5,6 +5,10 @@
 # Connection settings - SSH key authentication preferred over passwords
 ansible_network_os: cisco.nxos.nxos
 ansible_connection: ansible.netcommon.network_cli
+
+# Platform identifier (use this in playbooks, NOT ansible_network_os)
+platform: nxos
+
 ansible_user: "{{ vault_cisco_nxos_username | default('admin') }}"
 # SSH key authentication (preferred)
 ansible_ssh_private_key_file: "{{ vault_cisco_nxos_ssh_key | default(omit) }}"

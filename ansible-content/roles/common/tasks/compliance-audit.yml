@@ -7,7 +7,7 @@
   ansible.builtin.set_fact:
     compliance_results:
       device_name: "{{ inventory_hostname }}"
-      platform: "{{ ansible_network_os }}"
+      platform: "{{ platform }}"
       audit_timestamp: "{{ ansible_date_time.iso8601 if ansible_date_time is defined else lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       firmware_version: "{{ current_firmware_version }}"
       standards_tested: []
@@ -189,7 +189,7 @@
     msg:
       - "=== Compliance Audit Results ==="
       - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ ansible_network_os }}"
+      - "Platform: {{ platform }}"
       - "Firmware Version: {{ compliance_results.firmware_version }}"
       - "Audit Timestamp: {{ compliance_results.audit_timestamp }}"
       - "Standards Tested: {{ compliance_results.standards_tested | join(', ') }}"
@@ -209,6 +209,6 @@
     metric_data:
       device_id: "{{ inventory_hostname }}"
       compliance_score: "{{ compliance_percentage }}"
-      platform: "{{ ansible_network_os }}"
+      platform: "{{ platform }}"
       status: "success"
       timestamp: "{{ compliance_results.audit_timestamp }}"

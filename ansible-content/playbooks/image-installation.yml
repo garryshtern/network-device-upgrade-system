@@ -73,31 +73,31 @@
           ansible.builtin.include_role:
             name: cisco-nxos-upgrade
             tasks_from: image-installation
-          when: ansible_network_os | is_platform('nxos')
+          when: platform == 'nxos'
 
         - name: Install firmware - Cisco IOS-XE
           ansible.builtin.include_role:
             name: cisco-iosxe-upgrade
             tasks_from: image-installation
-          when: ansible_network_os | is_platform('ios')
+          when: platform == 'ios'
 
         - name: Install firmware - Metamako MOS
           ansible.builtin.include_role:
             name: metamako-mos-upgrade
             tasks_from: image-installation
-          when: ansible_network_os | is_platform('mos')
+          when: platform == 'metamako_mos'
 
         - name: Install firmware - Opengear
           ansible.builtin.include_role:
             name: opengear-upgrade
             tasks_from: image-installation
-          when: ansible_network_os | is_platform('opengear')
+          when: platform == 'opengear'
 
         - name: Install firmware - FortiOS
           ansible.builtin.include_role:
             name: fortios-upgrade
             tasks_from: image-installation
-          when: ansible_network_os | is_platform('fortios')
+          when: platform == 'fortios'
 
         - name: Mark pre-reboot tasks complete
           ansible.builtin.set_fact:
@@ -119,7 +119,7 @@
 
         - name: Execute platform-specific reboot
           ansible.builtin.include_role:
-            name: "{{ ansible_network_os }}-upgrade"
+            name: "{{ platform }}-upgrade"
             tasks_from: reboot
           when: reboot_required | bool
 
@@ -187,7 +187,7 @@
             metric_type: "installation_completion"
             metric_data:
               device_id: "{{ inventory_hostname }}"
-              platform: "{{ ansible_network_os }}"
+              platform: "{{ platform }}"
               firmware_version: "{{ firmware_version }}"
               status: "success"
               reboot_required: "{{ reboot_required }}"
@@ -212,6 +212,6 @@
         msg:
           - "=== Installation Complete ==="
           - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
+          - "Platform: {{ platform }}"
           - "Duration: {{ installation_duration }} seconds"
           - "Status: {{ installation_state.current_step }}"

@@ -26,10 +26,10 @@
     - name: Create backup placeholder for testing
       ansible.builtin.copy:
         content: |
-          # Configuration backup placeholder for {{ ansible_network_os }}
+          # Configuration backup placeholder for {{ platform }}
           # Device: {{ inventory_hostname }}
           # Timestamp: {{ backup_timestamp }}
-          # Platform: {{ ansible_network_os }}
+          # Platform: {{ platform }}
         dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/config_backup.txt"
         mode: '0644'
       delegate_to: localhost
@@ -43,7 +43,7 @@
     metric_data:
       device_id: "{{ inventory_hostname }}"
       backup_timestamp: "{{ backup_timestamp }}"
-      platform: "{{ ansible_network_os }}"
+      platform: "{{ platform }}"
       backup_type: "{{ backup_type }}"
       status: "success"
 
@@ -52,7 +52,7 @@
     msg:
       - "=== Configuration Backup Complete ==="
       - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ ansible_network_os }}"
+      - "Platform: {{ platform }}"
       - "Backup Type: {{ backup_type }}"
       - "Timestamp: {{ backup_timestamp }}"
       - "Status: SUCCESS"

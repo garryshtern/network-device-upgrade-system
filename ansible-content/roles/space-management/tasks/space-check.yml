@@ -3,7 +3,7 @@
 # Platform-specific storage space validation for supported platforms only
 
 - name: Platform-specific storage assessment
-  ansible.builtin.include_tasks: "{{ ansible_network_os }}-assessment.yml"
+  ansible.builtin.include_tasks: "{{ platform }}-assessment.yml"
 
 - name: Validate storage space availability
   ansible.builtin.assert:
@@ -36,7 +36,7 @@
     metric_type: "storage_check"
     metric_data:
       device_id: "{{ inventory_hostname }}"
-      platform: "{{ ansible_network_os }}"
+      platform: "{{ platform }}"
       required_space_gb: "{{ space_check_results.required_space }}"
       available_space_gb: "{{ space_check_results.available_space }}"
       status: "{{ 'success' if space_check_results.passed else 'failed' }}"

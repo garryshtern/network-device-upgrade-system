@@ -13,7 +13,7 @@
   when:
     - bgp_validation.bgp_configured
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Check initial BGP state
@@ -69,7 +69,7 @@
   when:
     - ospf_configured
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Check OSPF neighbor state
@@ -119,7 +119,7 @@
   when:
     - eigrp_configured
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Check EIGRP neighbor state
@@ -168,7 +168,7 @@
 - name: Interface convergence monitoring (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Check interface recovery
@@ -212,7 +212,7 @@
 - name: Route table convergence monitoring (NX-OS)
   when:
     - ansible_network_os is defined
-    - ansible_network_os | is_platform('nxos')
+    - platform == 'nxos'
     - not ansible_check_mode
   block:
     - name: Check route table convergence

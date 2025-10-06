@@ -5,6 +5,10 @@
 # Connection settings - API token authentication preferred over passwords
 ansible_network_os: fortinet.fortios.fortios
 ansible_connection: httpapi
+
+# Platform identifier (use this in playbooks, NOT ansible_network_os)
+platform: fortios
+
 ansible_host: "{{ inventory_hostname }}"
 ansible_user: "{{ vault_fortios_username | default('admin') }}"
 # API token authentication (preferred for FortiOS 6.0+)

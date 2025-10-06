@@ -7,7 +7,7 @@
   hosts: "{{ target_hosts }}"
   gather_facts: false
   vars:
-    firmware_source_path: "{{ firmware_base_path }}/{{ ansible_network_os }}"
+    firmware_source_path: "{{ firmware_base_path }}/{{ platform }}"
     device_storage_path: "/var/lib/firmware"
     integrity_check_required: true
     cleanup_old_images: true
@@ -38,35 +38,35 @@
           ansible.builtin.include_role:
             name: cisco-nxos-upgrade
             tasks_from: image-loading
-          when: ansible_network_os | is_platform('nxos')
+          when: platform == 'nxos'
 
         # Cisco IOS-XE Image Loading
         - name: Load Cisco IOS-XE image
           ansible.builtin.include_role:
             name: cisco-iosxe-upgrade
             tasks_from: image-loading
-          when: ansible_network_os | is_platform('ios')
+          when: platform == 'ios'
 
         # Metamako MOS Image Loading
         - name: Load Metamako MOS image
           ansible.builtin.include_role:
             name: metamako-mos-upgrade
             tasks_from: image-loading
-          when: ansible_network_os | is_platform('mos')
+          when: platform == 'metamako_mos'
 
         # Opengear Image Loading
         - name: Load Opengear image
           ansible.builtin.include_role:
             name: opengear-upgrade
             tasks_from: image-loading
-          when: ansible_network_os | is_platform('opengear')
+          when: platform == 'opengear'
 
         # FortiOS Image Loading
         - name: Load FortiOS image
           ansible.builtin.include_role:
             name: fortios-upgrade
             tasks_from: image-loading
-          when: ansible_network_os | is_platform('fortios')
+          when: platform == 'fortios'
 
     - name: Verify image integrity
       ansible.builtin.include_role:
@@ -82,7 +82,7 @@
         metric_data:
           device_id: "{{ inventory_hostname }}"
           firmware_version: "{{ firmware_version }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform }}"
           status: "success"
           timestamp: "{{ ansible_date_time.iso8601 }}"
 
@@ -91,7 +91,7 @@
         msg:
           - "=== Image Loading Complete ==="
           - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
+          - "Platform: {{ platform }}"
           - "Firmware: {{ firmware_version }}"
           - "Status: LOADED"
           - "=============================="

@@ -40,7 +40,7 @@
       {{ baseline_data_path }}/{{ inventory_hostname
         }}/bgp_baseline_{{ health_check_timestamp }}.json
   when:
-    - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios', 'arista.eos.eos']
+    - platform in ['nxos', 'ios', 'eos']
     - not ansible_check_mode
 
 - name: Capture interface states
@@ -53,7 +53,7 @@
       {{ baseline_data_path }}/{{ inventory_hostname
         }}/interfaces_baseline_{{ health_check_timestamp }}.json
   when:
-    - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios', 'arista.eos.eos']
+    - platform in ['nxos', 'ios', 'eos']
     - not ansible_check_mode
 
 - name: Capture routing information
@@ -66,7 +66,7 @@
       {{ baseline_data_path }}/{{ inventory_hostname
         }}/routing_baseline_{{ health_check_timestamp }}.json
   when:
-    - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios', 'arista.eos.eos']
+    - platform in ['nxos', 'ios', 'eos']
     - not ansible_check_mode
 
 - name: Capture multicast state (if applicable)
@@ -79,7 +79,7 @@
       {{ baseline_data_path }}/{{ inventory_hostname
         }}/multicast_baseline_{{ health_check_timestamp }}.json
   when:
-    - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
+    - platform in ['nxos', 'ios']
     - multicast_enabled
     - not ansible_check_mode
 
@@ -93,7 +93,7 @@
       {{ baseline_data_path }}/{{ inventory_hostname
         }}/arp_baseline_{{ health_check_timestamp }}.json
   when:
-    - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios', 'arista.eos.eos']
+    - platform in ['nxos', 'ios', 'eos']
     - not ansible_check_mode
 
 - name: Create health check summary
@@ -104,7 +104,7 @@
   vars:
     check_timestamp: "{{ health_check_timestamp }}"
     device_name: "{{ inventory_hostname }}"
-    platform: "{{ ansible_network_os }}"
+    platform: "{{ platform }}"
     connectivity_status: >
       "{{ 'success' if connection_wait_result is succeeded else 'failed' }}"
     baseline_files:
@@ -123,7 +123,7 @@
     metric_type: "health_check"
     metric_data:
       device_id: "{{ inventory_hostname }}"
-      platform: "{{ ansible_network_os }}"
+      platform: "{{ platform }}"
       check_timestamp: "{{ health_check_timestamp }}"
       status: "success"
       baseline_captured: true
@@ -133,7 +133,7 @@
     msg:
       - "=== Health Check Complete ==="
       - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ ansible_network_os }}"
+      - "Platform: {{ platform }}"
       - "Timestamp: {{ health_check_timestamp }}"
       - "Baseline Data: {{ baseline_data_path }}/{{ inventory_hostname }}/"
       - "Status: HEALTHY"

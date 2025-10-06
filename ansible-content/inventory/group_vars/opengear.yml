@@ -5,6 +5,10 @@
 # Connection settings - SSH key and API token auth preferred over passwords
 ansible_network_os: opengear
 ansible_connection: ssh  # Default to SSH, overridden for modern API devices
+
+# Platform identifier (use this in playbooks, NOT ansible_network_os)
+platform: opengear
+
 ansible_host: "{{ inventory_hostname }}"
 ansible_user: "{{ opengear_username }}"
 # SSH key authentication (preferred for SSH connections)

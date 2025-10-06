@@ -16,7 +16,7 @@
       ansible.builtin.set_fact:
         rollback_state:
           device: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform }}"
           start_time: "{{ rollback_timestamp }}"
           rollback_reason: "{{ rollback_reason }}"
           steps_completed: []
@@ -29,7 +29,7 @@
         msg:
           - "=== EMERGENCY ROLLBACK INITIATED ==="
           - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
+          - "Platform: {{ platform }}"
           - "Reason: {{ rollback_state.rollback_reason }}"
           - "Timestamp: {{ rollback_timestamp }}"
           - "=================================="
@@ -101,7 +101,7 @@
           vars:
             rollback_type: "firmware"
           when:
-            - ansible_network_os | is_platform('nxos')
+            - platform == 'nxos'
             - restore_firmware
 
         - name: Rollback Cisco IOS-XE firmware
@@ -111,7 +111,7 @@
           vars:
             rollback_type: "firmware"
           when:
-            - ansible_network_os | is_platform('ios')
+            - platform == 'ios'
             - restore_firmware
 
         - name: Rollback Metamako MOS firmware
@@ -121,7 +121,7 @@
           vars:
             rollback_type: "firmware"
           when:
-            - ansible_network_os | is_platform('mos')
+            - platform == 'metamako_mos'
             - restore_firmware
 
         - name: Rollback Opengear firmware
@@ -131,7 +131,7 @@
           vars:
             rollback_type: "firmware"
           when:
-            - ansible_network_os | is_platform('opengear')
+            - platform == 'opengear'
             - restore_firmware
 
         - name: Rollback FortiOS firmware
@@ -141,7 +141,7 @@
           vars:
             rollback_type: "firmware"
           when:
-            - ansible_network_os | is_platform('fortios')
+            - platform == 'fortios'
             - restore_firmware
 
         - name: Mark firmware rollback complete
@@ -188,7 +188,7 @@
 
         - name: Restore configuration from backup
           ansible.builtin.include_role:
-            name: "{{ ansible_network_os }}-upgrade"
+            name: "{{ platform }}-upgrade"
             tasks_from: config-restore
           vars:
             backup_file: "{{ latest_backup }}"
@@ -225,7 +225,7 @@
 
         - name: Reboot device for rollback
           ansible.builtin.include_role:
-            name: "{{ ansible_network_os }}-upgrade"
+            name: "{{ platform }}-upgrade"
             tasks_from: reboot
           vars:
             reboot_reason: "rollback"
@@ -327,7 +327,7 @@
         metric_type: "emergency_rollback"
         metric_data:
           device_id: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform }}"
           rollback_reason: "{{ rollback_state.rollback_reason }}"
           rollback_duration: "{{ rollback_duration }}"
           rollback_successful: "{{ rollback_successful }}"
@@ -361,7 +361,7 @@
         msg:
           - "=== ROLLBACK SUMMARY ==="
           - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
+          - "Platform: {{ platform }}"
           - "Reason: {{ rollback_state.rollback_reason }}"
           - "Duration: {{ rollback_duration }}s"
           - "Steps Completed: {{ rollback_state.steps_completed | join(', ') }}"

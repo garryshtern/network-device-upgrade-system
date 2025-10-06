@@ -12,7 +12,7 @@
       register: pim_config_check
       when:
         - ansible_network_os is defined
-        - ansible_network_os in ['cisco.nxos.nxos', 'cisco.ios.ios']
+        - platform in ['nxos', 'ios']
         - not ansible_check_mode
       failed_when: false
 
@@ -55,7 +55,7 @@
           - show ip pim rp | json
       register: nxos_pim_info
       when:
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - not ansible_check_mode
       failed_when: false
 
@@ -67,7 +67,7 @@
           - show ip pim rp mapping
       register: ios_pim_info
       when:
-        - ansible_network_os | is_platform('ios')
+        - platform == 'ios'
         - not ansible_check_mode
       failed_when: false
 
@@ -87,7 +87,7 @@
             json_query('TABLE_rp.ROW_rp')  }}"
       when:
         - not ansible_check_mode
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - nxos_pim_info.rc == 0
 
     - name: Classify PIM neighbor states
@@ -147,7 +147,7 @@
           - show ip igmp interface | json
       register: igmp_info
       when:
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - not ansible_check_mode
       failed_when: false
 
@@ -197,7 +197,7 @@
       register: rp_reachability
       loop: "{{ pim_rp_info[:5] }}"
       when:
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - pim_rp_info is defined and pim_rp_info | length > 0
         - not ansible_check_mode
       failed_when: false
@@ -222,7 +222,7 @@
           - show ip pim anycast-rp | json
       register: anycast_rp_info
       when:
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - not ansible_check_mode
       failed_when: false
 
@@ -262,7 +262,7 @@
           - show ip mroute | json
       register: mroute_info
       when:
-        - ansible_network_os | is_platform('nxos')
+        - platform == 'nxos'
         - not ansible_check_mode
       failed_when: false
 

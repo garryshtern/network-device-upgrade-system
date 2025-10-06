@@ -47,7 +47,7 @@
         - ansible_check_mode is defined
         - ansible_check_mode
         - ansible_network_os is defined
-        - ansible_network_os | is_platform('metamako_mos')
+        - platform == 'metamako_mos'
 
     - name: Validate required variables
       ansible.builtin.assert:
@@ -62,7 +62,7 @@
       ansible.builtin.set_fact:
         resolved_firmware_version: >-
           {% if platform_specific_firmware != {} %}
-            {%- set platform_key = ansible_network_os -%}
+            {%- set platform_key = platform -%}
             {%- set device_model_key = device_model if device_model is defined else 'default' -%}
             {%- if platform_key in platform_specific_firmware -%}
               {%- if device_model_key in platform_specific_firmware[platform_key] -%}
@@ -101,7 +101,7 @@
         msg:
           - "=== Network Device Upgrade Workflow ==="
           - "Target Device: {{ inventory_hostname }}"
-          - "Network OS: {{ ansible_network_os }}"
+          - "Network OS: {{ platform }}"
           - "Target Firmware: {{ firmware_version }}"
           - "Maintenance Window: {{ maintenance_window }}"
           - "Batch ID: {{ batch_id }}"
@@ -224,7 +224,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os | is_platform('nxos')
+            - platform == 'nxos'
 
         - name: Install firmware - Cisco IOS-XE
           ansible.builtin.include_role:
@@ -232,7 +232,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os | is_platform('ios')
+            - platform == 'ios'
 
         - name: Install firmware - FortiOS
           ansible.builtin.include_role:
@@ -240,7 +240,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os | is_platform('fortios')
+            - platform == 'fortios'
 
         - name: Install firmware - Metamako MOS
           ansible.builtin.include_role:
@@ -248,7 +248,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os | is_platform('metamako_mos')
+            - platform == 'metamako_mos'
 
         - name: Install firmware - Opengear
           ansible.builtin.include_role:
@@ -256,7 +256,7 @@
             tasks_from: image-installation
           when:
             - ansible_network_os is defined
-            - ansible_network_os | is_platform('opengear')
+            - platform == 'opengear'
 
         - name: Wait for device to come back online
           ansible.builtin.wait_for_connection:
