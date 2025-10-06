@@ -16,13 +16,15 @@ This guide provides comprehensive documentation of file transfer methods and upg
 
 ## File Transfer Methods Summary
 
+> **⚠️ MANDATORY**: All firmware filenames MUST conform to patterns defined in [Firmware Naming Standards](firmware-naming-standards.md).
+
 | Platform | Primary Transfer Method | Secondary Method | Protocol | **Primary Authentication** | **Fallback Authentication** | File Size Limit | **Firmware Examples** |
 |----------|------------------------|------------------|----------|---------------------------|----------------------------|------------------|----------------------|
 | **Cisco NX-OS** | SCP | SFTP | SSH | **SSH Key** | Username/Password | ~8GB | `nxos64-cs.10.4.5.M.bin`, `nxos64-msll.10.4.6.M.bin` |
 | **Cisco IOS-XE** | SCP | HTTP/HTTPS | SSH/HTTP | **SSH Key** | Username/Password | ~4GB | `cat9k_iosxe.17.15.03a.SPA.bin`, `c8000aes-universalk9.17.15.03a.SPA.bin` |
-| **FortiOS** | **HTTPS API Upload** | **No SCP** | HTTPS | **API Token** | Username/Password | ~2GB | `FortiGate_600D_v7.0.12.build0523.out` |
+| **FortiOS** | **HTTPS API Upload** | **No SCP** | HTTPS | **API Token** | Username/Password | ~2GB | `FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out` |
 | **Opengear** | CLI Commands + Local | SSH/SCP for staging | SSH | **SSH Key + API Token** | Username/Password | ~1GB | `cm71xx-5.2.4.flash`, `console_manager-25.07.0-production-signed.raucb` |
-| **Metamako MOS** | SCP | HTTP | SSH/HTTP | **SSH Key** | Username/Password | ~500MB | `mos-0.39.9.iso` |
+| **Metamako MOS** | SCP | HTTP | SSH/HTTP | **SSH Key** | Username/Password | ~500MB | `mos-0.39.9.iso`, `metamux-2.1.7.swix`, `metawatch-0.11.3.swix` |
 
 ## Platform-Specific Details
 
@@ -230,16 +232,23 @@ firmware_filename_patterns:
     password: "{{ ansible_password }}"
 ```
 
+**MANDATORY Filename Patterns** (see [Firmware Naming Standards](firmware-naming-standards.md)):
+- **MOS OS**: `mos-{version}.iso` (e.g., `mos-0.39.9.iso`)
+- **MetaMux App**: `metamux-{version}.swix` (e.g., `metamux-2.1.7.swix`)
+- **MetaWatch App**: `metawatch-{version}.swix` (e.g., `metawatch-0.11.3.swix`)
+
+**Valid Extensions**: `.iso`, `.swix`
+
 **Key Characteristics**:
 - Standard SCP for MOS firmware
-- HTTP for application packages (MetaWatch, MetaMux)
+- SWIX packages for MetaWatch and MetaMux applications
 - Ultra-low latency requirements
 - Application management post-upgrade
 - Smaller firmware files (~500MB max)
 
 **Upgrade Mechanism**:
 - MOS upgrade with automatic reboot
-- Post-upgrade application installation
+- Post-upgrade application installation (SWIX)
 - Latency-critical validation procedures
 
 ## Security Implications
@@ -415,4 +424,10 @@ The main upgrade workflow (`ansible-content/playbooks/main-upgrade-workflow.yml`
 
 ---
 
-*This guide is part of the Network Device Upgrade System documentation. For related information, see [upgrade-workflow-guide.md](upgrade-workflow-guide.md) and [platform-implementation-status.md](platform-implementation-status.md).*
+## Related Documentation
+
+- **[Firmware Naming Standards](firmware-naming-standards.md)** - MANDATORY filename patterns and validation rules
+- [Upgrade Workflow Guide](upgrade-workflow-guide.md) - Complete upgrade process documentation
+- [Platform Implementation Status](platform-implementation-status.md) - Platform feature support matrix
+
+*This guide is part of the Network Device Upgrade System documentation.*

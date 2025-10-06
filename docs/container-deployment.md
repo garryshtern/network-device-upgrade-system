@@ -759,11 +759,18 @@ podman run --rm \
 5. **Latency Validation**: Ultra-low latency performance verification post-upgrade
 
 **File Formats**:
-- **MOS Base OS**: ISO image format for bare-metal installation
-- **Applications**: RPM packages installed via package manager
-- **Installation Method**: ISO boot/mount + RPM package installation
+- **MOS Base OS**: ISO image format for bare-metal installation (`.iso`)
+- **Applications**: SWIX packages (`.swix`) for MetaWatch and MetaMux applications
+- **Installation Method**: ISO boot/mount + SWIX package installation
 
 **Important**: Metamako MOS upgrades are **always complete system upgrades** - you cannot upgrade MOS firmware without also updating the applications, as they are tightly integrated for ultra-low latency performance requirements.
+
+**MANDATORY Filename Patterns**:
+- MOS OS: `mos-{version}.iso` (e.g., `mos-0.39.9.iso`)
+- MetaMux: `metamux-{version}.swix` (e.g., `metamux-2.1.7.swix`)
+- MetaWatch: `metawatch-{version}.swix` (e.g., `metawatch-0.11.3.swix`)
+
+See [Firmware Naming Standards](firmware-naming-standards.md) for complete requirements.
 
 ### Firmware Filename Resolution
 
@@ -838,6 +845,8 @@ docker run --rm \
 
 ### Firmware Naming Conventions
 
+> **⚠️ MANDATORY NAMING STANDARDS**: All firmware filenames MUST conform to the strict patterns defined in [Firmware Naming Standards](firmware-naming-standards.md). The system performs validation and will **REJECT** non-conformant files.
+
 | Platform | Firmware Naming Pattern | Example |
 |----------|------------------------|---------|
 | **Cisco NX-OS** | **Platform-Specific Patterns** | |
@@ -862,8 +871,10 @@ docker run --rm \
 | CM8100 (Modern) | `console_manager-{version}-production-signed.raucb` | `console_manager-25.07.0-production-signed.raucb` |
 | OM2100/OM2200 (Modern) | `operations_manager-{version}-production-signed.raucb` | `operations_manager-25.07.0-production-signed.raucb` |
 | **Metamako MOS** | `mos-{version}.iso` | `mos-0.39.9.iso` |
-| **MetaWatch App** | `metawatch-{version}-{build}.x86_64.rpm` | `metawatch-3.2.0-1967.x86_64.rpm` |
-| **MetaMux App** | `metamux-{version}-{build}.x86_64.rpm` | `metamux-2.2.3-1849.x86_64.rpm` |
+| **MetaWatch App** | `metawatch-{version}.swix` | `metawatch-0.11.3.swix` |
+| **MetaMux App** | `metamux-{version}.swix` | `metamux-2.1.7.swix` |
+
+**For complete naming standards, patterns, and validation rules, see [Firmware Naming Standards](firmware-naming-standards.md).**
 
 ### EPLD Upgrade Examples (Cisco NX-OS)
 
