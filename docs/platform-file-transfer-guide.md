@@ -42,9 +42,9 @@ This guide provides comprehensive documentation of file transfer methods and upg
 ```
 
 **Platform-Specific Firmware Patterns**:
-- **Nexus 9000 Series**: `nxos64-cs.{version}.M.bin` (e.g., `nxos64-cs.10.4.5.M.bin`)
-- **Nexus 92384/93180**: `nxos64-cs.{version}.M.bin` (e.g., `nxos64-cs.10.4.5.M.bin`)
-- **Nexus 3548**: `nxos64-msll.{version}.M.bin` (e.g., `nxos64-msll.10.4.6.M.bin`)
+- **Nexus 9000 Series**: `nxos64-cs.{version}.bin` (e.g., `nxos64-cs.10.4.5.M.bin` where version = `10.4.5.M`)
+- **Nexus 92384/93180**: `nxos64-cs.{version}.bin` (e.g., `nxos64-cs.10.4.5.M.bin` where version = `10.4.5.M`)
+- **Nexus 3548**: `nxos64-msll.{version}.bin` (e.g., `nxos64-msll.10.4.6.M.bin` where version = `10.4.6.M`)
 - **Nexus 7000 Series**: `n7000-s2-dk9.{version}.bin` (e.g., `n7000-s2-dk9.9.3.12.bin`)
 - **EPLD Images**: `n9000-epld.{version}.img` (e.g., `n9000-epld.9.3.16.img`)
 

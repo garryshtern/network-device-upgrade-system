@@ -35,36 +35,36 @@ This document defines the **authoritative** and **MANDATORY** firmware filename 
 ### MANDATORY Filename Patterns
 
 #### Nexus 9000 Series
-**Pattern**: `nxos64-cs.{version}.M.bin`
+**Pattern**: `nxos64-cs.{version}.bin`
 
-**Version Format**: `X.Y.Z` (e.g., `10.4.5`)
+**Version Format**: `X.Y.Z.M` (e.g., `10.4.5.M`) - NOTE: `.M` is part of the version number
 
 **Examples**:
-- `nxos64-cs.10.4.5.M.bin`
-- `nxos64-cs.10.3.2.M.bin`
-- `nxos64-cs.9.3.12.M.bin`
+- `nxos64-cs.10.4.5.M.bin` (version: `10.4.5.M`)
+- `nxos64-cs.10.3.2.M.bin` (version: `10.3.2.M`)
+- `nxos64-cs.9.3.12.M.bin` (version: `9.3.12.M`)
 
 **Regex Pattern**: `^nxos64-cs\.[0-9]+\.[0-9]+\.[0-9]+\.M\.bin$`
 
 #### Nexus 3548 Series
-**Pattern**: `nxos64-msll.{version}.M.bin`
+**Pattern**: `nxos64-msll.{version}.bin`
 
-**Version Format**: `X.Y.Z` (e.g., `10.4.6`)
+**Version Format**: `X.Y.Z.M` (e.g., `10.4.6.M`) - NOTE: `.M` is part of the version number
 
 **Examples**:
-- `nxos64-msll.10.4.6.M.bin`
-- `nxos64-msll.10.3.3.M.bin`
+- `nxos64-msll.10.4.6.M.bin` (version: `10.4.6.M`)
+- `nxos64-msll.10.3.3.M.bin` (version: `10.3.3.M`)
 
 **Regex Pattern**: `^nxos64-msll\.[0-9]+\.[0-9]+\.[0-9]+\.M\.bin$`
 
 #### EPLD Upgrades (All Nexus 9000)
 **Pattern**: `n9000-epld.{version}.img`
 
-**Version Format**: `X.Y.Z` (e.g., `9.3.16`)
+**Version Format**: `X.Y.Z` (e.g., `9.3.16`) - NOTE: EPLD versions do NOT use `.M` suffix
 
 **Examples**:
-- `n9000-epld.9.3.16.img`
-- `n9000-epld.10.4.1.img`
+- `n9000-epld.9.3.16.img` (version: `9.3.16`)
+- `n9000-epld.10.4.1.img` (version: `10.4.1`)
 
 **Regex Pattern**: `^n9000-epld\.[0-9]+\.[0-9]+\.[0-9]+\.img$`
 

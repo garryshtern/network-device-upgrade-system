@@ -47,6 +47,7 @@ cleanup_old_images: true
 keep_image_count: 2
 
 # Firmware filename patterns (MANDATORY - per docs/firmware-naming-standards.md)
+# NOTE: .M is part of target_firmware_version (e.g., "10.4.5.M")
 device_model_patterns:
   - regex: "N9K-C92.*"
     platform: "nexus_9000"
@@ -60,10 +61,10 @@ device_model_patterns:
 
 firmware_filename_patterns:
   nexus_9000:
-    default: "nxos64-cs.{{ target_firmware_version }}.M.bin"
+    default: "nxos64-cs.{{ target_firmware_version }}.bin"
   nexus_3548:
-    default: "nxos64-msll.{{ target_firmware_version }}.M.bin"
-  default: "nxos64-cs.{{ target_firmware_version }}.M.bin"
+    default: "nxos64-msll.{{ target_firmware_version }}.bin"
+  default: "nxos64-cs.{{ target_firmware_version }}.bin"
 
 epld_firmware_patterns:
   nexus_9000:
@@ -100,8 +101,9 @@ target_vdc: "{{ ansible_host }}-vdc"
 
 # Boot variables (MANDATORY: Use compliant naming per docs/firmware-naming-standards.md)
 # Default to nxos64-cs pattern for Nexus 9000 (most common)
-primary_boot_image: "bootflash:///nxos64-cs.{{ target_firmware_version }}.M.bin"
-secondary_boot_image: "bootflash:///nxos64-cs.backup.M.bin"
+# NOTE: .M is part of target_firmware_version (e.g., "10.4.5.M")
+primary_boot_image: "bootflash:///nxos64-cs.{{ target_firmware_version }}.bin"
+secondary_boot_image: "bootflash:///nxos64-cs.backup.bin"
 
 # Feature validation
 required_features:

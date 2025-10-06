@@ -850,11 +850,11 @@ docker run --rm \
 | Platform | Firmware Naming Pattern | Example |
 |----------|------------------------|---------|
 | **Cisco NX-OS** | **Platform-Specific Patterns** | |
-| Nexus 9000 Series | `nxos64-cs.{version}.M.bin` | `nxos64-cs.10.4.5.M.bin` |
-| Nexus 92384/93180 | `nxos64-cs.{version}.M.bin` | `nxos64-cs.10.4.5.M.bin` |
+| Nexus 9000 Series | `nxos64-cs.{version}.bin` | `nxos64-cs.10.4.5.M.bin` (version: `10.4.5.M`) |
+| Nexus 92384/93180 | `nxos64-cs.{version}.bin` | `nxos64-cs.10.4.5.M.bin` (version: `10.4.5.M`) |
 | Nexus 7000 Series | `n7000-s2-dk9.{version}.bin` | `n7000-s2-dk9.9.3.12.bin` |
 | Nexus 5000 Series | `n5000-uk9.{version}.bin` | `n5000-uk9.9.3.12.bin` |
-| Nexus 3548 | `nxos64-msll.{version}.M.bin` | `nxos64-msll.10.4.6.M.bin` |
+| Nexus 3548 | `nxos64-msll.{version}.bin` | `nxos64-msll.10.4.6.M.bin` (version: `10.4.6.M`) |
 | Nexus 3000 Other | `n3000-uk9.{version}.bin` | `n3000-uk9.9.3.12.bin` |
 | **NX-OS EPLD** | `n9000-epld.{version}.img` | `n9000-epld.9.3.16.img` |
 | **Cisco IOS-XE** | **Platform-Specific Patterns** | |
