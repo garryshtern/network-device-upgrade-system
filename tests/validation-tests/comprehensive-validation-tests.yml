@@ -8,12 +8,12 @@
   vars:
     validation_test_matrix:
       cisco_nxos:
-        platform: "cisco_nxos"
+        platform: nxos
         expected_features:
           - "ISSU support"
           - "EPLD upgrades"
       cisco_iosxe:
-        platform: "cisco_iosxe"
+        platform: ios
         expected_features:
           - "Install/Bundle mode handling"
       opengear:

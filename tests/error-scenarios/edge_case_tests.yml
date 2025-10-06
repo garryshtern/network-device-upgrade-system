@@ -10,7 +10,6 @@
     edge_case_scenarios:
       - name: "Upgrade Interruption and Recovery"
         scenario_type: "interruption_recovery"
-        device_platform: "cisco_nxos"
         interruption_phase: "upgrade_installation"
         interruption_duration: 45
         recovery_expected: true
@@ -25,7 +24,6 @@
 
       - name: "Device Reboot Loop Detection"
         scenario_type: "reboot_loop"
-        device_platform: "cisco_iosxe"
         reboot_count: 5
         loop_detection_threshold: 3
         intervention_expected: true

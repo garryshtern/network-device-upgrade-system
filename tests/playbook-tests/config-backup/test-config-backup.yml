@@ -13,7 +13,6 @@
 
     # Mock device configuration
     ansible_network_os: "cisco.nxos.nxos"
-    device_platform: "cisco_nxos"
 
     # Test backup parameters
     backup_results_path: "/tmp/config-backup-test"
@@ -132,7 +131,7 @@
       ansible.builtin.set_fact:
         backup_state:
           device_name: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: nxos
           backup_timestamp: >-
             {{ ansible_date_time.epoch | default('1695340800') }}
           backup_types: "{{ backup_types }}"

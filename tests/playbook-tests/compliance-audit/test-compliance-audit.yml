@@ -16,7 +16,6 @@
 
     # Mock device configuration
     ansible_network_os: "cisco.nxos.nxos"
-    device_platform: "cisco_nxos"
 
     # Test audit parameters
     audit_results_path: "/tmp/compliance-test"
@@ -90,7 +89,7 @@
       ansible.builtin.set_fact:
         compliance_results:
           device_name: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: nxos
           audit_timestamp: >-
             {{ ansible_date_time.epoch | default('1695340800') }}
           compliance_standards: "{{ compliance_standards }}"

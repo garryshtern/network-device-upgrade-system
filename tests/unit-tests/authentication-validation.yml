@@ -9,7 +9,7 @@
   vars:
     test_scenarios:
       - name: "Cisco NX-OS SSH Key Authentication (Preferred)"
-        platform: "cisco_nxos"
+        platform: nxos
         auth_config:
           ansible_ssh_private_key_file: "/path/to/nxos-key"
           ansible_password: "fallback-password"
@@ -18,7 +18,7 @@
         should_pass: true
 
       - name: "Cisco IOS-XE SSH Key Authentication (Preferred)"
-        platform: "cisco_iosxe"
+        platform: ios
         auth_config:
           ansible_ssh_private_key_file: "/path/to/iosxe-key"
           ansible_password: "fallback-password"
@@ -54,14 +54,14 @@
         should_pass: true
 
       - name: "Password Fallback Configuration (All Platforms)"
-        platform: "cisco_nxos"
+        platform: nxos
         auth_config:
           ansible_password: "fallback-password"
         expected_auth_method: "password_fallback"
         should_pass: true
 
       - name: "Invalid SSH Key Path"
-        platform: "cisco_nxos"
+        platform: nxos
         auth_config:
           ansible_ssh_private_key_file: "/nonexistent/path/key"
           ansible_password: ""
@@ -69,7 +69,7 @@
         should_pass: false
 
       - name: "Missing Authentication Configuration"
-        platform: "cisco_iosxe"
+        platform: ios
         auth_config: {}
         expected_auth_method: "none"
         should_pass: false

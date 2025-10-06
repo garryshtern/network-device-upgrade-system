@@ -21,8 +21,8 @@
 
       - name: "Multi-Platform Batch with Network Partition"
         devices:
-          - { platform: "cisco_nxos", name: "nxos-switch-01", port: "{{ base_port + 2 }}" }
-          - { platform: "cisco_iosxe", name: "iosxe-router-01", port: "{{ base_port + 3 }}" }
+          - { platform: nxos, name: "nxos-switch-01", port: "{{ base_port + 2 }}" }
+          - { platform: ios, name: "iosxe-router-01", port: "{{ base_port + 3 }}" }
           - { platform: "opengear", name: "opengear-im7200", port: "{{ base_port + 4 }}" }
         coordination: "parallel"
         failure_injection:
@@ -34,9 +34,9 @@
 
       - name: "Resource Exhaustion During Concurrent Upgrades"
         devices:
-          - { platform: "cisco_nxos", name: "nxos-switch-01", port: "{{ base_port + 5 }}" }
-          - { platform: "cisco_nxos", name: "nxos-switch-02", port: "{{ base_port + 6 }}" }
-          - { platform: "cisco_nxos", name: "nxos-switch-03", port: "{{ base_port + 7 }}" }
+          - { platform: nxos, name: "nxos-switch-01", port: "{{ base_port + 5 }}" }
+          - { platform: nxos, name: "nxos-switch-02", port: "{{ base_port + 6 }}" }
+          - { platform: nxos, name: "nxos-switch-03", port: "{{ base_port + 7 }}" }
         coordination: "parallel"
         resource_limits:
           max_concurrent_uploads: 2

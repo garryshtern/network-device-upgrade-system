@@ -13,7 +13,6 @@
 
     # Mock device configuration
     ansible_network_os: "cisco.nxos.nxos"
-    device_platform: "cisco_nxos"
 
     # Test rollback parameters
     rollback_results_path: "/tmp/emergency-rollback-test"
@@ -161,7 +160,7 @@
       ansible.builtin.set_fact:
         rollback_state:
           device_name: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: nxos
           rollback_timestamp: >-
             {{ ansible_date_time.epoch | default('1695340800') }}
           rollback_types: "{{ rollback_types }}"
