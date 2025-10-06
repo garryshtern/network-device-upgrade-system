@@ -850,13 +850,13 @@ docker run --rm \
 | Platform | Firmware Naming Pattern | Example |
 |----------|------------------------|---------|
 | **Cisco NX-OS** | **Platform-Specific Patterns** | |
-| Nexus 9000 Series | `nxos64-cs.{version}.bin` | `nxos64-cs.10.4.5.M.bin` (version: `10.4.5.M`) |
-| Nexus 92384/93180 | `nxos64-cs.{version}.bin` | `nxos64-cs.10.4.5.M.bin` (version: `10.4.5.M`) |
+| Nexus 9000 Series | `nxos64-cs.{version}.bin` | `nxos64-cs.10.1.1.bin` or `nxos64-cs.10.4.5.M.bin` |
+| Nexus 92384/93180 | `nxos64-cs.{version}.bin` | `nxos64-cs.9.3.10.bin` or `nxos64-cs.10.4.5.M.bin` |
 | Nexus 7000 Series | `n7000-s2-dk9.{version}.bin` | `n7000-s2-dk9.9.3.12.bin` |
 | Nexus 5000 Series | `n5000-uk9.{version}.bin` | `n5000-uk9.9.3.12.bin` |
 | Nexus 3548 | `nxos64-msll.{version}.bin` | `nxos64-msll.10.4.6.M.bin` (version: `10.4.6.M`) |
 | Nexus 3000 Other | `n3000-uk9.{version}.bin` | `n3000-uk9.9.3.12.bin` |
-| **NX-OS EPLD** | `n9000-epld.{version}.img` | `n9000-epld.9.3.16.M.img` (version: `9.3.16.M`) |
+| **NX-OS EPLD** | `n9000-epld.{version}.img` | `n9000-epld.10.1.2.img` or `n9000-epld.9.3.16.M.img` |
 | **Cisco IOS-XE** | **Platform-Specific Patterns** | |
 | Catalyst 9000 Series | `cat9k_iosxe.{version}.SPA.bin` | `cat9k_iosxe.17.09.04a.SPA.bin` |
 | Catalyst 9200/9300 | `cat9k_lite_iosxe.{version}.SPA.bin` | `cat9k_lite_iosxe.17.09.04a.SPA.bin` |

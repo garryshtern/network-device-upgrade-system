@@ -42,11 +42,12 @@ This guide provides comprehensive documentation of file transfer methods and upg
 ```
 
 **Platform-Specific Firmware Patterns**:
-- **Nexus 9000 Series**: `nxos64-cs.{version}.bin` (e.g., `nxos64-cs.10.4.5.M.bin` where version = `10.4.5.M`)
-- **Nexus 92384/93180**: `nxos64-cs.{version}.bin` (e.g., `nxos64-cs.10.4.5.M.bin` where version = `10.4.5.M`)
-- **Nexus 3548**: `nxos64-msll.{version}.bin` (e.g., `nxos64-msll.10.4.6.M.bin` where version = `10.4.6.M`)
+- **Nexus 9000 Series**: `nxos64-cs.{version}.bin` (e.g., `nxos64-cs.10.1.1.bin` or `nxos64-cs.10.4.5.M.bin`)
+- **Nexus 92384/93180**: `nxos64-cs.{version}.bin` (e.g., `nxos64-cs.9.3.10.bin` or `nxos64-cs.10.4.5.M.bin`)
+- **Nexus 3548**: `nxos64-msll.{version}.bin` (e.g., `nxos64-msll.10.1.1.bin` or `nxos64-msll.10.4.6.M.bin`)
 - **Nexus 7000 Series**: `n7000-s2-dk9.{version}.bin` (e.g., `n7000-s2-dk9.9.3.12.bin`)
-- **EPLD Images**: `n9000-epld.{version}.img` (e.g., `n9000-epld.9.3.16.M.img` where version = `9.3.16.M`)
+- **EPLD Images**: `n9000-epld.{version}.img` (e.g., `n9000-epld.10.1.2.img` or `n9000-epld.9.3.16.M.img`)
+- **NOTE**: `.M` (maintenance) and `.F` (feature) suffixes are OPTIONAL in version numbers
 
 **Automatic Platform Selection**:
 The system automatically detects device models and selects appropriate firmware patterns:
@@ -58,14 +59,18 @@ device_model_patterns:
   - { regex: "N7K-C70.*", platform: "nexus_7000", model_prefix: "N7K-C70" }
 
 # Firmware filename resolution
+# NOTE: .M/.F suffixes are part of target_version variable when present
 firmware_filename_patterns:
   nexus_9000:
-    N9K-C92384: "nxos64-cs.{{ target_version }}.M.bin"
-    N9K-C93180: "nxos64-cs.{{ target_version }}.M.bin"
-    default: "nxos64-cs.{{ target_version }}.M.bin"
-  nexus_3000:
-    N3K-C3548: "nxos64-msll.{{ target_version }}.M.bin"
-    default: "n3000-uk9.{{ target_version }}.bin"
+    default: "nxos64-cs.{{ target_firmware_version }}.bin"
+  nexus_3548:
+    default: "nxos64-msll.{{ target_firmware_version }}.bin"
+  default: "nxos64-cs.{{ target_firmware_version }}.bin"
+
+# Example version variables:
+# target_firmware_version: "10.1.2" → nxos64-cs.10.1.2.bin
+# target_firmware_version: "10.4.5.M" → nxos64-cs.10.4.5.M.bin
+# target_firmware_version: "10.2.2.F" → nxos64-cs.10.2.2.F.bin
 ```
 
 **Key Characteristics**:
