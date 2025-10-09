@@ -688,6 +688,9 @@ run_syntax_check() {
     if [[ ! "$extra_vars" =~ target_firmware ]]; then
         extra_vars="target_firmware=test.bin ${extra_vars}"
     fi
+    if [[ ! "$extra_vars" =~ max_concurrent ]]; then
+        extra_vars="max_concurrent=1 ${extra_vars}"
+    fi
 
     log "Extra variables: $extra_vars"
 
