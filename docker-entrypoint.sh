@@ -488,6 +488,15 @@ run_dry_run() {
     if [[ ! "$extra_vars" =~ max_concurrent ]]; then
         extra_vars="max_concurrent=1 ${extra_vars}"
     fi
+    if [[ ! "$extra_vars" =~ maintenance ]]; then
+        extra_vars="maintenance=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ auto_rollback ]]; then
+        extra_vars="auto_rollback=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ platform_firmware ]]; then
+        extra_vars="platform_firmware=test.bin ${extra_vars}"
+    fi
 
     log "Extra variables: $extra_vars"
 
@@ -527,6 +536,15 @@ run_playbook() {
     # Add required runtime variables if not already provided
     if [[ ! "$extra_vars" =~ max_concurrent ]]; then
         extra_vars="max_concurrent=1 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ maintenance ]]; then
+        extra_vars="maintenance=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ auto_rollback ]]; then
+        extra_vars="auto_rollback=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ platform_firmware ]]; then
+        extra_vars="platform_firmware=test.bin ${extra_vars}"
     fi
 
     log "Extra variables: $extra_vars"
@@ -700,6 +718,15 @@ run_syntax_check() {
     fi
     if [[ ! "$extra_vars" =~ max_concurrent ]]; then
         extra_vars="max_concurrent=1 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ maintenance ]]; then
+        extra_vars="maintenance=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ auto_rollback ]]; then
+        extra_vars="auto_rollback=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ platform_firmware ]]; then
+        extra_vars="platform_firmware=test.bin ${extra_vars}"
     fi
 
     log "Extra variables: $extra_vars"
