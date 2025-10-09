@@ -106,16 +106,16 @@
             name: space-management
             tasks_from: storage-assessment
           vars:
-            minimum_free_space_gb: "{{ required_space_gb  }}"
+            minimum_free_space_gb: "{{ required_space_gb }}"
 
         - name: Verify sufficient space available
           ansible.builtin.assert:
             that:
               - storage_info is defined
-              - storage_info.free_space_gb >= (required_space_gb )
+              - storage_info.free_space_gb >= required_space_gb
             fail_msg: >
               Insufficient storage space. Available: {{ storage_info.free_space_gb }}GB,
-              Required: {{ required_space_gb  }}GB
+              Required: {{ required_space_gb }}GB
           when:
             - not ansible_check_mode or inventory_hostname != 'localhost'
 
