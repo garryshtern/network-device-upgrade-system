@@ -39,10 +39,10 @@ Parameters are organized in a hierarchical structure:
 
 These parameters MUST be set for each device:
 
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `ansible_host` | string | IP address or FQDN of device | `192.168.1.10` |
-| `platform` | string | Platform identifier | `nxos`, `ios`, `fortios`, `opengear`, `metamako_mos` |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `ansible_host` | string | **(required)** | IP address or FQDN of device (e.g., `192.168.1.10`) |
+| `platform` | string | **(required)** | Platform identifier: `nxos`, `ios`, `fortios`, `opengear`, `metamako_mos` |
 
 **Note**: `ansible_network_os` is automatically set by group_vars and should NOT be overridden.
 
@@ -257,11 +257,11 @@ Defined in: `ansible-content/inventory/group_vars/cisco_nxos.yml`
 
 ### Firmware Filename Patterns
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `firmware_filename_patterns` | dict | Platform-specific firmware naming patterns |
-| `epld_firmware_patterns` | dict | EPLD firmware naming patterns |
-| `device_model_patterns` | list | Device model detection patterns |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `firmware_filename_patterns` | dict | Platform-specific | Platform-specific firmware naming patterns |
+| `epld_firmware_patterns` | dict | Platform-specific | EPLD firmware naming patterns |
+| `device_model_patterns` | list | Platform-specific | Device model detection patterns |
 
 **Example Firmware Patterns**:
 ```yaml
@@ -726,9 +726,9 @@ Defined in: `ansible-content/inventory/group_vars/opengear.yml`
 
 ### Firmware Filename Patterns
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `firmware_filename_patterns` | dict | Firmware patterns by device architecture |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `firmware_filename_patterns` | dict | Architecture-specific | Firmware patterns by device architecture |
 
 **Example Patterns**:
 ```yaml
@@ -741,16 +741,16 @@ firmware_filename_patterns:
 
 ### Version Formats
 
-| Architecture | Pattern | Example |
-|-------------|---------|---------|
-| Legacy CLI | `5.x.x` | `5.16.4` |
-| Current CLI | `YY.MM.x` | `25.07.0` |
+| Architecture | Pattern | Default | Example |
+|-----------|------|---------|-------------|
+| Legacy CLI | `5.x.x` | N/A | `5.16.4` |
+| Current CLI | `YY.MM.x` | N/A | `25.07.0` |
 
 ### Upgrade Commands
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `upgrade_commands` | dict | See group_vars | Upgrade commands by architecture |
+| `upgrade_commands` | dict | Architecture-specific | Upgrade commands by architecture |
 
 **Commands**:
 - **Legacy CLI**: `netflash`
