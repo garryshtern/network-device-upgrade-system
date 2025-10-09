@@ -74,7 +74,6 @@
         msg:
           - "=== Network Device Upgrade Workflow ==="
           - "Target Device: {{ inventory_hostname }}"
-          - "Network OS: {{ platform }}"
           - "Target Firmware: {{ firmware_version }}"
           - "Maintenance Window: {{ maintenance_window }}"
           - "Batch ID: {{ batch_id }}"

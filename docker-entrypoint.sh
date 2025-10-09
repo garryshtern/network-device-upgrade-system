@@ -488,11 +488,11 @@ run_dry_run() {
     if [[ ! "$extra_vars" =~ max_concurrent ]]; then
         extra_vars="max_concurrent=1 ${extra_vars}"
     fi
-    if [[ ! "$extra_vars" =~ maintenance ]]; then
-        extra_vars="maintenance=false ${extra_vars}"
+    if [[ ! "$extra_vars" =~ maintenance_window ]]; then
+        extra_vars="maintenance_window=false ${extra_vars}"
     fi
-    if [[ ! "$extra_vars" =~ auto_rollback ]]; then
-        extra_vars="auto_rollback=false ${extra_vars}"
+    if [[ ! "$extra_vars" =~ rollback_on_failure ]]; then
+        extra_vars="rollback_on_failure=false ${extra_vars}"
     fi
     if [[ ! "$extra_vars" =~ platform_firmware ]]; then
         extra_vars="platform_firmware=test.bin ${extra_vars}"
@@ -537,11 +537,11 @@ run_playbook() {
     if [[ ! "$extra_vars" =~ max_concurrent ]]; then
         extra_vars="max_concurrent=1 ${extra_vars}"
     fi
-    if [[ ! "$extra_vars" =~ maintenance ]]; then
-        extra_vars="maintenance=false ${extra_vars}"
+    if [[ ! "$extra_vars" =~ maintenance_window ]]; then
+        extra_vars="maintenance_window=false ${extra_vars}"
     fi
-    if [[ ! "$extra_vars" =~ auto_rollback ]]; then
-        extra_vars="auto_rollback=false ${extra_vars}"
+    if [[ ! "$extra_vars" =~ rollback_on_failure ]]; then
+        extra_vars="rollback_on_failure=false ${extra_vars}"
     fi
     if [[ ! "$extra_vars" =~ platform_firmware ]]; then
         extra_vars="platform_firmware=test.bin ${extra_vars}"
@@ -719,11 +719,11 @@ run_syntax_check() {
     if [[ ! "$extra_vars" =~ max_concurrent ]]; then
         extra_vars="max_concurrent=1 ${extra_vars}"
     fi
-    if [[ ! "$extra_vars" =~ maintenance ]]; then
-        extra_vars="maintenance=false ${extra_vars}"
+    if [[ ! "$extra_vars" =~ maintenance_window ]]; then
+        extra_vars="maintenance_window=false ${extra_vars}"
     fi
-    if [[ ! "$extra_vars" =~ auto_rollback ]]; then
-        extra_vars="auto_rollback=false ${extra_vars}"
+    if [[ ! "$extra_vars" =~ rollback_on_failure ]]; then
+        extra_vars="rollback_on_failure=false ${extra_vars}"
     fi
     if [[ ! "$extra_vars" =~ platform_firmware ]]; then
         extra_vars="platform_firmware=test.bin ${extra_vars}"
