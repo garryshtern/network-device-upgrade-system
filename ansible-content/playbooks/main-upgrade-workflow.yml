@@ -48,37 +48,14 @@
     - name: Validate required variables
       ansible.builtin.assert:
         that:
-          - target_firmware is defined or platform_specific_firmware != {}
+          - target_firmware is defined
           - target_hosts is defined
-        fail_msg: >
-          Required variables missing. Either target_firmware or
-          platform_specific_firmware must be defined.
+        fail_msg: "Required variables missing. target_firmware and target_hosts must be defined."
 
-    - name: Resolve platform-specific firmware version
+    - name: Set firmware version for workflow
       ansible.builtin.set_fact:
-        resolved_firmware_version: >-
-          {% if platform_specific_firmware != {} %}
-            {%- set platform_key = platform -%}
-            {%- set device_model_key = device_model if device_model is defined else 'default' -%}
-            {%- if platform_key in platform_specific_firmware -%}
-              {%- if device_model_key in platform_specific_firmware[platform_key] -%}
-                {{ platform_specific_firmware[platform_key][device_model_key] }}
-              {%- elif 'default' in platform_specific_firmware[platform_key] -%}
-                {{ platform_specific_firmware[platform_key]['default'] }}
-              {%- else -%}
-                {{ target_firmware }}
-              {%- endif -%}
-            {%- else -%}
-              {{ target_firmware }}
-            {%- endif -%}
-          {%- else -%}
-            {{ target_firmware }}
-          {%- endif -%}
-
-    - name: Set final firmware version for workflow
-      ansible.builtin.set_fact:
-        firmware_version: "{{ resolved_firmware_version if resolved_firmware_version is defined else target_firmware }}"
-        target_firmware_version: "{{ resolved_firmware_version if resolved_firmware_version is defined else target_firmware }}"
+        firmware_version: "{{ target_firmware }}"
+        target_firmware_version: "{{ target_firmware }}"
 
     - name: Set upgrade start timestamp
       ansible.builtin.set_fact:
