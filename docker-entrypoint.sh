@@ -410,6 +410,11 @@ build_ansible_options() {
     [[ -n "${UPGRADE_PHASE:-}" ]] && extra_vars="$extra_vars upgrade_phase=${UPGRADE_PHASE}"
     [[ -n "${MAINTENANCE_WINDOW:-}" ]] && extra_vars="$extra_vars maintenance_window=${MAINTENANCE_WINDOW}"
 
+    # Storage configuration
+    if [[ -n "${REQUIRED_SPACE_GB:-}" ]]; then
+        extra_vars="$extra_vars required_space_gb=${REQUIRED_SPACE_GB}"
+    fi
+
     # EPLD upgrade configuration
     if [[ -n "${ENABLE_EPLD_UPGRADE:-}" ]]; then
         extra_vars="$extra_vars enable_epld_upgrade=${ENABLE_EPLD_UPGRADE}"
@@ -459,103 +464,112 @@ build_ansible_options() {
         esac
     fi
 
+    # Add default values for required runtime variables if not already provided
+    if [[ ! "$extra_vars" =~ max_concurrent ]]; then
+        extra_vars="max_concurrent=1 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ maintenance_window ]]; then
+        extra_vars="maintenance_window=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ rollback_on_failure ]]; then
+        extra_vars="rollback_on_failure=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ required_space_gb ]]; then
+        extra_vars="required_space_gb=4 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ platform_firmware ]]; then
+        extra_vars="platform_firmware=test.bin ${extra_vars}"
+    fi
+
     echo "$ansible_opts|$extra_vars"
+}
+
+# Common function to execute ansible-playbook with shared logic
+execute_ansible_playbook() {
+    local mode="$1"  # "syntax-check", "dry-run", or "run"
+    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
+    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
+
+    # Mode-specific logging
+    case "$mode" in
+        syntax-check)
+            log "Running syntax check on: $playbook"
+            ;;
+        dry-run)
+            log "Running dry run on: $playbook"
+            ;;
+        run)
+            warn "EXECUTING ACTUAL PLAYBOOK - CHANGES WILL BE MADE"
+            log "Running playbook: $playbook"
+            ;;
+    esac
+    log "Using inventory: $inventory"
+
+    # Validate inventory exists
+    if [[ ! -f "$inventory" ]]; then
+        error "Inventory file not found: $inventory"
+        error "Make sure to mount your inventory file to the container"
+        error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
+        exit 1
+    fi
+
+    # Build authentication and configuration
+    local opts_and_vars
+    opts_and_vars=$(build_ansible_options)
+    local ansible_opts="${opts_and_vars%|*}"
+    local extra_vars="${opts_and_vars#*|}"
+
+    # Add mode-specific extra vars
+    if [[ "$mode" == "syntax-check" ]]; then
+        if [[ ! "$extra_vars" =~ target_hosts ]]; then
+            extra_vars="target_hosts=localhost ${extra_vars}"
+        fi
+        if [[ ! "$extra_vars" =~ target_firmware ]]; then
+            extra_vars="target_firmware=test.bin ${extra_vars}"
+        fi
+    fi
+
+    log "Extra variables: $extra_vars"
+
+    # Execute ansible-playbook with mode-specific flags
+    case "$mode" in
+        syntax-check)
+            ansible-playbook \
+                --syntax-check \
+                -i "$inventory" \
+                ${ansible_opts} \
+                ${extra_vars:+--extra-vars "$extra_vars"} \
+                "$playbook"
+            success "Syntax check completed successfully"
+            ;;
+        dry-run)
+            ansible-playbook \
+                --check --diff \
+                -i "$inventory" \
+                ${ansible_opts} \
+                ${extra_vars:+--extra-vars "$extra_vars"} \
+                "$playbook"
+            success "Dry run completed successfully"
+            ;;
+        run)
+            ansible-playbook \
+                -i "$inventory" \
+                ${ansible_opts} \
+                ${extra_vars:+--extra-vars "$extra_vars"} \
+                "$playbook"
+            success "Playbook execution completed"
+            ;;
+    esac
 }
 
 # Execute dry run (check mode)
 run_dry_run() {
-    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
-    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
-
-    log "Running dry run on: $playbook"
-    log "Using inventory: $inventory"
-
-    # Build authentication and configuration
-    local opts_and_vars
-    opts_and_vars=$(build_ansible_options)
-    local ansible_opts="${opts_and_vars%|*}"
-    local extra_vars="${opts_and_vars#*|}"
-
-    # Validate inventory exists
-    if [[ ! -f "$inventory" ]]; then
-        error "Inventory file not found: $inventory"
-        error "Make sure to mount your inventory file to the container"
-        error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
-        exit 1
-    fi
-
-    # Add required runtime variables if not already provided
-    if [[ ! "$extra_vars" =~ max_concurrent ]]; then
-        extra_vars="max_concurrent=1 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ maintenance_window ]]; then
-        extra_vars="maintenance_window=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ rollback_on_failure ]]; then
-        extra_vars="rollback_on_failure=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ platform_firmware ]]; then
-        extra_vars="platform_firmware=test.bin ${extra_vars}"
-    fi
-
-    log "Extra variables: $extra_vars"
-
-    ansible-playbook \
-        --check --diff \
-        -i "$inventory" \
-        ${ansible_opts} \
-        ${extra_vars:+--extra-vars "$extra_vars"} \
-        "$playbook"
-
-    success "Dry run completed successfully"
+    execute_ansible_playbook "dry-run"
 }
 
 # Execute actual run
 run_playbook() {
-    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
-    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
-
-    warn "EXECUTING ACTUAL PLAYBOOK - CHANGES WILL BE MADE"
-    log "Running playbook: $playbook"
-    log "Using inventory: $inventory"
-
-    # Build authentication and configuration
-    local opts_and_vars
-    opts_and_vars=$(build_ansible_options)
-    local ansible_opts="${opts_and_vars%|*}"
-    local extra_vars="${opts_and_vars#*|}"
-
-    # Validate inventory exists
-    if [[ ! -f "$inventory" ]]; then
-        error "Inventory file not found: $inventory"
-        error "Make sure to mount your inventory file to the container"
-        error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
-        exit 1
-    fi
-
-    # Add required runtime variables if not already provided
-    if [[ ! "$extra_vars" =~ max_concurrent ]]; then
-        extra_vars="max_concurrent=1 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ maintenance_window ]]; then
-        extra_vars="maintenance_window=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ rollback_on_failure ]]; then
-        extra_vars="rollback_on_failure=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ platform_firmware ]]; then
-        extra_vars="platform_firmware=test.bin ${extra_vars}"
-    fi
-
-    log "Extra variables: $extra_vars"
-
-    ansible-playbook \
-        -i "$inventory" \
-        ${ansible_opts} \
-        ${extra_vars:+--extra-vars "$extra_vars"} \
-        "$playbook"
-
-    success "Playbook execution completed"
+    execute_ansible_playbook "run"
 }
 
 # Run test suite (old version - removed, see line 741 for current implementation)
@@ -689,56 +703,7 @@ validate_environment() {
 
 # Execute syntax check
 run_syntax_check() {
-    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
-    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
-
-    log "Running syntax check on: $playbook"
-    log "Using inventory: $inventory"
-
-    # Validate inventory exists
-    if [[ ! -f "$inventory" ]]; then
-        error "Inventory file not found: $inventory"
-        error "Make sure to mount your inventory file to the container"
-        error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
-        exit 1
-    fi
-
-    # Build authentication and configuration
-    local opts_and_vars
-    opts_and_vars=$(build_ansible_options)
-    local ansible_opts="${opts_and_vars%|*}"
-    local extra_vars="${opts_and_vars#*|}"
-
-    # Add required runtime variables for syntax check if not already provided
-    if [[ ! "$extra_vars" =~ target_hosts ]]; then
-        extra_vars="target_hosts=localhost ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ target_firmware ]]; then
-        extra_vars="target_firmware=test.bin ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ max_concurrent ]]; then
-        extra_vars="max_concurrent=1 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ maintenance_window ]]; then
-        extra_vars="maintenance_window=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ rollback_on_failure ]]; then
-        extra_vars="rollback_on_failure=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ platform_firmware ]]; then
-        extra_vars="platform_firmware=test.bin ${extra_vars}"
-    fi
-
-    log "Extra variables: $extra_vars"
-
-    ansible-playbook \
-        --syntax-check \
-        -i "$inventory" \
-        ${ansible_opts} \
-        ${extra_vars:+--extra-vars "$extra_vars"} \
-        "$playbook"
-
-    success "Syntax check completed successfully"
+    execute_ansible_playbook "syntax-check"
 }
 
 # Run comprehensive test suite
