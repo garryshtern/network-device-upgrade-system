@@ -37,6 +37,8 @@ Parameters are organized in a hierarchical structure:
 
 ## Required Parameters
 
+### Per-Device Parameters (in hosts.yml)
+
 These parameters MUST be set for each device:
 
 | Parameter | Type | Default | Description |
@@ -45,6 +47,27 @@ These parameters MUST be set for each device:
 | `platform` | string | **(required)** | Platform identifier: `nxos`, `ios`, `fortios`, `opengear`, `metamako_mos` |
 
 **Note**: `ansible_network_os` is automatically set by group_vars and should NOT be overridden.
+
+### Required Runtime Parameters (--extra-vars)
+
+These parameters MUST be provided as command-line extra-vars when running playbooks:
+
+| Parameter | Type | Example | Description |
+|-----------|------|---------|-------------|
+| `target_hosts` | string | `switch-01` | Host pattern to target for upgrade |
+| `target_firmware` | string | `nxos64-cs.10.4.5.M.bin` | Firmware filename to install |
+| `max_concurrent` | int | `1` | Number of devices to upgrade concurrently |
+
+**Usage Example**:
+```bash
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  -i ansible-content/inventory/hosts.yml \
+  --extra-vars "target_hosts=switch-01" \
+  --extra-vars "target_firmware=nxos64-cs.10.4.5.M.bin" \
+  --extra-vars "max_concurrent=1"
+```
+
+**Why extra-vars?** These runtime parameters are required at the play level (before group_vars are loaded) and must be passed via `--extra-vars` to ensure proper variable precedence.
 
 ---
 
@@ -1047,11 +1070,16 @@ all:
           platform: nxos
 ```
 
-**Usage**:
+**Usage** (Required runtime parameters):
 ```bash
 ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
-  --extra-vars "target_hosts=switch-01 target_firmware=nxos64-cs.10.4.5.M.bin maintenance=true"
+  -i ansible-content/inventory/hosts.yml \
+  --extra-vars "target_hosts=switch-01" \
+  --extra-vars "target_firmware=nxos64-cs.10.4.5.M.bin" \
+  --extra-vars "max_concurrent=1"
 ```
+
+**Note**: `target_hosts`, `target_firmware`, and `max_concurrent` MUST be provided as extra-vars.
 
 ### Advanced Multi-Platform Configuration
 

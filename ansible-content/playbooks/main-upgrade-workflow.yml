@@ -16,15 +16,11 @@
 - name: Network Device Upgrade - Master Workflow
   hosts: "{{ target_hosts }}"
   gather_facts: false
-  serial: "{{ max_concurrent  }}"
+  serial: "{{ max_concurrent }}"
   vars:
-    # Firmware configuration
+    # Firmware configuration (no local override - use group_vars values)
     firmware_version: "{{ target_firmware }}"
-    platform_specific_firmware: "{{ platform_firmware  }}"
-
-    # Workflow control
-    maintenance_window: "{{ maintenance  | bool }}"
-    rollback_on_failure: "{{ auto_rollback  | bool }}"
+    platform_specific_firmware: "{{ platform_firmware }}"
 
     # Security - SSH keys preferred over passwords
     ansible_ssh_private_key_file: "{{ ssh_key_file | default(omit) }}"
