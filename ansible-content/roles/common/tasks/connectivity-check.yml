@@ -24,6 +24,7 @@
 - name: Simulate connectivity test in check mode
   ansible.builtin.set_fact:
     connectivity_test: {"changed": false, "failed": false}
+    connection_wait_result: {"changed": false, "failed": false}
   when: ansible_check_mode
 
 - name: Perform ping test to device
