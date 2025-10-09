@@ -484,6 +484,11 @@ run_dry_run() {
         exit 1
     fi
 
+    # Add required runtime variables if not already provided
+    if [[ ! "$extra_vars" =~ max_concurrent ]]; then
+        extra_vars="max_concurrent=1 ${extra_vars}"
+    fi
+
     log "Extra variables: $extra_vars"
 
     ansible-playbook \
@@ -517,6 +522,11 @@ run_playbook() {
         error "Make sure to mount your inventory file to the container"
         error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
         exit 1
+    fi
+
+    # Add required runtime variables if not already provided
+    if [[ ! "$extra_vars" =~ max_concurrent ]]; then
+        extra_vars="max_concurrent=1 ${extra_vars}"
     fi
 
     log "Extra variables: $extra_vars"
