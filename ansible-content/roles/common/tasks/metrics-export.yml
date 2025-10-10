@@ -7,45 +7,37 @@
     metric_data: {}
   when: metric_data is not defined
 
-- name: Set default metric timestamp
-  ansible.builtin.set_fact:
-    metric_timestamp: "{{ ansible_play_batch | to_json | hash('md5') }}000000000"
+- name: Skip metrics export if no data
+  ansible.builtin.meta: end_host
+  when: metric_data | length == 0
 
-- name: Prepare InfluxDB line protocol data
+- name: Build InfluxDB line protocol entry
   ansible.builtin.set_fact:
-    influx_measurement: "{{ metric_type }}"
-    influx_tags: "device_id={{ inventory_hostname }},device_type={{ platform }},site_location={{ site_name }},vendor={{ vendor }},platform={{ platform }}"
+    influx_line_parts:
+      - "{{ metric_type }}"
+      - "device_id={{ inventory_hostname }},platform={{ platform }}"
 
-- name: Convert metric data to InfluxDB field format
+- name: Add metric fields to line protocol
   ansible.builtin.set_fact:
-    influx_field_string: >-
-      {% for item in metric_data | dict2items %}{{ item.key }}={{ item.value }}{% if not loop.last %},{% endif %}{% endfor %}
+    influx_fields_list: "{{ influx_fields_list | default([]) + [item.key + '=' + item.value | string] }}"
+  loop: "{{ metric_data | dict2items }}"
   when: metric_data | length > 0
-
-- name: Build InfluxDB line protocol string
-  ansible.builtin.set_fact:
-    influx_line: >
-      "{{ influx_measurement }},{{ influx_tags }} {{
-        influx_field_string }} {{ metric_timestamp }}"
-  when: influx_field_string is defined
 
 - name: Export metrics to InfluxDB
   ansible.builtin.uri:
-    url: >
-      "{{ influxdb_url }}/api/v2/write?bucket={{
-        influxdb_bucket }}&org={{ influxdb_org }}"
+    url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
     method: POST
     headers:
       Authorization: "Token {{ influxdb_token }}"
       Content-Type: "text/plain; charset=utf-8"
-    body: "{{ influx_line }}"
+    body: "{{ metric_type }},device_id={{ inventory_hostname }},platform={{ platform }} {{ influx_fields_list | join(',') }}"
     status_code: [204]
   register: influx_export_result
   when:
     - influxdb_url is defined
     - influxdb_token is defined
-    - influx_line is defined
     - send_metrics | bool
+    - influx_fields_list is defined
   failed_when: false
 
 - name: Log InfluxDB export status
