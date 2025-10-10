@@ -11,11 +11,28 @@
 #   connection_check_failed_when: Override failure condition (default: not set)
 #   connection_check_when: Additional conditional (default: true)
 
-- name: Wait for device connection
-  ansible.builtin.wait_for_connection:
-    timeout: "{{ wait_timeout }}"
-    delay: "{{ wait_delay }}"
-    sleep: "{{ wait_sleep }}"
-  register: connection_wait_result
-  failed_when: connection_check_failed_when if connection_check_failed_when is defined else connection_wait_result.failed
+- name: Wait for device connection with early failure detection
+  block:
+    - name: Test device connection
+      ansible.builtin.wait_for_connection:
+        timeout: "{{ wait_timeout }}"
+        delay: "{{ wait_delay }}"
+        sleep: "{{ wait_sleep }}"
+      register: connection_wait_result
+      failed_when: false
+
+    - name: Check for authentication errors
+      ansible.builtin.fail:
+        msg: "Authentication failed: {{ connection_wait_result.msg }}"
+      when:
+        - connection_wait_result.failed
+        - connection_wait_result.msg is defined
+        - "'Permission denied' in connection_wait_result.msg or 'Authentication' in connection_wait_result.msg or 'password' in connection_wait_result.msg"
+
+    - name: Check for other connection failures
+      ansible.builtin.fail:
+        msg: "Connection failed: {{ connection_wait_result.msg }}"
+      when:
+        - connection_wait_result.failed
+        - connection_check_failed_when is not defined
   when: connection_check_when | bool
