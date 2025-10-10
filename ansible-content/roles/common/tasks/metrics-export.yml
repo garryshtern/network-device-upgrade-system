@@ -15,7 +15,7 @@
   ansible.builtin.set_fact:
     influx_measurement: "{{ metric_type }}"
     influx_tags: "device_id={{ inventory_hostname }},device_type={{ platform }},site_location={{ site_name }},vendor={{ vendor }},platform={{ platform }}"
-    influx_fields: "{{ metric_data | combine({}) }}"
+    influx_fields: "{{ metric_data | to_json | from_json }}"
 
 - name: Convert metric data to InfluxDB field format
   ansible.builtin.set_fact:
