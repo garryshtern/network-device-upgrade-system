@@ -104,7 +104,7 @@
       firmware_version: "{{ firmware_version }}"
       platform: "{{ platform }}"
       status: "success"
-      timestamp: "{{ ansible_date_time.iso8601) }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
 
 - name: Display loading results
   ansible.builtin.debug:
