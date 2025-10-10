@@ -286,9 +286,7 @@
   block:
     - name: Calculate total convergence time
       ansible.builtin.set_fact:
-        total_convergence_time: >
-          "{{ ansible_play_batch | hash('md5') |
-            int - convergence_start_time | int }}"
+        total_convergence_time: "{{ ansible_play_batch | hash('md5') | int - convergence_start_time | int }}"
 
     - name: Determine convergence success
       ansible.builtin.set_fact:
