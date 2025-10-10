@@ -7,7 +7,29 @@
   ansible.builtin.set_fact:
     convergence_start_time: "{{ ansible_play_batch | hash('md5') }}"
     convergence_tests: []
-    convergence_results: {}
+    convergence_results:
+      bgp:
+        converged: true
+        time_seconds: 0
+        neighbors_established: 0
+      ospf:
+        converged: true
+        time_seconds: 0
+        neighbors_full: 0
+      eigrp:
+        converged: true
+        time_seconds: 0
+        neighbors_up: 0
+      interfaces:
+        converged: true
+        time_seconds: 0
+        interfaces_up: 0
+        expected_up: 0
+      routing:
+        converged: true
+        time_seconds: 0
+        current_routes: 0
+        expected_routes: 0
 
 - name: Initialize bgp_validation if not defined
   ansible.builtin.set_fact:
@@ -270,7 +292,7 @@
 
     - name: Determine convergence success
       ansible.builtin.set_fact:
-        overall_convergence_success: "{{ (convergence_results.get('bgp', {}).get('converged', true)) and (convergence_results.get('ospf', {}).get('converged', true)) and (convergence_results.get('eigrp', {}).get('converged', true)) and (convergence_results.get('interfaces', {}).get('converged', true)) and (convergence_results.get('routing', {}).get('converged', true)) }}"
+        overall_convergence_success: "{{ convergence_results.bgp.converged and convergence_results.ospf.converged and convergence_results.eigrp.converged and convergence_results.interfaces.converged and convergence_results.routing.converged }}"
 
 - name: Protocol convergence summary
   ansible.builtin.debug:
