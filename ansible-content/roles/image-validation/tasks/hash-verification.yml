@@ -47,16 +47,18 @@
   when:
     - expected_hash is defined
     - expected_hash | length > 0
+    - firmware_file_hash.stat is defined
+    - firmware_file_hash.stat.checksum is defined
 
 - name: Warning when no hash available
   ansible.builtin.debug:
     msg: |
       WARNING: No expected hash found for {{ target_firmware }}
-      Calculated hash: {{ firmware_file_hash.stat.checksum }}
       To enable hash verification, provide either:
       - A .sha512 file alongside the firmware
       - Set firmware_expected_hash variable
-  when: expected_hash is not defined or expected_hash | length == 0
+  when:
+    - expected_hash is not defined or expected_hash | length == 0
 
 - name: Set hash verification result
   ansible.builtin.set_fact:
