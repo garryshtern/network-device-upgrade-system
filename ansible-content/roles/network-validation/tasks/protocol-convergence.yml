@@ -9,8 +9,16 @@
     convergence_tests: []
     convergence_results: {}
 
+- name: Initialize bgp_validation if not defined
+  ansible.builtin.set_fact:
+    bgp_validation:
+      bgp_configured: false
+  when: bgp_validation is not defined
+
 - name: BGP convergence monitoring
   when:
+    - bgp_validation is defined
+    - bgp_validation.bgp_configured is defined
     - bgp_validation.bgp_configured
     - ansible_network_os is defined
     - platform == 'nxos'
