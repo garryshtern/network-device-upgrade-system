@@ -19,9 +19,9 @@ handle_privilege_drop() {
         # Setup SSH keys as root (can read root-owned mounted keys)
         setup_ssh_keys_as_root
 
-        # Switch to ansible user and re-exec this script
+        # Switch to ansible user and re-exec this script (preserve environment)
         log "Switching to ansible user and re-executing..."
-        exec su ansible -c "$0 $(printf '%q ' "$@")"
+        exec su -p ansible -c "$0 $(printf '%q ' "$@")"
     fi
 
     # If we reach here, we're running as ansible user - proceed normally
