@@ -2,6 +2,19 @@
 # Network Validation Role - Main Tasks
 # Comprehensive network state validation and comparison
 
+- name: Initialize validation baselines
+  ansible.builtin.set_fact:
+    interface_baseline:
+      up_interfaces: 0
+      total_interfaces: 0
+    routing_baseline:
+      total_routes: 0
+    arp_baseline:
+      total_arp_entries: 0
+    bgp_validation:
+      bgp_configured: false
+      peers_established: 0
+
 - name: Run BGP validation
   ansible.builtin.include_tasks: bgp-validation.yml
   when: bgp_enabled
