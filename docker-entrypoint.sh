@@ -28,7 +28,7 @@ handle_privilege_drop() {
         elif command -v runuser &> /dev/null; then
             exec runuser -u ansible -- "$0" "$@"
         elif command -v setpriv &> /dev/null; then
-            exec setpriv --reuid=ansible --regid=ansible --init-groups -- "$0" "$@"
+            exec setpriv --reuid=1000 --regid=1000 --init-groups -- "$0" "$@"
         else
             error "No suitable privilege drop tool found (gosu, runuser, or setpriv)"
             exit 1
