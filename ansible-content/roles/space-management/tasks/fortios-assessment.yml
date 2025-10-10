@@ -46,7 +46,7 @@
 
 - name: Check if cleanup is needed
   ansible.builtin.set_fact:
-    cleanup_needed: "{{ (minimum_free_space_gb is defined) and (storage_info.free_space_gb < (minimum_free_space_gb | float)) }}"
+    cleanup_needed: "{{ storage_info.free_space_gb < (minimum_free_space_gb | float) }}"
 
 - name: Storage cleanup block
   when: cleanup_needed
