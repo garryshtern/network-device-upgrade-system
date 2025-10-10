@@ -22,7 +22,7 @@
       site_location={{ site_name }},
       vendor={{ vendor }},
       platform={{ platform }}
-    influx_fields: "{{ metric_data }}"
+    influx_fields: {{ metric_data }}
 
 - name: Convert metric data to InfluxDB field format
   ansible.builtin.set_fact:
