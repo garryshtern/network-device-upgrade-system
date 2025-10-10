@@ -9,9 +9,7 @@
 
 - name: Set default metric timestamp
   ansible.builtin.set_fact:
-    metric_timestamp: >
-      "{{ ansible_play_batch | hash('md5')
-        }}000000000" # InfluxDB nanosecond format
+    metric_timestamp: "{{ ansible_play_batch | hash('md5') }}000000000"
 
 - name: Prepare InfluxDB line protocol data
   ansible.builtin.set_fact:
