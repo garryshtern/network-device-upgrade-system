@@ -114,7 +114,8 @@
     - not ansible_check_mode
 - name: Verify default gateway in ARP table
   ansible.builtin.debug:
-    msg: |Default Gateway Validation:
+    msg: |
+      Default Gateway Validation:
 
       Gateway IP: {{ default_gateway }}
 
@@ -204,7 +205,8 @@
     - not ansible_check_mode
 - name: Validate IPv6 neighbor discovery
   ansible.builtin.debug:
-    msg: |IPv6 Neighbor Discovery:
+    msg: |
+      IPv6 Neighbor Discovery:
 
       {% if ipv6_neighbors is defined and ipv6_neighbors | length > 0 %}
 
@@ -251,7 +253,8 @@
     - not ansible_check_mode
 - name: Validate ARP-MAC correlation
   ansible.builtin.debug:
-    msg: |MAC Address Table Status:
+    msg: |
+      MAC Address Table Status:
 
       Total MAC Entries: >
         {{ mac_entries | length if mac_entries is defined else 0
