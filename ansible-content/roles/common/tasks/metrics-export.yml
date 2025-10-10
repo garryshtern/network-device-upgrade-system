@@ -48,7 +48,7 @@
     - influxdb_url is defined
     - influxdb_token is defined
     - influx_line is defined
-    - send_metrics
+    - send_metrics | bool
   failed_when: false
 
 - name: Log InfluxDB export status
@@ -65,7 +65,7 @@
     create: true
     mode: "0644"
   delegate_to: localhost
-  when: log_metrics_locally
+  when: log_metrics_locally | bool
   failed_when: false
 
 - name: Send metrics to external webhook (if configured)
@@ -85,7 +85,7 @@
   register: webhook_export_result
   when:
     - metrics_webhook_url is defined
-    - send_metrics
+    - send_metrics | bool
   failed_when: false
 
 - name: Update NetBox custom fields (if applicable)
