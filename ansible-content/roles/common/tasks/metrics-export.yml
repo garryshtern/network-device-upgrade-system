@@ -9,19 +9,12 @@
 
 - name: Set default metric timestamp
   ansible.builtin.set_fact:
-    metric_timestamp: >
-      "{{ ansible_play_batch | hash('md5')
-        }}000000000" # InfluxDB nanosecond format
+    metric_timestamp: "{{ ansible_play_batch | to_json | hash('md5') }}000000000"
 
 - name: Prepare InfluxDB line protocol data
   ansible.builtin.set_fact:
     influx_measurement: "{{ metric_type }}"
-    influx_tags: >-
-      device_id={{ inventory_hostname }},
-      device_type={{ platform }},
-      site_location={{ site_name }},
-      vendor={{ vendor }},
-      platform={{ platform }}
+    influx_tags: "device_id={{ inventory_hostname }},device_type={{ platform }},site_location={{ site_name }},vendor={{ vendor }},platform={{ platform }}"
     influx_fields: "{{ metric_data | dict2items | items2dict }}"
 
 - name: Convert metric data to InfluxDB field format
