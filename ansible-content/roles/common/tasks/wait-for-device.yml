@@ -11,10 +11,11 @@
 #   connection_check_failed_when: Override failure condition (default: not set)
 #   connection_check_when: Additional conditional (default: true)
 
-- name: Initialize connection_check_when if not defined
+- name: Initialize wait parameters if not defined
   ansible.builtin.set_fact:
-    connection_check_when: true
-  when: connection_check_when is not defined
+    connection_check_when: "{{ connection_check_when if connection_check_when is defined else true }}"
+    wait_delay: "{{ wait_delay if wait_delay is defined else 5 }}"
+    wait_sleep: "{{ wait_sleep if wait_sleep is defined else 5 }}"
 
 - name: Wait for device connection
   ansible.builtin.wait_for_connection:
