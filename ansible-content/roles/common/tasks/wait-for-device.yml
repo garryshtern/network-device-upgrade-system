@@ -5,26 +5,11 @@
 # Required variables:
 #   wait_timeout: Maximum time to wait in seconds
 #
-# Optional variables:
+# Optional variables (defaults in roles/common/defaults/main.yml):
 #   wait_delay: Seconds to wait before starting checks (default: 5)
 #   wait_sleep: Seconds between retries (default: 5)
 #   connection_check_failed_when: Override failure condition (default: not set)
 #   connection_check_when: Additional conditional (default: true)
-
-- name: Initialize connection_check_when if not defined
-  ansible.builtin.set_fact:
-    connection_check_when: true
-  when: connection_check_when is not defined
-
-- name: Initialize wait_delay if not defined
-  ansible.builtin.set_fact:
-    wait_delay: 5
-  when: wait_delay is not defined
-
-- name: Initialize wait_sleep if not defined
-  ansible.builtin.set_fact:
-    wait_sleep: 5
-  when: wait_sleep is not defined
 
 - name: Wait for device connection
   ansible.builtin.wait_for_connection:

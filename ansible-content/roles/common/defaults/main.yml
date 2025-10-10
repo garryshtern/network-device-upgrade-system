@@ -1,0 +1,7 @@
+---
+# Common Role - Default Variables
+
+# Wait for device connection parameters
+wait_delay: 5
+wait_sleep: 5
+connection_check_when: true
