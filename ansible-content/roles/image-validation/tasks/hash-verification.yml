@@ -64,6 +64,8 @@
   ansible.builtin.set_fact:
     hash_verification_passed: >
       {{ expected_hash is defined and expected_hash | length > 0 and
+         firmware_file_hash.stat is defined and
+         firmware_file_hash.stat.checksum is defined and
          firmware_file_hash.stat.checksum == expected_hash }}
-    calculated_hash: "{{ firmware_file_hash.stat.checksum }}"
-    expected_hash_value: "{{ expected_hash }}"
+    calculated_hash: "{{ firmware_file_hash.stat.checksum if firmware_file_hash.stat is defined and firmware_file_hash.stat.checksum is defined else 'unavailable' }}"
+    expected_hash_value: "{{ expected_hash if expected_hash is defined else 'none' }}"
