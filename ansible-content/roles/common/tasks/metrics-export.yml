@@ -26,8 +26,8 @@
 
 - name: Convert metric data to InfluxDB field format
   ansible.builtin.set_fact:
-    influx_field_string: >
-      "{{ influx_fields | dict2items | map('join', '=') | join(',') }}"
+    influx_field_string: >-
+      {% for key, value in influx_fields.items() %}{{ key }}={{ value }}{% if not loop.last %},{% endif %}{% endfor %}
   when: influx_fields | length > 0
 
 - name: Build InfluxDB line protocol string
