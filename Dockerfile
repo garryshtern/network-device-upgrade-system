@@ -4,7 +4,7 @@ FROM python:3.13-alpine
 
 # Metadata labels for GitHub Container Registry
 LABEL org.opencontainers.image.title="Network Device Upgrade System"
-LABEL org.opencontainers.image.description="Automated network device firmware upgrade system using Ansible. Supports Cisco NX-OS/IOS-XE, FortiOS, Opengear, and Metamako with comprehensive validation and rollback."
+LABEL org.opencontainers.canimage.description="Automated network device firmware upgrade system using Ansible. Supports Cisco NX-OS/IOS-XE, FortiOS, Opengear, and Metamako with comprehensive validation and rollback."
 LABEL org.opencontainers.image.vendor="Network Operations"
 LABEL org.opencontainers.image.version="1.4.0"
 LABEL org.opencontainers.image.source="https://github.com/garryshtern/network-device-upgrade-system"
@@ -20,6 +20,7 @@ RUN apk add --no-cache \
     curl \
     bash \
     sudo \
+    gosu \
     tzdata \
     ca-certificates \
     gcc \

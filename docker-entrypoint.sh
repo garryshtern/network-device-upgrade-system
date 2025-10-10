@@ -19,21 +19,10 @@ handle_privilege_drop() {
         # Setup SSH keys as root (can read root-owned mounted keys)
         setup_ssh_keys_as_root
 
-        # Switch to ansible user and re-exec this script
+        # Switch to ansible user and re-exec this script using gosu
+        # gosu preserves environment and is specifically designed for containers
         log "Switching to ansible user and re-executing..."
-
-        # Use gosu (preferred) or runuser
-        # Note: su doesn't preserve environment reliably
-        if command -v gosu &> /dev/null; then
-            exec gosu ansible "$0" "$@"
-        elif command -v runuser &> /dev/null; then
-            exec runuser -u ansible -- "$0" "$@"
-        else
-            # Last resort: use chroot with env preservation
-            # This works on all systems but is less clean
-            cd /home/ansible
-            exec chroot --userspec=1000:1000 / /bin/bash "$0" "$@"
-        fi
+        exec gosu ansible "$0" "$@"
     fi
 
     # If we reach here, we're running as ansible user - proceed normally
