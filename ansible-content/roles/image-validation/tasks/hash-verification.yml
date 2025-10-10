@@ -1,6 +1,10 @@
 ---
 # Hash verification tasks
 
+- name: Initialize expected_hash to empty string
+  ansible.builtin.set_fact:
+    expected_hash: ""
+
 - name: Calculate SHA512 hash of firmware file
   ansible.builtin.stat:
     path: "{{ firmware_base_path }}/{{ target_firmware }}"
@@ -45,7 +49,6 @@
         firmware_file_hash.stat.checksum }} != expected {{ expected_hash }}"
     success_msg: "Hash verification passed for {{ target_firmware }}"
   when:
-    - expected_hash is defined
     - expected_hash | length > 0
     - firmware_file_hash.stat is defined
     - firmware_file_hash.stat.checksum is defined
@@ -57,15 +60,14 @@
       To enable hash verification, provide either:
       - A .sha512 file alongside the firmware
       - Set firmware_expected_hash variable
-  when:
-    - expected_hash is not defined or expected_hash | length == 0
+  when: expected_hash | length == 0
 
 - name: Set hash verification result
   ansible.builtin.set_fact:
     hash_verification_passed: >
-      {{ expected_hash is defined and expected_hash | length > 0 and
+      {{ expected_hash | length > 0 and
          firmware_file_hash.stat is defined and
          firmware_file_hash.stat.checksum is defined and
          firmware_file_hash.stat.checksum == expected_hash }}
     calculated_hash: "{{ firmware_file_hash.stat.checksum if firmware_file_hash.stat is defined and firmware_file_hash.stat.checksum is defined else 'unavailable' }}"
-    expected_hash_value: "{{ expected_hash if expected_hash is defined else 'none' }}"
+    expected_hash_value: "{{ expected_hash if expected_hash | length > 0 else 'none' }}"
