@@ -4,6 +4,11 @@
 
 set -euo pipefail
 
+# Constants - Single source of truth for paths
+readonly DEFAULT_BASE_PATH="/var/lib/network-upgrade"
+readonly DEFAULT_FIRMWARE_PATH="${DEFAULT_BASE_PATH}/firmware"
+readonly DEFAULT_BACKUP_PATH="${DEFAULT_BASE_PATH}/backups"
+
 # Privilege drop mechanism for SSH key handling
 # This must run BEFORE main() to handle root-to-ansible user switch
 handle_privilege_drop() {
@@ -151,9 +156,9 @@ ENVIRONMENT VARIABLES:
     SNMP_COMMUNITY              SNMP community string for monitoring
 
     # Path Configuration
-    NETWORK_UPGRADE_BASE_PATH   Base directory for all upgrade data (default: /var/lib/network-upgrade)
-    FIRMWARE_BASE_PATH          Base directory for firmware images (default: /var/lib/network-upgrade/firmware)
-    BACKUP_BASE_PATH            Base directory for configuration backups (default: /var/lib/network-upgrade/backups)
+    NETWORK_UPGRADE_BASE_PATH   Base directory for all upgrade data (default: ${DEFAULT_BASE_PATH})
+    FIRMWARE_BASE_PATH          Base directory for firmware images (default: ${DEFAULT_FIRMWARE_PATH})
+    BACKUP_BASE_PATH            Base directory for configuration backups (default: ${DEFAULT_BACKUP_PATH})
 
 EXAMPLES:
     # Syntax check (default)
@@ -485,13 +490,13 @@ build_ansible_options() {
         extra_vars="platform_firmware=test.bin ${extra_vars}"
     fi
     if [[ ! "$extra_vars" =~ network_upgrade_base_path ]]; then
-        extra_vars="network_upgrade_base_path=/var/lib/network-upgrade ${extra_vars}"
+        extra_vars="network_upgrade_base_path=${DEFAULT_BASE_PATH} ${extra_vars}"
     fi
     if [[ ! "$extra_vars" =~ firmware_base_path ]]; then
-        extra_vars="firmware_base_path=/var/lib/network-upgrade/firmware ${extra_vars}"
+        extra_vars="firmware_base_path=${DEFAULT_FIRMWARE_PATH} ${extra_vars}"
     fi
     if [[ ! "$extra_vars" =~ backup_base_path ]]; then
-        extra_vars="backup_base_path=/var/lib/network-upgrade/backups ${extra_vars}"
+        extra_vars="backup_base_path=${DEFAULT_BACKUP_PATH} ${extra_vars}"
     fi
 
     echo "$ansible_opts|$extra_vars"
