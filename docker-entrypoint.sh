@@ -480,6 +480,12 @@ build_ansible_options() {
     if [[ ! "$extra_vars" =~ platform_firmware ]]; then
         extra_vars="platform_firmware=test.bin ${extra_vars}"
     fi
+    if [[ ! "$extra_vars" =~ firmware_base_path ]]; then
+        extra_vars="firmware_base_path=/var/lib/network-upgrade/firmware ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ backup_base_path ]]; then
+        extra_vars="backup_base_path=/var/lib/network-upgrade/backups ${extra_vars}"
+    fi
 
     echo "$ansible_opts|$extra_vars"
 }
