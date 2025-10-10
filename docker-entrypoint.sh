@@ -510,6 +510,9 @@ build_ansible_options() {
     if [[ ! "$extra_vars" =~ include_running_config ]]; then
         extra_vars="include_running_config=true ${extra_vars}"
     fi
+    if [[ ! "$extra_vars" =~ site_name ]]; then
+        extra_vars="site_name=unknown ${extra_vars}"
+    fi
 
     echo "$ansible_opts|$extra_vars"
 }
