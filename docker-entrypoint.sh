@@ -549,6 +549,21 @@ build_ansible_options() {
     if [[ ! "$extra_vars" =~ convergence_monitoring ]]; then
         extra_vars="convergence_monitoring=true ${extra_vars}"
     fi
+    if [[ ! "$extra_vars" =~ log_metrics_locally ]]; then
+        extra_vars="log_metrics_locally=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ send_metrics ]]; then
+        extra_vars="send_metrics=true ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ export_metrics ]]; then
+        extra_vars="export_metrics=true ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ send_notifications ]]; then
+        extra_vars="send_notifications=true ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ log_level ]]; then
+        extra_vars="log_level=info ${extra_vars}"
+    fi
 
     echo "$ansible_opts|$extra_vars"
 }
