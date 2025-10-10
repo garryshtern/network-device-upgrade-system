@@ -19,9 +19,20 @@ handle_privilege_drop() {
         # Setup SSH keys as root (can read root-owned mounted keys)
         setup_ssh_keys_as_root
 
-        # Switch to ansible user and re-exec this script (preserve ALL environment)
+        # Switch to ansible user and re-exec this script
         log "Switching to ansible user and re-executing..."
-        exec su --preserve-environment ansible -c "$0 $(printf '%q ' "$@")"
+
+        # Use gosu (preferred), runuser, or setpriv depending on what's available
+        if command -v gosu &> /dev/null; then
+            exec gosu ansible "$0" "$@"
+        elif command -v runuser &> /dev/null; then
+            exec runuser -u ansible -- "$0" "$@"
+        elif command -v setpriv &> /dev/null; then
+            exec setpriv --reuid=ansible --regid=ansible --init-groups -- "$0" "$@"
+        else
+            error "No suitable privilege drop tool found (gosu, runuser, or setpriv)"
+            exit 1
+        fi
     fi
 
     # If we reach here, we're running as ansible user - proceed normally
