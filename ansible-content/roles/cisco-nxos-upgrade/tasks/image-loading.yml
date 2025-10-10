@@ -96,7 +96,7 @@
     available_space_mb: >
       "{{ (nxos_storage_data.dir_size.free | int / 1024 / 1024) | int }}"
     required_space_mb: >
-      "{{ firmware_size_mb if firmware_size_mb > 0 else nxos_minimum_free_space_mb }}"
+      "{{ firmware_size_mb if (firmware_size_mb | int) > 0 else nxos_minimum_free_space_mb }}"
 
 - name: Verify sufficient storage space
   ansible.builtin.assert:
