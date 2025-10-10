@@ -21,3 +21,13 @@
 
 - name: Run protocol convergence validation
   ansible.builtin.include_tasks: protocol-convergence.yml
+
+- name: Aggregate validation results
+  ansible.builtin.set_fact:
+    network_validation_results:
+      overall_status: "{{ 'healthy' if (interface_baseline.up_interfaces | int > 0) and (routing_baseline.total_routes | int > 0) else 'unhealthy' }}"
+      interface_status: "{{ 'healthy' if interface_baseline.up_interfaces | int > 0 else 'unhealthy' }}"
+      routing_status: "{{ 'healthy' if routing_baseline.total_routes | int > 0 else 'unhealthy' }}"
+      arp_status: "{{ 'healthy' if arp_baseline.total_arp_entries | int > 0 else 'warning' }}"
+      bgp_status: "{{ 'healthy' if bgp_validation.bgp_configured and bgp_validation.peers_established | int > 0 else 'skipped' }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
