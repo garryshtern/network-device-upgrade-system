@@ -295,31 +295,15 @@
 - name: Store ARP baseline
   ansible.builtin.set_fact:
     arp_baseline:
-      timestamp: '{{ lookup(''pipe'', ''date -u +%Y-%m-%dT%H:%M:%SZ'') }}'
-      total_arp_entries: >
-        '{{ arp_entries | length if arp_entries is defined else 0
-        }}'
-      static_entries: >
-        '{{ static_arp_entries | length if static_arp_entries is defined
-        else 0 }}'
-      dynamic_entries: >
-        '{{ dynamic_arp_entries | length if dynamic_arp_entries is
-        defined else 0 }}'
-      incomplete_entries: >
-        '{{ incomplete_arp_entries | length if incomplete_arp_entries
-        is defined else 0 }}'
-      default_gateway_present: >-
-        {{ true if default_gateway is defined and arp_entries
-        is defined and (arp_entries |
-          selectattr('ip_addr', 'equalto', default_gateway)
-        | list | length > 0) else false }}
-      dhcp_bindings: >
-        '{{ dhcp_bindings | length if dhcp_bindings is defined else 0
-        }}'
-      ipv6_neighbors: >
-        '{{ ipv6_neighbors | length if ipv6_neighbors is defined else
-        0 }}'
-      mac_entries: '{{ mac_entries | length if mac_entries is defined else 0 }}'
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      total_arp_entries: "{{ arp_entries | length if arp_entries is defined else 0 }}"
+      static_entries: "{{ static_arp_entries | length if static_arp_entries is defined else 0 }}"
+      dynamic_entries: "{{ dynamic_arp_entries | length if dynamic_arp_entries is defined else 0 }}"
+      incomplete_entries: "{{ incomplete_arp_entries | length if incomplete_arp_entries is defined else 0 }}"
+      default_gateway_present: "{{ true if default_gateway is defined and arp_entries is defined and (arp_entries | selectattr('ip_addr', 'equalto', default_gateway) | list | length > 0) else false }}"
+      dhcp_bindings: "{{ dhcp_bindings | length if dhcp_bindings is defined else 0 }}"
+      ipv6_neighbors: "{{ ipv6_neighbors | length if ipv6_neighbors is defined else 0 }}"
+      mac_entries: "{{ mac_entries | length if mac_entries is defined else 0 }}"
 - name: ARP validation summary
   ansible.builtin.debug:
     msg:
