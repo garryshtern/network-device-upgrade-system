@@ -380,24 +380,14 @@
 
 - name: Routing validation summary
   ansible.builtin.debug:
-    msg: |
-      Routing Validation Results:
-      - Total Routes: {{ routing_baseline.total_routes }}
-      - Static Routes: {{ routing_baseline.static_routes_count }}
-      - Connected Routes: {{ routing_baseline.connected_routes_count }}
-      - >-
-        Default Route: >
-        {{ 'Present' if routing_baseline.default_route_present
-           else 'Missing' }}
-      - Default Next-Hop: {{ routing_baseline.default_route_next_hop }}
-      - Default Route Reachable:
-        {{ 'YES' if (default_route_ping is defined and
-           default_route_ping is succeeded and
-           default_route_ping.stdout is defined and
-           default_route_ping.stdout[0] |
-           regex_search('Success rate is [^0]')) else 'UNTESTED' }}
-      - OSPF Neighbors: {{ routing_baseline.ospf_neighbors }}
-      - EIGRP Neighbors: {{ routing_baseline.eigrp_neighbors }}
-      - >-
-        Status: {{ 'HEALTHY' if routing_baseline.total_routes > 0 else
-          'CHECK REQUIRED' }}
+    msg:
+      - "Routing Validation Results:"
+      - "Total Routes: {{ routing_baseline.total_routes }}"
+      - "Static Routes: {{ routing_baseline.static_routes_count }}"
+      - "Connected Routes: {{ routing_baseline.connected_routes_count }}"
+      - "Default Route: {{ 'Present' if routing_baseline.default_route_present else 'Missing' }}"
+      - "Default Next-Hop: {{ routing_baseline.default_route_next_hop }}"
+      - "Default Route Reachable: {{ 'YES' if (default_route_ping is defined and default_route_ping is succeeded and default_route_ping.stdout is defined and default_route_ping.stdout[0] | regex_search('Success rate is [^0]')) else 'UNTESTED' }}"
+      - "OSPF Neighbors: {{ routing_baseline.ospf_neighbors }}"
+      - "EIGRP Neighbors: {{ routing_baseline.eigrp_neighbors }}"
+      - "Status: {{ 'HEALTHY' if routing_baseline.total_routes > 0 else 'CHECK REQUIRED' }}"

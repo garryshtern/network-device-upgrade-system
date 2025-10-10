@@ -55,11 +55,11 @@
 
 - name: Warning when no hash available
   ansible.builtin.debug:
-    msg: |
-      WARNING: No expected hash found for {{ target_firmware }}
-      To enable hash verification, provide either:
-      - A .sha512 file alongside the firmware
-      - Set firmware_expected_hash variable
+    msg:
+      - "WARNING: No expected hash found for {{ target_firmware }}"
+      - "To enable hash verification, provide either:"
+      - "  - A .sha512 file alongside the firmware"
+      - "  - Set firmware_expected_hash variable"
   when: expected_hash | length == 0
 
 - name: Set hash verification result

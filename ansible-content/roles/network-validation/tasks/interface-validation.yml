@@ -199,14 +199,10 @@
 
 - name: Interface validation summary
   ansible.builtin.debug:
-    msg: |
-      Interface Validation Results:
-      - Total Interfaces: {{ interface_baseline.total_interfaces }}
-      - Operational (Up): {{ interface_baseline.up_interfaces }}
-      - Down: {{ interface_baseline.down_interfaces }}
-      - >-
-        Critical Interfaces Up: {{ 'PASS' if
-          interface_baseline.up_interfaces | int > 0 else 'FAIL' }}
-      - >-
-        Validation Status: {{ 'COMPLETE' if
-          interface_baseline.total_interfaces | int > 0 else 'NO DATA' }}
+    msg:
+      - "Interface Validation Results:"
+      - "Total Interfaces: {{ interface_baseline.total_interfaces }}"
+      - "Operational (Up): {{ interface_baseline.up_interfaces }}"
+      - "Down: {{ interface_baseline.down_interfaces }}"
+      - "Critical Interfaces Up: {{ 'PASS' if interface_baseline.up_interfaces | int > 0 else 'FAIL' }}"
+      - "Validation Status: {{ 'COMPLETE' if interface_baseline.total_interfaces | int > 0 else 'NO DATA' }}"

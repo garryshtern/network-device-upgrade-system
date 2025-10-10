@@ -160,31 +160,26 @@
     - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
-- name: Validate DHCP snooping bindings
+- name: Validate DHCP snooping bindings (with data)
   ansible.builtin.debug:
-    msg: |DHCP Snooping Binding Table:
+    msg:
+      - "DHCP Snooping Binding Table:"
+      - "Total Bindings: {{ dhcp_bindings | length }}"
+      - "Sample Bindings (first 10):"
+      - "{% for binding in dhcp_bindings[:10] %}  {{ binding.ip_addr }}: {{ binding.mac_addr }} ({{ binding.interface }}, VLAN {{ binding.vlan_id }}){% endfor %}"
+  when:
+    - dhcp_snooping_info is defined
+    - dhcp_bindings is defined
+    - dhcp_bindings | length > 0
 
-      {% if dhcp_bindings is defined and dhcp_bindings | length > 0 %}
-
-      Total Bindings: {{ dhcp_bindings | length }}
-
-      {% for binding in dhcp_bindings[:10] %}
-
-      - >
-        {{ binding.ip_addr }}: {{ binding.mac_addr }}
-        ({{ binding.interface }}, VLAN
-      {{ binding.vlan_id }})
-
-      {% endfor %}
-
-      {% else %}
-
-      No DHCP snooping bindings found (feature may not be enabled)
-
-      {% endif %}
-
-      '
-  when: dhcp_snooping_info is defined
+- name: Validate DHCP snooping bindings (no data)
+  ansible.builtin.debug:
+    msg:
+      - "DHCP Snooping Binding Table:"
+      - "No DHCP snooping bindings found (feature may not be enabled)"
+  when:
+    - dhcp_snooping_info is defined
+    - dhcp_bindings is not defined or dhcp_bindings | length == 0
 - name: Get IPv6 neighbor table (NX-OS)
   block:
     - name: Get IPv6 neighbors
