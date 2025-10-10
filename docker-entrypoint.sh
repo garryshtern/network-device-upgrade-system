@@ -150,7 +150,8 @@ ENVIRONMENT VARIABLES:
     IMAGE_SERVER_PASSWORD       Password for firmware image server
     SNMP_COMMUNITY              SNMP community string for monitoring
 
-    # Firmware Image Management
+    # Path Configuration
+    NETWORK_UPGRADE_BASE_PATH   Base directory for all upgrade data (default: /var/lib/network-upgrade)
     FIRMWARE_BASE_PATH          Base directory for firmware images (default: /var/lib/network-upgrade/firmware)
     BACKUP_BASE_PATH            Base directory for configuration backups (default: /var/lib/network-upgrade/backups)
 
@@ -437,7 +438,10 @@ build_ansible_options() {
         extra_vars="$extra_vars upgrade_path=${UPGRADE_PATH}"
     fi
 
-    # Firmware and backup paths
+    # Base path and derived paths
+    if [[ -n "${NETWORK_UPGRADE_BASE_PATH:-}" ]]; then
+        extra_vars="$extra_vars network_upgrade_base_path=${NETWORK_UPGRADE_BASE_PATH}"
+    fi
     if [[ -n "${FIRMWARE_BASE_PATH:-}" ]]; then
         extra_vars="$extra_vars firmware_base_path=${FIRMWARE_BASE_PATH}"
     fi
@@ -479,6 +483,9 @@ build_ansible_options() {
     fi
     if [[ ! "$extra_vars" =~ platform_firmware ]]; then
         extra_vars="platform_firmware=test.bin ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ network_upgrade_base_path ]]; then
+        extra_vars="network_upgrade_base_path=/var/lib/network-upgrade ${extra_vars}"
     fi
     if [[ ! "$extra_vars" =~ firmware_base_path ]]; then
         extra_vars="firmware_base_path=/var/lib/network-upgrade/firmware ${extra_vars}"
