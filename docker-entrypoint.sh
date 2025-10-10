@@ -513,6 +513,42 @@ build_ansible_options() {
     if [[ ! "$extra_vars" =~ site_name ]]; then
         extra_vars="site_name=unknown ${extra_vars}"
     fi
+    if [[ ! "$extra_vars" =~ vendor ]]; then
+        extra_vars="vendor=unknown ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ current_firmware_version ]]; then
+        extra_vars="current_firmware_version=unknown ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ connectivity_timeout ]]; then
+        extra_vars="connectivity_timeout=300 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ reboot_wait_time ]]; then
+        extra_vars="reboot_wait_time=600 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ validation_timeout ]]; then
+        extra_vars="validation_timeout=300 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ max_retry_attempts ]]; then
+        extra_vars="max_retry_attempts=3 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ keep_backup_count ]]; then
+        extra_vars="keep_backup_count=3 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ firmware_size_gb ]]; then
+        extra_vars="firmware_size_gb=2 ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ skip_validation ]]; then
+        extra_vars="skip_validation=false ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ network_state_comparison ]]; then
+        extra_vars="network_state_comparison=true ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ baseline_capture_enabled ]]; then
+        extra_vars="baseline_capture_enabled=true ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ convergence_monitoring ]]; then
+        extra_vars="convergence_monitoring=true ${extra_vars}"
+    fi
 
     echo "$ansible_opts|$extra_vars"
 }
