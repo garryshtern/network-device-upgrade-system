@@ -22,16 +22,17 @@ handle_privilege_drop() {
         # Switch to ansible user and re-exec this script
         log "Switching to ansible user and re-executing..."
 
-        # Use gosu (preferred), runuser, or setpriv depending on what's available
+        # Use gosu (preferred) or runuser
+        # Note: su doesn't preserve environment reliably
         if command -v gosu &> /dev/null; then
             exec gosu ansible "$0" "$@"
         elif command -v runuser &> /dev/null; then
             exec runuser -u ansible -- "$0" "$@"
-        elif command -v setpriv &> /dev/null; then
-            exec setpriv --reuid=1000 --regid=1000 --init-groups -- "$0" "$@"
         else
-            error "No suitable privilege drop tool found (gosu, runuser, or setpriv)"
-            exit 1
+            # Last resort: use chroot with env preservation
+            # This works on all systems but is less clean
+            cd /home/ansible
+            exec chroot --userspec=1000:1000 / /bin/bash "$0" "$@"
         fi
     fi
 
