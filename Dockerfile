@@ -20,7 +20,6 @@ RUN apk add --no-cache \
     curl \
     bash \
     sudo \
-    gosu \
     tzdata \
     ca-certificates \
     gcc \

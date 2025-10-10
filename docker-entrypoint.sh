@@ -19,10 +19,10 @@ handle_privilege_drop() {
         # Setup SSH keys as root (can read root-owned mounted keys)
         setup_ssh_keys_as_root
 
-        # Switch to ansible user and re-exec this script using gosu
-        # gosu preserves environment and is specifically designed for containers
+        # Switch to ansible user and re-exec this script
+        # Use sudo -E to preserve all environment variables
         log "Switching to ansible user and re-executing..."
-        exec gosu ansible "$0" "$@"
+        exec sudo -E -u ansible "$0" "$@"
     fi
 
     # If we reach here, we're running as ansible user - proceed normally
