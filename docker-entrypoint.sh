@@ -20,9 +20,9 @@ handle_privilege_drop() {
         setup_ssh_keys_as_root
 
         # Switch to ansible user and re-exec this script
-        # Use sudo -E to preserve all environment variables
+        # Use sudo -E to preserve environment, and set PATH explicitly
         log "Switching to ansible user and re-executing..."
-        exec sudo -E -u ansible "$0" "$@"
+        exec sudo -E -u ansible env PATH="/home/ansible/.local/bin:$PATH" HOME="/home/ansible" "$0" "$@"
     fi
 
     # If we reach here, we're running as ansible user - proceed normally
