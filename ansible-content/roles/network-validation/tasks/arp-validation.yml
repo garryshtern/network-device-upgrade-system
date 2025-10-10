@@ -114,30 +114,10 @@
     - not ansible_check_mode
 - name: Verify default gateway in ARP table
   ansible.builtin.debug:
-    msg: |
-      Default Gateway Validation:
-
-      Gateway IP: {{ default_gateway }}
-
-      {% if default_gateway is defined %}
-
-      {% set gateway_entry = arp_entries |
-        selectattr(''ip_addr'', ''equalto'', default_gateway)
-      | list %}
-
-      Gateway in ARP: {{ ''YES'' if gateway_entry | length > 0 else ''NO'' }}
-
-      {% if gateway_entry | length > 0 %}
-
-      Gateway MAC: {{ gateway_entry[0].mac_addr }}
-
-      Gateway Interface: {{ gateway_entry[0].intf_out }}
-
-      {% endif %}
-
-      {% endif %}
-
-      '
+    msg:
+      - "Default Gateway Validation:"
+      - "Gateway IP: {{ default_gateway if default_gateway is defined else 'Not found' }}"
+      - "Gateway in ARP: {{ 'YES' if default_gateway is defined and arp_entries is defined and (arp_entries | selectattr('ip_addr', 'equalto', default_gateway) | list | length > 0) else 'NO' }}"
   when: arp_entries is defined
 - name: Get DHCP snooping binding table (NX-OS)
   block:
@@ -203,32 +183,24 @@
     - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
-- name: Validate IPv6 neighbor discovery
+- name: Validate IPv6 neighbor discovery (with neighbors)
   ansible.builtin.debug:
-    msg: |
-      IPv6 Neighbor Discovery:
+    msg:
+      - "IPv6 Neighbor Discovery:"
+      - "Total IPv6 Neighbors: {{ ipv6_neighbors | length }}"
+  when:
+    - ipv6_neighbor_info is defined
+    - ipv6_neighbors is defined
+    - ipv6_neighbors | length > 0
 
-      {% if ipv6_neighbors is defined and ipv6_neighbors | length > 0 %}
-
-      Total IPv6 Neighbors: {{ ipv6_neighbors | length }}
-
-      {% for neighbor in ipv6_neighbors[:5] %}
-
-      - >: >-
-          {{ neighbor.ipv6_addr }}: {{
-          neighbor.link_layer_addr }} ({{ neighbor.interface
-      }})
-
-      {% endfor %}
-
-      {% else %}
-
-      No IPv6 neighbors found (IPv6 may not be configured)
-
-      {% endif %}
-
-      '
-  when: ipv6_neighbor_info is defined
+- name: Validate IPv6 neighbor discovery (no neighbors)
+  ansible.builtin.debug:
+    msg:
+      - "IPv6 Neighbor Discovery:"
+      - "No IPv6 neighbors found (IPv6 may not be configured)"
+  when:
+    - ipv6_neighbor_info is defined
+    - ipv6_neighbors is not defined or ipv6_neighbors | length == 0
 - name: Get MAC address table (NX-OS)
   block:
     - name: Get MAC table
@@ -253,42 +225,10 @@
     - not ansible_check_mode
 - name: Validate ARP-MAC correlation
   ansible.builtin.debug:
-    msg: |
-      MAC Address Table Status:
-
-      Total MAC Entries: >
-        {{ mac_entries | length if mac_entries is defined else 0
-      }}
-
-      ARP-MAC Correlation: >
-        {{ ''Available'' if mac_entries is defined and arp_entries
-      is defined else ''Limited Data'' }}
-
-      {% if mac_entries is defined and arp_entries is defined %}
-
-      {% set correlated = [] %}
-
-      {% for arp in arp_entries[:5] %}
-
-      {% set mac_match = mac_entries |
-        selectattr(''disp_mac_addr'', ''equalto'',
-      arp.mac_addr) | list %}
-
-      {% if mac_match | length > 0 %}
-
-      {% set _ = correlated.append(arp) %}
-
-      {% endif %}
-
-      {% endfor %}
-
-      Correlated Entries: >
-        {{ correlated | length }}/{{ [arp_entries | length, 5] |
-      min }}
-
-      {% endif %}
-
-      '
+    msg:
+      - "MAC Address Table Status:"
+      - "Total MAC Entries: {{ mac_entries | length if mac_entries is defined else 0 }}"
+      - "ARP-MAC Correlation: {{ 'Available' if mac_entries is defined and arp_entries is defined else 'Limited Data' }}"
   when: mac_table_info is defined
 - name: Store ARP baseline
   ansible.builtin.set_fact:
