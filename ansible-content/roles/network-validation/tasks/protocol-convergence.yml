@@ -270,14 +270,7 @@
 
     - name: Determine convergence success
       ansible.builtin.set_fact:
-        overall_convergence_success: >-
-          {{
-            (convergence_results.bgp.converged ) and
-            (convergence_results.ospf.converged ) and
-            (convergence_results.eigrp.converged ) and
-            (convergence_results.interfaces.converged ) and
-            (convergence_results.routing.converged )
-          }}
+        overall_convergence_success: "{{ (convergence_results.get('bgp', {}).get('converged', true)) and (convergence_results.get('ospf', {}).get('converged', true)) and (convergence_results.get('eigrp', {}).get('converged', true)) and (convergence_results.get('interfaces', {}).get('converged', true)) and (convergence_results.get('routing', {}).get('converged', true)) }}"
 
 - name: Protocol convergence summary
   ansible.builtin.debug:
