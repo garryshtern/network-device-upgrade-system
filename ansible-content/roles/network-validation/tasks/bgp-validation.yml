@@ -19,13 +19,29 @@
 
 - name: Set validation mode (use first defined value)
   ansible.builtin.set_fact:
-    validation_mode: >-
-      {{
-        validation_mode if validation_mode != 'full' else
-        capture_mode if capture_mode != 'snapshot' else
-        validation_type if validation_type != 'pre_upgrade' else
-        check_type
-      }}
+    validation_mode: "{{ validation_mode }}"
+  when: validation_mode is defined and validation_mode != 'full'
+
+- name: Set validation mode from capture_mode
+  ansible.builtin.set_fact:
+    validation_mode: "{{ capture_mode }}"
+  when:
+    - validation_mode is not defined or validation_mode == 'full'
+    - capture_mode is defined
+    - capture_mode != 'snapshot'
+
+- name: Set validation mode from validation_type
+  ansible.builtin.set_fact:
+    validation_mode: "{{ validation_type }}"
+  when:
+    - validation_mode is not defined or validation_mode == 'full'
+    - validation_type is defined
+    - validation_type != 'pre_upgrade'
+
+- name: Set validation mode from check_type
+  ansible.builtin.set_fact:
+    validation_mode: "{{ check_type }}"
+  when: validation_mode is not defined or validation_mode == 'full'
 
 - name: Check if BGP is configured on device
   block:
