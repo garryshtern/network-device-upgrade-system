@@ -498,6 +498,18 @@ build_ansible_options() {
     if [[ ! "$extra_vars" =~ backup_base_path ]]; then
         extra_vars="backup_base_path=${DEFAULT_BACKUP_PATH} ${extra_vars}"
     fi
+    if [[ ! "$extra_vars" =~ backup_type ]]; then
+        extra_vars="backup_type=pre_upgrade ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ backup_enabled ]]; then
+        extra_vars="backup_enabled=true ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ include_startup_config ]]; then
+        extra_vars="include_startup_config=true ${extra_vars}"
+    fi
+    if [[ ! "$extra_vars" =~ include_running_config ]]; then
+        extra_vars="include_running_config=true ${extra_vars}"
+    fi
 
     echo "$ansible_opts|$extra_vars"
 }
