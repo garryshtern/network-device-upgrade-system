@@ -11,17 +11,13 @@
   ansible.builtin.set_fact:
     metric_timestamp: "{{ ansible_play_batch | to_json | hash('md5') }}000000000"
 
-- name: Prepare InfluxDB line protocol data
+- name: Convert metric data to InfluxDB field format
   ansible.builtin.set_fact:
     influx_measurement: "{{ metric_type }}"
     influx_tags: "device_id={{ inventory_hostname }},device_type={{ platform }},site_location={{ site_name }},vendor={{ vendor }},platform={{ platform }}"
-    influx_fields: "{{ metric_data | dict2items | items2dict }}"
-
-- name: Convert metric data to InfluxDB field format
-  ansible.builtin.set_fact:
     influx_field_string: >-
-      {% for key, value in influx_fields.items() %}{{ key }}={{ value }}{% if not loop.last %},{% endif %}{% endfor %}
-  when: influx_fields | length > 0
+      {% for key, value in metric_data.items() %}{{ key }}={{ value }}{% if not loop.last %},{% endif %}{% endfor %}
+  when: metric_data | length > 0
 
 - name: Build InfluxDB line protocol string
   ansible.builtin.set_fact:
