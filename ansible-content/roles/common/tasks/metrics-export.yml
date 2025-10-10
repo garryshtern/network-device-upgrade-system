@@ -2,11 +2,6 @@
 # Common Metrics Export Tasks
 # Exports metrics to InfluxDB and other monitoring systems
 
-- name: Initialize metric_data if not provided
-  ansible.builtin.set_fact:
-    metric_data: {}
-  when: metric_data is not defined
-
 - name: Skip metrics export if no data
   ansible.builtin.meta: end_host
   when: metric_data | length == 0

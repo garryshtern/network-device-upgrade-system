@@ -6,7 +6,7 @@ validation_mode: "full"
 capture_mode: "snapshot"
 validation_type: "pre_upgrade"
 check_type: "baseline"
-compare_with_baseline: false
+compare_to_baseline: false
 
 # Protocol configuration flags
 bgp_enabled: false

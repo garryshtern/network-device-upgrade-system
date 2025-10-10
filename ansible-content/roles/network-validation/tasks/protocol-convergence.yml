@@ -31,12 +31,6 @@
         current_routes: 0
         expected_routes: 0
 
-- name: Initialize bgp_validation if not defined
-  ansible.builtin.set_fact:
-    bgp_validation:
-      bgp_configured: false
-  when: bgp_validation is not defined
-
 - name: BGP convergence monitoring
   when:
     - bgp_validation is defined

@@ -11,11 +11,6 @@
       total_routes: 0
     arp_baseline:
       total_arp_entries: 0
-    bgp_validation:
-      bgp_configured: false
-      peers_established: 0
-    compare_to_baseline: false
-  when: compare_to_baseline is not defined
 
 - name: Run BGP validation
   ansible.builtin.include_tasks: bgp-validation.yml
