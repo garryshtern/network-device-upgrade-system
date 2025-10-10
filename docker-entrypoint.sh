@@ -564,6 +564,9 @@ build_ansible_options() {
     if [[ ! "$extra_vars" =~ log_level ]]; then
         extra_vars="log_level=info ${extra_vars}"
     fi
+    if [[ ! "$extra_vars" =~ debug_metrics ]]; then
+        extra_vars="debug_metrics=false ${extra_vars}"
+    fi
 
     echo "$ansible_opts|$extra_vars"
 }

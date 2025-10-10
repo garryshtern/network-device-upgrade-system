@@ -90,6 +90,7 @@ validation_type: "post_upgrade"  # Default validation type: pre_upgrade or post_
 log_level: "info"  # debug, info, warning, error
 structured_logging: true
 log_retention_days: 30
+debug_metrics: false  # Enable verbose metrics debugging output
 
 # Compliance and reporting
 generate_report: true  # Generate compliance/validation reports

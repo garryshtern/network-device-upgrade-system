@@ -128,4 +128,4 @@
       - "InfluxDB: {{ metrics_export_results.influxdb_export }}"
       - "Webhook: {{ metrics_export_results.webhook_export }}"
       - "Local log: {{ metrics_export_results.local_log }}"
-  when: debug_metrics
+  when: debug_metrics | bool
