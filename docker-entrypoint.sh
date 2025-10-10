@@ -619,6 +619,13 @@ execute_ansible_playbook() {
 
     log "Extra variables: $extra_vars"
 
+    # Debug: Show key authentication variables
+    if [[ "$extra_vars" =~ vault_cisco_nxos_username=([^[:space:]]+) ]]; then
+        log "DEBUG: CISCO_NXOS_USERNAME is set to: ${BASH_REMATCH[1]}"
+    else
+        warn "DEBUG: CISCO_NXOS_USERNAME is NOT set in extra_vars"
+    fi
+
     # Execute ansible-playbook with mode-specific flags
     case "$mode" in
         syntax-check)
