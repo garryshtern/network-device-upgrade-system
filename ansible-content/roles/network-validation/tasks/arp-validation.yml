@@ -339,14 +339,14 @@
       mac_entries: '{{ mac_entries | length if mac_entries is defined else 0 }}'
 - name: ARP validation summary
   ansible.builtin.debug:
-    msg: |
-      ARP and Neighbor Discovery Validation Results:
-      - Total ARP Entries: {{ arp_baseline.total_arp_entries }}
-      - Static Entries: {{ arp_baseline.static_entries }}
-      - Dynamic Entries: {{ arp_baseline.dynamic_entries }}
-      - Incomplete Entries: {{ arp_baseline.incomplete_entries }}
-      - Default Gateway in ARP: {{ 'YES' if arp_baseline.default_gateway_present else 'NO' }}
-      - DHCP Snooping Bindings: {{ arp_baseline.dhcp_bindings }}
-      - IPv6 Neighbors: {{ arp_baseline.ipv6_neighbors }}
-      - MAC Table Entries: {{ arp_baseline.mac_entries }}
-      - Overall Status: {{ 'HEALTHY' if arp_baseline.total_arp_entries | int > 0 else 'EMPTY TABLE' }}
+    msg:
+      - "ARP and Neighbor Discovery Validation Results:"
+      - "Total ARP Entries: {{ arp_baseline.total_arp_entries }}"
+      - "Static Entries: {{ arp_baseline.static_entries }}"
+      - "Dynamic Entries: {{ arp_baseline.dynamic_entries }}"
+      - "Incomplete Entries: {{ arp_baseline.incomplete_entries }}"
+      - "Default Gateway in ARP: {{ 'YES' if arp_baseline.default_gateway_present else 'NO' }}"
+      - "DHCP Snooping Bindings: {{ arp_baseline.dhcp_bindings }}"
+      - "IPv6 Neighbors: {{ arp_baseline.ipv6_neighbors }}"
+      - "MAC Table Entries: {{ arp_baseline.mac_entries }}"
+      - "Overall Status: {{ 'HEALTHY' if arp_baseline.total_arp_entries | int > 0 else 'EMPTY TABLE' }}"
