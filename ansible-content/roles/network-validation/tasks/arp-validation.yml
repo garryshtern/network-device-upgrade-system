@@ -70,31 +70,14 @@
   when: arp_entries is defined
 - name: Validate ARP table size
   ansible.builtin.debug:
-    msg: 'ARP Table Status:
-
-      Total Entries: {{ arp_entries | length }}
-
-      Static Entries: >
-        {{ static_arp_entries | length if static_arp_entries is defined
-      else 0 }}
-
-      Dynamic Entries: >
-        {{ dynamic_arp_entries | length if dynamic_arp_entries is defined
-      else 0 }}
-
-      Incomplete Entries: >
-        {{ incomplete_arp_entries | length if incomplete_arp_entries
-      is defined else 0 }}
-
-      {% if arp_summary is defined %}
-
-      Total Resolved: {{ arp_summary.resolved }}
-
-      Total Incomplete: {{ arp_summary.incomplete }}
-
-      {% endif %}
-
-      '
+    msg:
+      - "ARP Table Status:"
+      - "Total Entries: {{ arp_entries | length }}"
+      - "Static Entries: {{ static_arp_entries | length if static_arp_entries is defined else 0 }}"
+      - "Dynamic Entries: {{ dynamic_arp_entries | length if dynamic_arp_entries is defined else 0 }}"
+      - "Incomplete Entries: {{ incomplete_arp_entries | length if incomplete_arp_entries is defined else 0 }}"
+      - "{% if arp_summary is defined %}Total Resolved: {{ arp_summary.resolved }}{% endif %}"
+      - "{% if arp_summary is defined %}Total Incomplete: {{ arp_summary.incomplete }}{% endif %}"
   when: arp_entries is defined
 - name: Check for excessive incomplete entries
   ansible.builtin.debug:
@@ -131,7 +114,7 @@
     - not ansible_check_mode
 - name: Verify default gateway in ARP table
   ansible.builtin.debug:
-    msg: 'Default Gateway Validation:
+    msg: |Default Gateway Validation:
 
       Gateway IP: {{ default_gateway }}
 
@@ -179,7 +162,7 @@
     - not ansible_check_mode
 - name: Validate DHCP snooping bindings
   ansible.builtin.debug:
-    msg: 'DHCP Snooping Binding Table:
+    msg: |DHCP Snooping Binding Table:
 
       {% if dhcp_bindings is defined and dhcp_bindings | length > 0 %}
 
@@ -226,7 +209,7 @@
     - not ansible_check_mode
 - name: Validate IPv6 neighbor discovery
   ansible.builtin.debug:
-    msg: 'IPv6 Neighbor Discovery:
+    msg: |IPv6 Neighbor Discovery:
 
       {% if ipv6_neighbors is defined and ipv6_neighbors | length > 0 %}
 
@@ -273,7 +256,7 @@
     - not ansible_check_mode
 - name: Validate ARP-MAC correlation
   ansible.builtin.debug:
-    msg: 'MAC Address Table Status:
+    msg: |MAC Address Table Status:
 
       Total MAC Entries: >
         {{ mac_entries | length if mac_entries is defined else 0
