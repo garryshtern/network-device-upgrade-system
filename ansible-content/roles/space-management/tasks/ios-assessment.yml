@@ -12,7 +12,7 @@
   ansible.builtin.set_fact:
     ios_bootflash_dir:
       stdout:
-        - "Directory of bootflash:/\n\n    11  -rw-   536870912  Jan 01 2025 12:00:00 +00:00  test-image.bin\n\n2097152 bytes total (1048576 bytes free)"
+        - "Directory of bootflash:/\n\n    11  -rw-   1048576000  Jan 01 2025 12:00:00 +00:00  test-image.bin\n\n10737418240 bytes total (5368709120 bytes free)"
       rc: 0
   when: ansible_check_mode
 

@@ -16,7 +16,7 @@
   ansible.builtin.set_fact:
     nxos_bootflash_dir:
       stdout:
-        - "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576    Oct 01 09:00:00 2025  test-image.bin\n\n2097152 bytes total (1048576 bytes free)"
+        - "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576000    Oct 01 09:00:00 2025  test-image.bin\n\n10737418240 bytes total (5368709120 bytes free)"
       rc: 0
   when: ansible_check_mode or inventory_hostname == 'localhost' or ansible_connection == 'local'
 
