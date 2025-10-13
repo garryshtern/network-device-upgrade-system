@@ -3,42 +3,8 @@
 # Consolidates logic from platform-specific assessment files
 # Uses platform-specific variables for commands, parsing, and paths
 
-- name: Get storage directory information
-  block:
-    - name: Get Cisco NX-OS storage information
-      cisco.nxos.nxos_command:
-        commands:
-          - "dir bootflash:"
-      changed_when: false
-      when: platform == 'nxos'
-
-    - name: Get Cisco IOS-XE storage information
-      cisco.ios.ios_command:
-        commands:
-          - "dir bootflash:"
-      changed_when: false
-      when: platform == 'ios'
-
-    - name: Get FortiOS storage information
-      fortinet.fortios.fortios_monitor_fact:
-        vdom: "{{ vdom }}"
-        selector: "system_status"
-      when: platform == 'fortios'
-
-    - name: Get Metamako storage information
-      ansible.netcommon.cli_command:
-        command: "dir /data"
-      changed_when: false
-      when: platform == 'metamako_mos'
-
-    - name: Get Opengear storage information
-      ansible.builtin.raw: "df -h /data"
-      changed_when: false
-      when: platform == 'opengear'
-  register: storage_output
-  when:
-    - not ansible_check_mode
-    - inventory_hostname != 'localhost'
+- name: Get initial storage information from device
+  ansible.builtin.include_tasks: get-storage-output.yml
 
 - name: Debug actual device storage output
   ansible.builtin.debug:
@@ -105,50 +71,8 @@
     - ansible_check_mode or inventory_hostname == 'localhost'
     - platform == 'opengear'
 
-- name: Parse NX-OS storage information
-  ansible.builtin.set_fact:
-    parsed_storage:
-      files: "{{ storage_output.stdout[0] | regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+)') }}"
-      images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(bin|img))') }}"
-      total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
-      free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
-  when: platform == 'nxos'
-
-- name: Parse IOS-XE storage information
-  ansible.builtin.set_fact:
-    parsed_storage:
-      files: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+(\\d+)\\s+.+\\s+(.+)') }}"
-      images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}"
-      total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
-      free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
-  when: platform == 'ios'
-
-- name: Parse FortiOS storage information
-  ansible.builtin.set_fact:
-    parsed_storage:
-      files: []
-      images: []
-      total_bytes: 10737418240
-      free_bytes: 5368709120
-  when: platform == 'fortios'
-
-- name: Parse Metamako storage information
-  ansible.builtin.set_fact:
-    parsed_storage:
-      files: "{{ storage_output.stdout | regex_findall('(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+)') }}"
-      images: "{{ storage_output.stdout | regex_findall('\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+\\.(iso|swix))') }}"
-      total_bytes: "{{ storage_output.stdout | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
-      free_bytes: "{{ storage_output.stdout | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
-  when: platform == 'metamako_mos'
-
-- name: Parse Opengear storage information
-  ansible.builtin.set_fact:
-    parsed_storage:
-      files: []
-      images: []
-      total_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G', '\\1') | first | int * 1024 * 1024 * 1024) }}"
-      free_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G.*\\s+(\\d+)%', '\\1') | first | int * 1024 * 1024 * 1024) }}"
-  when: platform == 'opengear'
+- name: Parse storage information
+  ansible.builtin.include_tasks: parse-storage-output.yml
 
 - name: Calculate initial storage metrics
   ansible.builtin.set_fact:
@@ -272,43 +196,14 @@
         msg: "Removed {{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }} obsolete image(s)"
       when: cleanup_result is defined
 
-    - name: Re-assess storage after cleanup (platform-specific)
-      block:
-        - name: Re-assess NX-OS storage
-          cisco.nxos.nxos_command:
-            commands:
-              - "dir bootflash:"
-          register: storage_output_post
-          changed_when: false
-          when: platform == 'nxos'
+    - name: Re-assess storage after cleanup
+      ansible.builtin.include_tasks: get-storage-output.yml
 
-        - name: Re-assess IOS-XE storage
-          cisco.ios.ios_command:
-            commands:
-              - "dir bootflash:"
-          register: storage_output_post
-          changed_when: false
-          when: platform == 'ios'
+    - name: Re-parse storage information after cleanup
+      ansible.builtin.include_tasks: parse-storage-output.yml
 
-        - name: Re-assess Metamako storage
-          ansible.netcommon.cli_command:
-            command: "dir /data"
-          register: storage_output_post
-          changed_when: false
-          when: platform == 'metamako_mos'
-      when:
-        - not ansible_check_mode
-        - inventory_hostname != 'localhost'
-
-    - name: Update storage metrics after cleanup
+    - name: Update final storage info with post-cleanup metrics
       ansible.builtin.set_fact:
-        free_bytes_post: "{{ storage_output_post.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+        storage_info: "{{ storage_info | combine({'free_space_gb': parsed_storage.free_bytes / 1024 / 1024 / 1024 | round(2)}) }}"
         storage_cleanup_performed: true
-      when:
-        - storage_output_post is defined
-        - storage_output_post.stdout is defined
-
-    - name: Update final storage info
-      ansible.builtin.set_fact:
-        storage_info: "{{ storage_info | combine({'free_space_gb': (free_bytes_post / 1024 / 1024 / 1024) | round(2)}) }}"
-      when: free_bytes_post is defined
+      when: parsed_storage is defined
