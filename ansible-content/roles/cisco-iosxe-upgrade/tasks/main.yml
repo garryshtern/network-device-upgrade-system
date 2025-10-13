@@ -2,21 +2,10 @@
 # Cisco IOS-XE Upgrade Role - Main Tasks
 # Handles both install mode and bundle mode upgrades
 
-- name: Gather IOS-XE device facts
-  cisco.ios.ios_facts:
-    gather_subset:
-      - hardware
-      - config
-      - interfaces
-  register: iosxe_facts
-  when: current_firmware_version is not defined
-
-- name: Set current firmware version
+- name: Set current firmware version from connectivity check
   ansible.builtin.set_fact:
     iosxe_upgrade_state: >
-      "{{ iosxe_upgrade_state | combine({'current_version':
-        current_firmware_version if current_firmware_version is defined
-        else iosxe_facts.ansible_facts.ansible_net_version}) }}"
+      "{{ iosxe_upgrade_state | combine({'current_version': current_firmware_version}) }}"
 
 - name: Determine platform-specific firmware filename
   block:

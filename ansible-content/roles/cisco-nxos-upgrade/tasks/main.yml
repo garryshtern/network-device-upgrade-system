@@ -2,21 +2,10 @@
 # Cisco NX-OS Upgrade Role - Main Tasks
 # Handles ISSU-capable upgrades with comprehensive validation
 
-- name: Gather NX-OS device facts
-  cisco.nxos.nxos_facts:
-    gather_subset:
-      - hardware
-      - config
-      - interfaces
-  register: nxos_facts
-  when: current_firmware_version is not defined
-
-- name: Set current firmware version
+- name: Set current firmware version from connectivity check
   ansible.builtin.set_fact:
     nxos_upgrade_state: >
-      "{{ nxos_upgrade_state | combine({'current_version':
-        current_firmware_version if current_firmware_version is defined
-        else nxos_facts.ansible_facts.ansible_net_version}) }}"
+      "{{ nxos_upgrade_state | combine({'current_version': current_firmware_version}) }}"
 
 - name: Check ISSU compatibility
   ansible.builtin.include_tasks: check-issu-capability.yml
