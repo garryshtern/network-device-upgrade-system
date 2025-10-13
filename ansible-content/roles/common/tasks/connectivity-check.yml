@@ -15,12 +15,57 @@
         - ansible_check_mode
         - ansible_date_time is not defined
 
-    - name: Override connection type for FortiOS in check mode
+    - name: Set platform-specific connection settings (once for entire workflow)
       ansible.builtin.set_fact:
-        ansible_connection: local
-      when:
-        - ansible_check_mode
-        - platform == 'fortios'
+        ansible_connection: >-
+          {{
+            (ansible_check_mode and platform == 'fortios') | ternary('local',
+            (platform == 'nxos') | ternary('ansible.netcommon.network_cli',
+            (platform == 'ios') | ternary('ansible.netcommon.network_cli',
+            (platform == 'fortios') | ternary('httpapi',
+            (platform == 'metamako_mos') | ternary('ansible.netcommon.network_cli',
+            (platform == 'opengear') | ternary('ssh',
+            ansible_connection | default('ansible.netcommon.network_cli')))))))
+          }}
+        ansible_network_os: >-
+          {{
+            (platform == 'nxos') | ternary('cisco.nxos.nxos',
+            (platform == 'ios') | ternary('cisco.ios.ios',
+            (platform == 'fortios') | ternary('fortinet.fortios.fortios',
+            (platform == 'metamako_mos') | ternary('metamako_mos',
+            (platform == 'opengear') | ternary('opengear',
+            ansible_network_os | default(omit))))))
+          }}
+        ansible_user: >-
+          {{
+            (platform == 'nxos') | ternary(vault_cisco_nxos_username,
+            (platform == 'ios') | ternary(vault_cisco_iosxe_username,
+            (platform == 'fortios') | ternary(vault_fortios_username,
+            (platform == 'metamako_mos') | ternary(vault_metamako_username,
+            (platform == 'opengear') | ternary(vault_opengear_username,
+            ansible_user | default('admin'))))))
+          }}
+        ansible_password: >-
+          {{
+            (platform == 'nxos') | ternary(vault_cisco_nxos_password | default(omit),
+            (platform == 'ios') | ternary(vault_cisco_iosxe_password | default(omit),
+            (platform == 'fortios') | ternary(vault_fortios_password | default(omit),
+            (platform == 'metamako_mos') | ternary(vault_metamako_password | default(omit),
+            (platform == 'opengear') | ternary(vault_opengear_password | default(omit),
+            omit)))))
+          }}
+        ansible_ssh_private_key_file: >-
+          {{
+            (platform == 'nxos') | ternary(vault_cisco_nxos_ssh_key | default(omit),
+            (platform == 'ios') | ternary(vault_cisco_iosxe_ssh_key | default(omit),
+            (platform == 'metamako_mos') | ternary(vault_metamako_ssh_key | default(omit),
+            (platform == 'opengear') | ternary(vault_opengear_ssh_key | default(omit),
+            omit))))
+          }}
+        ansible_httpapi_key: >-
+          {{
+            (platform == 'fortios') | ternary(vault_fortios_api_token | default(omit), omit)
+          }}
 
     - name: Step 1 & 2 - Connect and retrieve version information (tests auth and connection)
       when: not ansible_check_mode
@@ -31,12 +76,6 @@
               - show version
           register: nxos_version_output
           changed_when: false
-          vars:
-            ansible_connection: ansible.netcommon.network_cli
-            ansible_network_os: cisco.nxos.nxos
-            ansible_user: "{{ vault_cisco_nxos_username }}"
-            ansible_password: "{{ vault_cisco_nxos_password | default(omit) }}"
-            ansible_ssh_private_key_file: "{{ vault_cisco_nxos_ssh_key | default(omit) }}"
           when: platform == 'nxos'
 
         - name: Parse and store NX-OS version
@@ -59,12 +98,6 @@
               - show version
           register: ios_version_output
           changed_when: false
-          vars:
-            ansible_connection: ansible.netcommon.network_cli
-            ansible_network_os: cisco.ios.ios
-            ansible_user: "{{ vault_cisco_iosxe_username }}"
-            ansible_password: "{{ vault_cisco_iosxe_password | default(omit) }}"
-            ansible_ssh_private_key_file: "{{ vault_cisco_iosxe_ssh_key | default(omit) }}"
           when: platform == 'ios'
 
         - name: Parse and store IOS-XE version
@@ -86,12 +119,6 @@
             vdom: "root"
             selector: "system_status"
           register: fortios_version_output
-          vars:
-            ansible_connection: httpapi
-            ansible_network_os: fortinet.fortios.fortios
-            ansible_user: "{{ vault_fortios_username }}"
-            ansible_password: "{{ vault_fortios_password | default(omit) }}"
-            ansible_httpapi_key: "{{ vault_fortios_api_token | default(omit) }}"
           when: platform == 'fortios'
 
         - name: Parse and store FortiOS version
@@ -112,12 +139,6 @@
             command: show system info
           register: mos_version_output
           changed_when: false
-          vars:
-            ansible_connection: ansible.netcommon.network_cli
-            ansible_network_os: metamako_mos
-            ansible_user: "{{ vault_metamako_username }}"
-            ansible_password: "{{ vault_metamako_password | default(omit) }}"
-            ansible_ssh_private_key_file: "{{ vault_metamako_ssh_key | default(omit) }}"
           when: platform == 'metamako_mos'
 
         - name: Parse and store Metamako version
@@ -138,12 +159,6 @@
           ansible.builtin.raw: config -g config.version
           register: opengear_version_output
           changed_when: false
-          vars:
-            ansible_connection: ssh
-            ansible_network_os: opengear
-            ansible_user: "{{ vault_opengear_username }}"
-            ansible_password: "{{ vault_opengear_password | default(omit) }}"
-            ansible_ssh_private_key_file: "{{ vault_opengear_ssh_key | default(omit) }}"
           when: platform == 'opengear'
 
         - name: Parse and store Opengear version

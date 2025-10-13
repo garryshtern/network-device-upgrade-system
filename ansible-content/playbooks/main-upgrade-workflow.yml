@@ -22,11 +22,6 @@
     firmware_version: "{{ target_firmware }}"
     platform_specific_firmware: "{{ platform_firmware }}"
 
-    # Connection settings (ensure they're set even if group_vars don't load)
-    # These are inherited by all roles/tasks in this playbook
-    ansible_connection: "{{ ansible_connection | default('ansible.netcommon.network_cli') }}"
-    ansible_network_os: "{{ ansible_network_os | default(omit) }}"
-
     # Security - SSH keys preferred over passwords
     ansible_ssh_private_key_file: "{{ ssh_key_file | default(omit) }}"
     ansible_ssh_pass: "{{ ssh_password | default(omit) }}"
