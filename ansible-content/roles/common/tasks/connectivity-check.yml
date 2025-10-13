@@ -3,6 +3,15 @@
 # Platform-specific basic connectivity validation
 # REDESIGNED: Uses platform-appropriate commands (not generic "show version")
 
+- name: Initialize ansible_date_time if not defined (check mode)
+  ansible.builtin.set_fact:
+    ansible_date_time:
+      iso8601: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      epoch: "{{ lookup('pipe', 'date +%s') }}"
+  when:
+    - ansible_check_mode
+    - ansible_date_time is not defined
+
 - name: Override connection type for FortiOS in check mode
   ansible.builtin.set_fact:
     ansible_connection: local
