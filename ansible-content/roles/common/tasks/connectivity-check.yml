@@ -11,19 +11,7 @@
     - ansible_network_os is defined
     - platform == 'fortios'
 
-- name: Test basic SSH connectivity (quick auth check)
-  ansible.builtin.wait_for_connection:
-    timeout: 10
-  register: connection_wait_result
-  when: not ansible_check_mode
-
-- name: Simulate connectivity test in check mode
-  ansible.builtin.set_fact:
-    connectivity_test: {"changed": false, "failed": false}
-    connection_wait_result: {"changed": false, "failed": false}
-  when: ansible_check_mode
-
-- name: Perform Ansible ping test
+- name: Step 1 - Perform Ansible ping test
   ansible.builtin.ping:
   register: ping_result
   when: not ansible_check_mode
@@ -33,67 +21,119 @@
     ping_result: {"changed": false, "failed": false}
   when: ansible_check_mode
 
-# Platform-specific CLI tests
-# Each platform uses appropriate module and command
-# All wrapped in single block with single rescue handler
-
-- name: Initialize CLI connectivity status
-  ansible.builtin.set_fact:
-    cli_connectivity: true
-
-- name: Platform-specific CLI connectivity tests
+- name: Step 2 - Connect and retrieve version information
   when: not ansible_check_mode
   block:
-    - name: Execute basic NX-OS command
+    - name: Get NX-OS version
       cisco.nxos.nxos_command:
         commands:
-          - show clock
-      register: nxos_cli_test
+          - show version
+      register: nxos_version_output
       changed_when: false
       when:
         - ansible_network_os is defined
         - platform == 'nxos'
 
-    - name: Execute basic IOS-XE command
+    - name: Parse and store NX-OS version
+      ansible.builtin.set_fact:
+        device_version_info:
+          raw_output: "{{ nxos_version_output.stdout[0] }}"
+          platform: "{{ platform }}"
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      when:
+        - platform == 'nxos'
+        - nxos_version_output is defined
+
+    - name: Get IOS-XE version
       cisco.ios.ios_command:
         commands:
-          - show clock
-      register: ios_cli_test
+          - show version
+      register: ios_version_output
       changed_when: false
       when:
         - ansible_network_os is defined
         - platform == 'ios'
 
-    - name: Test FortiOS API connection
+    - name: Parse and store IOS-XE version
+      ansible.builtin.set_fact:
+        device_version_info:
+          raw_output: "{{ ios_version_output.stdout[0] }}"
+          platform: "{{ platform }}"
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      when:
+        - platform == 'ios'
+        - ios_version_output is defined
+
+    - name: Get FortiOS version
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "system_status"
-      register: fortios_api_test
+      register: fortios_version_output
       when:
         - ansible_network_os is defined
         - platform == 'fortios'
 
-    - name: Execute basic Metamako command
+    - name: Parse and store FortiOS version
+      ansible.builtin.set_fact:
+        device_version_info:
+          raw_output: "{{ fortios_version_output }}"
+          platform: "{{ platform }}"
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      when:
+        - platform == 'fortios'
+        - fortios_version_output is defined
+
+    - name: Get Metamako version
       ansible.netcommon.cli_command:
         command: show system info
-      register: mos_cli_test
+      register: mos_version_output
       changed_when: false
       when:
         - ansible_network_os is defined
         - platform == 'metamako_mos'
 
-    - name: Execute basic Opengear command
+    - name: Parse and store Metamako version
+      ansible.builtin.set_fact:
+        device_version_info:
+          raw_output: "{{ mos_version_output.stdout }}"
+          platform: "{{ platform }}"
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      when:
+        - platform == 'metamako_mos'
+        - mos_version_output is defined
+
+    - name: Get Opengear version
       ansible.builtin.raw: config -g config.version
-      register: opengear_cli_test
+      register: opengear_version_output
       changed_when: false
       when:
         - ansible_network_os is defined
         - platform == 'opengear'
 
-  rescue:
-    - name: CLI connectivity failed for any platform
+    - name: Parse and store Opengear version
       ansible.builtin.set_fact:
+        device_version_info:
+          raw_output: "{{ opengear_version_output.stdout }}"
+          platform: "{{ platform }}"
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      when:
+        - platform == 'opengear'
+        - opengear_version_output is defined
+
+    - name: Set connection test result
+      ansible.builtin.set_fact:
+        connection_wait_result: {"changed": false, "failed": false}
+        cli_connectivity: true
+
+  rescue:
+    - name: Connection or version retrieval failed
+      ansible.builtin.set_fact:
+        connection_wait_result: {"changed": false, "failed": true}
         cli_connectivity: false
+        device_version_info:
+          raw_output: "Failed to retrieve version"
+          platform: "{{ platform }}"
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Set overall connectivity status
   ansible.builtin.set_fact:
@@ -117,9 +157,9 @@
       - "=== Connectivity Check Results ==="
       - "Device: {{ inventory_hostname }}"
       - "Platform: {{ device_connectivity.platform }}"
-      - "Basic Connectivity: {{ 'PASS' if device_connectivity.basic_connectivity else 'FAIL' }}"
       - "Ping Test: {{ 'PASS' if device_connectivity.ping_successful else 'FAIL' }}"
       - "CLI Connectivity: {{ 'PASS' if device_connectivity.cli_connectivity else 'FAIL' }}"
+      - "Version Retrieved: {{ 'YES' if device_version_info is defined and device_version_info.raw_output != 'Failed to retrieve version' else 'NO' }}"
       - "Overall Status: {{ 'CONNECTED' if device_connectivity.overall_status else 'CONNECTION FAILED' }}"
       - "================================="
 
