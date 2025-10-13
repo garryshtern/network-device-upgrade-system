@@ -11,13 +11,10 @@
     - ansible_network_os is defined
     - platform == 'fortios'
 
-- name: Test basic connectivity to device
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-for-device
-  vars:
-    wait_timeout: 60
-    wait_delay: 5
+- name: Test basic SSH connectivity (quick auth check)
+  ansible.builtin.wait_for_connection:
+    timeout: 10
+  register: connection_wait_result
   when: not ansible_check_mode
 
 - name: Simulate connectivity test in check mode
@@ -26,7 +23,7 @@
     connection_wait_result: {"changed": false, "failed": false}
   when: ansible_check_mode
 
-- name: Perform ping test to device
+- name: Perform Ansible ping test
   ansible.builtin.ping:
   register: ping_result
   when: not ansible_check_mode
