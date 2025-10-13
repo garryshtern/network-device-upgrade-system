@@ -44,6 +44,20 @@
     - not ansible_check_mode
     - inventory_hostname != 'localhost'
 
+- name: Debug actual device storage output
+  ansible.builtin.debug:
+    msg:
+      - "=== Storage Output Debug ==="
+      - "Platform: {{ platform }}"
+      - "Inventory hostname: {{ inventory_hostname }}"
+      - "Check mode: {{ ansible_check_mode }}"
+      - "storage_output defined: {{ storage_output is defined }}"
+      - "storage_output type: {{ storage_output | type_debug if storage_output is defined else 'undefined' }}"
+      - "storage_output.stdout type: {{ storage_output.stdout | type_debug if (storage_output is defined and storage_output.stdout is defined) else 'undefined' }}"
+      - "storage_output.stdout length: {{ storage_output.stdout | length if (storage_output is defined and storage_output.stdout is defined) else 'N/A' }}"
+      - "Raw storage_output: {{ storage_output }}"
+  when: storage_output is defined
+
 - name: Simulate NX-OS storage data for check mode or localhost
   ansible.builtin.set_fact:
     storage_output:
