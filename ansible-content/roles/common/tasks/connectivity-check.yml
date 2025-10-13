@@ -3,220 +3,197 @@
 # Platform-specific basic connectivity validation
 # REDESIGNED: Uses platform-appropriate commands (not generic "show version")
 
-- name: Check if platform is defined
+- name: Platform-based connectivity check
+  when: platform is defined
   block:
-    - name: Platform-specific connectivity validation
-      ansible.builtin.debug:
-        msg: "Running connectivity check for {{ platform }} platform"
-
-  rescue:
-    - name: Platform not defined - provide guidance
-      ansible.builtin.fail:
-        msg: |
-          Platform variable not defined for host {{ inventory_hostname }}.
-
-          To fix this, ensure your host is a member of a platform group in your inventory:
-            - cisco_nxos (for Cisco NX-OS devices)
-            - cisco_iosxe (for Cisco IOS-XE devices)
-            - fortios (for Fortinet FortiGate devices)
-            - metamako_mos (for Metamako devices)
-            - opengear (for Opengear devices)
-
-          Alternatively, define 'platform' variable in host_vars for this host.
-
-          Current groups: {{ group_names | default([]) }}
-  when: platform is not defined
-
-- name: Initialize ansible_date_time if not defined (check mode)
-  ansible.builtin.set_fact:
-    ansible_date_time:
-      iso8601: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      epoch: "{{ lookup('pipe', 'date +%s') }}"
-  when:
-    - ansible_check_mode
-    - ansible_date_time is not defined
-
-- name: Override connection type for FortiOS in check mode
-  ansible.builtin.set_fact:
-    ansible_connection: local
-  when:
-    - ansible_check_mode
-    - platform is defined
-    - platform == 'fortios'
-
-- name: Step 1 & 2 - Connect and retrieve version information (tests auth and connection)
-  when:
-    - platform is defined
-    - not ansible_check_mode
-  block:
-    - name: Get NX-OS version
-      cisco.nxos.nxos_command:
-        commands:
-          - show version
-      register: nxos_version_output
-      changed_when: false
-      when:
-        - platform is defined
-        - platform == 'nxos'
-
-    - name: Parse and store NX-OS version
+    - name: Initialize ansible_date_time if not defined (check mode)
       ansible.builtin.set_fact:
-        device_version_info:
-          raw_output: "{{ nxos_version_output.stdout[0] }}"
-          platform: "{{ platform }}"
-          timestamp: "{{ ansible_date_time.iso8601 }}"
+        ansible_date_time:
+          iso8601: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          epoch: "{{ lookup('pipe', 'date +%s') }}"
       when:
-        - platform == 'nxos'
-        - nxos_version_output is defined
-        - nxos_version_output.stdout is defined
-        - nxos_version_output is succeeded
+        - ansible_check_mode
+        - ansible_date_time is not defined
 
-    - name: Get IOS-XE version
-      cisco.ios.ios_command:
-        commands:
-          - show version
-      register: ios_version_output
-      changed_when: false
-      when:
-        - platform is defined
-        - platform == 'ios'
-
-    - name: Parse and store IOS-XE version
+    - name: Override connection type for FortiOS in check mode
       ansible.builtin.set_fact:
-        device_version_info:
-          raw_output: "{{ ios_version_output.stdout[0] }}"
-          platform: "{{ platform }}"
-          timestamp: "{{ ansible_date_time.iso8601 }}"
+        ansible_connection: local
       when:
-        - platform == 'ios'
-        - ios_version_output is defined
-        - ios_version_output.stdout is defined
-        - ios_version_output is succeeded
-
-    - name: Get FortiOS version
-      fortinet.fortios.fortios_monitor_fact:
-        vdom: "root"
-        selector: "system_status"
-      register: fortios_version_output
-      when:
-        - platform is defined
+        - ansible_check_mode
         - platform == 'fortios'
 
-    - name: Parse and store FortiOS version
-      ansible.builtin.set_fact:
-        device_version_info:
-          raw_output: "{{ fortios_version_output }}"
-          platform: "{{ platform }}"
-          timestamp: "{{ ansible_date_time.iso8601 }}"
-      when:
-        - platform == 'fortios'
-        - fortios_version_output is defined
-        - fortios_version_output is succeeded
+    - name: Step 1 & 2 - Connect and retrieve version information (tests auth and connection)
+      when: not ansible_check_mode
+      block:
+        - name: Get NX-OS version
+          cisco.nxos.nxos_command:
+            commands:
+              - show version
+          register: nxos_version_output
+          changed_when: false
+          when: platform == 'nxos'
 
-    - name: Get Metamako version
-      ansible.netcommon.cli_command:
-        command: show system info
-      register: mos_version_output
-      changed_when: false
-      when:
-        - platform is defined
-        - platform == 'metamako_mos'
+        - name: Parse and store NX-OS version
+          ansible.builtin.set_fact:
+            device_version_info:
+              raw_output: "{{ nxos_version_output.stdout[0] }}"
+              platform: "{{ platform }}"
+              timestamp: "{{ ansible_date_time.iso8601 }}"
+          when:
+            - platform == 'nxos'
+            - nxos_version_output is defined
+            - nxos_version_output.stdout is defined
+            - nxos_version_output is succeeded
 
-    - name: Parse and store Metamako version
-      ansible.builtin.set_fact:
-        device_version_info:
-          raw_output: "{{ mos_version_output.stdout }}"
-          platform: "{{ platform }}"
-          timestamp: "{{ ansible_date_time.iso8601 }}"
-      when:
-        - platform == 'metamako_mos'
-        - mos_version_output is defined
-        - mos_version_output.stdout is defined
-        - mos_version_output is succeeded
+        - name: Get IOS-XE version
+          cisco.ios.ios_command:
+            commands:
+              - show version
+          register: ios_version_output
+          changed_when: false
+          when: platform == 'ios'
 
-    - name: Get Opengear version
-      ansible.builtin.raw: config -g config.version
-      register: opengear_version_output
-      changed_when: false
-      when:
-        - platform is defined
-        - platform == 'opengear'
+        - name: Parse and store IOS-XE version
+          ansible.builtin.set_fact:
+            device_version_info:
+              raw_output: "{{ ios_version_output.stdout[0] }}"
+              platform: "{{ platform }}"
+              timestamp: "{{ ansible_date_time.iso8601 }}"
+          when:
+            - platform == 'ios'
+            - ios_version_output is defined
+            - ios_version_output.stdout is defined
+            - ios_version_output is succeeded
 
-    - name: Parse and store Opengear version
-      ansible.builtin.set_fact:
-        device_version_info:
-          raw_output: "{{ opengear_version_output.stdout }}"
-          platform: "{{ platform }}"
-          timestamp: "{{ ansible_date_time.iso8601 }}"
-      when:
-        - platform == 'opengear'
-        - opengear_version_output is defined
-        - opengear_version_output.stdout is defined
-        - opengear_version_output is succeeded
+        - name: Get FortiOS version
+          fortinet.fortios.fortios_monitor_fact:
+            vdom: "root"
+            selector: "system_status"
+          register: fortios_version_output
+          when: platform == 'fortios'
 
-    - name: Set connection test result (success)
+        - name: Parse and store FortiOS version
+          ansible.builtin.set_fact:
+            device_version_info:
+              raw_output: "{{ fortios_version_output }}"
+              platform: "{{ platform }}"
+              timestamp: "{{ ansible_date_time.iso8601 }}"
+          when:
+            - platform == 'fortios'
+            - fortios_version_output is defined
+            - fortios_version_output is succeeded
+
+        - name: Get Metamako version
+          ansible.netcommon.cli_command:
+            command: show system info
+          register: mos_version_output
+          changed_when: false
+          when: platform == 'metamako_mos'
+
+        - name: Parse and store Metamako version
+          ansible.builtin.set_fact:
+            device_version_info:
+              raw_output: "{{ mos_version_output.stdout }}"
+              platform: "{{ platform }}"
+              timestamp: "{{ ansible_date_time.iso8601 }}"
+          when:
+            - platform == 'metamako_mos'
+            - mos_version_output is defined
+            - mos_version_output.stdout is defined
+            - mos_version_output is succeeded
+
+        - name: Get Opengear version
+          ansible.builtin.raw: config -g config.version
+          register: opengear_version_output
+          changed_when: false
+          when: platform == 'opengear'
+
+        - name: Parse and store Opengear version
+          ansible.builtin.set_fact:
+            device_version_info:
+              raw_output: "{{ opengear_version_output.stdout }}"
+              platform: "{{ platform }}"
+              timestamp: "{{ ansible_date_time.iso8601 }}"
+          when:
+            - platform == 'opengear'
+            - opengear_version_output is defined
+            - opengear_version_output.stdout is defined
+            - opengear_version_output is succeeded
+
+        - name: Set connection test result (success)
+          ansible.builtin.set_fact:
+            connection_wait_result: {"changed": false, "failed": false}
+            ping_result: {"changed": false, "failed": false}
+            cli_connectivity: true
+
+      rescue:
+        - name: Connection or version retrieval failed
+          ansible.builtin.set_fact:
+            connection_wait_result: {"changed": false, "failed": true}
+            ping_result: {"changed": false, "failed": true}
+            cli_connectivity: false
+            device_version_info:
+              raw_output: "Failed to retrieve version"
+              platform: "{{ platform }}"
+              timestamp: "{{ ansible_date_time.iso8601 }}"
+
+    - name: Simulate connectivity test in check mode
       ansible.builtin.set_fact:
         connection_wait_result: {"changed": false, "failed": false}
         ping_result: {"changed": false, "failed": false}
         cli_connectivity: true
-
-  rescue:
-    - name: Connection or version retrieval failed
-      ansible.builtin.set_fact:
-        connection_wait_result: {"changed": false, "failed": true}
-        ping_result: {"changed": false, "failed": true}
-        cli_connectivity: false
         device_version_info:
-          raw_output: "Failed to retrieve version"
-          platform: "{{ platform if platform is defined else 'unknown' }}"
+          raw_output: "Check mode - no actual connection"
+          platform: "{{ platform }}"
           timestamp: "{{ ansible_date_time.iso8601 }}"
+      when: ansible_check_mode
 
-- name: Simulate connectivity test in check mode
-  ansible.builtin.set_fact:
-    connection_wait_result: {"changed": false, "failed": false}
-    ping_result: {"changed": false, "failed": false}
-    cli_connectivity: true
-    device_version_info:
-      raw_output: "Check mode - no actual connection"
-      platform: "{{ platform if platform is defined else 'unknown' }}"
-      timestamp: "{{ ansible_date_time.iso8601 }}"
-  when:
-    - platform is defined
-    - ansible_check_mode
+    - name: Set overall connectivity status
+      ansible.builtin.set_fact:
+        device_connectivity:
+          device: "{{ inventory_hostname }}"
+          platform: "{{ platform }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          basic_connectivity: "{{ connection_wait_result is succeeded }}"
+          ping_successful: "{{ ping_result is succeeded }}"
+          cli_connectivity: "{{ cli_connectivity  }}"
+          overall_status: >-
+            {{
+              (connection_wait_result is succeeded) and
+              (ping_result is succeeded) and
+              (cli_connectivity )
+            }}
 
-- name: Set overall connectivity status
-  ansible.builtin.set_fact:
-    device_connectivity:
-      device: "{{ inventory_hostname }}"
-      platform: "{{ platform if platform is defined else 'unknown' }}"
-      timestamp: "{{ ansible_date_time.iso8601 }}"
-      basic_connectivity: "{{ connection_wait_result is succeeded }}"
-      ping_successful: "{{ ping_result is succeeded }}"
-      cli_connectivity: "{{ cli_connectivity  }}"
-      overall_status: >-
-        {{
-          (connection_wait_result is succeeded) and
-          (ping_result is succeeded) and
-          (cli_connectivity )
-        }}
-  when: platform is defined
+    - name: Display connectivity results
+      ansible.builtin.debug:
+        msg:
+          - "=== Connectivity Check Results ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ device_connectivity.platform }}"
+          - "Ping Test: {{ 'PASS' if device_connectivity.ping_successful else 'FAIL' }}"
+          - "CLI Connectivity: {{ 'PASS' if device_connectivity.cli_connectivity else 'FAIL' }}"
+          - "Version Retrieved: {{ 'YES' if device_version_info is defined and device_version_info.raw_output != 'Failed to retrieve version' else 'NO' }}"
+          - "Overall Status: {{ 'CONNECTED' if device_connectivity.overall_status else 'CONNECTION FAILED' }}"
+          - "================================="
 
-- name: Display connectivity results
-  ansible.builtin.debug:
-    msg:
-      - "=== Connectivity Check Results ==="
-      - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ device_connectivity.platform }}"
-      - "Ping Test: {{ 'PASS' if device_connectivity.ping_successful else 'FAIL' }}"
-      - "CLI Connectivity: {{ 'PASS' if device_connectivity.cli_connectivity else 'FAIL' }}"
-      - "Version Retrieved: {{ 'YES' if device_version_info is defined and device_version_info.raw_output != 'Failed to retrieve version' else 'NO' }}"
-      - "Overall Status: {{ 'CONNECTED' if device_connectivity.overall_status else 'CONNECTION FAILED' }}"
-      - "================================="
-  when: platform is defined
+    - name: Fail if device is not reachable
+      ansible.builtin.fail:
+        msg: "Device {{ inventory_hostname }} is not reachable - connectivity check failed"
+      when: not device_connectivity.overall_status
 
-- name: Fail if device is not reachable
+- name: Platform not defined - provide guidance
   ansible.builtin.fail:
-    msg: "Device {{ inventory_hostname }} is not reachable - connectivity check failed"
-  when:
-    - platform is defined
-    - not device_connectivity.overall_status
+    msg: |
+      Platform variable not defined for host {{ inventory_hostname }}.
+
+      To fix this, ensure your host is a member of a platform group in your inventory:
+        - cisco_nxos (for Cisco NX-OS devices)
+        - cisco_iosxe (for Cisco IOS-XE devices)
+        - fortios (for Fortinet FortiGate devices)
+        - metamako_mos (for Metamako devices)
+        - opengear (for Opengear devices)
+
+      Alternatively, define 'platform' variable in host_vars for this host.
+
+      Current groups: {{ group_names | default([]) }}
+  when: platform is not defined
