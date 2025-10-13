@@ -601,6 +601,18 @@ execute_ansible_playbook() {
         exit 1
     fi
 
+    # Ensure group_vars are accessible from custom inventory location
+    # Create symlink from inventory directory to ansible-content group_vars
+    local inventory_dir
+    inventory_dir=$(dirname "$inventory")
+    local source_group_vars="ansible-content/inventory/group_vars"
+    local target_group_vars="${inventory_dir}/group_vars"
+
+    if [[ "$inventory_dir" != "ansible-content/inventory" ]] && [[ ! -e "$target_group_vars" ]]; then
+        log "Creating group_vars symlink for custom inventory location"
+        ln -sf "$(pwd)/${source_group_vars}" "$target_group_vars" 2>/dev/null || true
+    fi
+
     # Build authentication and configuration
     local opts_and_vars
     opts_and_vars=$(build_ansible_options)
