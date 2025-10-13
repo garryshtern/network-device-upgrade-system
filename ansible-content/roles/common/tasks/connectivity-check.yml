@@ -45,8 +45,8 @@
               raw_output: "{{ nxos_version_output.stdout[0] }}"
               platform: "{{ platform }}"
               timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ nxos_version_output.stdout[0] | regex_search('NXOS: version ([0-9.()A-Za-z]+)', '\\1') | first | default('unknown') }}"
-            current_firmware_version: "{{ nxos_version_output.stdout[0] | regex_search('NXOS: version ([0-9.()A-Za-z]+)', '\\1') | first | default('unknown') }}"
+              version: "{{ nxos_version_output.stdout[0] | regex_search('NXOS: version ([0-9.()A-Za-z]+)', '\\1') | first }}"
+            current_firmware_version: "{{ nxos_version_output.stdout[0] | regex_search('NXOS: version ([0-9.()A-Za-z]+)', '\\1') | first }}"
           when:
             - platform == 'nxos'
             - nxos_version_output is defined
@@ -73,8 +73,8 @@
               raw_output: "{{ ios_version_output.stdout[0] }}"
               platform: "{{ platform }}"
               timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first | default('unknown') }}"
-            current_firmware_version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first | default('unknown') }}"
+              version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first }}"
+            current_firmware_version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first }}"
           when:
             - platform == 'ios'
             - ios_version_output is defined
@@ -100,8 +100,8 @@
               raw_output: "{{ fortios_version_output }}"
               platform: "{{ platform }}"
               timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ fortios_version_output.meta.results.version | default('unknown') }}"
-            current_firmware_version: "{{ fortios_version_output.meta.results.version | default('unknown') }}"
+              version: "{{ fortios_version_output.meta.results.version }}"
+            current_firmware_version: "{{ fortios_version_output.meta.results.version }}"
           when:
             - platform == 'fortios'
             - fortios_version_output is defined
@@ -126,8 +126,8 @@
               raw_output: "{{ mos_version_output.stdout }}"
               platform: "{{ platform }}"
               timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ mos_version_output.stdout | regex_search('Version:\\s+([0-9.]+)', '\\1') | first | default('unknown') }}"
-            current_firmware_version: "{{ mos_version_output.stdout | regex_search('Version:\\s+([0-9.]+)', '\\1') | first | default('unknown') }}"
+              version: "{{ mos_version_output.stdout | regex_search('Version:\\s+([0-9.]+)', '\\1') | first }}"
+            current_firmware_version: "{{ mos_version_output.stdout | regex_search('Version:\\s+([0-9.]+)', '\\1') | first }}"
           when:
             - platform == 'metamako_mos'
             - mos_version_output is defined
@@ -152,8 +152,8 @@
               raw_output: "{{ opengear_version_output.stdout }}"
               platform: "{{ platform }}"
               timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') | default('unknown') }}"
-            current_firmware_version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') | default('unknown') }}"
+              version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') }}"
+            current_firmware_version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') }}"
           when:
             - platform == 'opengear'
             - opengear_version_output is defined
