@@ -9,12 +9,14 @@
       - config
       - interfaces
   register: nxos_facts
+  when: current_firmware_version is not defined or current_firmware_version == 'unknown'
 
 - name: Set current firmware version
   ansible.builtin.set_fact:
     nxos_upgrade_state: >
       "{{ nxos_upgrade_state | combine({'current_version':
-        nxos_facts.ansible_facts.ansible_net_version}) }}"
+        current_firmware_version if (current_firmware_version is defined and current_firmware_version != 'unknown')
+        else nxos_facts.ansible_facts.ansible_net_version}) }}"
 
 - name: Check ISSU compatibility
   ansible.builtin.include_tasks: check-issu-capability.yml

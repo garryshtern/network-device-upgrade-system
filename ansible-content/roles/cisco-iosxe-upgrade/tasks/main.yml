@@ -9,12 +9,14 @@
       - config
       - interfaces
   register: iosxe_facts
+  when: current_firmware_version is not defined or current_firmware_version == 'unknown'
 
 - name: Set current firmware version
   ansible.builtin.set_fact:
     iosxe_upgrade_state: >
       "{{ iosxe_upgrade_state | combine({'current_version':
-        iosxe_facts.ansible_facts.ansible_net_version}) }}"
+        current_firmware_version if (current_firmware_version is defined and current_firmware_version != 'unknown')
+        else iosxe_facts.ansible_facts.ansible_net_version}) }}"
 
 - name: Determine platform-specific firmware filename
   block:

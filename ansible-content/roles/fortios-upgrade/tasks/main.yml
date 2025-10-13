@@ -14,14 +14,16 @@
         vdom: "root"
         selector: "system_status"
       register: fortios_facts
+      when: current_firmware_version is not defined or current_firmware_version == 'unknown'
 
     - name: Parse device information
       ansible.builtin.set_fact:
         fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
-          'current_version': fortios_facts.meta.results.version,
-          'ha_mode': fortios_facts.meta.results.ha_mode,
-          'ha_role': fortios_facts.meta.results.ha_group_name,
-          'vdom_mode': (fortios_facts.meta.results.vdom_mode == 'enable')
+          'current_version': (current_firmware_version if (current_firmware_version is defined and current_firmware_version != 'unknown')
+            else fortios_facts.meta.results.version),
+          'ha_mode': fortios_facts.meta.results.ha_mode if fortios_facts is defined else 'standalone',
+          'ha_role': fortios_facts.meta.results.ha_group_name if fortios_facts is defined else '',
+          'vdom_mode': ((fortios_facts.meta.results.vdom_mode == 'enable') if fortios_facts is defined else false)
         }) }}"
 
     - name: Check HA cluster configuration
