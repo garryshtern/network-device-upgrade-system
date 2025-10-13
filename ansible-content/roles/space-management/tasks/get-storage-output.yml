@@ -8,6 +8,7 @@
       cisco.nxos.nxos_command:
         commands:
           - "dir bootflash:"
+      register: nxos_result
       changed_when: false
       when: platform == 'nxos'
 
@@ -15,6 +16,7 @@
       cisco.ios.ios_command:
         commands:
           - "dir bootflash:"
+      register: ios_result
       changed_when: false
       when: platform == 'ios'
 
@@ -22,19 +24,33 @@
       fortinet.fortios.fortios_monitor_fact:
         vdom: "{{ vdom }}"
         selector: "system_status"
+      register: fortios_result
       when: platform == 'fortios'
 
     - name: Get Metamako storage information
       ansible.netcommon.cli_command:
         command: "dir /data"
+      register: metamako_result
       changed_when: false
       when: platform == 'metamako_mos'
 
     - name: Get Opengear storage information
       ansible.builtin.raw: "df -h /data"
+      register: opengear_result
       changed_when: false
       when: platform == 'opengear'
-  register: storage_output
+
+    - name: Consolidate storage output from platform result
+      ansible.builtin.set_fact:
+        storage_output: >-
+          {{
+            nxos_result if (platform == 'nxos' and nxos_result is defined and not nxos_result.skipped | default(false)) else
+            ios_result if (platform == 'ios' and ios_result is defined and not ios_result.skipped | default(false)) else
+            fortios_result if (platform == 'fortios' and fortios_result is defined and not fortios_result.skipped | default(false)) else
+            metamako_result if (platform == 'metamako_mos' and metamako_result is defined and not metamako_result.skipped | default(false)) else
+            opengear_result if (platform == 'opengear' and opengear_result is defined and not opengear_result.skipped | default(false)) else
+            {}
+          }}
   when:
     - not ansible_check_mode
     - inventory_hostname != 'localhost'
