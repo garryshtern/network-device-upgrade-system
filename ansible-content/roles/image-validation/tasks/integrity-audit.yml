@@ -64,10 +64,10 @@
         (platform == 'opengear' and
           (firmware_filename_for_validation.endswith('.flash') or
            firmware_filename_for_validation.endswith('.raucb')))
-    fail_msg: >
-      "Firmware file extension not valid for platform {{ platform }}: {{ firmware_filename_for_validation }}.
-      Expected: nxos=(.bin|.img), ios=(.bin|.SPA.bin), fortios=(.out), metamako_mos=(.iso|.swix), opengear=(.flash|.raucb).
-      See docs/firmware-naming-standards.md for MANDATORY naming requirements."
+    fail_msg: |
+      Firmware file extension not valid for platform {{ platform }}: {{ firmware_filename_for_validation }}
+      Expected: nxos=(.bin|.img), ios=(.bin|.SPA.bin), fortios=(.out), metamako_mos=(.iso|.swix), opengear=(.flash|.raucb)
+      See docs/firmware-naming-standards.md for MANDATORY naming requirements
     success_msg: >
       "Firmware file extension validation passed for {{ platform }}: {{ firmware_filename_for_validation }}"
 
