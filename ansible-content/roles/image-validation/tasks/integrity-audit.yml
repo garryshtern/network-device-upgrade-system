@@ -17,9 +17,7 @@
     that:
       - firmware_file_stat.stat.exists
       - firmware_file_stat.stat.isreg
-    fail_msg: |
-      Firmware file {{ firmware_base_path }}/{{ firmware_filename_for_validation }}
-      does not exist or is not a regular file
+    fail_msg: "Firmware file {{ firmware_base_path }}/{{ firmware_filename_for_validation }} does not exist or is not a regular file"
     success_msg: "Firmware file found: {{ firmware_base_path }}/{{ firmware_filename_for_validation }}"
   when: not ansible_check_mode
 
