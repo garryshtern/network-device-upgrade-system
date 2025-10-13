@@ -1,0 +1,255 @@
+---
+# Platform-Agnostic Storage Assessment and Cleanup
+# Consolidates logic from platform-specific assessment files
+# Uses platform-specific variables for commands, parsing, and paths
+
+- name: Get storage directory information
+  block:
+    - name: Get Cisco NX-OS storage information
+      cisco.nxos.nxos_command:
+        commands:
+          - "dir bootflash:"
+      register: storage_output
+      changed_when: false
+      when: platform == 'nxos'
+
+    - name: Get Cisco IOS-XE storage information
+      cisco.ios.ios_command:
+        commands:
+          - "dir bootflash:"
+      register: storage_output
+      changed_when: false
+      when: platform == 'ios'
+
+    - name: Get FortiOS storage information
+      fortinet.fortios.fortios_facts:
+        vdom: "{{ vdom | default('root') }}"
+        gather_subset:
+          - fact: "system_status"
+      register: storage_output
+      when: platform == 'fortios'
+
+    - name: Get Metamako storage information
+      ansible.netcommon.cli_command:
+        command: "dir /data"
+      register: storage_output
+      changed_when: false
+      when: platform == 'metamako_mos'
+
+    - name: Get Opengear storage information
+      ansible.builtin.raw: "df -h /data"
+      register: storage_output
+      changed_when: false
+      when: platform == 'opengear'
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+
+- name: Simulate storage data for check mode or localhost
+  ansible.builtin.set_fact:
+    storage_output:
+      stdout:
+        - "{{ platform_storage_mock_data[platform] }}"
+      rc: 0
+  vars:
+    platform_storage_mock_data:
+      nxos: "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576000    Oct 01 09:00:00 2025  test-image.bin\n\n10737418240 bytes total (5368709120 bytes free)"
+      ios: "Directory of bootflash:/\n\n    11  -rw-   1048576000  Jan 01 2025 12:00:00 +00:00  test-image.bin\n\n10737418240 bytes total (5368709120 bytes free)"
+      fortios: "v7.2.4 build 1396"
+      metamako_mos: "1048576000    Jan 01 12:00  test-image.iso\n\n10737418240 bytes total (5368709120 bytes free)"
+      opengear: "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       10G   5G   5G  50% /data"
+  when: ansible_check_mode or inventory_hostname == 'localhost'
+
+- name: Parse storage information (platform-specific)
+  ansible.builtin.set_fact:
+    parsed_storage: "{{ storage_parsers[platform] }}"
+  vars:
+    storage_parsers:
+      nxos:
+        files: "{{ storage_output.stdout[0] | regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+)') }}"
+        images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(bin|img))') }}"
+        total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+        free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+      ios:
+        files: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+(\\d+)\\s+.+\\s+(.+)') }}"
+        images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}"
+        total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+        free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+      fortios:
+        files: []
+        images: []
+        total_bytes: 10737418240
+        free_bytes: 5368709120
+      metamako_mos:
+        files: "{{ storage_output.stdout | regex_findall('(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+)') }}"
+        images: "{{ storage_output.stdout | regex_findall('\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+\\.(iso|swix))') }}"
+        total_bytes: "{{ storage_output.stdout | regex_search('(\\d+) bytes total', '\\1') | first | default(10737418240) | int }}"
+        free_bytes: "{{ storage_output.stdout | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | default(5368709120) | int }}"
+      opengear:
+        files: []
+        images: []
+        total_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G', '\\1') | first | default('10') | int * 1024 * 1024 * 1024) }}"
+        free_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G.*\\s+(\\d+)%', '\\1') | first | default('5') | int * 1024 * 1024 * 1024) }}"
+
+- name: Calculate initial storage metrics
+  ansible.builtin.set_fact:
+    storage_info:
+      total_space_gb: "{{ (parsed_storage.total_bytes / 1024 / 1024 / 1024) | round(2) }}"
+      free_space_gb: "{{ (parsed_storage.free_bytes / 1024 / 1024 / 1024) | round(2) }}"
+      images_found: "{{ parsed_storage.images }}"
+      cleanup_candidates: "{{ parsed_storage.images }}"
+
+- name: Check if cleanup is needed
+  ansible.builtin.set_fact:
+    cleanup_needed: "{{ storage_info.free_space_gb < (minimum_free_space_gb | float) }}"
+
+- name: Storage cleanup block
+  when: cleanup_needed
+  block:
+    - name: Get current running image (platform-specific)
+      block:
+        - name: Get NX-OS running image
+          cisco.nxos.nxos_command:
+            commands:
+              - show version | include image
+          register: running_image_result
+          changed_when: false
+          when: platform == 'nxos'
+
+        - name: Get IOS-XE running image
+          cisco.ios.ios_command:
+            commands:
+              - show version | include System image
+          register: running_image_result
+          changed_when: false
+          when: platform == 'ios'
+
+        - name: Get Metamako running image
+          ansible.netcommon.cli_command:
+            command: "show version | grep Image"
+          register: running_image_result
+          changed_when: false
+          when: platform == 'metamako_mos'
+
+        - name: Skip running image detection for FortiOS and Opengear
+          ansible.builtin.set_fact:
+            running_image_result:
+              stdout:
+                - "N/A"
+          when: platform in ['fortios', 'opengear']
+      when:
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
+
+    - name: Simulate running image for check mode or localhost
+      ansible.builtin.set_fact:
+        running_image_result:
+          stdout:
+            - "system image file is: bootflash:///test-image.bin"
+          rc: 0
+      when: ansible_check_mode or inventory_hostname == 'localhost'
+
+    - name: Parse running image filename (platform-specific)
+      ansible.builtin.set_fact:
+        running_image_file: "{{ running_image_parsers[platform] }}"
+      vars:
+        running_image_parsers:
+          nxos: "{{ running_image_result.stdout[0] | regex_search('bootflash:///(.+\\.(bin|img))', '\\1') | first | default('') }}"
+          ios: "{{ running_image_result.stdout[0] | regex_search('System image file is \"bootflash:/(.+\\.bin)\"', '\\1') | first | default('') }}"
+          metamako_mos: "{{ running_image_result.stdout | regex_search('Image:\\s+(.+\\.(iso|swix))', '\\1') | first | default('') }}"
+          fortios: ""
+          opengear: ""
+      when: running_image_result.stdout[0] is defined
+
+    - name: Identify obsolete images for cleanup
+      ansible.builtin.set_fact:
+        cleanup_candidates: "{{ parsed_storage.images | difference([running_image_file]) | list }}"
+
+    - name: Remove obsolete image files (platform-specific)
+      block:
+        - name: Remove NX-OS obsolete images
+          cisco.nxos.nxos_command:
+            commands:
+              - "delete bootflash:{{ item }} no-prompt"
+          loop: "{{ cleanup_candidates }}"
+          when:
+            - platform == 'nxos'
+            - preserve_current_image
+            - item != running_image_file
+            - cleanup_candidates | length > 0
+          register: cleanup_result
+          failed_when: false
+
+        - name: Remove IOS-XE obsolete images
+          cisco.ios.ios_command:
+            commands:
+              - "delete /force bootflash:/{{ item }}"
+          loop: "{{ cleanup_candidates }}"
+          when:
+            - platform == 'ios'
+            - preserve_current_image
+            - item != running_image_file
+            - cleanup_candidates | length > 0
+          register: cleanup_result
+          failed_when: false
+
+        - name: Remove Metamako obsolete images
+          ansible.netcommon.cli_command:
+            command: "rm /data/{{ item }}"
+          loop: "{{ cleanup_candidates }}"
+          when:
+            - platform == 'metamako_mos'
+            - preserve_current_image
+            - item != running_image_file
+            - cleanup_candidates | length > 0
+          register: cleanup_result
+          failed_when: false
+      when:
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
+
+    - name: Log cleanup actions
+      ansible.builtin.debug:
+        msg: "Removed {{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }} obsolete image(s)"
+      when: cleanup_result is defined
+
+    - name: Re-assess storage after cleanup (platform-specific)
+      block:
+        - name: Re-assess NX-OS storage
+          cisco.nxos.nxos_command:
+            commands:
+              - "dir bootflash:"
+          register: storage_output_post
+          changed_when: false
+          when: platform == 'nxos'
+
+        - name: Re-assess IOS-XE storage
+          cisco.ios.ios_command:
+            commands:
+              - "dir bootflash:"
+          register: storage_output_post
+          changed_when: false
+          when: platform == 'ios'
+
+        - name: Re-assess Metamako storage
+          ansible.netcommon.cli_command:
+            command: "dir /data"
+          register: storage_output_post
+          changed_when: false
+          when: platform == 'metamako_mos'
+      when:
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
+
+    - name: Update storage metrics after cleanup
+      ansible.builtin.set_fact:
+        free_bytes_post: "{{ storage_output_post.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+        storage_cleanup_performed: true
+      when:
+        - storage_output_post is defined
+        - storage_output_post.stdout is defined
+
+    - name: Update final storage info
+      ansible.builtin.set_fact:
+        storage_info: "{{ storage_info | combine({'free_space_gb': (free_bytes_post / 1024 / 1024 / 1024) | round(2)}) }}"
+      when: free_bytes_post is defined
