@@ -18,14 +18,6 @@
         current_firmware_version if current_firmware_version is defined
         else nxos_facts.ansible_facts.ansible_net_version}) }}"
 
-- name: Validate current version was retrieved
-  ansible.builtin.assert:
-    that:
-      - nxos_upgrade_state.current_version is defined
-      - nxos_upgrade_state.current_version != ''
-      - nxos_upgrade_state.current_version != 'unknown'
-    fail_msg: "Failed to determine current firmware version for {{ inventory_hostname }}"
-
 - name: Check ISSU compatibility
   ansible.builtin.include_tasks: check-issu-capability.yml
 

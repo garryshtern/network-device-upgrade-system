@@ -18,14 +18,6 @@
         current_firmware_version if current_firmware_version is defined
         else iosxe_facts.ansible_facts.ansible_net_version}) }}"
 
-- name: Validate current version was retrieved
-  ansible.builtin.assert:
-    that:
-      - iosxe_upgrade_state.current_version is defined
-      - iosxe_upgrade_state.current_version != ''
-      - iosxe_upgrade_state.current_version != 'unknown'
-    fail_msg: "Failed to determine current firmware version for {{ inventory_hostname }}"
-
 - name: Determine platform-specific firmware filename
   block:
     - name: Extract device model

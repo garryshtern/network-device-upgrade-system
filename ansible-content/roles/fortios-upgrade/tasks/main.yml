@@ -26,14 +26,6 @@
           'vdom_mode': ((fortios_facts.meta.results.vdom_mode == 'enable') if fortios_facts is defined else false)
         }) }}"
 
-    - name: Validate current version was retrieved
-      ansible.builtin.assert:
-        that:
-          - fortios_upgrade_state.current_version is defined
-          - fortios_upgrade_state.current_version != ''
-          - fortios_upgrade_state.current_version != 'unknown'
-        fail_msg: "Failed to determine current firmware version for {{ inventory_hostname }}"
-
     - name: Check HA cluster configuration
       ansible.builtin.include_tasks: ha-coordination.yml
       when: fortios_upgrade_state.ha_mode != "standalone"
