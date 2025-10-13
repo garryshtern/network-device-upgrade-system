@@ -39,7 +39,6 @@
   when:
     - ansible_check_mode
     - platform is defined
-    - ansible_network_os is defined
     - platform == 'fortios'
 
 - name: Step 1 & 2 - Connect and retrieve version information (tests auth and connection)
@@ -53,7 +52,6 @@
       changed_when: false
       when:
         - platform is defined
-        - ansible_network_os is defined
         - platform == 'nxos'
 
     - name: Parse and store NX-OS version
@@ -76,7 +74,6 @@
       changed_when: false
       when:
         - platform is defined
-        - ansible_network_os is defined
         - platform == 'ios'
 
     - name: Parse and store IOS-XE version
@@ -98,7 +95,6 @@
       register: fortios_version_output
       when:
         - platform is defined
-        - ansible_network_os is defined
         - platform == 'fortios'
 
     - name: Parse and store FortiOS version
@@ -119,7 +115,6 @@
       changed_when: false
       when:
         - platform is defined
-        - ansible_network_os is defined
         - platform == 'metamako_mos'
 
     - name: Parse and store Metamako version
@@ -140,7 +135,6 @@
       changed_when: false
       when:
         - platform is defined
-        - ansible_network_os is defined
         - platform == 'opengear'
 
     - name: Parse and store Opengear version
