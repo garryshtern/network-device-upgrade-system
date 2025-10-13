@@ -26,7 +26,7 @@
 
 - name: Fail if firmware file not found
   ansible.builtin.fail:
-    msg: >-
+    msg: |
       Firmware file not found:
       {{ firmware_source_path }}/{{ firmware_version }}
   when:

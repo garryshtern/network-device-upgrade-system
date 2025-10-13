@@ -17,25 +17,18 @@
     that:
       - firmware_file_stat.stat.exists
       - firmware_file_stat.stat.isreg
-    fail_msg: >-
+    fail_msg: |
       Firmware file {{ firmware_base_path }}/{{ firmware_filename_for_validation }}
-      does not exist or
-        is not a regular file
-    success_msg: >
-      "Firmware file found: {{ firmware_base_path }}/{{ firmware_filename_for_validation }}"
+      does not exist or is not a regular file
+    success_msg: "Firmware file found: {{ firmware_base_path }}/{{ firmware_filename_for_validation }}"
   when: not ansible_check_mode
 
 - name: Check minimum file size (prevent empty/corrupt files)
   ansible.builtin.assert:
     that:
       - firmware_file_stat.stat.size > 1048576  # 1MB minimum
-    fail_msg: >
-      "Firmware file {{ firmware_filename_for_validation }} is too small ({{
-        firmware_file_stat.stat.size }} bytes). Minimum 1MB required."
-    success_msg: >-
-      Firmware file size validation passed:
-      {{ (firmware_file_stat.stat.size / 1024 / 1024) |
-        round(2) }} MB
+    fail_msg: "Firmware file {{ firmware_filename_for_validation }} is too small ({{ firmware_file_stat.stat.size }} bytes). Minimum 1MB required."
+    success_msg: "Firmware file size validation passed: {{ (firmware_file_stat.stat.size / 1024 / 1024) | round(2) }} MB"
   when: not ansible_check_mode
 
 - name: Check file permissions are readable
@@ -68,8 +61,7 @@
       Firmware file extension not valid for platform {{ platform }}: {{ firmware_filename_for_validation }}
       Expected: nxos=(.bin|.img), ios=(.bin|.SPA.bin), fortios=(.out), metamako_mos=(.iso|.swix), opengear=(.flash|.raucb)
       See docs/firmware-naming-standards.md for MANDATORY naming requirements
-    success_msg: >
-      "Firmware file extension validation passed for {{ platform }}: {{ firmware_filename_for_validation }}"
+    success_msg: "Firmware file extension validation passed for {{ platform }}: {{ firmware_filename_for_validation }}"
 
 - name: Set integrity check result
   ansible.builtin.set_fact:

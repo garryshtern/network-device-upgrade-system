@@ -73,11 +73,8 @@
       - expected_firmware_version != target_firmware
       - expected_firmware_version | length > 0
       - expected_firmware_version != 'unknown'
-    fail_msg: >
-      "Could not extract valid version from
-        firmware filename: {{ target_firmware }}"
-    success_msg: >
-      "Expected firmware version extracted: {{ expected_firmware_version }}"
+    fail_msg: "Could not extract valid version from firmware filename: {{ target_firmware }}"
+    success_msg: "Expected firmware version extracted: {{ expected_firmware_version }}"
 
 - name: Verify version matches (strict mode)
   ansible.builtin.assert:
@@ -87,8 +84,7 @@
       Firmware version mismatch detected:
       Expected version: {{ expected_firmware_version }}
       Actual version:   {{ actual_firmware_version }}
-    success_msg: >
-      "Firmware version verification passed: {{ actual_firmware_version }}"
+    success_msg: "Firmware version verification passed: {{ actual_firmware_version }}"
   when:
     - strict_version_check  | bool
     - actual_firmware_version != 'unknown'
