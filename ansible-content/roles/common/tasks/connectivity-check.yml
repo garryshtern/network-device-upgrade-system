@@ -3,6 +3,17 @@
 # Platform-specific basic connectivity validation
 # REDESIGNED: Uses platform-appropriate commands (not generic "show version")
 
+- name: Validate platform variable is defined
+  ansible.builtin.assert:
+    that:
+      - platform is defined
+      - platform in ['nxos', 'ios', 'fortios', 'metamako_mos', 'opengear']
+    fail_msg: |
+      Platform variable not defined for host {{ inventory_hostname }}.
+      Ensure host is member of correct platform group (cisco_nxos, cisco_iosxe, fortios, metamako_mos, opengear)
+      or define 'platform' variable in host_vars.
+    success_msg: "Platform validated: {{ platform }}"
+
 - name: Initialize ansible_date_time if not defined (check mode)
   ansible.builtin.set_fact:
     ansible_date_time:
@@ -17,6 +28,7 @@
     ansible_connection: local
   when:
     - ansible_check_mode
+    - platform is defined
     - ansible_network_os is defined
     - platform == 'fortios'
 
@@ -30,6 +42,7 @@
       register: nxos_version_output
       changed_when: false
       when:
+        - platform is defined
         - ansible_network_os is defined
         - platform == 'nxos'
 
@@ -52,6 +65,7 @@
       register: ios_version_output
       changed_when: false
       when:
+        - platform is defined
         - ansible_network_os is defined
         - platform == 'ios'
 
@@ -73,6 +87,7 @@
         selector: "system_status"
       register: fortios_version_output
       when:
+        - platform is defined
         - ansible_network_os is defined
         - platform == 'fortios'
 
@@ -93,6 +108,7 @@
       register: mos_version_output
       changed_when: false
       when:
+        - platform is defined
         - ansible_network_os is defined
         - platform == 'metamako_mos'
 
@@ -113,6 +129,7 @@
       register: opengear_version_output
       changed_when: false
       when:
+        - platform is defined
         - ansible_network_os is defined
         - platform == 'opengear'
 
