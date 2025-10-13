@@ -11,17 +11,7 @@
     - ansible_network_os is defined
     - platform == 'fortios'
 
-- name: Step 1 - Perform Ansible ping test
-  ansible.builtin.ping:
-  register: ping_result
-  when: not ansible_check_mode
-
-- name: Simulate ping test in check mode
-  ansible.builtin.set_fact:
-    ping_result: {"changed": false, "failed": false}
-  when: ansible_check_mode
-
-- name: Step 2 - Connect and retrieve version information
+- name: Step 1 & 2 - Connect and retrieve version information (tests auth and connection)
   when: not ansible_check_mode
   block:
     - name: Get NX-OS version
@@ -120,20 +110,33 @@
         - platform == 'opengear'
         - opengear_version_output is defined
 
-    - name: Set connection test result
+    - name: Set connection test result (success)
       ansible.builtin.set_fact:
         connection_wait_result: {"changed": false, "failed": false}
+        ping_result: {"changed": false, "failed": false}
         cli_connectivity: true
 
   rescue:
     - name: Connection or version retrieval failed
       ansible.builtin.set_fact:
         connection_wait_result: {"changed": false, "failed": true}
+        ping_result: {"changed": false, "failed": true}
         cli_connectivity: false
         device_version_info:
           raw_output: "Failed to retrieve version"
-          platform: "{{ platform }}"
+          platform: "{{ platform if platform is defined else 'unknown' }}"
           timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Simulate connectivity test in check mode
+  ansible.builtin.set_fact:
+    connection_wait_result: {"changed": false, "failed": false}
+    ping_result: {"changed": false, "failed": false}
+    cli_connectivity: true
+    device_version_info:
+      raw_output: "Check mode - no actual connection"
+      platform: "{{ platform if platform is defined else 'unknown' }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+  when: ansible_check_mode
 
 - name: Set overall connectivity status
   ansible.builtin.set_fact:
