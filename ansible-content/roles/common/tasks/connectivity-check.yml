@@ -34,6 +34,9 @@
           vars:
             ansible_connection: ansible.netcommon.network_cli
             ansible_network_os: cisco.nxos.nxos
+            ansible_user: "{{ vault_cisco_nxos_username }}"
+            ansible_password: "{{ vault_cisco_nxos_password | default(omit) }}"
+            ansible_ssh_private_key_file: "{{ vault_cisco_nxos_ssh_key | default(omit) }}"
           when: platform == 'nxos'
 
         - name: Parse and store NX-OS version
@@ -57,6 +60,9 @@
           vars:
             ansible_connection: ansible.netcommon.network_cli
             ansible_network_os: cisco.ios.ios
+            ansible_user: "{{ vault_cisco_iosxe_username }}"
+            ansible_password: "{{ vault_cisco_iosxe_password | default(omit) }}"
+            ansible_ssh_private_key_file: "{{ vault_cisco_iosxe_ssh_key | default(omit) }}"
           when: platform == 'ios'
 
         - name: Parse and store IOS-XE version
@@ -79,6 +85,9 @@
           vars:
             ansible_connection: httpapi
             ansible_network_os: fortinet.fortios.fortios
+            ansible_user: "{{ vault_fortios_username }}"
+            ansible_password: "{{ vault_fortios_password | default(omit) }}"
+            ansible_httpapi_key: "{{ vault_fortios_api_token | default(omit) }}"
           when: platform == 'fortios'
 
         - name: Parse and store FortiOS version
@@ -100,6 +109,9 @@
           vars:
             ansible_connection: ansible.netcommon.network_cli
             ansible_network_os: metamako_mos
+            ansible_user: "{{ vault_metamako_username }}"
+            ansible_password: "{{ vault_metamako_password | default(omit) }}"
+            ansible_ssh_private_key_file: "{{ vault_metamako_ssh_key | default(omit) }}"
           when: platform == 'metamako_mos'
 
         - name: Parse and store Metamako version
@@ -121,6 +133,9 @@
           vars:
             ansible_connection: ssh
             ansible_network_os: opengear
+            ansible_user: "{{ vault_opengear_username }}"
+            ansible_password: "{{ vault_opengear_password | default(omit) }}"
+            ansible_ssh_private_key_file: "{{ vault_opengear_ssh_key | default(omit) }}"
           when: platform == 'opengear'
 
         - name: Parse and store Opengear version
