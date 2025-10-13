@@ -6,13 +6,6 @@
 - name: Platform-based connectivity check
   when: platform is defined
   block:
-    - name: Debug - Show connection settings
-      ansible.builtin.debug:
-        msg:
-          - "Platform: {{ platform }}"
-          - "ansible_connection: {{ ansible_connection | default('UNDEFINED') }}"
-          - "ansible_network_os: {{ ansible_network_os | default('UNDEFINED') }}"
-
     - name: Initialize ansible_date_time if not defined (check mode)
       ansible.builtin.set_fact:
         ansible_date_time:
@@ -21,12 +14,6 @@
       when:
         - ansible_check_mode
         - ansible_date_time is not defined
-
-    - name: Ensure proper connection type for network devices
-      ansible.builtin.set_fact:
-        ansible_connection: "{{ 'ansible.netcommon.network_cli' if platform in ['nxos', 'ios', 'metamako_mos'] else ('httpapi' if platform == 'fortios' else 'ssh') }}"
-        ansible_network_os: "{{ 'cisco.nxos.nxos' if platform == 'nxos' else ('cisco.ios.ios' if platform == 'ios' else ('fortinet.fortios.fortios' if platform == 'fortios' else ('metamako_mos' if platform == 'metamako_mos' else 'opengear'))) }}"
-      when: not ansible_check_mode
 
     - name: Override connection type for FortiOS in check mode
       ansible.builtin.set_fact:
@@ -44,6 +31,9 @@
               - show version
           register: nxos_version_output
           changed_when: false
+          vars:
+            ansible_connection: ansible.netcommon.network_cli
+            ansible_network_os: cisco.nxos.nxos
           when: platform == 'nxos'
 
         - name: Parse and store NX-OS version
@@ -64,6 +54,9 @@
               - show version
           register: ios_version_output
           changed_when: false
+          vars:
+            ansible_connection: ansible.netcommon.network_cli
+            ansible_network_os: cisco.ios.ios
           when: platform == 'ios'
 
         - name: Parse and store IOS-XE version
@@ -83,6 +76,9 @@
             vdom: "root"
             selector: "system_status"
           register: fortios_version_output
+          vars:
+            ansible_connection: httpapi
+            ansible_network_os: fortinet.fortios.fortios
           when: platform == 'fortios'
 
         - name: Parse and store FortiOS version
@@ -101,6 +97,9 @@
             command: show system info
           register: mos_version_output
           changed_when: false
+          vars:
+            ansible_connection: ansible.netcommon.network_cli
+            ansible_network_os: metamako_mos
           when: platform == 'metamako_mos'
 
         - name: Parse and store Metamako version
@@ -119,6 +118,9 @@
           ansible.builtin.raw: config -g config.version
           register: opengear_version_output
           changed_when: false
+          vars:
+            ansible_connection: ssh
+            ansible_network_os: opengear
           when: platform == 'opengear'
 
         - name: Parse and store Opengear version
