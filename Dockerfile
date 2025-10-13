@@ -56,6 +56,7 @@ ENV PATH="/home/ansible/.local/bin:${PATH}"
 RUN pip install --user --no-cache-dir --upgrade pip \
     && pip install --user --no-cache-dir \
         ansible \
+        ansible-pylibssh \
         paramiko \
         netaddr \
         jinja2 \
