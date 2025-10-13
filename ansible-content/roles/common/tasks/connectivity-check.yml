@@ -6,6 +6,13 @@
 - name: Platform-based connectivity check
   when: platform is defined
   block:
+    - name: Debug - Show connection settings
+      ansible.builtin.debug:
+        msg:
+          - "Platform: {{ platform }}"
+          - "ansible_connection: {{ ansible_connection | default('UNDEFINED') }}"
+          - "ansible_network_os: {{ ansible_network_os | default('UNDEFINED') }}"
+
     - name: Initialize ansible_date_time if not defined (check mode)
       ansible.builtin.set_fact:
         ansible_date_time:
@@ -14,6 +21,12 @@
       when:
         - ansible_check_mode
         - ansible_date_time is not defined
+
+    - name: Ensure proper connection type for network devices
+      ansible.builtin.set_fact:
+        ansible_connection: "{{ 'ansible.netcommon.network_cli' if platform in ['nxos', 'ios', 'metamako_mos'] else ('httpapi' if platform == 'fortios' else 'ssh') }}"
+        ansible_network_os: "{{ 'cisco.nxos.nxos' if platform == 'nxos' else ('cisco.ios.ios' if platform == 'ios' else ('fortinet.fortios.fortios' if platform == 'fortios' else ('metamako_mos' if platform == 'metamako_mos' else 'opengear'))) }}"
+      when: not ansible_check_mode
 
     - name: Override connection type for FortiOS in check mode
       ansible.builtin.set_fact:
