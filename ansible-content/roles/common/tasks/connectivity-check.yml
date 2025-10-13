@@ -29,7 +29,7 @@
         device_version_info:
           raw_output: "{{ nxos_version_output.stdout[0] }}"
           platform: "{{ platform }}"
-          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
       when:
         - platform == 'nxos'
         - nxos_version_output is defined
@@ -49,7 +49,7 @@
         device_version_info:
           raw_output: "{{ ios_version_output.stdout[0] }}"
           platform: "{{ platform }}"
-          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
       when:
         - platform == 'ios'
         - ios_version_output is defined
@@ -68,7 +68,7 @@
         device_version_info:
           raw_output: "{{ fortios_version_output }}"
           platform: "{{ platform }}"
-          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
       when:
         - platform == 'fortios'
         - fortios_version_output is defined
@@ -87,7 +87,7 @@
         device_version_info:
           raw_output: "{{ mos_version_output.stdout }}"
           platform: "{{ platform }}"
-          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
       when:
         - platform == 'metamako_mos'
         - mos_version_output is defined
@@ -105,7 +105,7 @@
         device_version_info:
           raw_output: "{{ opengear_version_output.stdout }}"
           platform: "{{ platform }}"
-          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
       when:
         - platform == 'opengear'
         - opengear_version_output is defined
@@ -125,7 +125,7 @@
         device_version_info:
           raw_output: "Failed to retrieve version"
           platform: "{{ platform if platform is defined else 'unknown' }}"
-          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
 
 - name: Simulate connectivity test in check mode
   ansible.builtin.set_fact:
@@ -135,7 +135,7 @@
     device_version_info:
       raw_output: "Check mode - no actual connection"
       platform: "{{ platform if platform is defined else 'unknown' }}"
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
   when: ansible_check_mode
 
 - name: Set overall connectivity status
@@ -143,7 +143,7 @@
     device_connectivity:
       device: "{{ inventory_hostname }}"
       platform: "{{ platform }}"
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
       basic_connectivity: "{{ connection_wait_result is succeeded }}"
       ping_successful: "{{ ping_result is succeeded }}"
       cli_connectivity: "{{ cli_connectivity  }}"
