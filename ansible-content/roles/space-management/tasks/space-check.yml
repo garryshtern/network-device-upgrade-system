@@ -7,14 +7,14 @@
 
 - name: Set space check results from storage_info
   ansible.builtin.set_fact:
-    space_check_passed: "{{ storage_info.free_space_gb | float >= (required_space_gb | default(minimum_free_space_gb) | float) }}"
+    space_check_passed: "{{ storage_info.free_space_gb | float >= minimum_free_space_gb | float }}"
 
 - name: Validate storage space availability
   ansible.builtin.assert:
     that:
-      - storage_info.free_space_gb | float >= (required_space_gb | default(minimum_free_space_gb) | float)
-    fail_msg: "Insufficient storage space: {{ storage_info.free_space_gb }}GB available, {{ required_space_gb | default(minimum_free_space_gb) }}GB required"
-    success_msg: "Storage space check passed: {{ storage_info.free_space_gb }}GB available, {{ required_space_gb | default(minimum_free_space_gb) }}GB required"
+      - storage_info.free_space_gb | float >= minimum_free_space_gb | float
+    fail_msg: "Insufficient storage space: {{ storage_info.free_space_gb }}GB available, {{ minimum_free_space_gb }}GB required"
+    success_msg: "Storage space check passed: {{ storage_info.free_space_gb }}GB available, {{ minimum_free_space_gb }}GB required"
   when: not ansible_check_mode
 
 - name: Display storage check results
@@ -23,7 +23,7 @@
       - "=== Storage Space Check ==="
       - "Device: {{ inventory_hostname }}"
       - "Platform: {{ platform }}"
-      - "Required Space: {{ required_space_gb | default(minimum_free_space_gb) }}GB"
+      - "Required Space: {{ minimum_free_space_gb }}GB"
       - "Available Space: {{ storage_info.free_space_gb }}GB"
       - "Total Space: {{ storage_info.total_space_gb }}GB"
       - "Status: {{ 'PASS' if space_check_passed else 'FAIL' }}"
@@ -38,7 +38,7 @@
     metric_data:
       device_id: "{{ inventory_hostname }}"
       platform: "{{ platform }}"
-      required_space_gb: "{{ required_space_gb | default(minimum_free_space_gb) }}"
+      required_space_gb: "{{ minimum_free_space_gb }}"
       available_space_gb: "{{ storage_info.free_space_gb }}"
       total_space_gb: "{{ storage_info.total_space_gb }}"
       status: "{{ 'success' if space_check_passed else 'failed' }}"
