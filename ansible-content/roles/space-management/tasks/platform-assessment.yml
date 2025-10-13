@@ -53,9 +53,10 @@
       - "Check mode: {{ ansible_check_mode }}"
       - "storage_output defined: {{ storage_output is defined }}"
       - "storage_output type: {{ storage_output | type_debug if storage_output is defined else 'undefined' }}"
-      - "storage_output.stdout type: {{ storage_output.stdout | type_debug if (storage_output is defined and storage_output.stdout is defined) else 'undefined' }}"
-      - "storage_output.stdout length: {{ storage_output.stdout | length if (storage_output is defined and storage_output.stdout is defined) else 'N/A' }}"
-      - "Raw storage_output: {{ storage_output }}"
+      - "storage_output keys: {{ storage_output.keys() | list if storage_output is defined else 'N/A' }}"
+      - "storage_output.stdout exists: {{ storage_output.stdout is defined if storage_output is defined else 'N/A' }}"
+      - "storage_output.stdout_lines exists: {{ storage_output.stdout_lines is defined if storage_output is defined else 'N/A' }}"
+      - "FULL storage_output dump: {{ storage_output | to_nice_json if storage_output is defined else 'undefined' }}"
   when: storage_output is defined
 
 - name: Simulate NX-OS storage data for check mode or localhost
