@@ -15,12 +15,8 @@
     name: image-validation
     tasks_from: integrity-audit
 
-- name: Check device storage capacity
-  ansible.builtin.include_role:
-    name: space-management
-    tasks_from: space-check
-  vars:
-    required_space_gb: "{{ firmware_size_gb }}"
+# NOTE: Storage capacity is already checked in main-upgrade-workflow STEP 2
+# with automatic cleanup. No need to check again here.
 
 - name: Platform-specific image loading
   block:
