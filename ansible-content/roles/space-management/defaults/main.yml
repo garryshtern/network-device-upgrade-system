@@ -2,6 +2,9 @@
 # Space Management Role Defaults
 # Default values for storage assessment and cleanup
 
+# FortiOS specific defaults
+vdom: root
+
 # Storage cleanup defaults
 minimum_free_space_gb: "{{ required_space_gb | default(4) }}"
 cleanup_old_images: true

@@ -23,7 +23,7 @@
 
     - name: Get FortiOS storage information
       fortinet.fortios.fortios_monitor_fact:
-        vdom: "{{ vdom | default('root') }}"
+        vdom: "{{ vdom }}"
         selector: "system_status"
       register: storage_output
       when: platform == 'fortios'
@@ -82,13 +82,13 @@
       metamako_mos:
         files: "{{ storage_output.stdout | regex_findall('(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+)') }}"
         images: "{{ storage_output.stdout | regex_findall('\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+\\.(iso|swix))') }}"
-        total_bytes: "{{ storage_output.stdout | regex_search('(\\d+) bytes total', '\\1') | first | default(10737418240) | int }}"
-        free_bytes: "{{ storage_output.stdout | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | default(5368709120) | int }}"
+        total_bytes: "{{ storage_output.stdout | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+        free_bytes: "{{ storage_output.stdout | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
       opengear:
         files: []
         images: []
-        total_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G', '\\1') | first | default('10') | int * 1024 * 1024 * 1024) }}"
-        free_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G.*\\s+(\\d+)%', '\\1') | first | default('5') | int * 1024 * 1024 * 1024) }}"
+        total_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G', '\\1') | first | int * 1024 * 1024 * 1024) }}"
+        free_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G.*\\s+(\\d+)%', '\\1') | first | int * 1024 * 1024 * 1024) }}"
 
 - name: Calculate initial storage metrics
   ansible.builtin.set_fact:
@@ -153,9 +153,9 @@
         running_image_file: "{{ running_image_parsers[platform] }}"
       vars:
         running_image_parsers:
-          nxos: "{{ running_image_result.stdout[0] | regex_search('bootflash:///(.+\\.(bin|img))', '\\1') | first | default('') }}"
-          ios: "{{ running_image_result.stdout[0] | regex_search('System image file is \"bootflash:/(.+\\.bin)\"', '\\1') | first | default('') }}"
-          metamako_mos: "{{ running_image_result.stdout | regex_search('Image:\\s+(.+\\.(iso|swix))', '\\1') | first | default('') }}"
+          nxos: "{{ running_image_result.stdout[0] | regex_search('bootflash:///(.+\\.(bin|img))', '\\1') | first }}"
+          ios: "{{ running_image_result.stdout[0] | regex_search('System image file is \"bootflash:/(.+\\.bin)\"', '\\1') | first }}"
+          metamako_mos: "{{ running_image_result.stdout | regex_search('Image:\\s+(.+\\.(iso|swix))', '\\1') | first }}"
           fortios: ""
           opengear: ""
       when: running_image_result.stdout[0] is defined
