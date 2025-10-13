@@ -46,10 +46,7 @@
 
 - name: Simulate storage data for check mode or localhost
   ansible.builtin.set_fact:
-    storage_output:
-      stdout:
-        - "{{ platform_storage_mock_data[platform] }}"
-      rc: 0
+    storage_output: "{{ mock_outputs[platform] }}"
   vars:
     platform_storage_mock_data:
       nxos: "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576000    Oct 01 09:00:00 2025  test-image.bin\n\n10737418240 bytes total (5368709120 bytes free)"
@@ -57,6 +54,26 @@
       fortios: "v7.2.4 build 1396"
       metamako_mos: "1048576000    Jan 01 12:00  test-image.iso\n\n10737418240 bytes total (5368709120 bytes free)"
       opengear: "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       10G   5G   5G  50% /data"
+    mock_outputs:
+      nxos:
+        stdout:
+          - "{{ platform_storage_mock_data.nxos }}"
+        rc: 0
+      ios:
+        stdout:
+          - "{{ platform_storage_mock_data.ios }}"
+        rc: 0
+      fortios:
+        stdout:
+          - "{{ platform_storage_mock_data.fortios }}"
+        rc: 0
+      metamako_mos:
+        stdout: "{{ platform_storage_mock_data.metamako_mos }}"
+        rc: 0
+      opengear:
+        stdout: "{{ platform_storage_mock_data.opengear }}"
+        stdout_lines: "{{ platform_storage_mock_data.opengear.split('\n') }}"
+        rc: 0
   when: ansible_check_mode or inventory_hostname == 'localhost'
 
 - name: Parse storage information (platform-specific)
