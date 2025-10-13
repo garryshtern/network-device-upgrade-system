@@ -8,7 +8,7 @@
     compliance_results:
       device_name: "{{ inventory_hostname }}"
       platform: "{{ platform }}"
-      audit_timestamp: "{{ ansible_date_time.iso8601 if ansible_date_time is defined else lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      audit_timestamp: "{{ ansible_date_time.iso8601 }}"
       firmware_version: "{{ current_firmware_version }}"
       standards_tested: []
       compliance_checks:
