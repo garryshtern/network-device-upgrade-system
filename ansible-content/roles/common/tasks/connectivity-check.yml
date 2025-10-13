@@ -3,6 +3,16 @@
 # Platform-specific basic connectivity validation
 # REDESIGNED: Uses platform-appropriate commands (not generic "show version")
 
+- name: Debug - Show group membership and platform variable
+  ansible.builtin.debug:
+    msg:
+      - "Host: {{ inventory_hostname }}"
+      - "Groups: {{ group_names }}"
+      - "Platform defined: {{ platform is defined }}"
+      - "Platform value: {{ platform | default('UNDEFINED') }}"
+      - "ansible_network_os defined: {{ ansible_network_os is defined }}"
+      - "ansible_network_os value: {{ ansible_network_os | default('UNDEFINED') }}"
+
 - name: Validate platform variable is defined
   ansible.builtin.assert:
     that:

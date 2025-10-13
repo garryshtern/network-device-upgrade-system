@@ -605,12 +605,29 @@ execute_ansible_playbook() {
     # Create symlink from inventory directory to ansible-content group_vars
     local inventory_dir
     inventory_dir=$(dirname "$inventory")
-    local source_group_vars="ansible-content/inventory/group_vars"
+    local source_group_vars="$(pwd)/ansible-content/inventory/group_vars"
     local target_group_vars="${inventory_dir}/group_vars"
 
     if [[ "$inventory_dir" != "ansible-content/inventory" ]] && [[ ! -e "$target_group_vars" ]]; then
         log "Creating group_vars symlink for custom inventory location"
-        ln -sf "$(pwd)/${source_group_vars}" "$target_group_vars" 2>/dev/null || true
+        log "  Source: ${source_group_vars}"
+        log "  Target: ${target_group_vars}"
+
+        # Ensure inventory directory exists
+        mkdir -p "$inventory_dir" 2>/dev/null || true
+
+        # Create symlink with absolute path
+        if ln -sf "$source_group_vars" "$target_group_vars" 2>/dev/null; then
+            log "  Symlink created successfully"
+            # Verify it's readable
+            if [[ -d "$target_group_vars" ]]; then
+                log "  Verified: group_vars accessible at $target_group_vars"
+            else
+                warn "  Warning: Symlink created but directory not accessible"
+            fi
+        else
+            warn "  Warning: Failed to create symlink"
+        fi
     fi
 
     # Build authentication and configuration
