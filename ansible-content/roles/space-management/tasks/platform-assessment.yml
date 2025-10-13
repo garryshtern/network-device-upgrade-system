@@ -76,36 +76,50 @@
         rc: 0
   when: ansible_check_mode or inventory_hostname == 'localhost'
 
-- name: Parse storage information (platform-specific)
+- name: Parse NX-OS storage information
   ansible.builtin.set_fact:
-    parsed_storage: "{{ storage_parsers[platform] }}"
-  vars:
-    storage_parsers:
-      nxos:
-        files: "{{ storage_output.stdout[0] | regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+)') }}"
-        images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(bin|img))') }}"
-        total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
-        free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
-      ios:
-        files: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+(\\d+)\\s+.+\\s+(.+)') }}"
-        images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}"
-        total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
-        free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
-      fortios:
-        files: []
-        images: []
-        total_bytes: 10737418240
-        free_bytes: 5368709120
-      metamako_mos:
-        files: "{{ storage_output.stdout | regex_findall('(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+)') }}"
-        images: "{{ storage_output.stdout | regex_findall('\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+\\.(iso|swix))') }}"
-        total_bytes: "{{ storage_output.stdout | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
-        free_bytes: "{{ storage_output.stdout | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
-      opengear:
-        files: []
-        images: []
-        total_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G', '\\1') | first | int * 1024 * 1024 * 1024) }}"
-        free_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G.*\\s+(\\d+)%', '\\1') | first | int * 1024 * 1024 * 1024) }}"
+    parsed_storage:
+      files: "{{ storage_output.stdout[0] | regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+)') }}"
+      images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(bin|img))') }}"
+      total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+      free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+  when: platform == 'nxos'
+
+- name: Parse IOS-XE storage information
+  ansible.builtin.set_fact:
+    parsed_storage:
+      files: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+(\\d+)\\s+.+\\s+(.+)') }}"
+      images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}"
+      total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+      free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+  when: platform == 'ios'
+
+- name: Parse FortiOS storage information
+  ansible.builtin.set_fact:
+    parsed_storage:
+      files: []
+      images: []
+      total_bytes: 10737418240
+      free_bytes: 5368709120
+  when: platform == 'fortios'
+
+- name: Parse Metamako storage information
+  ansible.builtin.set_fact:
+    parsed_storage:
+      files: "{{ storage_output.stdout | regex_findall('(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+)') }}"
+      images: "{{ storage_output.stdout | regex_findall('\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+\\.(iso|swix))') }}"
+      total_bytes: "{{ storage_output.stdout | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+      free_bytes: "{{ storage_output.stdout | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+  when: platform == 'metamako_mos'
+
+- name: Parse Opengear storage information
+  ansible.builtin.set_fact:
+    parsed_storage:
+      files: []
+      images: []
+      total_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G', '\\1') | first | int * 1024 * 1024 * 1024) }}"
+      free_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G.*\\s+(\\d+)%', '\\1') | first | int * 1024 * 1024 * 1024) }}"
+  when: platform == 'opengear'
 
 - name: Calculate initial storage metrics
   ansible.builtin.set_fact:

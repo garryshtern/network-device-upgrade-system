@@ -33,7 +33,7 @@
       debug:
         msg: |
           Testing device: {{ inventory_hostname }}
-          Platform: {{ platform_type }}
+          Platform: {{ platform }}
           Current Version: {{ firmware_version }}
           Target Version: {{ target_version }}
 
