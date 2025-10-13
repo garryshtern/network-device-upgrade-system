@@ -9,11 +9,9 @@ ansible_connection: ansible.netcommon.network_cli
 # Platform identifier (use this in playbooks, NOT ansible_network_os)
 platform: nxos
 
-ansible_user: "{{ vault_cisco_nxos_username | default('admin') }}"
-# SSH key authentication (preferred)
-ansible_ssh_private_key_file: "{{ vault_cisco_nxos_ssh_key | default(omit) }}"
-# Password authentication (fallback)
-ansible_password: "{{ vault_cisco_nxos_password | default(omit) }}"
+# Credentials are dynamically mapped in group_vars/all.yml based on platform
+# ansible_user, ansible_password, ansible_ssh_private_key_file set in all.yml
+
 ansible_ssh_common_args: >
   -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
   -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password

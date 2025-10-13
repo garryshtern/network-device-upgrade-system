@@ -10,16 +10,17 @@ ansible_connection: ssh  # Default to SSH, overridden for modern API devices
 platform: opengear
 
 ansible_host: "{{ inventory_hostname }}"
-ansible_user: "{{ opengear_username }}"
-# SSH key authentication (preferred for SSH connections)
-ansible_ssh_private_key_file: "{{ vault_opengear_ssh_key | default(omit) }}"
-# Password authentication (fallback for SSH connections)
-ansible_ssh_pass: "{{ opengear_password | default(omit) }}"
+
+# Credentials are dynamically mapped in group_vars/all.yml based on platform
+# ansible_user, ansible_password, ansible_ssh_private_key_file set in all.yml
+
 ansible_ssh_common_args: >
   -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
   -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
-opengear_username: "{{ vault_opengear_username | default('admin') }}"
-opengear_password: "{{ vault_opengear_password | default(omit) }}"
+
+# Opengear-specific credential variables for API access
+opengear_username: "{{ vault_opengear_username }}"
+opengear_password: "{{ vault_opengear_password }}"
 # API token authentication (preferred for API connections)
 opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
 

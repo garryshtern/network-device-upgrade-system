@@ -10,11 +10,11 @@ ansible_connection: httpapi
 platform: fortios
 
 ansible_host: "{{ inventory_hostname }}"
-ansible_user: "{{ vault_fortios_username | default('admin') }}"
+
+# Credentials are dynamically mapped in group_vars/all.yml based on platform
+# ansible_user, ansible_password set in all.yml
 # API token authentication (preferred for FortiOS 6.0+)
 ansible_httpapi_key: "{{ vault_fortios_api_token | default(omit) }}"
-# Password authentication (fallback when no token available)
-ansible_password: "{{ vault_fortios_password | default(omit) }}"
 ansible_httpapi_use_ssl: true
 ansible_httpapi_validate_certs: false
 ansible_httpapi_port: 443
