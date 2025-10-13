@@ -13,25 +13,28 @@
 
 - name: Wait for device connection with early failure detection
   block:
-    - name: Test device connection
+    - name: Test device connection with short timeout to detect auth failures quickly
       ansible.builtin.wait_for_connection:
-        timeout: "{{ wait_timeout }}"
-        delay: "{{ wait_delay }}"
-        sleep: "{{ wait_sleep }}"
+        timeout: 10
+        delay: 0
+        sleep: 2
       register: connection_wait_result
       failed_when: false
+      until: connection_wait_result is succeeded
+      retries: "{{ (wait_timeout | int / 10) | int }}"
+      delay: 0
 
-    - name: Check for authentication errors
+    - name: Fail immediately on authentication errors
       ansible.builtin.fail:
-        msg: "Authentication failed: {{ connection_wait_result.msg }}"
+        msg: "Authentication failed - check username/password/SSH keys"
       when:
         - connection_wait_result.failed
         - connection_wait_result.msg is defined
-        - "'Permission denied' in connection_wait_result.msg or 'Authentication' in connection_wait_result.msg or 'password' in connection_wait_result.msg"
+        - "'Permission denied' in connection_wait_result.msg or 'Authentication' in connection_wait_result.msg or 'authentication' in connection_wait_result.msg or 'password' in connection_wait_result.msg"
 
     - name: Check for other connection failures
       ansible.builtin.fail:
-        msg: "Connection failed: {{ connection_wait_result.msg }}"
+        msg: "Connection failed: {{ connection_wait_result.msg if connection_wait_result.msg is defined else 'Unknown connection error' }}"
       when:
         - connection_wait_result.failed
         - connection_check_failed_when is not defined
