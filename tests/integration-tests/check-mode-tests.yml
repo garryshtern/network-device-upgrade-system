@@ -5,6 +5,15 @@
 - name: Check Mode Integration Tests
   hosts: all
   gather_facts: false
+  pre_tasks:
+    - name: Load mock storage data for check mode testing
+      ansible.builtin.include_vars: "{{ playbook_dir }}/../fixtures/mock-storage-data.yml"
+
+    - name: Set storage_output from mock data for current platform
+      ansible.builtin.set_fact:
+        storage_output: "{{ mock_storage_output[platform] }}"
+      when: ansible_check_mode or inventory_hostname == 'localhost'
+
   vars:
     test_phases:
       - phase: "loading"
