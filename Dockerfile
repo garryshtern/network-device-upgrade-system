@@ -26,6 +26,7 @@ RUN apk add --no-cache \
     musl-dev \
     libffi-dev \
     openssl-dev \
+    libssh-dev \
     cargo \
     rust \
     && rm -rf /var/cache/apk/*
