@@ -42,6 +42,8 @@
       when:
         - platform == 'nxos'
         - nxos_version_output is defined
+        - nxos_version_output.stdout is defined
+        - nxos_version_output is succeeded
 
     - name: Get IOS-XE version
       cisco.ios.ios_command:
@@ -62,6 +64,8 @@
       when:
         - platform == 'ios'
         - ios_version_output is defined
+        - ios_version_output.stdout is defined
+        - ios_version_output is succeeded
 
     - name: Get FortiOS version
       fortinet.fortios.fortios_monitor_fact:
@@ -81,6 +85,7 @@
       when:
         - platform == 'fortios'
         - fortios_version_output is defined
+        - fortios_version_output is succeeded
 
     - name: Get Metamako version
       ansible.netcommon.cli_command:
@@ -100,6 +105,8 @@
       when:
         - platform == 'metamako_mos'
         - mos_version_output is defined
+        - mos_version_output.stdout is defined
+        - mos_version_output is succeeded
 
     - name: Get Opengear version
       ansible.builtin.raw: config -g config.version
@@ -118,6 +125,8 @@
       when:
         - platform == 'opengear'
         - opengear_version_output is defined
+        - opengear_version_output.stdout is defined
+        - opengear_version_output is succeeded
 
     - name: Set connection test result (success)
       ansible.builtin.set_fact:
