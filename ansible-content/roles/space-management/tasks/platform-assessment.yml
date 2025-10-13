@@ -3,46 +3,56 @@
 # Consolidates logic from platform-specific assessment files
 # Uses platform-specific variables for commands, parsing, and paths
 
-- name: Get storage directory information
-  block:
-    - name: Get Cisco NX-OS storage information
-      cisco.nxos.nxos_command:
-        commands:
-          - "dir bootflash:"
-      register: storage_output
-      changed_when: false
-      when: platform == 'nxos'
-
-    - name: Get Cisco IOS-XE storage information
-      cisco.ios.ios_command:
-        commands:
-          - "dir bootflash:"
-      register: storage_output
-      changed_when: false
-      when: platform == 'ios'
-
-    - name: Get FortiOS storage information
-      fortinet.fortios.fortios_monitor_fact:
-        vdom: "{{ vdom }}"
-        selector: "system_status"
-      register: storage_output
-      when: platform == 'fortios'
-
-    - name: Get Metamako storage information
-      ansible.netcommon.cli_command:
-        command: "dir /data"
-      register: storage_output
-      changed_when: false
-      when: platform == 'metamako_mos'
-
-    - name: Get Opengear storage information
-      ansible.builtin.raw: "df -h /data"
-      register: storage_output
-      changed_when: false
-      when: platform == 'opengear'
+- name: Get Cisco NX-OS storage information
+  cisco.nxos.nxos_command:
+    commands:
+      - "dir bootflash:"
+  register: storage_output
+  changed_when: false
   when:
     - not ansible_check_mode
     - inventory_hostname != 'localhost'
+    - platform == 'nxos'
+
+- name: Get Cisco IOS-XE storage information
+  cisco.ios.ios_command:
+    commands:
+      - "dir bootflash:"
+  register: storage_output
+  changed_when: false
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+    - platform == 'ios'
+
+- name: Get FortiOS storage information
+  fortinet.fortios.fortios_monitor_fact:
+    vdom: "{{ vdom }}"
+    selector: "system_status"
+  register: storage_output
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+    - platform == 'fortios'
+
+- name: Get Metamako storage information
+  ansible.netcommon.cli_command:
+    command: "dir /data"
+  register: storage_output
+  changed_when: false
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+    - platform == 'metamako_mos'
+
+- name: Get Opengear storage information
+  ansible.builtin.raw: "df -h /data"
+  register: storage_output
+  changed_when: false
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+    - platform == 'opengear'
 
 - name: Debug actual device storage output
   ansible.builtin.debug:
