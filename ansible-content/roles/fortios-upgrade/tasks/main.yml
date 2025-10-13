@@ -14,17 +14,25 @@
         vdom: "root"
         selector: "system_status"
       register: fortios_facts
-      when: current_firmware_version is not defined or current_firmware_version == 'unknown'
+      when: current_firmware_version is not defined
 
     - name: Parse device information
       ansible.builtin.set_fact:
         fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
-          'current_version': (current_firmware_version if (current_firmware_version is defined and current_firmware_version != 'unknown')
+          'current_version': (current_firmware_version if current_firmware_version is defined
             else fortios_facts.meta.results.version),
           'ha_mode': fortios_facts.meta.results.ha_mode if fortios_facts is defined else 'standalone',
           'ha_role': fortios_facts.meta.results.ha_group_name if fortios_facts is defined else '',
           'vdom_mode': ((fortios_facts.meta.results.vdom_mode == 'enable') if fortios_facts is defined else false)
         }) }}"
+
+    - name: Validate current version was retrieved
+      ansible.builtin.assert:
+        that:
+          - fortios_upgrade_state.current_version is defined
+          - fortios_upgrade_state.current_version != ''
+          - fortios_upgrade_state.current_version != 'unknown'
+        fail_msg: "Failed to determine current firmware version for {{ inventory_hostname }}"
 
     - name: Check HA cluster configuration
       ansible.builtin.include_tasks: ha-coordination.yml

@@ -168,16 +168,18 @@
 
       rescue:
         - name: Connection or version retrieval failed
-          ansible.builtin.set_fact:
-            connection_wait_result: {"changed": false, "failed": true}
-            ping_result: {"changed": false, "failed": true}
-            cli_connectivity: false
-            device_version_info:
-              raw_output: "Failed to retrieve version"
-              platform: "{{ platform }}"
-              timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "unknown"
-            current_firmware_version: "unknown"
+          ansible.builtin.fail:
+            msg: |
+              Failed to connect to device {{ inventory_hostname }} or retrieve version information.
+              This is required for upgrade operations.
+
+              Please check:
+              - Device connectivity (network, SSH access)
+              - Credentials (username, password, or SSH key)
+              - Device is responding to commands
+
+              Platform: {{ platform }}
+              Error occurred during version retrieval.
 
     - name: Simulate connectivity test in check mode
       ansible.builtin.set_fact:
