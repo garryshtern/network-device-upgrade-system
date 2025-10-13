@@ -3,26 +3,29 @@
 # Platform-specific basic connectivity validation
 # REDESIGNED: Uses platform-appropriate commands (not generic "show version")
 
-- name: Debug - Show group membership and platform variable
-  ansible.builtin.debug:
-    msg:
-      - "Host: {{ inventory_hostname }}"
-      - "Groups: {{ group_names }}"
-      - "Platform defined: {{ platform is defined }}"
-      - "Platform value: {{ platform | default('UNDEFINED') }}"
-      - "ansible_network_os defined: {{ ansible_network_os is defined }}"
-      - "ansible_network_os value: {{ ansible_network_os | default('UNDEFINED') }}"
+- name: Check if platform is defined
+  block:
+    - name: Platform-specific connectivity validation
+      ansible.builtin.debug:
+        msg: "Running connectivity check for {{ platform }} platform"
 
-- name: Validate platform variable is defined
-  ansible.builtin.assert:
-    that:
-      - platform is defined
-      - platform in ['nxos', 'ios', 'fortios', 'metamako_mos', 'opengear']
-    fail_msg: |
-      Platform variable not defined for host {{ inventory_hostname }}.
-      Ensure host is member of correct platform group (cisco_nxos, cisco_iosxe, fortios, metamako_mos, opengear)
-      or define 'platform' variable in host_vars.
-    success_msg: "Platform validated: {{ platform }}"
+  rescue:
+    - name: Platform not defined - provide guidance
+      ansible.builtin.fail:
+        msg: |
+          Platform variable not defined for host {{ inventory_hostname }}.
+
+          To fix this, ensure your host is a member of a platform group in your inventory:
+            - cisco_nxos (for Cisco NX-OS devices)
+            - cisco_iosxe (for Cisco IOS-XE devices)
+            - fortios (for Fortinet FortiGate devices)
+            - metamako_mos (for Metamako devices)
+            - opengear (for Opengear devices)
+
+          Alternatively, define 'platform' variable in host_vars for this host.
+
+          Current groups: {{ group_names | default([]) }}
+  when: platform is not defined
 
 - name: Initialize ansible_date_time if not defined (check mode)
   ansible.builtin.set_fact:
@@ -42,7 +45,9 @@
     - platform == 'fortios'
 
 - name: Step 1 & 2 - Connect and retrieve version information (tests auth and connection)
-  when: not ansible_check_mode
+  when:
+    - platform is defined
+    - not ansible_check_mode
   block:
     - name: Get NX-OS version
       cisco.nxos.nxos_command:
@@ -175,13 +180,15 @@
       raw_output: "Check mode - no actual connection"
       platform: "{{ platform if platform is defined else 'unknown' }}"
       timestamp: "{{ ansible_date_time.iso8601 }}"
-  when: ansible_check_mode
+  when:
+    - platform is defined
+    - ansible_check_mode
 
 - name: Set overall connectivity status
   ansible.builtin.set_fact:
     device_connectivity:
       device: "{{ inventory_hostname }}"
-      platform: "{{ platform }}"
+      platform: "{{ platform if platform is defined else 'unknown' }}"
       timestamp: "{{ ansible_date_time.iso8601 }}"
       basic_connectivity: "{{ connection_wait_result is succeeded }}"
       ping_successful: "{{ ping_result is succeeded }}"
@@ -192,6 +199,7 @@
           (ping_result is succeeded) and
           (cli_connectivity )
         }}
+  when: platform is defined
 
 - name: Display connectivity results
   ansible.builtin.debug:
@@ -204,8 +212,11 @@
       - "Version Retrieved: {{ 'YES' if device_version_info is defined and device_version_info.raw_output != 'Failed to retrieve version' else 'NO' }}"
       - "Overall Status: {{ 'CONNECTED' if device_connectivity.overall_status else 'CONNECTION FAILED' }}"
       - "================================="
+  when: platform is defined
 
 - name: Fail if device is not reachable
   ansible.builtin.fail:
     msg: "Device {{ inventory_hostname }} is not reachable - connectivity check failed"
-  when: not device_connectivity.overall_status
+  when:
+    - platform is defined
+    - not device_connectivity.overall_status
