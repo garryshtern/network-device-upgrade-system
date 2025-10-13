@@ -123,26 +123,23 @@
             | selectattr('platform', 'search', 'fortios') | list | length > 0
         fail_msg: "Multi-platform support not properly configured"
 
-    # Verify required task files exist
-    - name: Check for platform-specific task files
+    # Verify required task files exist (consolidated platform-agnostic architecture)
+    - name: Check for consolidated task files
       ansible.builtin.stat:
         path: "{{ item }}"
-      register: platform_task_files
+      register: consolidated_task_files
       loop:
         - "{{ role_path }}/tasks/main.yml"
         - "{{ role_path }}/tasks/storage-assessment.yml"
-        - "{{ role_path }}/tasks/cisco.nxos.nxos-assessment.yml"
-        - "{{ role_path }}/tasks/cisco.ios.ios-assessment.yml"
-        - "{{ role_path }}/tasks/fortinet.fortios.fortios-assessment.yml"
-        - "{{ role_path }}/tasks/opengear-assessment.yml"
-        - "{{ role_path }}/tasks/metamako_mos-assessment.yml"
+        - "{{ role_path }}/tasks/platform-assessment.yml"
+        - "{{ role_path }}/tasks/space-check.yml"
 
-    - name: Verify platform task files exist
+    - name: Verify consolidated task files exist
       ansible.builtin.assert:
         that:
           - item.stat.exists
         fail_msg: "Required task file {{ item.item }} not found"
-      loop: "{{ platform_task_files.results }}"
+      loop: "{{ consolidated_task_files.results }}"
 
     # Test cleanup settings validation
     - name: Verify cleanup configuration

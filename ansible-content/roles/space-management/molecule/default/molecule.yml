@@ -33,6 +33,7 @@ provisioner:
     host_vars:
       space-mgmt-test-instance:
         ansible_connection: local
+        platform: nxos  # Default platform for testing
 
         # Test multiple platform scenarios
         test_platforms:
