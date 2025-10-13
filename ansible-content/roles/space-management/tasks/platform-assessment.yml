@@ -22,10 +22,9 @@
       when: platform == 'ios'
 
     - name: Get FortiOS storage information
-      fortinet.fortios.fortios_facts:
+      fortinet.fortios.fortios_monitor_fact:
         vdom: "{{ vdom | default('root') }}"
-        gather_subset:
-          - fact: "system_status"
+        selector: "system_status"
       register: storage_output
       when: platform == 'fortios'
 
