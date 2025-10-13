@@ -44,37 +44,56 @@
     - not ansible_check_mode
     - inventory_hostname != 'localhost'
 
-- name: Simulate storage data for check mode or localhost
+- name: Simulate NX-OS storage data for check mode or localhost
   ansible.builtin.set_fact:
-    storage_output: "{{ mock_outputs[platform] }}"
-  vars:
-    platform_storage_mock_data:
-      nxos: "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576000    Oct 01 09:00:00 2025  test-image.bin\n\n10737418240 bytes total (5368709120 bytes free)"
-      ios: "Directory of bootflash:/\n\n    11  -rw-   1048576000  Jan 01 2025 12:00:00 +00:00  test-image.bin\n\n10737418240 bytes total (5368709120 bytes free)"
-      fortios: "v7.2.4 build 1396"
-      metamako_mos: "1048576000    Jan 01 12:00  test-image.iso\n\n10737418240 bytes total (5368709120 bytes free)"
-      opengear: "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       10G   5G   5G  50% /data"
-    mock_outputs:
-      nxos:
-        stdout:
-          - "{{ platform_storage_mock_data.nxos }}"
-        rc: 0
-      ios:
-        stdout:
-          - "{{ platform_storage_mock_data.ios }}"
-        rc: 0
-      fortios:
-        stdout:
-          - "{{ platform_storage_mock_data.fortios }}"
-        rc: 0
-      metamako_mos:
-        stdout: "{{ platform_storage_mock_data.metamako_mos }}"
-        rc: 0
-      opengear:
-        stdout: "{{ platform_storage_mock_data.opengear }}"
-        stdout_lines: "{{ platform_storage_mock_data.opengear.split('\n') }}"
-        rc: 0
-  when: ansible_check_mode or inventory_hostname == 'localhost'
+    storage_output:
+      stdout:
+        - "       4096    Oct 01 10:00:00 2025  .bootflash/\n    1048576000    Oct 01 09:00:00 2025  test-image.bin\n\n10737418240 bytes total (5368709120 bytes free)"
+      rc: 0
+  when:
+    - ansible_check_mode or inventory_hostname == 'localhost'
+    - platform == 'nxos'
+
+- name: Simulate IOS-XE storage data for check mode or localhost
+  ansible.builtin.set_fact:
+    storage_output:
+      stdout:
+        - "Directory of bootflash:/\n\n    11  -rw-   1048576000  Jan 01 2025 12:00:00 +00:00  test-image.bin\n\n10737418240 bytes total (5368709120 bytes free)"
+      rc: 0
+  when:
+    - ansible_check_mode or inventory_hostname == 'localhost'
+    - platform == 'ios'
+
+- name: Simulate FortiOS storage data for check mode or localhost
+  ansible.builtin.set_fact:
+    storage_output:
+      stdout:
+        - "v7.2.4 build 1396"
+      rc: 0
+  when:
+    - ansible_check_mode or inventory_hostname == 'localhost'
+    - platform == 'fortios'
+
+- name: Simulate Metamako storage data for check mode or localhost
+  ansible.builtin.set_fact:
+    storage_output:
+      stdout: "1048576000    Jan 01 12:00  test-image.iso\n\n10737418240 bytes total (5368709120 bytes free)"
+      rc: 0
+  when:
+    - ansible_check_mode or inventory_hostname == 'localhost'
+    - platform == 'metamako_mos'
+
+- name: Simulate Opengear storage data for check mode or localhost
+  ansible.builtin.set_fact:
+    storage_output:
+      stdout: "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       10G   5G   5G  50% /data"
+      stdout_lines:
+        - "Filesystem      Size  Used Avail Use% Mounted on"
+        - "/dev/sda1       10G   5G   5G  50% /data"
+      rc: 0
+  when:
+    - ansible_check_mode or inventory_hostname == 'localhost'
+    - platform == 'opengear'
 
 - name: Parse NX-OS storage information
   ansible.builtin.set_fact:
