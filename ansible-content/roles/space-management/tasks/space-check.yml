@@ -1,31 +1,32 @@
 ---
 # Storage Space Check Tasks
-# Platform-specific storage space validation for supported platforms only
+# Platform-agnostic storage space validation
 
-- name: Platform-specific storage assessment
-  ansible.builtin.include_tasks: "{{ platform }}-assessment.yml"
+- name: Run platform-agnostic storage assessment
+  ansible.builtin.include_tasks: platform-assessment.yml
+
+- name: Set space check results from storage_info
+  ansible.builtin.set_fact:
+    space_check_passed: "{{ storage_info.free_space_gb | float >= (required_space_gb | default(minimum_free_space_gb) | float) }}"
 
 - name: Validate storage space availability
   ansible.builtin.assert:
     that:
-      - space_check_results.available_space | int >= space_check_results.required_space | int
-    fail_msg: >-
-      Insufficient storage space: {{ space_check_results.available_space }}GB available,
-      {{ space_check_results.required_space }}GB required
-    success_msg: >-
-      Storage space check passed: {{ space_check_results.available_space }}GB available,
-      {{ space_check_results.required_space }}GB required
+      - storage_info.free_space_gb | float >= (required_space_gb | default(minimum_free_space_gb) | float)
+    fail_msg: "Insufficient storage space: {{ storage_info.free_space_gb }}GB available, {{ required_space_gb | default(minimum_free_space_gb) }}GB required"
+    success_msg: "Storage space check passed: {{ storage_info.free_space_gb }}GB available, {{ required_space_gb | default(minimum_free_space_gb) }}GB required"
   when: not ansible_check_mode
 
 - name: Display storage check results
   ansible.builtin.debug:
     msg:
       - "=== Storage Space Check ==="
-      - "Device: {{ space_check_results.device }}"
-      - "Platform: {{ space_check_results.platform }}"
-      - "Required Space: {{ space_check_results.required_space }}GB"
-      - "Available Space: {{ space_check_results.available_space }}GB"
-      - "Status: {{ 'PASS' if space_check_results.passed else 'FAIL' }}"
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "Required Space: {{ required_space_gb | default(minimum_free_space_gb) }}GB"
+      - "Available Space: {{ storage_info.free_space_gb }}GB"
+      - "Total Space: {{ storage_info.total_space_gb }}GB"
+      - "Status: {{ 'PASS' if space_check_passed else 'FAIL' }}"
       - "=========================="
 
 - name: Record space check completion
@@ -37,7 +38,8 @@
     metric_data:
       device_id: "{{ inventory_hostname }}"
       platform: "{{ platform }}"
-      required_space_gb: "{{ space_check_results.required_space }}"
-      available_space_gb: "{{ space_check_results.available_space }}"
-      status: "{{ 'success' if space_check_results.passed else 'failed' }}"
-      timestamp: "{{ space_check_results.timestamp }}"
+      required_space_gb: "{{ required_space_gb | default(minimum_free_space_gb) }}"
+      available_space_gb: "{{ storage_info.free_space_gb }}"
+      total_space_gb: "{{ storage_info.total_space_gb }}"
+      status: "{{ 'success' if space_check_passed else 'failed' }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
