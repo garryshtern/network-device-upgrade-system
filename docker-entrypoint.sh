@@ -515,7 +515,7 @@ execute_ansible_playbook() {
     # Use INVENTORY_FILE (custom variable) instead of ANSIBLE_INVENTORY (built-in)
     # to avoid conflicts with Ansible's built-in variable handling
     local user_inventory="${INVENTORY_FILE:-$DEFAULT_INVENTORY}"
-    local ansible_inventory="ansible-content/inventory/hosts.yml"
+    local ansible_inventory_dir="ansible-content/inventory"
 
     # Mode-specific logging
     case "$mode" in
@@ -540,35 +540,25 @@ execute_ansible_playbook() {
         exit 1
     fi
 
-    # Create symlink from ansible-content/inventory/hosts.yml to user's inventory
-    # This allows Ansible to naturally discover group_vars/all.yml in the same directory
-    if [[ "$user_inventory" != "$ansible_inventory" ]]; then
-        log "Creating inventory symlink for custom inventory file"
-        log "  User inventory: ${user_inventory}"
-        log "  Ansible inventory: ${ansible_inventory}"
+    # Copy user's inventory file into ansible-content/inventory/ temporarily
+    # This allows Ansible to discover group_vars/all.yml in the same directory
+    # We use copy instead of symlink because Ansible follows symlinks and looks
+    # for group_vars in the target location, not the symlink location
+    if [[ "$user_inventory" != "${ansible_inventory_dir}/hosts.yml" ]]; then
+        log "Copying user inventory to ansible-content/inventory/"
+        log "  Source: ${user_inventory}"
+        log "  Target: ${ansible_inventory_dir}/hosts.yml"
 
-        # Remove existing symlink/file if it exists
-        rm -f "$ansible_inventory" 2>/dev/null || true
-
-        # Create symlink with absolute path
-        local user_inventory_abs
-        user_inventory_abs=$(readlink -f "$user_inventory" 2>/dev/null || realpath "$user_inventory" 2>/dev/null || echo "$user_inventory")
-
-        if ln -sf "$user_inventory_abs" "$ansible_inventory" 2>/dev/null; then
-            log "  Symlink created successfully"
-            # Verify it's readable
-            if [[ -f "$ansible_inventory" ]]; then
-                log "  Verified: inventory accessible at $ansible_inventory"
-                log "  group_vars/all.yml will be automatically discovered"
-            else
-                warn "  Warning: Symlink created but file not accessible"
-            fi
+        # Copy the user's inventory file
+        if cp "$user_inventory" "${ansible_inventory_dir}/hosts.yml" 2>/dev/null; then
+            log "  Inventory copied successfully"
+            log "  group_vars/all.yml will be automatically discovered"
         else
-            error "Failed to create inventory symlink"
+            error "Failed to copy inventory file"
             exit 1
         fi
     else
-        log "Using inventory: $ansible_inventory"
+        log "Using default inventory: ${ansible_inventory_dir}/hosts.yml"
     fi
 
     # Build authentication and configuration
@@ -602,7 +592,7 @@ execute_ansible_playbook() {
         syntax-check)
             ansible-playbook \
                 --syntax-check \
-                -i "$ansible_inventory" \
+                -i "$ansible_inventory_dir" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
@@ -611,7 +601,7 @@ execute_ansible_playbook() {
         dry-run)
             ansible-playbook \
                 --check --diff \
-                -i "$ansible_inventory" \
+                -i "$ansible_inventory_dir" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
@@ -619,7 +609,7 @@ execute_ansible_playbook() {
             ;;
         run)
             ansible-playbook \
-                -i "$ansible_inventory" \
+                -i "$ansible_inventory_dir" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
