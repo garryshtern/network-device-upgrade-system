@@ -127,6 +127,10 @@ ENVIRONMENT VARIABLES:
     MULTI_STEP_UPGRADE_REQUIRED  Enable multi-step upgrade mode (true/false)
     UPGRADE_PATH                 Comma-separated upgrade path (e.g., "6.4.8,7.0.12,7.2.5")
 
+    # Debug Configuration
+    SHOW_DEBUG               Enable verbose debug output (true/false, default: false)
+                            Also enables ANSIBLE_DISPLAY_OK_HOSTS and ANSIBLE_DISPLAY_SKIPPED_HOSTS
+
     # SSH Key Authentication (Preferred)
     CISCO_NXOS_SSH_KEY          SSH private key for Cisco NX-OS devices
     CISCO_IOSXE_SSH_KEY         SSH private key for Cisco IOS-XE devices
@@ -223,6 +227,13 @@ EXAMPLES:
     # Run test suite
     docker run --rm \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest test
+
+    # Enable debug output with verbose Ansible display
+    docker run --rm \\
+      -e SHOW_DEBUG=true \\
+      -e TARGET_HOSTS=cisco-switch-01 \\
+      -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
 PODMAN COMPATIBILITY (RHEL8/9):
     # Run with podman (rootless)
@@ -442,6 +453,17 @@ build_ansible_options() {
     fi
     if [[ -n "${UPGRADE_PATH:-}" ]]; then
         extra_vars="$extra_vars upgrade_path=${UPGRADE_PATH}"
+    fi
+
+    # Debug configuration
+    if [[ -n "${SHOW_DEBUG:-}" ]]; then
+        extra_vars="$extra_vars show_debug=${SHOW_DEBUG}"
+        # Enable Ansible display settings when debug is enabled
+        if [[ "${SHOW_DEBUG,,}" == "true" ]]; then
+            export ANSIBLE_DISPLAY_OK_HOSTS=true
+            export ANSIBLE_DISPLAY_SKIPPED_HOSTS=true
+            log "Debug mode enabled: show_debug=true, ANSIBLE_DISPLAY_OK_HOSTS=true, ANSIBLE_DISPLAY_SKIPPED_HOSTS=true"
+        fi
     fi
 
     # Base path and derived paths

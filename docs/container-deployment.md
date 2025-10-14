@@ -153,6 +153,12 @@ The container supports extensive configuration through environment variables:
 - `IMAGE_SERVER_PASSWORD` - Password for firmware image server
 - `SNMP_COMMUNITY` - SNMP community string for monitoring
 
+### Debug Configuration
+- `SHOW_DEBUG` - Enable verbose debug output (true/false, default: false)
+  - When enabled, also sets `ANSIBLE_DISPLAY_OK_HOSTS=true` and `ANSIBLE_DISPLAY_SKIPPED_HOSTS=true`
+  - Provides comprehensive device facts dumps and detailed execution information
+  - Example: `-e SHOW_DEBUG=true`
+
 ### Firmware Image Management
 - `FIRMWARE_BASE_PATH` - Base directory for firmware images in container (default: /var/lib/network-upgrade/firmware)
 - `TARGET_FIRMWARE` - Target firmware version/filename to install
@@ -407,6 +413,14 @@ docker run --rm network-upgrade-system syntax-check
 docker run --rm \
   -v ./inventory:/opt/inventory:ro \
   -e ANSIBLE_INVENTORY=/opt/inventory/staging.yml \
+  network-upgrade-system dry-run
+
+# Enable debug output with verbose display
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e SHOW_DEBUG=true \
+  -e TARGET_HOSTS=cisco-switch-01 \
   network-upgrade-system dry-run
 
 # Interactive debugging
