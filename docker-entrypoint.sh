@@ -585,9 +585,6 @@ build_ansible_options() {
     if [[ ! "$extra_vars" =~ debug_metrics ]]; then
         extra_vars="debug_metrics=false ${extra_vars}"
     fi
-    if [[ ! "$extra_vars" =~ show_debug ]]; then
-        extra_vars="show_debug=false ${extra_vars}"
-    fi
 
     echo "$ansible_opts|$extra_vars"
 }
@@ -676,11 +673,15 @@ execute_ansible_playbook() {
     fi
 
     # Execute ansible-playbook with mode-specific flags
+    # Always load group_vars/all.yml to ensure defaults are available
+    local group_vars_file="ansible-content/inventory/group_vars/all.yml"
+
     case "$mode" in
         syntax-check)
             ansible-playbook \
                 --syntax-check \
                 -i "$inventory" \
+                -e "@${group_vars_file}" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
@@ -690,6 +691,7 @@ execute_ansible_playbook() {
             ansible-playbook \
                 --check --diff \
                 -i "$inventory" \
+                -e "@${group_vars_file}" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
@@ -698,6 +700,7 @@ execute_ansible_playbook() {
         run)
             ansible-playbook \
                 -i "$inventory" \
+                -e "@${group_vars_file}" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
