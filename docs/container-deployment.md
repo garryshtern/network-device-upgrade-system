@@ -155,8 +155,8 @@ The container supports extensive configuration through environment variables:
 
 ### Debug Configuration
 - `SHOW_DEBUG` - Enable verbose debug output (true/false, default: false)
-  - When enabled, also sets `ANSIBLE_DISPLAY_SKIPPED_HOSTS=true`
   - Provides comprehensive device facts dumps and detailed execution information
+  - Enables all debug tasks in network validation roles
   - Example: `-e SHOW_DEBUG=true`
 
 ### Firmware Image Management
