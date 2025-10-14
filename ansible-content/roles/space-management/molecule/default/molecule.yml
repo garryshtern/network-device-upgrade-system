@@ -37,7 +37,7 @@ provisioner:
 
         # Test multiple platform scenarios
         test_platforms:
-          - platform: "cisco.nxos.nxos"
+          - platform: "nxos"
             filesystem_type: "bootflash"
             total_space_mb: 8192
             used_space_mb: 6144
@@ -45,7 +45,7 @@ provisioner:
             firmware_size_mb: 1800
             cleanup_threshold_mb: 1000
 
-          - platform: "cisco.ios.ios"
+          - platform: "ios"
             filesystem_type: "flash"
             total_space_mb: 4096
             used_space_mb: 3000
@@ -53,7 +53,7 @@ provisioner:
             firmware_size_mb: 800
             cleanup_threshold_mb: 500
 
-          - platform: "fortinet.fortios.fortios"
+          - platform: "fortios"
             filesystem_type: "disk"
             total_space_mb: 2048
             used_space_mb: 1200

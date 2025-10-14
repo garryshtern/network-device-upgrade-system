@@ -30,7 +30,7 @@ provisioner:
     host_vars:
       network-validation-test:
         ansible_connection: local
-        platform_type: "cisco_nxos"
+        platform: "nxos"
 
         # BGP validation test data
         baseline_bgp_neighbors: 4
@@ -51,3 +51,18 @@ provisioner:
 
 verifier:
   name: ansible
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

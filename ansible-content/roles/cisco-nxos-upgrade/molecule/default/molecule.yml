@@ -34,7 +34,7 @@ provisioner:
         # Mock NX-OS device characteristics
         ansible_network_os: cisco.nxos.nxos
         ansible_connection: local
-        platform_type: "cisco_nxos"
+        platform: "nxos"
         target_firmware: "10.1.2"
         current_firmware: "9.3.10"
 

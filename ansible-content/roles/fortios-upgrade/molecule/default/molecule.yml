@@ -37,7 +37,7 @@ provisioner:
     host_vars:
       fortios-primary:
         ansible_connection: local
-        platform_type: "fortios"
+        platform: "fortios"
         ha_role: "primary"
         ha_cluster_id: "test-cluster-1"
         ha_peer_ip: "192.168.1.2"
@@ -46,7 +46,7 @@ provisioner:
 
       fortios-secondary:
         ansible_connection: local
-        platform_type: "fortios"
+        platform: "fortios"
         ha_role: "secondary"
         ha_cluster_id: "test-cluster-1"
         ha_peer_ip: "192.168.1.1"
@@ -55,3 +55,18 @@ provisioner:
 
 verifier:
   name: ansible
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

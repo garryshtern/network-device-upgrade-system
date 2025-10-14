@@ -36,7 +36,7 @@ provisioner:
         # Mock Metamako device characteristics
         ansible_network_os: metamako.mos
         ansible_connection: local
-        platform_type: "metamako_mos"
+        platform: "metamako"
         target_firmware_version: "2.1.3"
         current_firmware_version: "2.0.8"
 

@@ -33,7 +33,7 @@ provisioner:
     host_vars:
       image-validation-test-instance:
         ansible_connection: local
-        platform_type: "multi_vendor"
+        platform: "nxos"  # Use nxos as default test platform
 
         # Image validation test variables
         firmware_base_path: "/tmp/firmware-test"
