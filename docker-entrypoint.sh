@@ -474,8 +474,9 @@ build_ansible_options() {
     fi
 
     # Ansible configuration
-    if [[ -n "${ANSIBLE_CONFIG:-}" ]]; then
-        export ANSIBLE_CONFIG="${ANSIBLE_CONFIG}"
+    # Always set ANSIBLE_CONFIG to ensure proper paths and group_vars discovery
+    if [[ -z "${ANSIBLE_CONFIG:-}" ]]; then
+        export ANSIBLE_CONFIG="ansible-content/ansible.cfg"
     fi
 
     if [[ -n "${ANSIBLE_VAULT_PASSWORD_FILE:-}" ]]; then
@@ -512,9 +513,10 @@ execute_ansible_playbook() {
     local mode="$1"  # "syntax-check", "dry-run", or "run"
     local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
 
-    # Always use ansible-content/inventory/hosts.yml for group_vars discovery
-    # group_vars must be in same directory as inventory file
-    local ansible_inventory="ansible-content/inventory/hosts.yml"
+    # Use ansible-content/inventory directory with explicit config
+    # This ensures group_vars is discovered in the inventory directory
+    local ansible_inventory_dir="ansible-content/inventory"
+    local ansible_inventory="${ansible_inventory_dir}/hosts.yml"
 
     # Mode-specific logging
     case "$mode" in
