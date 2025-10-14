@@ -459,7 +459,9 @@ build_ansible_options() {
     if [[ -n "${SHOW_DEBUG:-}" ]]; then
         extra_vars="$extra_vars show_debug=${SHOW_DEBUG}"
         # Enable Ansible display settings when debug is enabled
-        if [[ "${SHOW_DEBUG,,}" == "true" ]]; then
+        local show_debug_lower
+        show_debug_lower=$(echo "${SHOW_DEBUG}" | tr '[:upper:]' '[:lower:]')
+        if [[ "$show_debug_lower" == "true" ]]; then
             export ANSIBLE_DISPLAY_OK_HOSTS=true
             export ANSIBLE_DISPLAY_SKIPPED_HOSTS=true
             log "Debug mode enabled: show_debug=true, ANSIBLE_DISPLAY_OK_HOSTS=true, ANSIBLE_DISPLAY_SKIPPED_HOSTS=true"
