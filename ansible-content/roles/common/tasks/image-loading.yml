@@ -10,10 +10,8 @@
     integrity_check_required: true
     cleanup_old_images: true
 
-- name: Validate firmware file integrity (existence, size, permissions, extension)
-  ansible.builtin.include_role:
-    name: image-validation
-    tasks_from: integrity-audit
+# NOTE: Image integrity is already validated in main-upgrade-workflow STEP 3
+# before calling this task. No need to validate again here.
 
 # NOTE: Storage capacity is already checked in main-upgrade-workflow STEP 2
 # with automatic cleanup. No need to check again here.

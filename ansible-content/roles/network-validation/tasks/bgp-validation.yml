@@ -43,53 +43,9 @@
     validation_mode: "{{ check_type }}"
   when: validation_mode is not defined or validation_mode == 'full'
 
-- name: Check if BGP is configured on device
+- name: Gather BGP configuration using facts (replaces 'show running-config bgp')
   block:
-    - name: Check BGP configuration (Cisco)
-      cisco.nxos.nxos_command:
-        commands:
-          - show running-config bgp
-      register: bgp_config_check
-      when:
-        - ansible_network_os is defined
-        - platform in ['nxos', 'ios']
-        - not ansible_check_mode
-      failed_when: false
-
-    - name: Determine if BGP is configured
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': bgp_is_configured}) }}"
-      vars:
-        bgp_is_configured: >-
-          {{
-            (bgp_config_check is defined and
-             bgp_config_check.stdout is defined and
-             bgp_config_check.stdout | length > 0 and
-             'router bgp' in bgp_config_check.stdout[0])
-          }}
-      when:
-        - bgp_config_check is defined
-        - not ansible_check_mode
-
-    - name: Set BGP configured for check mode
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': true}) }}"
-      when: ansible_check_mode
-
-  rescue:
-    - name: Handle BGP configuration check failure
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'warnings': bgp_validation.warnings + ['Could not determine BGP configuration status - skipping BGP validation'], 'bgp_configured': false}) }}"
-
-- name: Skip BGP validation if not configured
-  ansible.builtin.debug:
-    msg: "BGP is not configured on {{ inventory_hostname }} - skipping BGP validation"
-  when: not bgp_validation.bgp_configured
-
-- name: Gather BGP summary information
-  when: bgp_validation.bgp_configured
-  block:
-    - name: Gather BGP facts using nxos_facts module
+    - name: Gather BGP facts to detect configuration and extract data
       cisco.nxos.nxos_facts:
         gather_subset:
           - '!all'
@@ -99,24 +55,53 @@
           - bgp_address_family
       register: bgp_facts
       when:
+        - ansible_network_os is defined
         - platform == 'nxos'
         - not ansible_check_mode
+      failed_when: false
 
-    - name: Extract BGP configuration from facts
+    - name: Determine if BGP is configured and extract data
       ansible.builtin.set_fact:
-        bgp_asn: "{{ ansible_net_resources.bgp_global.as_number  }}"
-        bgp_router_id: "{{ ansible_net_resources.bgp_global.router_id  }}"
-        bgp_neighbors: "{{ ansible_net_resources.bgp_global.neighbors  }}"
+        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': bgp_is_configured}) }}"
+        bgp_asn: "{{ ansible_net_resources.bgp_global.as_number }}"
+        bgp_router_id: "{{ ansible_net_resources.bgp_global.router_id }}"
+        bgp_neighbors: "{{ ansible_net_resources.bgp_global.neighbors }}"
+      vars:
+        bgp_is_configured: >-
+          {{
+            (bgp_facts is defined and
+             bgp_facts is succeeded and
+             ansible_net_resources is defined and
+             ansible_net_resources.bgp_global is defined and
+             ansible_net_resources.bgp_global.as_number is defined)
+          }}
       when:
         - bgp_facts is defined
-        - ansible_net_resources is defined
-        - ansible_net_resources.bgp_global is defined
+        - bgp_facts is succeeded
         - not ansible_check_mode
 
-  rescue:
-    - name: Handle BGP command failure
+    - name: Set BGP not configured if facts gathering failed
       ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'errors': bgp_validation.errors + ['Failed to retrieve BGP summary: ' + (ansible_failed_result.msg)]}) }}"
+        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': false}) }}"
+      when:
+        - bgp_facts is defined
+        - bgp_facts is failed
+        - not ansible_check_mode
+
+    - name: Set BGP configured for check mode
+      ansible.builtin.set_fact:
+        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': true}) }}"
+      when: ansible_check_mode
+
+  rescue:
+    - name: Handle BGP facts gathering failure
+      ansible.builtin.set_fact:
+        bgp_validation: "{{ bgp_validation | combine({'warnings': bgp_validation.warnings + ['Could not gather BGP facts - skipping BGP validation'], 'bgp_configured': false}) }}"
+
+- name: Skip BGP validation if not configured
+  ansible.builtin.debug:
+    msg: "BGP is not configured on {{ inventory_hostname }} - skipping BGP validation"
+  when: not bgp_validation.bgp_configured
 
 - name: Analyze BGP neighbor states
   when: bgp_validation.bgp_configured
