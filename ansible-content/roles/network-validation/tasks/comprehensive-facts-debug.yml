@@ -9,7 +9,7 @@
     gather_network_resources: all
   register: comprehensive_facts
   when:
-    - show_debug
+    - show_debug | bool
     - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
@@ -32,7 +32,7 @@
       - "=== Available Network Resources ==="
       - "{{ ansible_net_resources.keys() | list }}"
   when:
-    - show_debug
+    - show_debug | bool
     - comprehensive_facts is defined
     - comprehensive_facts is succeeded
     - not ansible_check_mode

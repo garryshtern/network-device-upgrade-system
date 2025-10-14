@@ -12,6 +12,10 @@
     arp_baseline:
       total_arp_entries: 0
 
+- name: Gather comprehensive NX-OS facts for debugging
+  ansible.builtin.include_tasks: comprehensive-facts-debug.yml
+  when: show_debug | bool
+
 - name: Run BGP validation
   ansible.builtin.include_tasks: bgp-validation.yml
   when: bgp_enabled
@@ -31,10 +35,6 @@
 
 - name: Run protocol convergence validation
   ansible.builtin.include_tasks: protocol-convergence.yml
-
-- name: Gather comprehensive NX-OS facts for debugging
-  ansible.builtin.include_tasks: comprehensive-facts-debug.yml
-  when: show_debug
 
 - name: Aggregate validation results (check mode)
   ansible.builtin.set_fact:

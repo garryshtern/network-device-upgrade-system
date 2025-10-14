@@ -19,7 +19,7 @@
       - "storage_output.stdout_lines exists: {{ storage_output.stdout_lines is defined }}"
       - "FULL storage_output dump: {{ storage_output | to_nice_json }}"
   when:
-    - show_debug
+    - show_debug | bool
     - storage_output is defined
 
 - name: Parse storage information

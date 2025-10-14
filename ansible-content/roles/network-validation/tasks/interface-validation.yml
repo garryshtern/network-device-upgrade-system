@@ -31,7 +31,7 @@
           - "ansible_net_resources defined: {{ ansible_net_resources is defined }}"
           - "FULL ansible_net_resources dump: {{ ansible_net_resources | to_nice_json }}"
       when:
-        - show_debug
+        - show_debug | bool
         - nxos_interface_facts is defined
 
     - name: Get interface operational state (error counters)
@@ -131,7 +131,7 @@
           - "Gather succeeded: {{ vlan_facts is succeeded }}"
           - "FULL ansible_net_resources.vlans: {{ ansible_net_resources.vlans | to_nice_json }}"
       when:
-        - show_debug
+        - show_debug | bool
         - vlan_facts is defined
 
     - name: Validate VLAN assignments
@@ -169,7 +169,7 @@
           - "Gather succeeded: {{ portchannel_facts is succeeded }}"
           - "FULL ansible_net_resources.lag_interfaces: {{ ansible_net_resources.lag_interfaces | to_nice_json }}"
       when:
-        - show_debug
+        - show_debug | bool
         - portchannel_facts is defined
 
     - name: Validate port-channel states

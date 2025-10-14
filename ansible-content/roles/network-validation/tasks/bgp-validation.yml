@@ -70,7 +70,7 @@
           - "ansible_net_resources defined: {{ ansible_net_resources is defined }}"
           - "FULL ansible_net_resources dump: {{ ansible_net_resources | to_nice_json }}"
       when:
-        - show_debug
+        - show_debug | bool
         - bgp_facts is defined
         - not ansible_check_mode
 

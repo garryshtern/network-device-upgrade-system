@@ -202,7 +202,7 @@
           - "Gather succeeded: {{ ospf_facts is succeeded }}"
           - "FULL ansible_net_resources.ospfv2: {{ ansible_net_resources.ospfv2 | to_nice_json }}"
       when:
-        - show_debug
+        - show_debug | bool
         - ospf_facts is defined
         - platform == 'nxos'
         - not ansible_check_mode
