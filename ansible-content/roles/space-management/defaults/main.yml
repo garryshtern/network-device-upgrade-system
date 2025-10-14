@@ -2,9 +2,6 @@
 # Space Management Role Defaults
 # Default values for storage assessment and cleanup
 
-# Debug settings
-show_debug: false
-
 # FortiOS specific defaults
 vdom: root
 

@@ -1,9 +1,6 @@
 ---
 # Network Validation Role - Default Variables
 
-# Debug settings
-show_debug: false
-
 # Validation control
 validation_mode: "full"
 capture_mode: "snapshot"
