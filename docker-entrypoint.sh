@@ -491,22 +491,8 @@ build_ansible_options() {
         esac
     fi
 
-    # Add default values for required runtime variables if not already provided
-    if [[ ! "$extra_vars" =~ max_concurrent ]]; then
-        extra_vars="max_concurrent=1 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ maintenance_window ]]; then
-        extra_vars="maintenance_window=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ rollback_on_failure ]]; then
-        extra_vars="rollback_on_failure=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ required_space_gb ]]; then
-        extra_vars="required_space_gb=4 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ platform_firmware ]]; then
-        extra_vars="platform_firmware=test.bin ${extra_vars}"
-    fi
+    # Override path variables with container-specific defaults
+    # All other defaults come from group_vars/all.yml loaded via -e @file
     if [[ ! "$extra_vars" =~ network_upgrade_base_path ]]; then
         extra_vars="network_upgrade_base_path=${DEFAULT_BASE_PATH} ${extra_vars}"
     fi
@@ -515,75 +501,6 @@ build_ansible_options() {
     fi
     if [[ ! "$extra_vars" =~ backup_base_path ]]; then
         extra_vars="backup_base_path=${DEFAULT_BACKUP_PATH} ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ backup_type ]]; then
-        extra_vars="backup_type=pre_upgrade ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ backup_enabled ]]; then
-        extra_vars="backup_enabled=true ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ include_startup_config ]]; then
-        extra_vars="include_startup_config=true ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ include_running_config ]]; then
-        extra_vars="include_running_config=true ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ site_name ]]; then
-        extra_vars="site_name=unknown ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ vendor ]]; then
-        extra_vars="vendor=unknown ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ current_firmware_version ]]; then
-        extra_vars="current_firmware_version=unknown ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ connectivity_timeout ]]; then
-        extra_vars="connectivity_timeout=300 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ reboot_wait_time ]]; then
-        extra_vars="reboot_wait_time=600 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ validation_timeout ]]; then
-        extra_vars="validation_timeout=300 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ max_retry_attempts ]]; then
-        extra_vars="max_retry_attempts=3 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ keep_backup_count ]]; then
-        extra_vars="keep_backup_count=3 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ firmware_size_gb ]]; then
-        extra_vars="firmware_size_gb=2 ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ skip_validation ]]; then
-        extra_vars="skip_validation=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ network_state_comparison ]]; then
-        extra_vars="network_state_comparison=true ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ baseline_capture_enabled ]]; then
-        extra_vars="baseline_capture_enabled=true ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ convergence_monitoring ]]; then
-        extra_vars="convergence_monitoring=true ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ log_metrics_locally ]]; then
-        extra_vars="log_metrics_locally=false ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ send_metrics ]]; then
-        extra_vars="send_metrics=true ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ export_metrics ]]; then
-        extra_vars="export_metrics=true ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ send_notifications ]]; then
-        extra_vars="send_notifications=true ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ log_level ]]; then
-        extra_vars="log_level=info ${extra_vars}"
-    fi
-    if [[ ! "$extra_vars" =~ debug_metrics ]]; then
-        extra_vars="debug_metrics=false ${extra_vars}"
     fi
 
     echo "$ansible_opts|$extra_vars"
