@@ -71,7 +71,7 @@ test_target_hosts_validation() {
 
     # Test valid hosts
     export TARGET_HOSTS="cisco-switch-01"
-    export ANSIBLE_INVENTORY="$SCRIPT_DIR/mockups/inventory/production.yml"
+    export INVENTORY_FILE="$SCRIPT_DIR/mockups/inventory/production.yml"
 
     if bash docker-entrypoint.sh syntax-check >/dev/null 2>&1; then
         success "TARGET_HOSTS validation with valid hosts passed"
@@ -90,7 +90,7 @@ test_invalid_target_hosts() {
 
     # Test invalid hosts (should fail)
     export TARGET_HOSTS="nonexistent-device"
-    export ANSIBLE_INVENTORY="$SCRIPT_DIR/mockups/inventory/production.yml"
+    export INVENTORY_FILE="$SCRIPT_DIR/mockups/inventory/production.yml"
 
     if ! bash docker-entrypoint.sh syntax-check >/dev/null 2>&1; then
         success "TARGET_HOSTS validation correctly rejects invalid hosts"
@@ -115,7 +115,7 @@ test_environment_variables() {
     export TARGET_HOSTS="cisco-switch-01"
     export TARGET_FIRMWARE="test-firmware.bin"
     export UPGRADE_PHASE="validation"
-    export ANSIBLE_INVENTORY="$SCRIPT_DIR/mockups/inventory/production.yml"
+    export INVENTORY_FILE="$SCRIPT_DIR/mockups/inventory/production.yml"
 
     if bash docker-entrypoint.sh syntax-check >/dev/null 2>&1; then
         success "Environment variable processing test passed"
@@ -148,7 +148,7 @@ test_inventory_validation() {
     cd "$PROJECT_ROOT"
 
     # Test missing inventory (should fail)
-    export ANSIBLE_INVENTORY="/nonexistent/inventory.yml"
+    export INVENTORY_FILE="/nonexistent/inventory.yml"
     export TARGET_HOSTS="cisco-switch-01"
 
     if ! bash docker-entrypoint.sh syntax-check >/dev/null 2>&1; then

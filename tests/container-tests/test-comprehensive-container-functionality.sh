@@ -69,7 +69,7 @@ run_comprehensive_container_test() {
         -v "$MOCKUP_DIR/keys:/opt/keys:ro"
         -v "$MOCKUP_DIR/firmware:/opt/firmware:ro"
         -v "$PROJECT_ROOT/ansible-content:/opt/network-upgrade/ansible-content:ro"
-        -e ANSIBLE_INVENTORY="/opt/inventory/production.yml"
+        -e INVENTORY_FILE="/opt/inventory/production.yml"
         -e ANSIBLE_CONFIG="/opt/network-upgrade/ansible-content/ansible.cfg"
     )
 
@@ -195,7 +195,7 @@ test_target_hosts_validation() {
 
     # Test TARGET_HOSTS without inventory (should fail)
     run_comprehensive_container_test "TARGET_HOSTS without inventory" "fail" "syntax-check" \
-        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml" \
+        -e INVENTORY_FILE="/nonexistent/inventory.yml" \
         -e TARGET_HOSTS="cisco-switch-01"
 
     # Test mixed valid/invalid hosts (should fail)
@@ -300,7 +300,7 @@ test_error_conditions() {
 
     # Test missing inventory
     run_comprehensive_container_test "Missing inventory" "fail" "syntax-check" \
-        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml"
+        -e INVENTORY_FILE="/nonexistent/inventory.yml"
 
     # Test invalid command
     run_comprehensive_container_test "Invalid command" "fail" "invalid-command"

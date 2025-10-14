@@ -25,7 +25,7 @@ export FORTIOS_API_TOKEN="fortios-token-12345"
 export TARGET_HOSTS="cisco-switch-01"
 export TARGET_FIRMWARE="9.3.12"
 export UPGRADE_PHASE="loading"
-export ANSIBLE_INVENTORY="$SCRIPT_DIR/mockups/inventory/production.yml"
+export INVENTORY_FILE="$SCRIPT_DIR/mockups/inventory/production.yml"
 
 section "Environment Variable Processing"
 

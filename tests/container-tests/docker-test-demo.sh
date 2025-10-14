@@ -46,7 +46,7 @@ if command -v docker &> /dev/null; then
             echo "Test 2: Basic syntax check with inventory"
             if docker run --rm \
                 -v "$SCRIPT_DIR/mockups/inventory:/opt/inventory:ro" \
-                -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
+                -e INVENTORY_FILE="/opt/inventory/production.yml" \
                 "$CONTAINER_IMAGE" syntax-check; then
                 echo -e "${GREEN}✅ Basic syntax check test passed${NC}"
             fi
@@ -56,7 +56,7 @@ if command -v docker &> /dev/null; then
             echo "Test 3: TARGET_HOSTS validation"
             if docker run --rm \
                 -v "$SCRIPT_DIR/mockups/inventory:/opt/inventory:ro" \
-                -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
+                -e INVENTORY_FILE="/opt/inventory/production.yml" \
                 -e TARGET_HOSTS="cisco-switch-01" \
                 "$CONTAINER_IMAGE" syntax-check; then
                 echo -e "${GREEN}✅ TARGET_HOSTS validation test passed${NC}"
@@ -67,7 +67,7 @@ if command -v docker &> /dev/null; then
             echo "Test 4: Invalid TARGET_HOSTS (should fail)"
             if ! docker run --rm \
                 -v "$SCRIPT_DIR/mockups/inventory:/opt/inventory:ro" \
-                -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
+                -e INVENTORY_FILE="/opt/inventory/production.yml" \
                 -e TARGET_HOSTS="nonexistent-device" \
                 "$CONTAINER_IMAGE" syntax-check 2>/dev/null; then
                 echo -e "${GREEN}✅ Invalid TARGET_HOSTS correctly rejected${NC}"
@@ -79,7 +79,7 @@ if command -v docker &> /dev/null; then
             if docker run --rm \
                 -v "$SCRIPT_DIR/mockups/inventory:/opt/inventory:ro" \
                 -v "$SCRIPT_DIR/mockups/keys:/opt/keys:ro" \
-                -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
+                -e INVENTORY_FILE="/opt/inventory/production.yml" \
                 -e TARGET_HOSTS="cisco-switch-01" \
                 -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key" \
                 -e FORTIOS_API_TOKEN="test-token" \

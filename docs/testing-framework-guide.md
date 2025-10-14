@@ -288,13 +288,13 @@ molecule test --scenario-name podman-test
 # Container testing with inventory
 docker run --rm \
   -v ./tests/mock-inventories:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY="/opt/inventory/all-platforms.yml" \
+  -e INVENTORY_FILE="/opt/inventory/all-platforms.yml" \
   ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
 # Podman rootless testing (RHEL8/9)
 podman run --rm \
   -v ./tests/mock-inventories:/opt/inventory:Z \
-  -e ANSIBLE_INVENTORY="/opt/inventory/all-platforms.yml" \
+  -e INVENTORY_FILE="/opt/inventory/all-platforms.yml" \
   ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 ```
 

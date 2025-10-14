@@ -169,11 +169,11 @@ test_error_conditions() {
 
     # Test missing inventory file
     run_container_test "Missing inventory file" "fail" \
-        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml"
+        -e INVENTORY_FILE="/nonexistent/inventory.yml"
 
     # Test TARGET_HOSTS without inventory (critical new test)
     run_container_test "TARGET_HOSTS without inventory" "fail" \
-        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml" \
+        -e INVENTORY_FILE="/nonexistent/inventory.yml" \
         -e TARGET_HOSTS="cisco-switch-01"
 
     # Test invalid TARGET_HOSTS

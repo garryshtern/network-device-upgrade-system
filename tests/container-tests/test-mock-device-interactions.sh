@@ -63,7 +63,7 @@ run_mock_device_test() {
         -v "$MOCKUP_DIR/inventory:/opt/inventory:ro"
         -v "$MOCKUP_DIR/keys:/opt/keys:ro"
         -v "$MOCKUP_DIR/firmware:/opt/firmware:ro"
-        -e ANSIBLE_INVENTORY="/opt/inventory/production.yml"
+        -e INVENTORY_FILE="/opt/inventory/production.yml"
         -e TARGET_HOSTS="$device_host"
     )
 

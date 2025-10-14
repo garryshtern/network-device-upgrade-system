@@ -107,7 +107,8 @@ COMMANDS:
 ENVIRONMENT VARIABLES:
     # Core Ansible Configuration
     ANSIBLE_PLAYBOOK   Playbook to execute (default: ${DEFAULT_PLAYBOOK})
-    ANSIBLE_INVENTORY  Inventory file (default: ${DEFAULT_INVENTORY})
+    INVENTORY_FILE     Inventory file path (default: ${DEFAULT_INVENTORY})
+                       Note: Use INVENTORY_FILE (not ANSIBLE_INVENTORY) to avoid conflicts
     ANSIBLE_CONFIG     Path to ansible.cfg file
     ANSIBLE_VAULT_PASSWORD_FILE  Path to vault password file
 
@@ -204,14 +205,14 @@ EXAMPLES:
     # Run with custom inventory
     docker run --rm \\
       -v /path/to/inventory:/opt/inventory:ro \\
-      -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \\
+      -e INVENTORY_FILE=/opt/inventory/production.yml \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # Production deployment with all authentication methods
     docker run --rm \\
       -v /opt/secrets/ssh-keys:/keys:ro \\
       -v /opt/inventory:/opt/inventory:ro \\
-      -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \\
+      -e INVENTORY_FILE=/opt/inventory/production.yml \\
       -e TARGET_HOSTS=cisco-datacenter-switches \\
       -e TARGET_FIRMWARE=9.3.12 \\
       -e UPGRADE_PHASE=loading \\
@@ -243,7 +244,7 @@ PODMAN COMPATIBILITY (RHEL8/9):
     # Mount external inventory with podman (SELinux compatible)
     podman run --rm \\
       -v ./inventory:/opt/inventory:ro,Z \\
-      -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \\
+      -e INVENTORY_FILE=/opt/inventory/hosts.yml \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # SSH keys with podman (SELinux context)
@@ -510,7 +511,11 @@ build_ansible_options() {
 execute_ansible_playbook() {
     local mode="$1"  # "syntax-check", "dry-run", or "run"
     local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
-    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
+
+    # Use INVENTORY_FILE (custom variable) instead of ANSIBLE_INVENTORY (built-in)
+    # to avoid conflicts with Ansible's built-in variable handling
+    local user_inventory="${INVENTORY_FILE:-$DEFAULT_INVENTORY}"
+    local ansible_inventory="ansible-content/inventory/hosts.yml"
 
     # Mode-specific logging
     case "$mode" in
@@ -525,43 +530,45 @@ execute_ansible_playbook() {
             log "Running playbook: $playbook"
             ;;
     esac
-    log "Using inventory: $inventory"
 
-    # Validate inventory exists
-    if [[ ! -f "$inventory" ]]; then
-        error "Inventory file not found: $inventory"
+    # Validate user inventory exists
+    if [[ ! -f "$user_inventory" ]]; then
+        error "Inventory file not found: $user_inventory"
         error "Make sure to mount your inventory file to the container"
         error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
+        error "Then specify it with: -e INVENTORY_FILE=/opt/inventory/hosts.yml"
         exit 1
     fi
 
-    # Ensure group_vars are accessible from custom inventory location
-    # Create symlink from inventory directory to ansible-content group_vars
-    local inventory_dir
-    inventory_dir=$(dirname "$inventory")
-    local source_group_vars="$(pwd)/ansible-content/inventory/group_vars"
-    local target_group_vars="${inventory_dir}/group_vars"
+    # Create symlink from ansible-content/inventory/hosts.yml to user's inventory
+    # This allows Ansible to naturally discover group_vars/all.yml in the same directory
+    if [[ "$user_inventory" != "$ansible_inventory" ]]; then
+        log "Creating inventory symlink for custom inventory file"
+        log "  User inventory: ${user_inventory}"
+        log "  Ansible inventory: ${ansible_inventory}"
 
-    if [[ "$inventory_dir" != "ansible-content/inventory" ]] && [[ ! -e "$target_group_vars" ]]; then
-        log "Creating group_vars symlink for custom inventory location"
-        log "  Source: ${source_group_vars}"
-        log "  Target: ${target_group_vars}"
-
-        # Ensure inventory directory exists
-        mkdir -p "$inventory_dir" 2>/dev/null || true
+        # Remove existing symlink/file if it exists
+        rm -f "$ansible_inventory" 2>/dev/null || true
 
         # Create symlink with absolute path
-        if ln -sf "$source_group_vars" "$target_group_vars" 2>/dev/null; then
+        local user_inventory_abs
+        user_inventory_abs=$(readlink -f "$user_inventory" 2>/dev/null || realpath "$user_inventory" 2>/dev/null || echo "$user_inventory")
+
+        if ln -sf "$user_inventory_abs" "$ansible_inventory" 2>/dev/null; then
             log "  Symlink created successfully"
             # Verify it's readable
-            if [[ -d "$target_group_vars" ]]; then
-                log "  Verified: group_vars accessible at $target_group_vars"
+            if [[ -f "$ansible_inventory" ]]; then
+                log "  Verified: inventory accessible at $ansible_inventory"
+                log "  group_vars/all.yml will be automatically discovered"
             else
-                warn "  Warning: Symlink created but directory not accessible"
+                warn "  Warning: Symlink created but file not accessible"
             fi
         else
-            warn "  Warning: Failed to create symlink"
+            error "Failed to create inventory symlink"
+            exit 1
         fi
+    else
+        log "Using inventory: $ansible_inventory"
     fi
 
     # Build authentication and configuration
@@ -590,15 +597,12 @@ execute_ansible_playbook() {
     fi
 
     # Execute ansible-playbook with mode-specific flags
-    # Always load group_vars/all.yml to ensure defaults are available
-    local group_vars_file="ansible-content/inventory/group_vars/all.yml"
-
+    # Using ansible-content/inventory as inventory directory ensures group_vars/all.yml is discovered
     case "$mode" in
         syntax-check)
             ansible-playbook \
                 --syntax-check \
-                -i "$inventory" \
-                -e "@${group_vars_file}" \
+                -i "$ansible_inventory" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
@@ -607,8 +611,7 @@ execute_ansible_playbook() {
         dry-run)
             ansible-playbook \
                 --check --diff \
-                -i "$inventory" \
-                -e "@${group_vars_file}" \
+                -i "$ansible_inventory" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
@@ -616,8 +619,7 @@ execute_ansible_playbook() {
             ;;
         run)
             ansible-playbook \
-                -i "$inventory" \
-                -e "@${group_vars_file}" \
+                -i "$ansible_inventory" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
@@ -665,7 +667,7 @@ start_shell() {
 
 # Validate TARGET_HOSTS against inventory
 validate_target_hosts() {
-    local inventory="${ANSIBLE_INVENTORY:-$DEFAULT_INVENTORY}"
+    local inventory="${INVENTORY_FILE:-$DEFAULT_INVENTORY}"
     local target_hosts="${TARGET_HOSTS:-}"
 
     # If no TARGET_HOSTS specified, validation passes
@@ -683,7 +685,7 @@ validate_target_hosts() {
         error "TARGET_HOSTS specified but inventory file not found: $inventory"
         error "When using TARGET_HOSTS, you MUST mount an inventory file."
         error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
-        error "         -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml"
+        error "         -e INVENTORY_FILE=/opt/inventory/hosts.yml"
         return 1
     fi
 

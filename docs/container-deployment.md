@@ -114,12 +114,12 @@ The container supports extensive configuration through environment variables:
 
 ### Core Ansible Configuration
 - `ANSIBLE_PLAYBOOK` - Playbook to execute (default: main-upgrade-workflow.yml)
-- `ANSIBLE_INVENTORY` - Inventory file (default: hosts.yml) - **MANDATORY when using TARGET_HOSTS**
+- `INVENTORY_FILE` - Inventory file (default: hosts.yml) - **MANDATORY when using TARGET_HOSTS**
 - `ANSIBLE_CONFIG` - Path to ansible.cfg file
 - `ANSIBLE_VAULT_PASSWORD_FILE` - Path to vault password file
 
 ### Upgrade Configuration
-- `TARGET_HOSTS` - Hosts to target (default: all) - **Requires ANSIBLE_INVENTORY to be mounted**
+- `TARGET_HOSTS` - Hosts to target (default: all) - **Requires INVENTORY_FILE to be mounted**
 - `TARGET_FIRMWARE` - Firmware version to install
 - `UPGRADE_PHASE` - Phase: full, loading, installation, validation, rollback
 - `MAINTENANCE_WINDOW` - Set to 'true' for installation phase
@@ -184,14 +184,14 @@ All this information comes from the inventory file and its associated group_vars
 # ✅ CORRECT: Mount inventory directory and specify full path
 docker run --rm \
   -v /path/to/your/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_HOSTS=cisco-switch-01 \
   ghcr.io/garryshtern/network-device-upgrade-system:latest syntax-check
 
 # ✅ CORRECT: Mount single inventory file directly
 docker run --rm \
   -v /path/to/hosts.yml:/opt/inventory/hosts.yml:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_HOSTS=cisco-switch-01 \
   ghcr.io/garryshtern/network-device-upgrade-system:latest syntax-check
 ```
@@ -202,13 +202,13 @@ docker run --rm \
 # ❌ WRONG: Mounting to container root - Ansible won't find files
 docker run --rm \
   -v /path/to/inventory:/inventory:ro \
-  -e ANSIBLE_INVENTORY=/inventory/hosts.yml \
+  -e INVENTORY_FILE=/inventory/hosts.yml \
   -e TARGET_HOSTS=cisco-switch-01 \
   ghcr.io/garryshtern/network-device-upgrade-system:latest syntax-check
 
 # ❌ WRONG: Using default path without mounting
 docker run --rm \
-  -e ANSIBLE_INVENTORY=hosts.yml \
+  -e INVENTORY_FILE=hosts.yml \
   -e TARGET_HOSTS=cisco-switch-01 \
   ghcr.io/garryshtern/network-device-upgrade-system:latest syntax-check
 
@@ -225,7 +225,7 @@ docker run --rm \
 # For systems with SELinux enabled (RHEL8/9)
 podman run --rm \
   -v /path/to/inventory:/opt/inventory:ro,Z \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_HOSTS=cisco-switch-01 \
   ghcr.io/garryshtern/network-device-upgrade-system:latest syntax-check
 ```
@@ -252,7 +252,7 @@ docker run --rm \
   -v ~/.ssh/id_rsa_opengear:/keys/opengear-key:ro \
   -v ~/.ssh/id_rsa_metamako:/keys/metamako-key:ro \
   -v /path/to/your/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
   -e OPENGEAR_SSH_KEY=/keys/opengear-key \
   -e METAMAKO_SSH_KEY=/keys/metamako-key \
@@ -264,7 +264,7 @@ podman run --rm \
   -v ~/.ssh/id_rsa_cisco:/keys/cisco-key:ro,Z \
   -v ~/.ssh/id_rsa_opengear:/keys/opengear-key:ro,Z \
   -v /path/to/your/inventory:/opt/inventory:ro,Z \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
   -e OPENGEAR_SSH_KEY=/keys/opengear-key \
   -e TARGET_HOSTS=opengear-console-01 \
@@ -278,7 +278,7 @@ podman run --rm \
 docker run --rm \
   -v ~/.ssh:/keys:ro \
   -v /path/to/your/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e CISCO_NXOS_SSH_KEY=/keys/id_rsa_cisco \
   -e CISCO_IOSXE_SSH_KEY=/keys/id_rsa_iosxe \
   -e OPENGEAR_SSH_KEY=/keys/id_rsa_opengear \
@@ -304,7 +304,7 @@ docker run --rm \
   --mount type=bind,source=/run/secrets/cisco-ssh-key,target=/keys/cisco-key,readonly \
   --mount type=bind,source=/run/secrets/opengear-ssh-key,target=/keys/opengear-key,readonly \
   --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
   -e OPENGEAR_SSH_KEY=/keys/opengear-key \
   -e TARGET_HOSTS=production-devices \
@@ -319,7 +319,7 @@ docker run --rm \
 # Read tokens from files (secure)
 docker run --rm \
   -v /path/to/your/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e FORTIOS_API_TOKEN="$(cat ~/.secrets/fortios-token)" \
   -e OPENGEAR_API_TOKEN="$(cat ~/.secrets/opengear-token)" \
   -e TARGET_HOSTS=fortinet-firewall-01,opengear-console-01 \
@@ -334,7 +334,7 @@ docker run --rm \
   --mount type=bind,source=/run/secrets/fortios-api-token,target=/tmp/fortios-token,readonly \
   --mount type=bind,source=/run/secrets/opengear-api-token,target=/tmp/opengear-token,readonly \
   --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e FORTIOS_API_TOKEN="$(cat /tmp/fortios-token)" \
   -e OPENGEAR_API_TOKEN="$(cat /tmp/opengear-token)" \
   -e TARGET_HOSTS=fortinet-firewalls,opengear-consoles \
@@ -350,7 +350,7 @@ docker run --rm \
   --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
   --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
   --mount type=bind,source=/opt/firmware,target=/opt/firmware,readonly \
-  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e INVENTORY_FILE=/opt/inventory/production.yml \
   -e TARGET_HOSTS=cisco-datacenter-switches \
   -e TARGET_FIRMWARE=9.3.12 \
   -e UPGRADE_PHASE=loading \
@@ -412,13 +412,13 @@ docker run --rm network-upgrade-system syntax-check
 # Dry run with custom inventory
 docker run --rm \
   -v ./inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/staging.yml \
+  -e INVENTORY_FILE=/opt/inventory/staging.yml \
   network-upgrade-system dry-run
 
 # Enable debug output with verbose display
 docker run --rm \
   -v ./inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e SHOW_DEBUG=true \
   -e TARGET_HOSTS=cisco-switch-01 \
   network-upgrade-system dry-run
@@ -480,7 +480,7 @@ docker run --rm \
   --name fortios-upgrade \
   --mount type=bind,source=/opt/secrets,target=/secrets,readonly \
   --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
-  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e INVENTORY_FILE=/opt/inventory/production.yml \
   -e TARGET_HOSTS=fortinet-datacenter-firewalls \
   -e TARGET_FIRMWARE=7.2.5 \
   -e MULTI_STEP_UPGRADE_REQUIRED=true \
@@ -562,7 +562,7 @@ The container expects firmware images to be organized by platform in the followi
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=cisco-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
@@ -578,7 +578,7 @@ docker run --rm \
   -v /opt/firmware/fortinet:/var/lib/network-upgrade/firmware/fortios:ro \
   -v /opt/firmware/opengear:/var/lib/network-upgrade/firmware/opengear:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=cisco-datacenter-switches \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
@@ -594,7 +594,7 @@ docker run --rm \
   -v /opt/network-upgrade/backups:/var/lib/network-upgrade/backups \
   -v /opt/network-upgrade/logs:/var/log/network-upgrade \
   -v /opt/secrets/ssh-keys:/keys:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e INVENTORY_FILE=/opt/inventory/production.yml \
   -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=datacenter-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \
@@ -610,7 +610,7 @@ docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=nexus-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
@@ -622,7 +622,7 @@ podman run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
   -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro,Z \
   -v /opt/inventory:/opt/inventory:ro,Z \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=nexus-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
@@ -637,7 +637,7 @@ docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/cisco_iosxe_key:/keys/cisco-key:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=cat9k_iosxe.17.09.04a.SPA.bin \
   -e TARGET_HOSTS=catalyst-switches \
   -e CISCO_IOSXE_SSH_KEY=/keys/cisco-key \
@@ -649,7 +649,7 @@ podman run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
   -v ~/.ssh/cisco_iosxe_key:/keys/cisco-key:ro,Z \
   -v /opt/inventory:/opt/inventory:ro,Z \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=cat9k_iosxe.17.09.04a.SPA.bin \
   -e TARGET_HOSTS=catalyst-switches \
   -e CISCO_IOSXE_SSH_KEY=/keys/cisco-key \
@@ -663,7 +663,7 @@ podman run --rm \
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out \
   -e TARGET_HOSTS=fortinet-firewalls \
   -e FORTIOS_API_TOKEN="$(cat ~/.secrets/fortios-token)" \
@@ -682,7 +682,7 @@ docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/opengear_key:/keys/opengear-key:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=cm71xx-5.2.4.flash \
   -e TARGET_HOSTS=console-servers-legacy \
   -e OPENGEAR_SSH_KEY=/keys/opengear-key \
@@ -694,7 +694,7 @@ podman run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
   -v ~/.ssh/opengear_key:/keys/opengear-key:ro,Z \
   -v /opt/inventory:/opt/inventory:ro,Z \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=cm71xx-5.2.4.flash \
   -e TARGET_HOSTS=console-servers-legacy \
   -e OPENGEAR_SSH_KEY=/keys/opengear-key \
@@ -709,7 +709,7 @@ docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/opengear_key:/keys/opengear-key:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=console_manager-25.07.0-production-signed.raucb \
   -e TARGET_HOSTS=console-servers-modern \
   -e OPENGEAR_SSH_KEY=/keys/opengear-key \
@@ -721,7 +721,7 @@ podman run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
   -v ~/.ssh/opengear_key:/keys/opengear-key:ro,Z \
   -v /opt/inventory:/opt/inventory:ro,Z \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=console_manager-25.07.0-production-signed.raucb \
   -e TARGET_HOSTS=console-servers-modern \
   -e OPENGEAR_SSH_KEY=/keys/opengear-key \
@@ -739,7 +739,7 @@ docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/metamako_key:/keys/metamako-key:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=mos-0.39.9.iso \
   -e TARGET_HOSTS=metamako-devices \
   -e METAMAKO_SSH_KEY=/keys/metamako-key \
@@ -754,7 +754,7 @@ podman run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
   -v ~/.ssh/metamako_key:/keys/metamako-key:ro,Z \
   -v /opt/inventory:/opt/inventory:ro,Z \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=mos-0.39.9.iso \
   -e TARGET_HOSTS=metamako-devices \
   -e METAMAKO_SSH_KEY=/keys/metamako-key \
@@ -822,7 +822,7 @@ The system automatically detects device models and selects the appropriate firmw
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=9.3.12 \
   -e TARGET_HOSTS=cisco-switches \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
@@ -834,7 +834,7 @@ docker run --rm \
 docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_HOSTS=mixed-cisco-devices \
   -e PLATFORM_FIRMWARE='{
     "cisco_nxos": {
@@ -901,7 +901,7 @@ docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=10.4.5.M \
   -e TARGET_EPLD_IMAGE=n9000-epld.9.3.16.img \
   -e TARGET_HOSTS=nexus-9000-switches \
@@ -920,7 +920,7 @@ docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_EPLD_IMAGE=n9000-epld.9.3.16.img \
   -e TARGET_HOSTS=nexus-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
@@ -946,7 +946,7 @@ docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=nexus-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
@@ -962,7 +962,7 @@ docker run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro \
   -v ~/.ssh/cisco_nxos_key:/keys/cisco-key:ro \
   -v /opt/inventory:/opt/inventory:ro \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=nxos.10.1.2.bin \
   -e TARGET_HOSTS=nexus-core-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
@@ -987,7 +987,7 @@ docker run --rm \
   --mount type=bind,source=/opt/backups,target=/var/lib/network-upgrade/backups \
   --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
   --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
-  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e INVENTORY_FILE=/opt/inventory/production.yml \
   -e TARGET_HOSTS=datacenter-nexus-switches \
   -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e UPGRADE_PHASE=full \
@@ -1008,7 +1008,7 @@ docker run --rm \
   --mount type=bind,source=/opt/firmware,target=/var/lib/network-upgrade/firmware,readonly \
   --mount type=bind,source=/opt/secrets,target=/secrets,readonly \
   --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
-  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e INVENTORY_FILE=/opt/inventory/production.yml \
   -e TARGET_HOSTS=fortinet-datacenter-firewalls \
   -e TARGET_FIRMWARE=7.2.5 \
   -e MULTI_STEP_UPGRADE_REQUIRED=true \
@@ -1073,7 +1073,7 @@ docker run --rm \
   --mount type=bind,source=/opt/firmware,target=/var/lib/network-upgrade/firmware,readonly \
   --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
   --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
-  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e INVENTORY_FILE=/opt/inventory/production.yml \
   -e TARGET_HOSTS=mixed-platform-devices \
   -e PLATFORM_FIRMWARE='{
     "cisco_nxos": {
@@ -1115,7 +1115,7 @@ docker run --rm \
   --mount type=bind,source=/opt/secrets/ssh-keys,target=/keys,readonly \
   --mount type=bind,source=/opt/secrets,target=/secrets,readonly \
   --mount type=bind,source=/opt/inventory,target=/opt/inventory,readonly \
-  -e ANSIBLE_INVENTORY=/opt/inventory/production.yml \
+  -e INVENTORY_FILE=/opt/inventory/production.yml \
   -e TARGET_HOSTS=all-network-devices \
   -e TARGET_FIRMWARE=auto-detect \
   -e UPGRADE_PHASE=loading \
@@ -1140,7 +1140,7 @@ podman run --rm \
   -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
   -v /opt/secrets/ssh-keys:/keys:ro,Z \
   -v /opt/inventory:/opt/inventory:ro,Z \
-  -e ANSIBLE_INVENTORY=/opt/inventory/hosts.yml \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
   -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
   -e TARGET_HOSTS=cisco-switches \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
