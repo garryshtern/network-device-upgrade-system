@@ -5,8 +5,7 @@
 dependency:
   name: galaxy
   options:
-    requirements-file: >
-      ../../../../../ansible-content/collections/requirements.yml
+    requirements-file: ${PWD}/ansible-content/collections/requirements.yml
 
 driver:
   name: docker
