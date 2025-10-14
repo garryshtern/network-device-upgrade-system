@@ -530,11 +530,9 @@ execute_ansible_playbook() {
             ;;
     esac
 
-    # If user provided INVENTORY_FILE, copy it to hosts.yml
-    # We MUST copy (not symlink) because Ansible follows symlinks and looks for
-    # group_vars in the target file's directory, not the symlink's directory
+    # If user provided INVENTORY_FILE, symlink it to hosts.yml
     if [[ -n "${INVENTORY_FILE:-}" ]]; then
-        log "Copying custom inventory to ansible-content/inventory/"
+        log "Creating symlink for custom inventory"
         log "  Source: ${INVENTORY_FILE}"
         log "  Target: ${ansible_inventory}"
 
@@ -547,12 +545,14 @@ execute_ansible_playbook() {
             exit 1
         fi
 
-        # Copy the inventory file (overwrite if exists)
-        if cp -f "${INVENTORY_FILE}" "${ansible_inventory}" 2>/dev/null; then
-            log "  Inventory copied successfully"
-            log "  group_vars/all.yml will be discovered in same directory"
+        # Remove existing symlink/file if it exists
+        rm -f "${ansible_inventory}" 2>/dev/null || true
+
+        # Create symlink
+        if ln -sf "${INVENTORY_FILE}" "${ansible_inventory}" 2>/dev/null; then
+            log "  Symlink created successfully"
         else
-            error "Failed to copy inventory file"
+            error "Failed to create inventory symlink"
             exit 1
         fi
     else
