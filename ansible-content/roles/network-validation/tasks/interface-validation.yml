@@ -54,8 +54,7 @@
         interface_errors: >-
           {{
             nxos_interface_errors.stdout[0] if (nxos_interface_errors.stdout[0] is mapping) else
-            (nxos_interface_errors.stdout[0] | from_json) if (nxos_interface_errors.stdout[0] is string) else
-            {}
+            (nxos_interface_errors.stdout[0] | from_json)
           }}
 
     - name: Parse interface states from facts
