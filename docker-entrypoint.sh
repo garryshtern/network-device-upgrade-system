@@ -512,10 +512,8 @@ execute_ansible_playbook() {
     local mode="$1"  # "syntax-check", "dry-run", or "run"
     local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
 
-    # Use INVENTORY_FILE (custom variable) instead of ANSIBLE_INVENTORY (built-in)
-    # to avoid conflicts with Ansible's built-in variable handling
-    local user_inventory="${INVENTORY_FILE:-$DEFAULT_INVENTORY}"
-    local ansible_inventory_dir="ansible-content/inventory"
+    # Always use ansible-content/inventory directory for group_vars discovery
+    local ansible_inventory="ansible-content/inventory"
 
     # Mode-specific logging
     case "$mode" in
@@ -531,34 +529,33 @@ execute_ansible_playbook() {
             ;;
     esac
 
-    # Validate user inventory exists
-    if [[ ! -f "$user_inventory" ]]; then
-        error "Inventory file not found: $user_inventory"
-        error "Make sure to mount your inventory file to the container"
-        error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
-        error "Then specify it with: -e INVENTORY_FILE=/opt/inventory/hosts.yml"
-        exit 1
-    fi
+    # If user provided INVENTORY_FILE, symlink it to hosts.yml
+    if [[ -n "${INVENTORY_FILE:-}" ]]; then
+        log "Creating symlink for custom inventory"
+        log "  Source: ${INVENTORY_FILE}"
+        log "  Target: ${ansible_inventory}/hosts.yml"
 
-    # Copy user's inventory file into ansible-content/inventory/ temporarily
-    # This allows Ansible to discover group_vars/all.yml in the same directory
-    # We use copy instead of symlink because Ansible follows symlinks and looks
-    # for group_vars in the target location, not the symlink location
-    if [[ "$user_inventory" != "${ansible_inventory_dir}/hosts.yml" ]]; then
-        log "Copying user inventory to ansible-content/inventory/"
-        log "  Source: ${user_inventory}"
-        log "  Target: ${ansible_inventory_dir}/hosts.yml"
+        # Validate user inventory exists
+        if [[ ! -f "${INVENTORY_FILE}" ]]; then
+            error "Inventory file not found: ${INVENTORY_FILE}"
+            error "Make sure to mount your inventory file to the container"
+            error "Example: -v /path/to/inventory.yml:/opt/inventory/hosts.yml:ro"
+            error "Then specify it with: -e INVENTORY_FILE=/opt/inventory/hosts.yml"
+            exit 1
+        fi
 
-        # Copy the user's inventory file
-        if cp "$user_inventory" "${ansible_inventory_dir}/hosts.yml" 2>/dev/null; then
-            log "  Inventory copied successfully"
-            log "  group_vars/all.yml will be automatically discovered"
+        # Remove existing symlink/file if it exists
+        rm -f "${ansible_inventory}/hosts.yml" 2>/dev/null || true
+
+        # Create symlink
+        if ln -sf "${INVENTORY_FILE}" "${ansible_inventory}/hosts.yml" 2>/dev/null; then
+            log "  Symlink created successfully"
         else
-            error "Failed to copy inventory file"
+            error "Failed to create inventory symlink"
             exit 1
         fi
     else
-        log "Using default inventory: ${ansible_inventory_dir}/hosts.yml"
+        log "Using default inventory: ${ansible_inventory}/hosts.yml"
     fi
 
     # Build authentication and configuration
@@ -592,7 +589,7 @@ execute_ansible_playbook() {
         syntax-check)
             ansible-playbook \
                 --syntax-check \
-                -i "$ansible_inventory_dir" \
+                -i "$ansible_inventory" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
@@ -601,7 +598,7 @@ execute_ansible_playbook() {
         dry-run)
             ansible-playbook \
                 --check --diff \
-                -i "$ansible_inventory_dir" \
+                -i "$ansible_inventory" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
@@ -609,7 +606,7 @@ execute_ansible_playbook() {
             ;;
         run)
             ansible-playbook \
-                -i "$ansible_inventory_dir" \
+                -i "$ansible_inventory" \
                 ${ansible_opts} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
