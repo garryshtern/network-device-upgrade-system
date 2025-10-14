@@ -1,0 +1,38 @@
+---
+# Comprehensive NX-OS Facts Debug
+# Gathers ALL available facts and network resources for deep troubleshooting
+# Only executes when show_debug=true to avoid performance impact
+
+- name: Gather comprehensive NX-OS facts (all resources and subsets)
+  cisco.nxos.nxos_facts:
+    gather_subset: all
+    gather_network_resources: all
+  register: comprehensive_facts
+  when:
+    - show_debug
+    - ansible_network_os is defined
+    - platform == 'nxos'
+    - not ansible_check_mode
+  failed_when: false
+
+- name: Debug comprehensive NX-OS facts
+  ansible.builtin.debug:
+    msg:
+      - "=== Comprehensive NX-OS Facts Debug ==="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "Gather succeeded: {{ comprehensive_facts is succeeded }}"
+      - ""
+      - "=== ansible_facts ==="
+      - "{{ ansible_facts | to_nice_json }}"
+      - ""
+      - "=== ansible_net_resources (ALL) ==="
+      - "{{ ansible_net_resources | to_nice_json }}"
+      - ""
+      - "=== Available Network Resources ==="
+      - "{{ ansible_net_resources.keys() | list }}"
+  when:
+    - show_debug
+    - comprehensive_facts is defined
+    - comprehensive_facts is succeeded
+    - not ansible_check_mode
