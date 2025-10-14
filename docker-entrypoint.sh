@@ -457,16 +457,10 @@ build_ansible_options() {
     fi
 
     # Debug configuration
-    if [[ -n "${SHOW_DEBUG:-}" ]]; then
-        # Convert to boolean (true/false without quotes for Ansible)
-        local show_debug_bool
-        if [[ "${SHOW_DEBUG,,}" == "true" ]]; then
-            show_debug_bool="true"
-        else
-            show_debug_bool="false"
-        fi
-        extra_vars="$extra_vars show_debug=${show_debug_bool}"
-        log "Debug mode enabled: show_debug=${show_debug_bool}"
+    # Only override if explicitly set to true (group_vars/all.yml has default: false)
+    if [[ "${SHOW_DEBUG,,}" == "true" ]]; then
+        extra_vars="$extra_vars show_debug=true"
+        log "Debug mode enabled: show_debug=true"
     fi
 
     # Base path and derived paths
