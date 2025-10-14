@@ -129,7 +129,7 @@ ENVIRONMENT VARIABLES:
 
     # Debug Configuration
     SHOW_DEBUG               Enable verbose debug output (true/false, default: false)
-                            Also enables ANSIBLE_DISPLAY_OK_HOSTS and ANSIBLE_DISPLAY_SKIPPED_HOSTS
+                            Also enables ANSIBLE_DISPLAY_SKIPPED_HOSTS
 
     # SSH Key Authentication (Preferred)
     CISCO_NXOS_SSH_KEY          SSH private key for Cisco NX-OS devices
@@ -460,9 +460,8 @@ build_ansible_options() {
         extra_vars="$extra_vars show_debug=${SHOW_DEBUG}"
         # Enable Ansible display settings when debug is enabled
         if [[ "${SHOW_DEBUG,,}" == "true" ]]; then
-            export ANSIBLE_DISPLAY_OK_HOSTS=true
             export ANSIBLE_DISPLAY_SKIPPED_HOSTS=true
-            log "Debug mode enabled: show_debug=true, ANSIBLE_DISPLAY_OK_HOSTS=true, ANSIBLE_DISPLAY_SKIPPED_HOSTS=true"
+            log "Debug mode enabled: show_debug=true, ANSIBLE_DISPLAY_SKIPPED_HOSTS=true"
         fi
     fi
 

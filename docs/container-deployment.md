@@ -155,7 +155,7 @@ The container supports extensive configuration through environment variables:
 
 ### Debug Configuration
 - `SHOW_DEBUG` - Enable verbose debug output (true/false, default: false)
-  - When enabled, also sets `ANSIBLE_DISPLAY_OK_HOSTS=true` and `ANSIBLE_DISPLAY_SKIPPED_HOSTS=true`
+  - When enabled, also sets `ANSIBLE_DISPLAY_SKIPPED_HOSTS=true`
   - Provides comprehensive device facts dumps and detailed execution information
   - Example: `-e SHOW_DEBUG=true`
 
