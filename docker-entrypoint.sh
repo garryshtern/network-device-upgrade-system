@@ -512,8 +512,9 @@ execute_ansible_playbook() {
     local mode="$1"  # "syntax-check", "dry-run", or "run"
     local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
 
-    # Always use ansible-content/inventory directory for group_vars discovery
-    local ansible_inventory="ansible-content/inventory"
+    # Always use ansible-content/inventory/hosts.yml for group_vars discovery
+    # group_vars must be in same directory as inventory file
+    local ansible_inventory="ansible-content/inventory/hosts.yml"
 
     # Mode-specific logging
     case "$mode" in
@@ -533,7 +534,7 @@ execute_ansible_playbook() {
     if [[ -n "${INVENTORY_FILE:-}" ]]; then
         log "Creating symlink for custom inventory"
         log "  Source: ${INVENTORY_FILE}"
-        log "  Target: ${ansible_inventory}/hosts.yml"
+        log "  Target: ${ansible_inventory}"
 
         # Validate user inventory exists
         if [[ ! -f "${INVENTORY_FILE}" ]]; then
@@ -545,17 +546,17 @@ execute_ansible_playbook() {
         fi
 
         # Remove existing symlink/file if it exists
-        rm -f "${ansible_inventory}/hosts.yml" 2>/dev/null || true
+        rm -f "${ansible_inventory}" 2>/dev/null || true
 
         # Create symlink
-        if ln -sf "${INVENTORY_FILE}" "${ansible_inventory}/hosts.yml" 2>/dev/null; then
+        if ln -sf "${INVENTORY_FILE}" "${ansible_inventory}" 2>/dev/null; then
             log "  Symlink created successfully"
         else
             error "Failed to create inventory symlink"
             exit 1
         fi
     else
-        log "Using default inventory: ${ansible_inventory}/hosts.yml"
+        log "Using default inventory: ${ansible_inventory}"
     fi
 
     # Build authentication and configuration
@@ -584,7 +585,8 @@ execute_ansible_playbook() {
     fi
 
     # Execute ansible-playbook with mode-specific flags
-    # Using ansible-content/inventory as inventory directory ensures group_vars/all.yml is discovered
+    # Using ansible-content/inventory/hosts.yml ensures group_vars/all.yml is discovered
+    # group_vars must be in same directory as inventory file for Ansible to find it
     case "$mode" in
         syntax-check)
             ansible-playbook \
