@@ -50,8 +50,13 @@
   block:
     - name: Extract NX-OS interface data from facts
       ansible.builtin.set_fact:
-        all_interfaces: "{{ ansible_net_resources.interfaces  }}"
-        interface_errors: "{{ nxos_interface_errors.stdout[0] | from_json }}"
+        all_interfaces: "{{ ansible_net_resources.interfaces }}"
+        interface_errors: >-
+          {{
+            nxos_interface_errors.stdout[0] if (nxos_interface_errors.stdout[0] is mapping) else
+            (nxos_interface_errors.stdout[0] | from_json) if (nxos_interface_errors.stdout[0] is string) else
+            {}
+          }}
 
     - name: Parse interface states from facts
       ansible.builtin.set_fact:
