@@ -10,6 +10,7 @@
     workflow_scenarios:
       - name: "NX-OS ISSU Capable Path"
         device_vars:
+          platform: "nxos"
           issu_capable: true
           firmware_version: "9.3.10"
           target_version: "10.1.2"
@@ -17,6 +18,7 @@
 
       - name: "NX-OS Non-ISSU Path"
         device_vars:
+          platform: "nxos"
           issu_capable: false
           firmware_version: "9.2.4"
           target_version: "10.1.2"
@@ -24,6 +26,7 @@
 
       - name: "IOS-XE Install Mode Path"
         device_vars:
+          platform: "ios"
           install_mode: true
           firmware_version: "16.12.07"
           target_version: "17.06.04"
@@ -31,6 +34,7 @@
 
       - name: "IOS-XE Bundle Mode Path"
         device_vars:
+          platform: "ios"
           install_mode: false
           firmware_version: "16.12.07"
           target_version: "17.06.04"
@@ -38,6 +42,7 @@
 
       - name: "FortiOS HA Primary Path"
         device_vars:
+          platform: "fortios"
           ha_enabled: true
           ha_role: "primary"
           firmware_version: "7.0.8"
@@ -46,6 +51,7 @@
 
       - name: "FortiOS HA Secondary Path"
         device_vars:
+          platform: "fortios"
           ha_enabled: true
           ha_role: "secondary"
           firmware_version: "7.0.8"
@@ -54,6 +60,7 @@
 
       - name: "Skip Validation Path"
         device_vars:
+          platform: "nxos"
           skip_validation: true
           firmware_version: "9.3.10"
           target_version: "10.1.2"

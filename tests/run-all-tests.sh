@@ -55,10 +55,16 @@ run_syntax_checks() {
     echo -e "${YELLOW}Running Ansible syntax checks...${NC}"
     local failed=0
     
-    # Check all playbooks
+    # Check all playbooks with required runtime variables
     for playbook in "$ANSIBLE_CONTENT_DIR/playbooks"/*.yml; do
         if [ -f "$playbook" ]; then
-            if ansible-playbook --syntax-check "$playbook" >/dev/null 2>&1; then
+            if ansible-playbook --syntax-check "$playbook" \
+                -e "target_hosts=localhost" \
+                -e "upgrade_phase=validation" \
+                -e "target_firmware=test.bin" \
+                -e "max_concurrent=1" \
+                -e "platform_firmware=test.bin" \
+                >/dev/null 2>&1; then
                 echo -e "${GREEN}✓ $(basename "$playbook")${NC}"
             else
                 echo -e "${RED}✗ $(basename "$playbook")${NC}"
