@@ -21,6 +21,19 @@
           - l3_interfaces
       register: nxos_interface_facts
 
+    - name: Debug interface facts gathered from device
+      ansible.builtin.debug:
+        msg:
+          - "=== NX-OS Facts Debug (Interfaces) ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ platform }}"
+          - "Gather succeeded: {{ nxos_interface_facts is succeeded }}"
+          - "ansible_net_resources defined: {{ ansible_net_resources is defined }}"
+          - "FULL ansible_net_resources dump: {{ ansible_net_resources | to_nice_json }}"
+      when:
+        - show_debug
+        - nxos_interface_facts is defined
+
     - name: Get interface operational state (error counters)
       cisco.nxos.nxos_command:
         commands:
@@ -110,6 +123,17 @@
           - vlans
       register: vlan_facts
 
+    - name: Debug VLAN facts gathered from device
+      ansible.builtin.debug:
+        msg:
+          - "=== NX-OS Facts Debug (VLANs) ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Gather succeeded: {{ vlan_facts is succeeded }}"
+          - "FULL ansible_net_resources.vlans: {{ ansible_net_resources.vlans | to_nice_json }}"
+      when:
+        - show_debug
+        - vlan_facts is defined
+
     - name: Validate VLAN assignments
       ansible.builtin.debug:
         msg: |
@@ -136,6 +160,17 @@
           - lag_interfaces
       register: portchannel_facts
       failed_when: false
+
+    - name: Debug LAG interface facts gathered from device
+      ansible.builtin.debug:
+        msg:
+          - "=== NX-OS Facts Debug (LAG Interfaces) ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Gather succeeded: {{ portchannel_facts is succeeded }}"
+          - "FULL ansible_net_resources.lag_interfaces: {{ ansible_net_resources.lag_interfaces | to_nice_json }}"
+      when:
+        - show_debug
+        - portchannel_facts is defined
 
     - name: Validate port-channel states
       ansible.builtin.debug:

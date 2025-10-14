@@ -194,6 +194,19 @@
         - not ansible_check_mode
       failed_when: false
 
+    - name: Debug OSPF facts gathered from device
+      ansible.builtin.debug:
+        msg:
+          - "=== NX-OS Facts Debug (OSPF) ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Gather succeeded: {{ ospf_facts is succeeded }}"
+          - "FULL ansible_net_resources.ospfv2: {{ ansible_net_resources.ospfv2 | to_nice_json }}"
+      when:
+        - show_debug
+        - ospf_facts is defined
+        - platform == 'nxos'
+        - not ansible_check_mode
+
     - name: Determine if OSPF is configured (NX-OS)
       ansible.builtin.set_fact:
         ospf_configured: "{{ ansible_net_resources.ospfv2 is defined and ansible_net_resources.ospfv2.processes is defined and ansible_net_resources.ospfv2.processes | length > 0 }}"

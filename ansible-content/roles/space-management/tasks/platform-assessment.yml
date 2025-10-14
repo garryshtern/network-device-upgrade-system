@@ -18,7 +18,9 @@
       - "storage_output.stdout exists: {{ storage_output.stdout is defined }}"
       - "storage_output.stdout_lines exists: {{ storage_output.stdout_lines is defined }}"
       - "FULL storage_output dump: {{ storage_output | to_nice_json }}"
-  when: storage_output is defined
+  when:
+    - show_debug
+    - storage_output is defined
 
 - name: Parse storage information
   ansible.builtin.include_tasks: parse-storage-output.yml

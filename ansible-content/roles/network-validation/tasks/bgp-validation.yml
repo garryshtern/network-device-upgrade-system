@@ -60,6 +60,20 @@
         - not ansible_check_mode
       failed_when: false
 
+    - name: Debug BGP facts gathered from device
+      ansible.builtin.debug:
+        msg:
+          - "=== NX-OS Facts Debug (BGP) ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ platform }}"
+          - "Gather succeeded: {{ bgp_facts is succeeded }}"
+          - "ansible_net_resources defined: {{ ansible_net_resources is defined }}"
+          - "FULL ansible_net_resources dump: {{ ansible_net_resources | to_nice_json }}"
+      when:
+        - show_debug
+        - bgp_facts is defined
+        - not ansible_check_mode
+
     - name: Determine if BGP is configured and extract data
       ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({'bgp_configured': bgp_is_configured}) }}"

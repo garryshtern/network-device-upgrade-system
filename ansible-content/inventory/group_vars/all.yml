@@ -74,6 +74,9 @@ network_state_comparison: true
 baseline_capture_enabled: true
 convergence_monitoring: true
 
+# Debug settings
+show_debug: false  # Set to true to enable verbose debug output
+
 # Storage paths
 network_upgrade_base_path: "/var/lib/network-upgrade"
 firmware_base_path: "{{ network_upgrade_base_path }}/firmware"
