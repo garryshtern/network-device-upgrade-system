@@ -40,7 +40,6 @@ ansible_ssh_private_key_file: >-
 
 # Upgrade workflow settings
 target_hosts: all  # Default hosts pattern for playbooks
-max_concurrent_devices: 5
 max_concurrent: 5  # Serial execution limit for playbooks
 max_retry_attempts: 3
 connectivity_timeout: 300
