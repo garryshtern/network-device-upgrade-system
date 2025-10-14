@@ -38,7 +38,7 @@ This is the master Ansible playbook that orchestrates network device firmware up
 ## Performance Considerations: **Excellent**
 
 ### Concurrency and Scalability
-- **Excellent**: Configurable serial execution (`serial: "{{ max_concurrent | default(5) }}"`)
+- **Excellent**: Configurable serial execution (`serial: "{{ max_concurrent }}"`)
 - **Good**: Batch processing with hash-based batch IDs
 - **Good**: Appropriate timeout settings for network operations
 

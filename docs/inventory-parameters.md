@@ -97,8 +97,7 @@ Defined in: `ansible-content/inventory/group_vars/all.yml`
 |-----------|------|---------|-------------|
 | `target_firmware` | string | `""` | Firmware filename (MUST be set at runtime) |
 | `target_hosts` | string | `all` | Host pattern for upgrades |
-| `max_concurrent_devices` | int | `5` | Maximum concurrent device upgrades |
-| `max_concurrent` | int | `5` | Serial execution limit |
+| `max_concurrent` | int | `5` | Serial execution limit for playbooks |
 | `max_retry_attempts` | int | `3` | Retry attempts on failure |
 | `connectivity_timeout` | int | `300` | Post-reboot connectivity timeout (seconds) |
 | `reboot_wait_time` | int | `600` | Wait time after reboot (seconds) |
