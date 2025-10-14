@@ -585,6 +585,9 @@ build_ansible_options() {
     if [[ ! "$extra_vars" =~ debug_metrics ]]; then
         extra_vars="debug_metrics=false ${extra_vars}"
     fi
+    if [[ ! "$extra_vars" =~ show_debug ]]; then
+        extra_vars="show_debug=false ${extra_vars}"
+    fi
 
     echo "$ansible_opts|$extra_vars"
 }
