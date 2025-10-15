@@ -75,7 +75,8 @@
             gather_subset:
               - all
             gather_network_resources:
-              - all
+              - '!acls'
+              - '!acl_interfaces'
             available_network_resources: true
           register: nxos_facts_output
           when: platform == 'nxos'
