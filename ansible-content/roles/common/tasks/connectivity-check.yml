@@ -136,6 +136,32 @@
             - platform == 'nxos'
             - nxos_facts_output is succeeded
 
+        - name: Dump detailed NX-OS facts (lists and dictionaries)
+          ansible.builtin.debug:
+            msg:
+              - "=== NX-OS Detailed Facts Dump ==="
+              - "--- File Systems List ---"
+              - "{{ ansible_net_filesystems | default([]) | to_nice_json }}"
+              - "--- All IPv4 Addresses List ---"
+              - "{{ ansible_net_all_ipv4_addresses | default([]) | to_nice_json }}"
+              - "--- All IPv6 Addresses List ---"
+              - "{{ ansible_net_all_ipv6_addresses | default([]) | to_nice_json }}"
+              - "--- Interfaces Dictionary ---"
+              - "{{ ansible_net_interfaces | default({}) | to_nice_json }}"
+              - "--- Network Resources Dictionary ---"
+              - "{{ ansible_network_resources | default({}) | to_nice_json }}"
+              - "--- Gathered Network Resources List ---"
+              - "{{ ansible_net_gather_network_resources | default([]) | to_nice_json }}"
+              - "--- Gathered Subsets List ---"
+              - "{{ ansible_net_gather_subset | default([]) | to_nice_json }}"
+              - "--- Neighbors (LLDP/CDP) ---"
+              - "{{ ansible_net_neighbors | default({}) | to_nice_json }}"
+              - "================================="
+          when:
+            - platform == 'nxos'
+            - nxos_facts_output is succeeded
+            - show_debug | bool
+
         - name: Get IOS-XE version
           cisco.ios.ios_command:
             commands:
