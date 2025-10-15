@@ -40,7 +40,8 @@ ansible_ssh_private_key_file: >-
 
 # Upgrade workflow settings
 target_hosts: all  # Default hosts pattern for playbooks
-max_concurrent: 5  # Serial execution limit for playbooks
+# NOTE: max_concurrent MUST be provided as extra_vars (-e max_concurrent=N)
+# The 'serial' keyword is processed before group_vars are loaded by Ansible
 max_retry_attempts: 3
 connectivity_timeout: 300
 reboot_wait_time: 600
@@ -57,6 +58,7 @@ phase_2_timeout: 1800  # Installation phase (30 minutes)
 # Backup and rollback
 backup_enabled: true
 rollback_on_failure: true
+rollback_timeout: 600  # Rollback operation timeout (seconds)
 keep_backup_count: 3
 maintenance_window: false  # MUST be explicitly set to true for upgrades (safety)
 backup_type: "pre_upgrade"  # Type of backup: pre_upgrade, post_upgrade, scheduled

@@ -30,10 +30,8 @@
     batch_id: "{{ ansible_play_batch | hash('md5') }}"
     operator_id: "{{ lookup('env', 'USER')  }}"
 
-    # Timeouts and retries
-    connectivity_timeout: 300
-    reboot_wait_time: 600
-    max_retry_attempts: 3
+    # NOTE: Timeouts and retries are defined in group_vars/all.yml:
+    #   connectivity_timeout, reboot_wait_time, max_retry_attempts
 
   pre_tasks:
     - name: Initialize ansible_date_time if facts not gathered

@@ -116,6 +116,8 @@ ENVIRONMENT VARIABLES:
     TARGET_HOSTS       Hosts to target (default: all)
     TARGET_FIRMWARE    Firmware version to install
     UPGRADE_PHASE      Phase: full, loading, installation, validation, rollback
+    MAX_CONCURRENT     REQUIRED: Number of devices to upgrade in parallel (e.g., 5)
+                       Note: Must be provided - 'serial' processed before group_vars
     MAINTENANCE_WINDOW Set to 'true' for installation phase
 
     # EPLD Upgrade Configuration (Cisco NX-OS)
@@ -178,12 +180,13 @@ EXAMPLES:
     # Dry run upgrade workflow
     docker run --rm \\
       -e TARGET_FIRMWARE=9.3.12 -e TARGET_HOSTS=cisco-switch-01 \\
+      -e MAX_CONCURRENT=5 \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # Execute actual upgrade (production)
     docker run --rm \\
       -e TARGET_FIRMWARE=9.3.12 -e TARGET_HOSTS=cisco-switch-01 \\
-      -e UPGRADE_PHASE=loading -e MAINTENANCE_WINDOW=false \\
+      -e MAX_CONCURRENT=5 -e UPGRADE_PHASE=loading -e MAINTENANCE_WINDOW=false \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest run
 
     # SSH key authentication (recommended)
@@ -193,6 +196,7 @@ EXAMPLES:
       -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \\
       -e OPENGEAR_SSH_KEY=/keys/opengear-key \\
       -e TARGET_HOSTS=cisco-datacenter-switches \\
+      -e MAX_CONCURRENT=5 \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # API token authentication (FortiOS/Opengear API)
@@ -200,12 +204,14 @@ EXAMPLES:
       -e FORTIOS_API_TOKEN="\$(cat ~/.secrets/fortios-token)" \\
       -e OPENGEAR_API_TOKEN="\$(cat ~/.secrets/opengear-token)" \\
       -e TARGET_HOSTS=fortinet-firewalls \\
+      -e MAX_CONCURRENT=5 \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # Run with custom inventory
     docker run --rm \\
       -v /path/to/inventory:/opt/inventory:ro \\
       -e INVENTORY_FILE=/opt/inventory/production.yml \\
+      -e MAX_CONCURRENT=5 \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
     # Production deployment with all authentication methods
@@ -215,6 +221,7 @@ EXAMPLES:
       -e INVENTORY_FILE=/opt/inventory/production.yml \\
       -e TARGET_HOSTS=cisco-datacenter-switches \\
       -e TARGET_FIRMWARE=9.3.12 \\
+      -e MAX_CONCURRENT=5 \\
       -e UPGRADE_PHASE=loading \\
       -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \\
       -e CISCO_IOSXE_SSH_KEY=/keys/cisco-iosxe-key \\
@@ -234,6 +241,7 @@ EXAMPLES:
       -e SHOW_DEBUG=true \\
       -e TARGET_HOSTS=cisco-switch-01 \\
       -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \\
+      -e MAX_CONCURRENT=5 \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
 
 PODMAN COMPATIBILITY (RHEL8/9):
@@ -427,6 +435,9 @@ build_ansible_options() {
     [[ -n "${TARGET_HOSTS:-}" ]] && extra_vars="$extra_vars target_hosts=${TARGET_HOSTS}"
     [[ -n "${TARGET_FIRMWARE:-}" ]] && extra_vars="$extra_vars target_firmware=${TARGET_FIRMWARE}"
     [[ -n "${UPGRADE_PHASE:-}" ]] && extra_vars="$extra_vars upgrade_phase=${UPGRADE_PHASE}"
+
+    # Serial execution limit (REQUIRED - processed before group_vars)
+    [[ -n "${MAX_CONCURRENT:-}" ]] && extra_vars="$extra_vars max_concurrent=${MAX_CONCURRENT}"
     [[ -n "${MAINTENANCE_WINDOW:-}" ]] && extra_vars="$extra_vars maintenance_window=${MAINTENANCE_WINDOW}"
 
     # Storage configuration
@@ -575,6 +586,18 @@ execute_ansible_playbook() {
         fi
         if [[ ! "$extra_vars" =~ target_firmware ]]; then
             extra_vars="target_firmware=test.bin ${extra_vars}"
+        fi
+        if [[ ! "$extra_vars" =~ max_concurrent ]]; then
+            extra_vars="max_concurrent=5 ${extra_vars}"
+        fi
+    else
+        # For dry-run and run modes, max_concurrent is REQUIRED
+        if [[ ! "$extra_vars" =~ max_concurrent ]]; then
+            error "max_concurrent is REQUIRED for playbook execution"
+            error "The 'serial' keyword is processed before group_vars are loaded"
+            error "You must provide max_concurrent as an extra variable:"
+            error "  Example: -e MAX_CONCURRENT=5"
+            exit 1
         fi
     fi
 

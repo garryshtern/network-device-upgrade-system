@@ -9,8 +9,8 @@
   vars:
     installation_start_time: "{{ ansible_date_time.iso8601 }}"
     reboot_required: true
-    max_reboot_wait: 600
-    validation_timeout: 300
+    # NOTE: reboot_wait_time and validation_timeout defined in group_vars/all.yml
+    max_reboot_wait: "{{ reboot_wait_time }}"  # Use group_vars value
   pre_tasks:
     - name: Verify maintenance window
       ansible.builtin.assert:

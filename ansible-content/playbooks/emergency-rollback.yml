@@ -9,8 +9,7 @@
   connection: network_cli
   vars:
     rollback_timestamp: "{{ ansible_date_time.iso8601 }}"
-    rollback_timeout: 600
-    # restore_config, restore_firmware, emergency_mode inherited from group_vars
+    # NOTE: rollback_timeout, restore_config, restore_firmware, emergency_mode inherited from group_vars
   pre_tasks:
     - name: Initialize rollback tracking
       ansible.builtin.set_fact:
