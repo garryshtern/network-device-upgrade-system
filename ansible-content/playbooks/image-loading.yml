@@ -29,7 +29,7 @@
         name: space-management
         tasks_from: space-check
       vars:
-        required_space_gb: "{{ firmware_size_gb  }}"
+        required_space_gb: "{{ firmware_size_gb }}"
 
     - name: Platform-specific image loading
       block:

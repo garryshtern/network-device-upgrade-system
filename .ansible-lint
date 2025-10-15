@@ -4,7 +4,7 @@ skip_list:
   - schema[tasks]  # Skip schema validation for tasks - playbooks are valid
   - parser-error  # Skip parser errors for valid conflicting actions in playbooks
   - var-naming[no-role-prefix]  # Skip variable naming prefix requirements
-  
+
 # Exclude paths that don't need linting
 exclude_paths:
   - .venv/
@@ -31,3 +31,10 @@ offline: true
 
 # Don't warn about newer versions
 warn_list: []
+
+# Provide extra vars for syntax checking playbooks that require runtime variables
+extra_vars:
+  target_hosts: localhost
+  target_firmware: test-firmware.bin
+  maintenance_window: true
+  max_concurrent: 1

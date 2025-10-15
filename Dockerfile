@@ -53,10 +53,10 @@ USER ansible
 # Set PATH to include user pip binaries
 ENV PATH="/home/ansible/.local/bin:${PATH}"
 
-# Upgrade pip and install Ansible with latest versions
+# Upgrade pip and install Ansible 11.0.0 (includes ansible-core 2.18.10)
 RUN pip install --user --no-cache-dir --upgrade pip \
     && pip install --user --no-cache-dir \
-        ansible \
+        ansible==11.0.0 \
         ansible-pylibssh \
         paramiko \
         netaddr \

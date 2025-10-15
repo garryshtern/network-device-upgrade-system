@@ -59,15 +59,15 @@ Network device upgrade management system for 1000+ heterogeneous network devices
 
 ## Development Commands
 
-**Requires latest versions: Ansible 12.0.0 with ansible-core 2.19.2 and Python 3.13.7**.
+**Requires: Ansible 11.0.0 with ansible-core 2.18.10 and Python 3.13.x**.
 
 ### Setup & Testing - QUALITY FIRST APPROACH
 
 **MANDATORY: ALL commands MUST return 0 exit code before proceeding**
 
 ```bash
-# Install latest Ansible version (includes ansible-core 2.19.2)
-pip install --upgrade ansible
+# Install Ansible 11.0.0 (includes ansible-core 2.18.10)
+pip install ansible==11.0.0
 
 # Install Ansible collections
 ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force
@@ -122,12 +122,12 @@ ansible-playbook --check --diff ansible-content/playbooks/main-upgrade-workflow.
 
 **Common Issue: `ModuleNotFoundError: No module named 'ansible.module_utils.six.moves'`**
 
-This issue is resolved in modern Ansible versions. Update to latest:
+This issue is resolved in Ansible 11.0.0+. Update to required version:
 
 ```bash
-# Clean install latest versions
+# Clean install required versions
 pip uninstall ansible ansible-core ansible-base -y
-pip install --upgrade ansible
+pip install ansible==11.0.0
 
 # Install latest collection versions (as of September 11, 2025)
 ansible-galaxy collection install \
@@ -164,7 +164,7 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
 - Non-root execution (UID 1000)
 - RHEL8/9 podman compatible
 - Multi-architecture (amd64/arm64)
-- Pre-installed Ansible 12.0.0 & Python 3.13.7
+- Pre-installed Ansible 11.0.0 & Python 3.13.x
 - FortiOS multi-step upgrade support
 
 **Installation:** See [Container Deployment Guide](docs/container-deployment.md) for complete Docker/Podman installation instructions and platform-specific setup.
