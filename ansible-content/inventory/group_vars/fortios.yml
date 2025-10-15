@@ -93,6 +93,7 @@ fortiguard_services:
 upgrade_method: "standard"  # standard, coordinated (for HA)
 pre_upgrade_backup: true
 post_upgrade_validation_timeout: 600
+multi_step_upgrade_required: false  # Enable multi-step upgrade for major version jumps
 
 # HA specific settings (when ha_enabled: true)
 ha_coordination:

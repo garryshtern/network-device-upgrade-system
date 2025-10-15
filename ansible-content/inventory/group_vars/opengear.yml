@@ -170,7 +170,7 @@ max_upload_retries: 3
 session_keepalive: true
 
 # Monitoring integration
-export_metrics: true
+# NOTE: export_metrics inherited from group_vars/all.yml
 metric_collection_interval: 60
 alert_on_upgrade_failure: true
 
@@ -181,7 +181,7 @@ enable_audit_logging: true
 
 # Rollback settings
 enable_automatic_rollback: true
-rollback_timeout: 600
+# NOTE: rollback_timeout inherited from group_vars/all.yml
 preserve_user_data: true
 
 # Validation settings specific to device type

@@ -438,19 +438,25 @@ build_ansible_options() {
 
     # Serial execution limit (REQUIRED - processed before group_vars)
     [[ -n "${MAX_CONCURRENT:-}" ]] && extra_vars="$extra_vars max_concurrent=${MAX_CONCURRENT}"
-    [[ -n "${MAINTENANCE_WINDOW:-}" ]] && extra_vars="$extra_vars maintenance_window=${MAINTENANCE_WINDOW}"
+
+    # Maintenance window (default: false in group_vars)
+    # Only set if explicitly set to true (safety feature)
+    if [[ "${MAINTENANCE_WINDOW:-false}" == "true" ]]; then
+        extra_vars="$extra_vars maintenance_window=true"
+    fi
 
     # Storage configuration
     if [[ -n "${REQUIRED_SPACE_GB:-}" ]]; then
         extra_vars="$extra_vars required_space_gb=${REQUIRED_SPACE_GB}"
     fi
 
-    # EPLD upgrade configuration
-    if [[ -n "${ENABLE_EPLD_UPGRADE:-}" ]]; then
-        extra_vars="$extra_vars enable_epld_upgrade=${ENABLE_EPLD_UPGRADE}"
+    # EPLD upgrade configuration (default: false in group_vars)
+    # Only set if explicitly set to true
+    if [[ "${ENABLE_EPLD_UPGRADE:-false}" == "true" ]]; then
+        extra_vars="$extra_vars enable_epld_upgrade=true"
     fi
-    if [[ -n "${ALLOW_DISRUPTIVE_EPLD:-}" ]]; then
-        extra_vars="$extra_vars allow_disruptive_epld=${ALLOW_DISRUPTIVE_EPLD}"
+    if [[ "${ALLOW_DISRUPTIVE_EPLD:-false}" == "true" ]]; then
+        extra_vars="$extra_vars allow_disruptive_epld=true"
     fi
     if [[ -n "${EPLD_UPGRADE_TIMEOUT:-}" ]]; then
         extra_vars="$extra_vars epld_upgrade_timeout=${EPLD_UPGRADE_TIMEOUT}"
@@ -459,17 +465,18 @@ build_ansible_options() {
         extra_vars="$extra_vars target_epld_image=${TARGET_EPLD_IMAGE}"
     fi
 
-    # Multi-step upgrade (FortiOS)
-    if [[ -n "${MULTI_STEP_UPGRADE_REQUIRED:-}" ]]; then
-        extra_vars="$extra_vars multi_step_upgrade_required=${MULTI_STEP_UPGRADE_REQUIRED}"
+    # Multi-step upgrade (FortiOS - default: false in group_vars/fortios.yml)
+    # Only set if explicitly set to true
+    if [[ "${MULTI_STEP_UPGRADE_REQUIRED:-false}" == "true" ]]; then
+        extra_vars="$extra_vars multi_step_upgrade_required=true"
     fi
     if [[ -n "${UPGRADE_PATH:-}" ]]; then
         extra_vars="$extra_vars upgrade_path=${UPGRADE_PATH}"
     fi
 
-    # Debug configuration
-    # Only override if explicitly set to true (group_vars/all.yml has default: false)
-    if [[ -n "${SHOW_DEBUG:-}" ]]; then
+    # Debug configuration (default: false in group_vars/all.yml)
+    # Only override if explicitly set to true
+    if [[ "${SHOW_DEBUG:-false}" == "true" ]]; then
         extra_vars="$extra_vars show_debug=true"
         log "Debug mode enabled: show_debug=true"
     fi

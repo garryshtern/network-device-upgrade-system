@@ -228,13 +228,13 @@
             tasks_from: reboot
           vars:
             reboot_reason: "rollback"
-          when: restore_firmware
+          when: restore_firmware | bool
 
         - name: Wait for device recovery after reboot
           ansible.builtin.wait_for_connection:
             timeout: "{{ rollback_timeout }}"
             delay: 60
-          when: restore_firmware
+          when: restore_firmware | bool
 
         - name: Mark rollback reboot complete
           ansible.builtin.set_fact:

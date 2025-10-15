@@ -68,7 +68,7 @@
           {%- else -%}
 
           {%- endif -%}
-      when: enable_epld_upgrade
+      when: enable_epld_upgrade | bool
 
     - name: Display firmware selection
       ansible.builtin.debug:
