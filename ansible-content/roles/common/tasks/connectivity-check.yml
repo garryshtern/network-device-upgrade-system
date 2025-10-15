@@ -92,6 +92,51 @@
             - nxos_version_output.stdout is defined
             - nxos_version_output is succeeded
 
+        - name: Gather comprehensive NX-OS facts (hardware, interfaces, config)
+          cisco.nxos.nxos_facts:
+            gather_subset:
+              - all
+            gather_network_resources:
+              - all
+            available_network_resources: true
+          register: nxos_facts_output
+          when:
+            - platform == 'nxos'
+            - nxos_version_output is succeeded
+
+        - name: Display all NX-OS facts after successful connection
+          ansible.builtin.debug:
+            msg:
+              - "=== NX-OS Device Facts ==="
+              - "--- Device Identity ---"
+              - "Hostname: {{ ansible_net_hostname | default('N/A') }}"
+              - "Model: {{ ansible_net_model | default('N/A') }}"
+              - "Serial Number: {{ ansible_net_serialnum | default('N/A') }}"
+              - "--- Software & Image ---"
+              - "OS Version: {{ ansible_net_version | default('N/A') }}"
+              - "Image: {{ ansible_net_image | default('N/A') }}"
+              - "License Host ID: {{ ansible_net_license_hostid | default('N/A') }}"
+              - "--- System Resources ---"
+              - "Memory Total: {{ ansible_net_memtotal_mb | default('N/A') }} MB"
+              - "Memory Free: {{ ansible_net_memfree_mb | default('N/A') }} MB"
+              - "File Systems: {{ ansible_net_filesystems | default([]) | join(', ') }}"
+              - "--- Network Configuration ---"
+              - "IPv4 Addresses: {{ ansible_net_all_ipv4_addresses | default([]) | join(', ') }}"
+              - "IPv6 Addresses: {{ ansible_net_all_ipv6_addresses | default([]) | join(', ') }}"
+              - "VLANs: {{ vlan_list | default([]) | join(', ') }}"
+              - "Interfaces: {{ interfaces_list | default({}) | list | join(', ') }}"
+              - "--- Network Resources Gathered ---"
+              - "Resources: {{ ansible_net_gather_network_resources | default([]) | join(', ') }}"
+              - "Available Network Resources: {{ ansible_network_resources | default({}) | dict2items | map(attribute='key') | list | join(', ') }}"
+              - "--- Collection Details ---"
+              - "Transport: {{ ansible_net_api | default('N/A') }}"
+              - "Python Version: {{ ansible_net_python_version | default('N/A') }}"
+              - "Gathered Subsets: {{ ansible_net_gather_subset | default([]) | join(', ') }}"
+              - "=========================="
+          when:
+            - platform == 'nxos'
+            - nxos_facts_output is succeeded
+
         - name: Get IOS-XE version
           cisco.ios.ios_command:
             commands:
