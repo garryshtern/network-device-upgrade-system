@@ -28,8 +28,8 @@
 - name: Calculate initial storage metrics
   ansible.builtin.set_fact:
     storage_info:
-      total_space_gb: "{{ (parsed_storage.total_bytes / 1024 / 1024 / 1024) | round(2) }}"
-      free_space_gb: "{{ (parsed_storage.free_bytes / 1024 / 1024 / 1024) | round(2) }}"
+      total_space_gb: "{{ (parsed_storage.total_bytes | int / 1024 / 1024 / 1024) | round(2) }}"
+      free_space_gb: "{{ (parsed_storage.free_bytes | int / 1024 / 1024 / 1024) | round(2) }}"
       images_found: "{{ parsed_storage.images }}"
       cleanup_candidates: "{{ parsed_storage.images }}"
 
@@ -155,6 +155,6 @@
 
     - name: Update final storage info with post-cleanup metrics
       ansible.builtin.set_fact:
-        storage_info: "{{ storage_info | combine({'free_space_gb': parsed_storage.free_bytes / 1024 / 1024 / 1024 | round(2)}) }}"
+        storage_info: "{{ storage_info | combine({'free_space_gb': (parsed_storage.free_bytes | int / 1024 / 1024 / 1024) | round(2)}) }}"
         storage_cleanup_performed: true
       when: parsed_storage is defined
