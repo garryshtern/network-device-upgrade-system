@@ -70,7 +70,7 @@
     - name: Step 1 & 2 - Connect and retrieve version information (tests auth and connection)
       when: not ansible_check_mode
       block:
-        - name: Gather comprehensive NX-OS facts for validation (hardware, interfaces, BGP, VLANs, routing)
+        - name: Gather comprehensive NX-OS facts for validation (hardware, interfaces, BGP, VLANs, routing, BFD)
           cisco.nxos.nxos_facts:
             gather_subset:
               - all
@@ -81,6 +81,7 @@
               - vlans
               - lag_interfaces
               - lacp_interfaces
+              - bfd_interfaces
               - bgp_global
               - bgp_address_family
               - bgp_neighbor_address_family
@@ -114,13 +115,14 @@
             - nxos_facts_output is defined
             - nxos_facts_output is succeeded
 
-        - name: Gather additional NX-OS validation data (ARP, MAC, routing, multicast)
+        - name: Gather additional NX-OS validation data (ARP, MAC, routing, multicast, BFD)
           cisco.nxos.nxos_command:
             commands:
               - show ip arp vrf all | json
               - show mac address-table | json
               - show ip route vrf all | json
               - show forwarding ipv4 route | json
+              - show bfd neighbors vrf all | json
               - show ip pim interface | json
               - show ip pim neighbor | json
               - show ip pim rp | json
