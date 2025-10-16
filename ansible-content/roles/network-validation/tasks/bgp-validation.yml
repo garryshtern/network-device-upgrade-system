@@ -17,6 +17,11 @@
       warnings: []
       bgp_configured: false
 
+- name: Set BGP configured for check mode
+  ansible.builtin.set_fact:
+    bgp_validation: "{{ bgp_validation | combine({'bgp_configured': true}) }}"
+  when: ansible_check_mode
+
 - name: Set validation mode (use first defined value)
   ansible.builtin.set_fact:
     validation_mode: "{{ validation_mode }}"
@@ -45,6 +50,10 @@
 
 - name: Gather BGP configuration using facts (replaces 'show running-config bgp')
   block:
+  when:
+    - not ansible_check_mode
+    - ansible_network_os is defined
+
     - name: Gather BGP facts to detect configuration and extract data
       cisco.nxos.nxos_facts:
         gather_subset:
@@ -54,10 +63,7 @@
           - bgp_global
           - bgp_address_family
       register: bgp_facts
-      when:
-        - ansible_network_os is defined
-        - platform == 'nxos'
-        - not ansible_check_mode
+      when: platform == 'nxos'
       failed_when: false
 
     - name: Debug BGP facts gathered from device
@@ -72,7 +78,6 @@
       when:
         - show_debug | bool
         - bgp_facts is defined
-        - not ansible_check_mode
 
     - name: Determine if BGP is configured and extract data
       ansible.builtin.set_fact:
@@ -92,20 +97,6 @@
       when:
         - bgp_facts is defined
         - bgp_facts is succeeded
-        - not ansible_check_mode
-
-    - name: Set BGP not configured if facts gathering failed
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': false}) }}"
-      when:
-        - bgp_facts is defined
-        - bgp_facts is failed
-        - not ansible_check_mode
-
-    - name: Set BGP configured for check mode
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': true}) }}"
-      when: ansible_check_mode
 
   rescue:
     - name: Handle BGP facts gathering failure

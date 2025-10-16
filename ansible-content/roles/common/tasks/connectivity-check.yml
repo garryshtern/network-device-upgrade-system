@@ -70,13 +70,29 @@
     - name: Step 1 & 2 - Connect and retrieve version information (tests auth and connection)
       when: not ansible_check_mode
       block:
-        - name: Gather comprehensive NX-OS facts (hardware, interfaces, config, BGP, version)
+        - name: Gather comprehensive NX-OS facts for validation (hardware, interfaces, BGP, VLANs, routing)
           cisco.nxos.nxos_facts:
             gather_subset:
               - all
             gather_network_resources:
-              - '!acls'
-              - '!acl_interfaces'
+              - interfaces
+              - l2_interfaces
+              - l3_interfaces
+              - vlans
+              - lag_interfaces
+              - lacp_interfaces
+              - bgp_global
+              - bgp_address_family
+              - bgp_neighbor_address_family
+              - route_maps
+              - prefix_lists
+              - static_routes
+              - lldp_global
+              - lldp_interfaces
+              - ntp_global
+              - snmp_server
+              - logging_global
+              - hostname
             available_network_resources: true
           register: nxos_facts_output
           when: platform == 'nxos'
@@ -97,6 +113,25 @@
             - platform == 'nxos'
             - nxos_facts_output is defined
             - nxos_facts_output is succeeded
+
+        - name: Gather additional NX-OS validation data (ARP, MAC, routing, multicast)
+          cisco.nxos.nxos_command:
+            commands:
+              - show ip arp vrf all | json
+              - show mac address-table | json
+              - show ip route vrf all | json
+              - show forwarding ipv4 route | json
+              - show ip pim interface | json
+              - show ip pim neighbor | json
+              - show ip pim rp | json
+              - show ip igmp interface | json
+              - show ip igmp groups | json
+          register: nxos_validation_data
+          changed_when: false
+          when:
+            - platform == 'nxos'
+            - nxos_facts_output is succeeded
+          failed_when: false
 
         - name: Display all NX-OS facts after successful connection
           ansible.builtin.debug:
