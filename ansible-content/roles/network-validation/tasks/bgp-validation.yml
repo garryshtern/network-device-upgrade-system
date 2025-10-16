@@ -48,60 +48,45 @@
     validation_mode: "{{ check_type }}"
   when: validation_mode is not defined or validation_mode == 'full'
 
-- name: Gather BGP configuration using facts (replaces 'show running-config bgp')
-  block:
+- name: Use pre-gathered BGP configuration from connectivity-check
   when:
     - not ansible_check_mode
     - ansible_network_os is defined
-
-    - name: Gather BGP facts to detect configuration and extract data
-      cisco.nxos.nxos_facts:
-        gather_subset:
-          - '!all'
-          - '!min'
-        gather_network_resources:
-          - bgp_global
-          - bgp_address_family
-      register: bgp_facts
-      when: platform == 'nxos'
-      failed_when: false
-
-    - name: Debug BGP facts gathered from device
+    - platform == 'nxos'
+  block:
+    - name: Debug pre-gathered BGP facts
       ansible.builtin.debug:
         msg:
-          - "=== NX-OS Facts Debug (BGP) ==="
+          - "=== NX-OS BGP Facts (Pre-gathered) ==="
           - "Device: {{ inventory_hostname }}"
           - "Platform: {{ platform }}"
-          - "Gather succeeded: {{ bgp_facts is succeeded }}"
-          - "ansible_net_resources defined: {{ ansible_net_resources is defined }}"
-          - "FULL ansible_net_resources dump: {{ ansible_net_resources | to_nice_json }}"
-      when:
-        - show_debug | bool
-        - bgp_facts is defined
+          - "ansible_network_resources defined: {{ ansible_network_resources is defined }}"
+          - "BGP Global configured: {{ ansible_network_resources.bgp_global is defined }}"
+          - "BGP Address Family configured: {{ ansible_network_resources.bgp_address_family is defined }}"
+          - "BGP Neighbor Address Family configured: {{ ansible_network_resources.bgp_neighbor_address_family is defined }}"
+      when: show_debug | bool
 
-    - name: Determine if BGP is configured and extract data
+    - name: Determine if BGP is configured and extract data from pre-gathered facts
       ansible.builtin.set_fact:
         bgp_validation: "{{ bgp_validation | combine({'bgp_configured': bgp_is_configured}) }}"
-        bgp_asn: "{{ ansible_net_resources.bgp_global.as_number }}"
-        bgp_router_id: "{{ ansible_net_resources.bgp_global.router_id }}"
-        bgp_neighbors: "{{ ansible_net_resources.bgp_global.neighbors }}"
+        bgp_asn: "{{ ansible_network_resources.bgp_global.as_number }}"
+        bgp_router_id: "{{ ansible_network_resources.bgp_global.router_id }}"
+        bgp_neighbors: "{{ ansible_network_resources.bgp_global.neighbors }}"
       vars:
         bgp_is_configured: >-
           {{
-            (bgp_facts is defined and
-             bgp_facts is succeeded and
-             ansible_net_resources is defined and
-             ansible_net_resources.bgp_global is defined and
-             ansible_net_resources.bgp_global.as_number is defined)
+            (ansible_network_resources is defined and
+             ansible_network_resources.bgp_global is defined and
+             ansible_network_resources.bgp_global.as_number is defined)
           }}
       when:
-        - bgp_facts is defined
-        - bgp_facts is succeeded
+        - ansible_network_resources is defined
+        - ansible_network_resources.bgp_global is defined
 
   rescue:
-    - name: Handle BGP facts gathering failure
+    - name: Handle missing BGP facts (not pre-gathered)
       ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'warnings': bgp_validation.warnings + ['Could not gather BGP facts - skipping BGP validation'], 'bgp_configured': false}) }}"
+        bgp_validation: "{{ bgp_validation | combine({'warnings': bgp_validation.warnings + ['BGP facts not available - skipping BGP validation'], 'bgp_configured': false}) }}"
 
 - name: Skip BGP validation if not configured
   ansible.builtin.debug:
