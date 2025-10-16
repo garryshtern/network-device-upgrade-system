@@ -1,44 +1,31 @@
 ---
 # Interface State Validation
 # Validates interface operational status, error counters, and optics
-# UPDATED: Removed mgt0 checks (not connected on most devices)
-# UPDATED: Removed admin_state parsing (not available in NXOS commands)
-# UPDATED: Removed generic device support
+# Uses pre-gathered facts from connectivity-check (ansible_network_resources.interfaces)
+# Only gathers error counters (not available via facts)
 
-- name: Gather interface information (NX-OS)
+- name: Gather interface error counters (NX-OS)
   when:
     - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
   block:
-    - name: Get interface configuration using nxos_facts
-      cisco.nxos.nxos_facts:
-        gather_subset:
-          - '!all'
-          - '!min'
-        gather_network_resources:
-          - interfaces
-          - l3_interfaces
-      register: nxos_interface_facts
-
-    - name: Debug interface facts gathered from device
-      ansible.builtin.debug:
-        msg:
-          - "=== NX-OS Facts Debug (Interfaces) ==="
-          - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ platform }}"
-          - "Gather succeeded: {{ nxos_interface_facts is succeeded }}"
-          - "ansible_net_resources defined: {{ ansible_net_resources is defined }}"
-          - "FULL ansible_net_resources dump: {{ ansible_net_resources | to_nice_json }}"
-      when:
-        - show_debug | bool
-        - nxos_interface_facts is defined
-
     - name: Get interface operational state (error counters)
       cisco.nxos.nxos_command:
         commands:
           - show interface counters errors | json
       register: nxos_interface_errors
+
+    - name: Debug pre-gathered interface facts
+      ansible.builtin.debug:
+        msg:
+          - "=== NX-OS Interface Facts (Pre-gathered) ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ platform }}"
+          - "ansible_network_resources.interfaces: {{ ansible_network_resources.interfaces | default([]) | length }} interfaces"
+          - "ansible_network_resources.l2_interfaces: {{ ansible_network_resources.l2_interfaces | default([]) | length }} L2 interfaces"
+          - "ansible_network_resources.l3_interfaces: {{ ansible_network_resources.l3_interfaces | default([]) | length }} L3 interfaces"
+      when: show_debug | bool
 
 - name: Gather interface information (IOS-XE)
   when:
@@ -58,19 +45,20 @@
   when:
     - ansible_network_os is defined
     - platform == 'nxos'
-    - nxos_interface_facts is defined
+    - ansible_network_resources is defined
+    - ansible_network_resources.interfaces is defined
     - not ansible_check_mode
   block:
-    - name: Extract NX-OS interface data from facts
+    - name: Extract NX-OS interface data from pre-gathered facts
       ansible.builtin.set_fact:
-        all_interfaces: "{{ ansible_net_resources.interfaces }}"
+        all_interfaces: "{{ ansible_network_resources.interfaces }}"
         interface_errors: >-
           {{
             nxos_interface_errors.stdout[0] if (nxos_interface_errors.stdout[0] is mapping) else
             (nxos_interface_errors.stdout[0] | from_json)
           }}
 
-    - name: Parse interface states from facts
+    - name: Parse interface states from pre-gathered facts
       ansible.builtin.set_fact:
         up_interfaces: >-
           {{ all_interfaces |
