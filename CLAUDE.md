@@ -237,6 +237,62 @@ Comprehensive testing for Mac/Linux development without physical devices:
 - **Performance**: Code MUST not introduce performance regressions
 - **Documentation**: ALL changes MUST include corresponding documentation updates
 
+#### **Platform-Specific Task Organization (MANDATORY)**
+
+**CRITICAL: All platform-specific tasks MUST be organized under a single block with ONE when clause**
+
+- **Single Block Design**: Group all tasks for a specific platform under one block
+- **One When Clause**: Use a single `when: platform == 'platform_name'` at the block level
+- **No Redundant Conditionals**: Do NOT repeat platform checks on individual tasks within the block
+- **Strict Platform Gating**: Prevents cross-platform fact access and module execution
+- **Fail-Fast Validation**: Assert required facts/variables at the start of the block
+
+**Example - CORRECT:**
+```yaml
+- name: NX-OS Network Validation
+  when: platform == 'nxos'  # Single when clause
+  block:
+    - name: Enforce NX-OS facts availability
+      ansible.builtin.assert:
+        that:
+          - ansible_network_resources is defined
+
+    - name: Run BGP validation
+      ansible.builtin.include_tasks: bgp-validation.yml
+      when: bgp_enabled | bool  # Only feature-specific conditions inside block
+
+    - name: Run interface validation
+      ansible.builtin.include_tasks: interface-validation.yml
+
+    - name: Run routing validation
+      ansible.builtin.include_tasks: routing-validation.yml
+```
+
+**Example - INCORRECT:**
+```yaml
+# WRONG: Redundant platform checks on every task
+- name: Run BGP validation
+  ansible.builtin.include_tasks: bgp-validation.yml
+  when:
+    - platform == 'nxos'  # Redundant
+    - bgp_enabled | bool
+
+- name: Run interface validation
+  ansible.builtin.include_tasks: interface-validation.yml
+  when: platform == 'nxos'  # Redundant
+
+- name: Run routing validation
+  ansible.builtin.include_tasks: routing-validation.yml
+  when: platform == 'nxos'  # Redundant
+```
+
+**Benefits:**
+- **Performance**: When condition evaluated once, not per task
+- **Readability**: Clear platform boundary, easier to understand
+- **Maintainability**: Single point to modify platform logic
+- **Safety**: Prevents accidental cross-platform execution
+- **Efficiency**: Ansible skips entire block if condition false
+
 ### **Testing Standards**
 
 **⚠️ MANDATORY: ALL CODE CHANGES REQUIRE TEST UPDATES**

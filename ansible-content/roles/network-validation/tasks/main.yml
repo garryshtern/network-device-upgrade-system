@@ -2,8 +2,11 @@
 # Network Validation Role - Main Tasks
 # Comprehensive network state validation and comparison
 # STRICT GATE: Uses platform-specific facts gathered in connectivity-check
+#
+# DESIGN: Single when clause for all platform-specific tasks
+# All NX-OS validation tasks grouped under one block with single platform gate
 
-- name: Validate platform and pre-gathered facts for NX-OS
+- name: NX-OS Network Validation (uses pre-gathered facts from connectivity-check)
   when: platform == 'nxos'
   block:
     - name: Enforce NX-OS facts availability
@@ -14,43 +17,35 @@
         fail_msg: "NX-OS facts not pre-gathered. Connectivity-check must run first."
         success_msg: "NX-OS facts verified - proceeding with validation"
 
-- name: Initialize validation baselines
-  ansible.builtin.set_fact:
-    interface_baseline:
-      up_interfaces: 0
-      total_interfaces: 0
-    routing_baseline:
-      total_routes: 0
-    arp_baseline:
-      total_arp_entries: 0
+    - name: Initialize validation baselines
+      ansible.builtin.set_fact:
+        interface_baseline:
+          up_interfaces: 0
+          total_interfaces: 0
+        routing_baseline:
+          total_routes: 0
+        arp_baseline:
+          total_arp_entries: 0
 
-- name: Run BGP validation (NX-OS only)
-  ansible.builtin.include_tasks: bgp-validation.yml
-  when:
-    - platform == 'nxos'
-    - bgp_enabled | bool
+    - name: Run BGP validation
+      ansible.builtin.include_tasks: bgp-validation.yml
+      when: bgp_enabled | bool
 
-- name: Run interface validation (NX-OS only)
-  ansible.builtin.include_tasks: interface-validation.yml
-  when: platform == 'nxos'
+    - name: Run interface validation
+      ansible.builtin.include_tasks: interface-validation.yml
 
-- name: Run routing validation (NX-OS only)
-  ansible.builtin.include_tasks: routing-validation.yml
-  when: platform == 'nxos'
+    - name: Run routing validation
+      ansible.builtin.include_tasks: routing-validation.yml
 
-- name: Run ARP validation (NX-OS only)
-  ansible.builtin.include_tasks: arp-validation.yml
-  when: platform == 'nxos'
+    - name: Run ARP validation
+      ansible.builtin.include_tasks: arp-validation.yml
 
-- name: Run multicast validation (NX-OS only)
-  ansible.builtin.include_tasks: multicast-validation.yml
-  when:
-    - platform == 'nxos'
-    - multicast_enabled | bool
+    - name: Run multicast validation
+      ansible.builtin.include_tasks: multicast-validation.yml
+      when: multicast_enabled | bool
 
-- name: Run protocol convergence validation (NX-OS only)
-  ansible.builtin.include_tasks: protocol-convergence.yml
-  when: platform == 'nxos'
+    - name: Run protocol convergence validation
+      ansible.builtin.include_tasks: protocol-convergence.yml
 
 - name: Aggregate validation results (check mode)
   ansible.builtin.set_fact:
