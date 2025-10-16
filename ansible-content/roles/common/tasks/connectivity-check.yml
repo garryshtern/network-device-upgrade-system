@@ -2,6 +2,11 @@
 # Common Connectivity Check Tasks
 # Platform-specific basic connectivity validation
 # REDESIGNED: Uses platform-appropriate commands (not generic "show version")
+#
+# STRICT PLATFORM GATING:
+# - NX-OS facts (ansible_network_resources) ONLY gathered when platform == 'nxos'
+# - nxos_facts and nxos_command modules ONLY used for NX-OS devices
+# - Other platforms use their respective modules (ios_command, etc.)
 
 - name: Platform-based connectivity check
   when: platform is defined
