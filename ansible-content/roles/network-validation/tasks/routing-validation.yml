@@ -1,153 +1,151 @@
 ---
 # Routing Protocol Validation
-# Validates static routes, default routes, and next-hop verification
-# UPDATED: Removed generic device support
-# UPDATED: Made OSPF/EIGRP conditional on configuration
+# Validates RIB, FIB, and route consistency (static, BGP, connected routes only)
+# Uses pre-gathered data from connectivity-check (nxos_validation_data)
+# DESIGN: Single block pattern with platform gate
+#
+# FEATURES:
+# - RIB (Routing Information Base) analysis
+# - FIB (Forwarding Information Base) analysis
+# - RIB-FIB consistency checking
+# - Route type breakdown: static, BGP, connected
+# - No OSPF or EIGRP validation (removed per requirements)
 
-- name: Gather routing table information (NX-OS)
-  block:
-    - name: Get routing table (NX-OS)
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip route summary | json
-          - show ip route | json
-          - show ip route 0.0.0.0/0 | json
-      register: nxos_routing_info
+- name: NX-OS Routing Validation (uses pre-gathered RIB/FIB from connectivity-check)
   when:
-    - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
-
-- name: Gather routing table information (IOS-XE)
   block:
-    - name: Get routing table (IOS-XE)
-      cisco.ios.ios_command:
-        commands:
-          - show ip route summary
-          - show ip route
-          - show ip route 0.0.0.0
-      register: ios_routing_info
-  when:
-    - ansible_network_os is defined
-    - platform == 'ios'
-    - not ansible_check_mode
-
-- name: Parse routing information for NX-OS
-  block:
-    - name: Extract NX-OS routing data
+    - name: Extract RIB and FIB from pre-gathered data
       ansible.builtin.set_fact:
-        routing_summary: "{{ nxos_routing_info.stdout[0] | from_json }}"
-        routing_table: "{{ nxos_routing_info.stdout[1] | from_json }}"
-        default_route: "{{ nxos_routing_info.stdout[2] | from_json }}"
-
-    - name: Parse route counts
-      ansible.builtin.set_fact:
-        total_routes: "{{ routing_summary.total_routes  }}"
-        static_routes: >
-          {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
-             TABLE_prefix.ROW_prefix |
-             selectattr('ucast_nhops.TABLE_path.ROW_path.clientname',
-                        'equalto', 'static') | list  }}
-        connected_routes: >
-          {{ routing_table.TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
-             TABLE_prefix.ROW_prefix |
-             selectattr('ucast_nhops.TABLE_path.ROW_path.clientname',
-                        'equalto', 'direct') | list  }}
+        rib_data: "{{ nxos_validation_data.stdout[2] }}"
+        fib_data: "{{ nxos_validation_data.stdout[3] }}"
       when:
-        - routing_table.TABLE_vrf is defined
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-    - nxos_routing_info is defined
-    - nxos_routing_info.stdout is defined
+        - nxos_validation_data is defined
+        - nxos_validation_data.stdout is defined
 
-- name: Static route validation (NX-OS)
-  block:
+    - name: Parse RIB data (routing table)
+      ansible.builtin.set_fact:
+        routing_table: "{{ rib_data if rib_data is mapping else (rib_data | from_json) }}"
+      when:
+        - rib_data is defined
+
+    - name: Parse FIB data (forwarding table)
+      ansible.builtin.set_fact:
+        forwarding_table: "{{ fib_data if fib_data is mapping else (fib_data | from_json) }}"
+      when:
+        - fib_data is defined
+
+    - name: Extract route counts from RIB
+      ansible.builtin.set_fact:
+        total_routes: >-
+          {{
+            routing_table.TABLE_vrf.ROW_vrf
+            | map(attribute='TABLE_addrf')
+            | map(attribute='ROW_addrf')
+            | map(attribute='TABLE_prefix')
+            | map(attribute='ROW_prefix')
+            | flatten
+            | length
+          }}
+        static_routes: >-
+          {{
+            routing_table.TABLE_vrf.ROW_vrf
+            | map(attribute='TABLE_addrf')
+            | map(attribute='ROW_addrf')
+            | map(attribute='TABLE_prefix')
+            | map(attribute='ROW_prefix')
+            | flatten
+            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined')
+            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'static')
+            | list
+          }}
+        connected_routes: >-
+          {{
+            routing_table.TABLE_vrf.ROW_vrf
+            | map(attribute='TABLE_addrf')
+            | map(attribute='ROW_addrf')
+            | map(attribute='TABLE_prefix')
+            | map(attribute='ROW_prefix')
+            | flatten
+            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined')
+            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'direct')
+            | list
+          }}
+        bgp_routes: >-
+          {{
+            routing_table.TABLE_vrf.ROW_vrf
+            | map(attribute='TABLE_addrf')
+            | map(attribute='ROW_addrf')
+            | map(attribute='TABLE_prefix')
+            | map(attribute='ROW_prefix')
+            | flatten
+            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined')
+            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'bgp')
+            | list
+          }}
+      when:
+        - routing_table is defined
+        - routing_table.TABLE_vrf is defined
+
+    - name: Extract FIB statistics
+      ansible.builtin.set_fact:
+        fib_entries: >-
+          {{
+            forwarding_table.TABLE_vrf.ROW_vrf
+            | map(attribute='TABLE_prefix')
+            | map(attribute='ROW_prefix')
+            | flatten
+            | length
+          }}
+      when:
+        - forwarding_table is defined
+        - forwarding_table.TABLE_vrf is defined
+
+    - name: Validate RIB-FIB consistency
+      ansible.builtin.set_fact:
+        rib_fib_consistent: "{{ (total_routes | int) == (fib_entries | int) }}"
+        rib_fib_variance: "{{ ((total_routes | int) - (fib_entries | int)) | abs }}"
+      when:
+        - total_routes is defined
+        - fib_entries is defined
+
+    - name: Debug RIB and FIB comparison
+      ansible.builtin.debug:
+        msg:
+          - "=== RIB/FIB Validation ==="
+          - "RIB Entries: {{ total_routes }}"
+          - "FIB Entries: {{ fib_entries }}"
+          - "Consistent: {{ rib_fib_consistent }}"
+          - "Variance: {{ rib_fib_variance }}"
+      when:
+        - show_debug | bool
+        - total_routes is defined
+        - fib_entries is defined
+
     - name: Verify static routes presence
       ansible.builtin.debug:
         msg: |
           Static Routes Found: {{ static_routes | length }}
-          {% for route in static_routes %}
-          - >-
-            {{ route.ipprefix }}: via
-            {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop |
-               default('N/A') }}
+          {% for route in static_routes[:10] %}
+          - {{ route.ipprefix }}: via {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop | default('N/A') }}
           {% endfor %}
-      when:
-        - static_routes is defined
-
-    - name: Check static route reachability
-      cisco.nxos.nxos_command:
-        commands:
-          - >
-            ping {{ item.ucast_nhops.TABLE_path.ROW_path.ipnexthop }}
-            count 3 timeout 5
-      register: static_route_ping
-      loop: "{{ static_routes[:5] }}"  # Test first 5 static routes
       when:
         - static_routes is defined
         - static_routes | length > 0
-      failed_when: false
 
-    - name: Validate static route reachability
+    - name: Validate BGP routes presence
       ansible.builtin.debug:
         msg: |
-          Static Route Reachability:
-          {% for result in static_route_ping.results  %}
-          - >-
-            Route {{ loop.index }}: {{ 'REACHABLE' if result.stdout[0] |
-              regex_search('Success rate is [^0]') else 'UNREACHABLE' }}
+          BGP Routes Found: {{ bgp_routes | length }}
+          {% for route in bgp_routes[:10] %}
+          - {{ route.ipprefix }}: via {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop | default('N/A') }}
           {% endfor %}
       when:
-        - static_route_ping is defined
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
+        - bgp_routes is defined
+        - bgp_routes | length > 0
 
-- name: Default route validation (NX-OS)
-  block:
-    - name: Check for default route presence
-      ansible.builtin.set_fact:
-        has_default_route: >
-          {{ default_route.TABLE_vrf is defined and
-             default_route.TABLE_vrf.ROW_vrf | length > 0 }}
-      when:
-        - default_route is defined
-
-    - name: Extract default route information
-      ansible.builtin.set_fact:
-        default_route_info:
-          present: "{{ has_default_route }}"
-          next_hop: >
-            {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.
-               ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.
-               TABLE_path.ROW_path.ipnexthop }}
-          interface: >
-            {{ default_route.TABLE_vrf.ROW_vrf[0].TABLE_addrf.
-               ROW_addrf.TABLE_prefix.ROW_prefix.ucast_nhops.
-               TABLE_path.ROW_path.ifname }}
-      when:
-        - has_default_route
-
-    - name: Validate default route next-hop
-      cisco.nxos.nxos_command:
-        commands:
-          - "ping {{ default_route_info.next_hop }} count 3 timeout 5"
-      register: default_route_ping
-      when:
-        - default_route_info.next_hop is defined
-        - default_route_info.next_hop != 'None'
-      failed_when: false
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-
-- name: Route table health validation (NX-OS)
-  block:
-    - name: Check route table size
+    - name: Check route table health
       ansible.builtin.assert:
         that:
           - total_routes | int > 0
@@ -160,247 +158,72 @@
         msg: |
           Connected Routes: {{ connected_routes | length }}
           {% for route in connected_routes[:10] %}
-          - >
-            {{ route.ipprefix }} via
-            {{ route.ucast_nhops.TABLE_path.ROW_path.ifname }}
+          - {{ route.ipprefix }} via {{ route.ucast_nhops.TABLE_path.ROW_path.ifname }}
           {% endfor %}
       when:
         - connected_routes is defined
+        - connected_routes | length > 0
 
-    - name: Check for routing loops (basic)
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip route summary vrf all
-      register: vrf_routing_summary
-      failed_when: false
+
+- name: Store routing baseline (NX-OS)
   when:
-    - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
-
-- name: Check if OSPF is configured
-  block:
-    - name: Gather OSPF configuration facts (NX-OS)
-      cisco.nxos.nxos_facts:
-        gather_subset:
-          - '!all'
-          - '!min'
-        gather_network_resources:
-          - ospfv2
-      register: ospf_facts
-      when:
-        - ansible_network_os is defined
-        - platform == 'nxos'
-        - not ansible_check_mode
-      failed_when: false
-
-    - name: Debug OSPF facts gathered from device
-      ansible.builtin.debug:
-        msg:
-          - "=== NX-OS Facts Debug (OSPF) ==="
-          - "Device: {{ inventory_hostname }}"
-          - "Gather succeeded: {{ ospf_facts is succeeded }}"
-          - "FULL ansible_net_resources.ospfv2: {{ ansible_net_resources.ospfv2 | to_nice_json }}"
-      when:
-        - show_debug | bool
-        - ospf_facts is defined
-        - platform == 'nxos'
-        - not ansible_check_mode
-
-    - name: Determine if OSPF is configured (NX-OS)
-      ansible.builtin.set_fact:
-        ospf_configured: "{{ ansible_net_resources.ospfv2 is defined and ansible_net_resources.ospfv2.processes is defined and ansible_net_resources.ospfv2.processes | length > 0 }}"
-      when:
-        - ansible_network_os is defined
-        - platform == 'nxos'
-        - not ansible_check_mode
-        - ospf_facts is succeeded
-
-    - name: Check OSPF configuration (IOS-XE fallback)
-      cisco.ios.ios_command:
-        commands:
-          - show running-config | section router ospf
-      register: ios_ospf_config_check
-      when:
-        - ansible_network_os is defined
-        - platform == 'ios'
-        - not ansible_check_mode
-      failed_when: false
-
-    - name: Determine if OSPF is configured (IOS-XE)
-      ansible.builtin.set_fact:
-        ospf_configured: "{{ ios_ospf_config_check is defined and ios_ospf_config_check.stdout is defined and ios_ospf_config_check.stdout | length > 0 and 'router ospf' in ios_ospf_config_check.stdout[0] }}"
-      when:
-        - ansible_network_os is defined
-        - platform == 'ios'
-        - not ansible_check_mode
-        - ios_ospf_config_check is defined
-
-    - name: Set OSPF configured for check mode
-      ansible.builtin.set_fact:
-        ospf_configured: false
-      when:
-        - ansible_check_mode
-
-  rescue:
-    - name: Handle OSPF configuration check failure
-      ansible.builtin.set_fact:
-        ospf_configured: false
-
-- name: Skip OSPF validation if not configured
-  ansible.builtin.debug:
-    msg: "OSPF not configured on {{ inventory_hostname }} - skipping OSPF validation"
-  when:
-    - not (ospf_configured)
-
-- name: OSPF validation
-  block:
-    - name: Check OSPF neighbor status
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip ospf neighbor | json
-      register: ospf_neighbors
-      failed_when: false
-
-    - name: Validate OSPF adjacencies
-      ansible.builtin.debug:
-        msg: |
-          OSPF Neighbor Status:
-          {% for neighbor in ospf_neighbors.stdout[0] | from_json |
-            json_query('TABLE_neighbor.ROW_neighbor')  %}
-          - {{ neighbor.rid }}: {{ neighbor.state }} ({{ neighbor.interface }})
-          {% endfor %}
-      when:
-        - ospf_neighbors is defined
-        - ospf_neighbors.rc == 0
-  when:
-    - ospf_configured
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-
-- name: Check if EIGRP is configured
-  block:
-    - name: Check EIGRP configuration (Cisco)
-      cisco.nxos.nxos_command:
-        commands:
-          - show running-config eigrp
-      register: eigrp_config_check
-      when:
-        - ansible_network_os is defined
-        - platform in ['nxos', 'ios']
-        - not ansible_check_mode
-      failed_when: false
-
-    - name: Determine if EIGRP is configured
-      ansible.builtin.set_fact:
-        eigrp_configured: >-
-          {{
-            (eigrp_config_check is defined and
-             eigrp_config_check.stdout is defined and
-             eigrp_config_check.stdout | length > 0 and
-             'router eigrp' in eigrp_config_check.stdout[0])
-          }}
-      when:
-        - eigrp_config_check is defined
-        - not ansible_check_mode
-
-    - name: Set EIGRP configured for check mode
-      ansible.builtin.set_fact:
-        eigrp_configured: false
-      when:
-        - ansible_check_mode
-
-  rescue:
-    - name: Handle EIGRP configuration check failure
-      ansible.builtin.set_fact:
-        eigrp_configured: false
-
-- name: Skip EIGRP validation if not configured
-  ansible.builtin.debug:
-    msg: "EIGRP not configured on {{ inventory_hostname }} - skipping EIGRP validation"
-  when:
-    - not (eigrp_configured)
-
-- name: EIGRP validation
-  block:
-    - name: Check EIGRP neighbor status
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip eigrp neighbors | json
-      register: eigrp_neighbors
-      failed_when: false
-
-    - name: Validate EIGRP adjacencies
-      ansible.builtin.debug:
-        msg: |
-          EIGRP Neighbor Status:
-          {% for neighbor in eigrp_neighbors.stdout[0] | from_json |
-            json_query('TABLE_neighbor.ROW_neighbor')  %}
-          - {{ neighbor.ipaddr }}: {{ neighbor.state }} AS {{ neighbor.as }}
-          {% endfor %}
-      when:
-        - eigrp_neighbors is defined
-        - eigrp_neighbors.rc == 0
-  when:
-    - eigrp_configured
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-
-- name: Store routing baseline
   ansible.builtin.set_fact:
     routing_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      total_routes: "{{ total_routes  }}"
-      static_routes_count: >
-        "{{ static_routes | length if static_routes is defined else 0 }}"
-      connected_routes_count: >
-        "{{ connected_routes | length if connected_routes is defined else 0 }}"
-      default_route_present: "{{ default_route_info.present  }}"
-      default_route_next_hop: >
-        "{{ default_route_info.next_hop }}"
-      ospf_configured: "{{ ospf_configured }}"
-      ospf_neighbors: >
-        {{ ospf_neighbors.stdout[0] | from_json |
-           json_query('TABLE_neighbor.ROW_neighbor') | length
-           if (ospf_configured) and ospf_neighbors is defined and ospf_neighbors.rc == 0
-           else 0 }}
-      eigrp_configured: "{{ eigrp_configured }}"
-      eigrp_neighbors: >
-        {{ eigrp_neighbors.stdout[0] | from_json |
-           json_query('TABLE_neighbor.ROW_neighbor') | length
-           if (eigrp_configured) and eigrp_neighbors is defined and eigrp_neighbors.rc == 0
-           else 0 }}
-  when:
-    - not ansible_check_mode
+      total_routes: "{{ total_routes | default(0) }}"
+      fib_entries: "{{ fib_entries | default(0) }}"
+      rib_fib_consistent: "{{ rib_fib_consistent | default(true) }}"
+      rib_fib_variance: "{{ rib_fib_variance | default(0) }}"
+      static_routes_count: "{{ static_routes | length if static_routes is defined else 0 }}"
+      connected_routes_count: "{{ connected_routes | length if connected_routes is defined else 0 }}"
+      bgp_routes_count: "{{ bgp_routes | length if bgp_routes is defined else 0 }}"
 
 - name: Store routing baseline for check mode
+  when:
+    - ansible_check_mode
   ansible.builtin.set_fact:
     routing_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       total_routes: 0
+      fib_entries: 0
+      rib_fib_consistent: true
+      rib_fib_variance: 0
       static_routes_count: 0
       connected_routes_count: 0
-      default_route_present: false
-      default_route_next_hop: "None"
-      ospf_configured: false
-      ospf_neighbors: 0
-      eigrp_configured: false
-      eigrp_neighbors: 0
-  when:
-    - ansible_check_mode
+      bgp_routes_count: 0
 
 - name: Routing validation summary
   ansible.builtin.debug:
     msg:
-      - "Routing Validation Results:"
-      - "Total Routes: {{ routing_baseline.total_routes }}"
+      - "=== Routing Validation Results ==="
+      - "RIB Total Routes: {{ routing_baseline.total_routes }}"
+      - "FIB Total Entries: {{ routing_baseline.fib_entries }}"
+      - "RIB-FIB Consistent: {{ routing_baseline.rib_fib_consistent }}"
+      - "RIB-FIB Variance: {{ routing_baseline.rib_fib_variance }}"
       - "Static Routes: {{ routing_baseline.static_routes_count }}"
       - "Connected Routes: {{ routing_baseline.connected_routes_count }}"
-      - "Default Route: {{ 'Present' if routing_baseline.default_route_present else 'Missing' }}"
-      - "Default Next-Hop: {{ routing_baseline.default_route_next_hop }}"
-      - "Default Route Reachable: {{ 'YES' if (default_route_ping is defined and default_route_ping is succeeded and default_route_ping.stdout is defined and default_route_ping.stdout[0] | regex_search('Success rate is [^0]')) else 'UNTESTED' }}"
-      - "OSPF Neighbors: {{ routing_baseline.ospf_neighbors }}"
-      - "EIGRP Neighbors: {{ routing_baseline.eigrp_neighbors }}"
-      - "Status: {{ 'HEALTHY' if routing_baseline.total_routes > 0 else 'CHECK REQUIRED' }}"
+      - "BGP Routes: {{ routing_baseline.bgp_routes_count }}"
+      - "Status: {{ 'HEALTHY' if routing_baseline.total_routes | int > 0 else 'CHECK REQUIRED' }}"
+      - "================================="
+
+- name: IOS-XE Routing Validation (placeholder for future implementation)
+  when:
+    - platform == 'ios'
+    - not ansible_check_mode
+  block:
+    - name: Get routing table (IOS-XE)
+      cisco.ios.ios_command:
+        commands:
+          - show ip route summary
+          - show ip route
+      register: ios_routing_info
+
+    - name: Store IOS-XE routing baseline (placeholder)
+      ansible.builtin.set_fact:
+        routing_baseline:
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          total_routes: 0
+          platform: "ios"
+          raw_output: "{{ ios_routing_info.stdout }}"

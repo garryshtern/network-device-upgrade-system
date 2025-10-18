@@ -76,10 +76,13 @@ ansible-galaxy collection install -r ansible-content/collections/requirements.ym
 ./tests/run-all-tests.sh
 
 # REQUIRED: Syntax validation - MUST pass without errors
-ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
+# CRITICAL: ALWAYS provide ALL required extra_vars to avoid "undefined variable" errors
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1"
 
 # REQUIRED: Check mode validation - MUST work without errors
-ansible-playbook --check ansible-content/playbooks/health-check.yml
+ansible-playbook --check ansible-content/playbooks/health-check.yml \
+  --extra-vars="target_hosts=localhost"
 
 # CRITICAL: Linting validation - MUST return 0 errors/warnings
 ansible-lint ansible-content/playbooks/
@@ -102,7 +105,15 @@ yamllint ansible-content/
 # - Ensure tests verify correct behavior, not just pass
 
 # 2. Syntax validation (exit code MUST be 0)
-find ansible-content -name "*.yml" -exec ansible-playbook --syntax-check {} \;
+# CRITICAL: ALWAYS provide required extra_vars for playbooks that need them
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1"
+ansible-playbook --syntax-check ansible-content/playbooks/health-check.yml \
+  --extra-vars="target_hosts=localhost"
+ansible-playbook --syntax-check ansible-content/playbooks/config-backup.yml
+ansible-playbook --syntax-check ansible-content/playbooks/compliance-audit.yml
+ansible-playbook --syntax-check ansible-content/playbooks/image-installation.yml
+ansible-playbook --syntax-check ansible-content/playbooks/network-validation.yml
 
 # 3. Linting validation (exit code MUST be 0)
 ansible-lint ansible-content/ --offline --parseable-severity
@@ -112,7 +123,9 @@ yamllint ansible-content/
 ./tests/run-all-tests.sh | grep "Passed:" | grep "23"
 
 # 5. Check mode validation
-ansible-playbook --check --diff ansible-content/playbooks/main-upgrade-workflow.yml
+# CRITICAL: ALWAYS provide required extra_vars
+ansible-playbook --check --diff ansible-content/playbooks/main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1"
 
 # ALL CHECKS MUST PASS BEFORE COMMIT
 # CODE CHANGES WITHOUT CORRESPONDING TEST UPDATES ARE BLOCKED
@@ -214,9 +227,9 @@ Comprehensive testing for Mac/Linux development without physical devices:
 3. **Pre-Commit Validation (REQUIRED)**:
    - Run `ansible-lint ansible-content/` - MUST return 0 errors
    - Run `yamllint ansible-content/` - MUST return 0 errors
-   - Run `ansible-playbook --syntax-check` on all modified playbooks
+   - Run `ansible-playbook --syntax-check` on all modified playbooks **WITH REQUIRED EXTRA_VARS**
    - Run test suites - MUST achieve 100% pass rate
-   - Verify all changes work in check mode (`--check --diff`)
+   - Verify all changes work in check mode (`--check --diff`) **WITH REQUIRED EXTRA_VARS**
 
 4. **Code Review Requirements**:
    - Systematic search for ALL instances of patterns being fixed
@@ -236,6 +249,38 @@ Comprehensive testing for Mac/Linux development without physical devices:
 - **Security**: All sensitive data encrypted with Ansible Vault, no hardcoded secrets
 - **Performance**: Code MUST not introduce performance regressions
 - **Documentation**: ALL changes MUST include corresponding documentation updates
+
+#### **Syntax Validation with Extra Variables (CRITICAL)**
+
+**MANDATORY: ALWAYS provide ALL required extra_vars when running ansible-playbook --syntax-check**
+
+Many playbooks use runtime variables (target_hosts, target_firmware, max_concurrent, etc.) that MUST be provided during syntax validation to avoid "undefined variable" errors.
+
+**NEVER run syntax checks without required extra_vars:**
+```bash
+# ❌ WRONG - Will fail with "undefined variable" errors
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
+
+# ✅ CORRECT - Provides all required variables
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1"
+```
+
+**Required extra_vars by playbook:**
+- `main-upgrade-workflow.yml`: target_hosts, target_firmware, maintenance_window, max_concurrent
+- `health-check.yml`: target_hosts
+- `config-backup.yml`: (none - can run without extra_vars)
+- `compliance-audit.yml`: (none - can run without extra_vars)
+- `image-installation.yml`: (none - can run without extra_vars)
+- `network-validation.yml`: (none - can run without extra_vars)
+
+**This requirement applies to:**
+- Manual syntax checks during development
+- Pre-commit validation scripts
+- CI/CD pipeline syntax validation
+- Check mode execution (`--check --diff`)
+
+**Rationale:** Providing extra_vars ensures syntax validation catches ALL errors, not just YAML structure issues. Without proper variables, syntax checks may pass but playbooks will fail at runtime.
 
 #### **Platform-Specific Task Organization (MANDATORY)**
 

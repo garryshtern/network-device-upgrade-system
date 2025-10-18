@@ -1,127 +1,80 @@
 ---
 # ARP and Neighbor Discovery Validation
-# Validates ARP table entries and DHCP snooping binding table
-# UPDATED: Removed generic device support
-# UPDATED: Consolidated when clauses, fixed set_fact prefixes
+# Validates ARP table entries, MAC table, DHCP snooping, and IPv6 neighbors
+# Uses pre-gathered data from connectivity-check (nxos_validation_data)
+# DESIGN: Single block pattern with platform gate
+#
+# FEATURES:
+# - ARP table analysis (static, dynamic, incomplete)
+# - MAC address table analysis
+# - ARP-MAC correlation
+# - DHCP snooping binding table (not pre-gathered)
+# - IPv6 neighbor discovery (not pre-gathered)
 
-- name: Get ARP table (NX-OS)
-  block:
-    - name: Get ARP information
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip arp | json
-          - show ip arp summary | json
-          - show ip arp statistics | json
-      register: nxos_arp_info
+- name: NX-OS ARP and MAC Validation (uses pre-gathered data from connectivity-check)
   when:
-    - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
+  block:
+    - name: Extract ARP and MAC data from pre-gathered data
+      ansible.builtin.set_fact:
+        arp_data: "{{ nxos_validation_data.stdout[0] }}"
+        mac_data: "{{ nxos_validation_data.stdout[1] }}"
+      when:
+        - nxos_validation_data is defined
+        - nxos_validation_data.stdout is defined
 
-- name: Get ARP table (IOS-XE)
-  block:
-    - name: Get ARP information
-      cisco.ios.ios_command:
-        commands:
-          - show ip arp
-          - show arp summary
-      register: ios_arp_info
-  when:
-    - ansible_network_os is defined
-    - platform == 'ios'
-    - not ansible_check_mode
-- name: Extract ARP data (NX-OS)
-  block:
     - name: Parse ARP table data
       ansible.builtin.set_fact:
-        arp_entries: >
-          {{ nxos_arp_info.stdout[0] | from_json |
-             json_query('TABLE_arp.ROW_arp')
-           }}'
-        arp_summary: '{{ nxos_arp_info.stdout[1] | from_json }}'
-        arp_statistics: '{{ nxos_arp_info.stdout[2] | from_json }}'
+        arp_table: "{{ arp_data if arp_data is mapping else (arp_data | from_json) }}"
+      when:
+        - arp_data is defined
 
-    - name: Classify ARP entries
+    - name: Parse MAC table data
       ansible.builtin.set_fact:
-        static_arp_entries: >
-          '{{ arp_entries | selectattr(''flag'', ''match'', ''.*S.*'')
-          | list }}'
-        dynamic_arp_entries: >
-          '{{ arp_entries | selectattr(''flag'', ''match'', ''.*D.*'')
-          | list }}'
-        incomplete_arp_entries: >
-          '{{ arp_entries | selectattr(''flag'', ''match'', ''.*I.*'')
-          | list }}'
+        mac_table: "{{ mac_data if mac_data is mapping else (mac_data | from_json) }}"
+      when:
+        - mac_data is defined
+
+    - name: Extract ARP entries
+      ansible.builtin.set_fact:
+        arp_entries: "{{ arp_table.TABLE_vrf.ROW_vrf | map(attribute='TABLE_adj') | map(attribute='ROW_adj') | flatten }}"
+      when:
+        - arp_table is defined
+        - arp_table.TABLE_vrf is defined
+
+    - name: Extract MAC entries
+      ansible.builtin.set_fact:
+        mac_entries: "{{ mac_table.TABLE_mac_address.ROW_mac_address }}"
+      when:
+        - mac_table is defined
+        - mac_table.TABLE_mac_address is defined
+
+    - name: Classify ARP entries by type
+      ansible.builtin.set_fact:
+        static_arp_entries: "{{ arp_entries | selectattr('flags', 'defined') | selectattr('flags', 'match', '.*S.*') | list }}"
+        dynamic_arp_entries: "{{ arp_entries | selectattr('flags', 'defined') | selectattr('flags', 'match', '.*D.*') | list }}"
+        incomplete_arp_entries: "{{ arp_entries | selectattr('flags', 'defined') | selectattr('flags', 'match', '.*I.*') | list }}"
       when:
         - arp_entries is defined
         - arp_entries | length > 0
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-    - nxos_arp_info is defined
-    - nxos_arp_info.stdout is defined
-    - nxos_arp_info.stdout[0] != ""
-- name: Check ARP table completeness
-  ansible.builtin.assert:
-    that:
-      - arp_entries | length > 0
-    fail_msg: ARP table appears to be empty
-  when: arp_entries is defined
-- name: Validate ARP table size
-  ansible.builtin.debug:
-    msg:
-      - "ARP Table Status:"
-      - "Total Entries: {{ arp_entries | length }}"
-      - "Static Entries: {{ static_arp_entries | length if static_arp_entries is defined else 0 }}"
-      - "Dynamic Entries: {{ dynamic_arp_entries | length if dynamic_arp_entries is defined else 0 }}"
-      - "Incomplete Entries: {{ incomplete_arp_entries | length if incomplete_arp_entries is defined else 0 }}"
-      - "{% if arp_summary is defined %}Total Resolved: {{ arp_summary.resolved }}{% endif %}"
-      - "{% if arp_summary is defined %}Total Incomplete: {{ arp_summary.incomplete }}{% endif %}"
-  when: arp_entries is defined
-- name: Check for excessive incomplete entries
-  ansible.builtin.debug:
-    msg: >-
-      WARNING: {{ incomplete_arp_entries | length }}
-      incomplete ARP entries found
-  when:
-    - incomplete_arp_entries is defined
-    - incomplete_arp_entries | length > 10
-- name: Check default gateway ARP entry (NX-OS)
-  block:
-    - name: Get default route
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip route 0.0.0.0/0 | json
-      register: default_route_info
-      failed_when: false
 
-    - name: Extract default gateway
-      ansible.builtin.set_fact:
-        default_gateway: >
-          {{ default_route_info.stdout[0] | from_json |
-             json_query('TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
-                         TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.
-                         ROW_path.ipnexthop')
-          }}
+    - name: Check ARP table completeness
+      ansible.builtin.assert:
+        that:
+          - arp_entries | length > 0
+        fail_msg: "ARP table appears to be empty"
       when:
-        - default_route_info is defined
-        - default_route_info.rc == 0
-        - default_route_info.stdout[0] != ""
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-- name: Verify default gateway in ARP table
-  ansible.builtin.debug:
-    msg:
-      - "Default Gateway Validation:"
-      - "Gateway IP: {{ default_gateway if default_gateway is defined else 'Not found' }}"
-      - "Gateway in ARP: {{ 'YES' if default_gateway is defined and arp_entries is defined and (arp_entries | selectattr('ip_addr', 'equalto', default_gateway) | list | length > 0) else 'NO' }}"
-  when: arp_entries is defined
-- name: Get DHCP snooping binding table (NX-OS)
-  block:
-    - name: Get DHCP snooping bindings
+        - arp_entries is defined
+
+    - name: Check for excessive incomplete entries
+      ansible.builtin.debug:
+        msg: "WARNING: {{ incomplete_arp_entries | length }} incomplete ARP entries found"
+      when:
+        - incomplete_arp_entries is defined
+        - incomplete_arp_entries | length > 10
+
+    - name: Get DHCP snooping binding table
       cisco.nxos.nxos_command:
         commands:
           - show ip dhcp snooping binding | json
@@ -130,40 +83,12 @@
 
     - name: Parse DHCP snooping bindings
       ansible.builtin.set_fact:
-        dhcp_bindings: >
-          {{ dhcp_snooping_info.stdout[0] | from_json |
-             json_query('TABLE_binding.ROW_binding')
-           }}'
+        dhcp_bindings: "{{ dhcp_snooping_info.stdout[0] | from_json | json_query('TABLE_binding.ROW_binding') }}"
       when:
         - dhcp_snooping_info is defined
-        - dhcp_snooping_info.rc == 0
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-- name: Validate DHCP snooping bindings (with data)
-  ansible.builtin.debug:
-    msg:
-      - "DHCP Snooping Binding Table:"
-      - "Total Bindings: {{ dhcp_bindings | length }}"
-      - "Sample Bindings (first 10):"
-      - "{% for binding in dhcp_bindings[:10] %}  {{ binding.ip_addr }}: {{ binding.mac_addr }} ({{ binding.interface }}, VLAN {{ binding.vlan_id }}){% endfor %}"
-  when:
-    - dhcp_snooping_info is defined
-    - dhcp_bindings is defined
-    - dhcp_bindings | length > 0
+        - dhcp_snooping_info is succeeded
 
-- name: Validate DHCP snooping bindings (no data)
-  ansible.builtin.debug:
-    msg:
-      - "DHCP Snooping Binding Table:"
-      - "No DHCP snooping bindings found (feature may not be enabled)"
-  when:
-    - dhcp_snooping_info is defined
-    - dhcp_bindings is not defined or dhcp_bindings | length == 0
-- name: Get IPv6 neighbor table (NX-OS)
-  block:
-    - name: Get IPv6 neighbors
+    - name: Get IPv6 neighbor table
       cisco.nxos.nxos_command:
         commands:
           - show ipv6 neighbor | json
@@ -172,65 +97,28 @@
 
     - name: Parse IPv6 neighbors
       ansible.builtin.set_fact:
-        ipv6_neighbors: >
-          {{ ipv6_neighbor_info.stdout[0] | from_json |
-             json_query('TABLE_neighbor.ROW_neighbor')
-           }}'
+        ipv6_neighbors: "{{ ipv6_neighbor_info.stdout[0] | from_json | json_query('TABLE_neighbor.ROW_neighbor') }}"
       when:
         - ipv6_neighbor_info is defined
-        - ipv6_neighbor_info.rc == 0
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-- name: Validate IPv6 neighbor discovery (with neighbors)
-  ansible.builtin.debug:
-    msg:
-      - "IPv6 Neighbor Discovery:"
-      - "Total IPv6 Neighbors: {{ ipv6_neighbors | length }}"
-  when:
-    - ipv6_neighbor_info is defined
-    - ipv6_neighbors is defined
-    - ipv6_neighbors | length > 0
+        - ipv6_neighbor_info is succeeded
 
-- name: Validate IPv6 neighbor discovery (no neighbors)
-  ansible.builtin.debug:
-    msg:
-      - "IPv6 Neighbor Discovery:"
-      - "No IPv6 neighbors found (IPv6 may not be configured)"
-  when:
-    - ipv6_neighbor_info is defined
-    - ipv6_neighbors is not defined or ipv6_neighbors | length == 0
-- name: Get MAC address table (NX-OS)
-  block:
-    - name: Get MAC table
-      cisco.nxos.nxos_command:
-        commands:
-          - show mac address-table | json
-      register: mac_table_info
-      failed_when: false
-
-    - name: Cross-reference ARP and MAC tables
-      ansible.builtin.set_fact:
-        mac_entries: >
-          {{ mac_table_info.stdout[0] | from_json |
-             json_query('TABLE_mac_address.ROW_mac_address')
-           }}'
+    - name: Validate ARP-MAC correlation
+      ansible.builtin.debug:
+        msg:
+          - "=== ARP and MAC Table Validation ==="
+          - "ARP Entries: {{ arp_entries | length }}"
+          - "Static ARP: {{ static_arp_entries | length if static_arp_entries is defined else 0 }}"
+          - "Dynamic ARP: {{ dynamic_arp_entries | length if dynamic_arp_entries is defined else 0 }}"
+          - "Incomplete ARP: {{ incomplete_arp_entries | length if incomplete_arp_entries is defined else 0 }}"
+          - "MAC Entries: {{ mac_entries | length if mac_entries is defined else 0 }}"
+          - "DHCP Bindings: {{ dhcp_bindings | length if dhcp_bindings is defined else 0 }}"
+          - "IPv6 Neighbors: {{ ipv6_neighbors | length if ipv6_neighbors is defined else 0 }}"
       when:
-        - mac_table_info is defined
-        - mac_table_info.rc == 0
+        - show_debug | bool
+- name: Store ARP baseline (NX-OS)
   when:
-    - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
-- name: Validate ARP-MAC correlation
-  ansible.builtin.debug:
-    msg:
-      - "MAC Address Table Status:"
-      - "Total MAC Entries: {{ mac_entries | length if mac_entries is defined else 0 }}"
-      - "ARP-MAC Correlation: {{ 'Available' if mac_entries is defined and arp_entries is defined else 'Limited Data' }}"
-  when: mac_table_info is defined
-- name: Store ARP baseline
   ansible.builtin.set_fact:
     arp_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
@@ -238,20 +126,54 @@
       static_entries: "{{ static_arp_entries | length if static_arp_entries is defined else 0 }}"
       dynamic_entries: "{{ dynamic_arp_entries | length if dynamic_arp_entries is defined else 0 }}"
       incomplete_entries: "{{ incomplete_arp_entries | length if incomplete_arp_entries is defined else 0 }}"
-      default_gateway_present: "{{ true if default_gateway is defined and arp_entries is defined and (arp_entries | selectattr('ip_addr', 'equalto', default_gateway) | list | length > 0) else false }}"
       dhcp_bindings: "{{ dhcp_bindings | length if dhcp_bindings is defined else 0 }}"
       ipv6_neighbors: "{{ ipv6_neighbors | length if ipv6_neighbors is defined else 0 }}"
       mac_entries: "{{ mac_entries | length if mac_entries is defined else 0 }}"
+
+- name: Store ARP baseline for check mode
+  when:
+    - ansible_check_mode
+  ansible.builtin.set_fact:
+    arp_baseline:
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      total_arp_entries: 0
+      static_entries: 0
+      dynamic_entries: 0
+      incomplete_entries: 0
+      dhcp_bindings: 0
+      ipv6_neighbors: 0
+      mac_entries: 0
+
 - name: ARP validation summary
   ansible.builtin.debug:
     msg:
-      - "ARP and Neighbor Discovery Validation Results:"
+      - "=== ARP and Neighbor Discovery Validation Results ==="
       - "Total ARP Entries: {{ arp_baseline.total_arp_entries }}"
-      - "Static Entries: {{ arp_baseline.static_entries }}"
-      - "Dynamic Entries: {{ arp_baseline.dynamic_entries }}"
-      - "Incomplete Entries: {{ arp_baseline.incomplete_entries }}"
-      - "Default Gateway in ARP: {{ 'YES' if arp_baseline.default_gateway_present else 'NO' }}"
+      - "Static ARP Entries: {{ arp_baseline.static_entries }}"
+      - "Dynamic ARP Entries: {{ arp_baseline.dynamic_entries }}"
+      - "Incomplete ARP Entries: {{ arp_baseline.incomplete_entries }}"
       - "DHCP Snooping Bindings: {{ arp_baseline.dhcp_bindings }}"
       - "IPv6 Neighbors: {{ arp_baseline.ipv6_neighbors }}"
       - "MAC Table Entries: {{ arp_baseline.mac_entries }}"
       - "Overall Status: {{ 'HEALTHY' if arp_baseline.total_arp_entries | int > 0 else 'EMPTY TABLE' }}"
+      - "============================================"
+
+- name: IOS-XE ARP Validation (placeholder for future implementation)
+  when:
+    - platform == 'ios'
+    - not ansible_check_mode
+  block:
+    - name: Get ARP information (IOS-XE)
+      cisco.ios.ios_command:
+        commands:
+          - show ip arp
+          - show arp summary
+      register: ios_arp_info
+
+    - name: Store IOS-XE ARP baseline (placeholder)
+      ansible.builtin.set_fact:
+        arp_baseline:
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          total_arp_entries: 0
+          platform: "ios"
+          raw_output: "{{ ios_arp_info.stdout }}"

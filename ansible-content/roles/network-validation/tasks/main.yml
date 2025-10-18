@@ -26,6 +26,9 @@
           total_routes: 0
         arp_baseline:
           total_arp_entries: 0
+        bfd_baseline:
+          total_sessions: 0
+          sessions_up: 0
 
     - name: Run BGP validation
       ansible.builtin.include_tasks: bgp-validation.yml
@@ -44,6 +47,9 @@
       ansible.builtin.include_tasks: multicast-validation.yml
       when: multicast_enabled | bool
 
+    - name: Run BFD validation
+      ansible.builtin.include_tasks: bfd-validation.yml
+
     - name: Run protocol convergence validation
       ansible.builtin.include_tasks: protocol-convergence.yml
 
@@ -55,6 +61,7 @@
       routing_status: "check_mode"
       arp_status: "check_mode"
       bgp_status: "check_mode"
+      bfd_status: "check_mode"
       comparison_status: "passed"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when: ansible_check_mode
@@ -67,6 +74,7 @@
       routing_status: "{{ 'healthy' if routing_baseline.total_routes | int > 0 else 'unhealthy' }}"
       arp_status: "{{ 'healthy' if arp_baseline.total_arp_entries | int > 0 else 'warning' }}"
       bgp_status: "{{ 'healthy' if bgp_validation.bgp_configured and bgp_validation.peers_established | int > 0 else 'skipped' }}"
+      bfd_status: "{{ 'healthy' if bfd_baseline.bfd_configured and bfd_baseline.sessions_up | int == bfd_baseline.total_sessions | int and bfd_baseline.total_sessions | int > 0 else ('not_configured' if bfd_baseline.total_sessions | int == 0 else 'degraded') }}"
       comparison_status: "not_applicable"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when:
@@ -81,6 +89,7 @@
       routing_status: "{{ 'healthy' if routing_baseline.total_routes | int > 0 else 'unhealthy' }}"
       arp_status: "{{ 'healthy' if arp_baseline.total_arp_entries | int > 0 else 'warning' }}"
       bgp_status: "{{ 'healthy' if bgp_validation.bgp_configured and bgp_validation.peers_established | int > 0 else 'skipped' }}"
+      bfd_status: "{{ 'healthy' if bfd_baseline.bfd_configured and bfd_baseline.sessions_up | int == bfd_baseline.total_sessions | int and bfd_baseline.total_sessions | int > 0 else ('not_configured' if bfd_baseline.total_sessions | int == 0 else 'degraded') }}"
       comparison_status: "passed"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when:
