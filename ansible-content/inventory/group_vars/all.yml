@@ -118,6 +118,7 @@ ping_test_enabled: true
 ping_test_host: "8.8.8.8"
 ping_test_count: 3
 bgp_enabled: true  # Enable BGP validation checks
+bfd_enabled: true  # Enable BFD validation checks
 multicast_enabled: true  # Enable multicast validation checks
 validation_type: "post_upgrade"  # Default validation type: pre_upgrade or post_upgrade
 

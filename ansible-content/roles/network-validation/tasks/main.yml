@@ -49,9 +49,7 @@
 
     - name: Run BFD validation
       ansible.builtin.include_tasks: bfd-validation.yml
-
-    - name: Run protocol convergence validation
-      ansible.builtin.include_tasks: protocol-convergence.yml
+      when: bfd_enabled | bool
 
 - name: Aggregate validation results (check mode)
   ansible.builtin.set_fact:

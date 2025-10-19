@@ -3,12 +3,31 @@
 # Validates BFD interfaces, neighbors, and session states
 # Uses pre-gathered data from connectivity-check (nxos_validation_data)
 # DESIGN: Single block pattern with platform gate
+# PATTERN: Only validates if BFD is configured on device (same as BGP/multicast)
 #
 # FEATURES:
 # - BFD interface configuration validation
 # - BFD neighbor session state checking
 # - Session up/down/admin-down classification
 # - Per-VRF BFD session analysis
+
+- name: Initialize BFD validation results
+  ansible.builtin.set_fact:
+    bfd_validation:
+      device: "{{ inventory_hostname }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      validation_type: "bfd"
+      baseline: {}
+      current: {}
+      passed: true
+      errors: []
+      warnings: []
+      bfd_configured: false
+
+- name: Set BFD configured for check mode
+  ansible.builtin.set_fact:
+    bfd_validation: "{{ bfd_validation | combine({'bfd_configured': true}) }}"
+  when: ansible_check_mode
 
 - name: NX-OS BFD Validation (uses pre-gathered BFD data from connectivity-check)
   when:
@@ -40,13 +59,28 @@
       when:
         - bfd_neighbor_table is defined
 
-    - name: Check if BFD is configured
+    - name: Determine if BFD is configured on device
       ansible.builtin.set_fact:
-        bfd_configured: "{{ (bfd_interfaces_config | length > 0) or (bfd_neighbors | length > 0) }}"
+        bfd_validation: "{{ bfd_validation | combine({'bfd_configured': bfd_is_configured}) }}"
+      vars:
+        bfd_is_configured: "{{ (bfd_interfaces_config | length > 0) or (bfd_neighbors | length > 0) }}"
       when:
         - bfd_interfaces_config is defined
         - bfd_neighbors is defined
 
+  rescue:
+    - name: Handle missing BFD facts (not pre-gathered)
+      ansible.builtin.set_fact:
+        bfd_validation: "{{ bfd_validation | combine({'warnings': bfd_validation.warnings + ['BFD facts not available - skipping BFD validation'], 'bfd_configured': false}) }}"
+
+- name: Skip BFD validation if not configured
+  ansible.builtin.debug:
+    msg: "BFD is not configured on {{ inventory_hostname }} - skipping BFD validation"
+  when: not bfd_validation.bfd_configured
+
+- name: Analyze BFD sessions and state
+  when: bfd_validation.bfd_configured
+  block:
     - name: Classify BFD session states
       ansible.builtin.set_fact:
         bfd_sessions_up: "{{ bfd_neighbors | selectattr('state', 'defined') | selectattr('state', 'equalto', 'Up') | list }}"
@@ -118,7 +152,7 @@
   ansible.builtin.set_fact:
     bfd_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      bfd_configured: "{{ bfd_configured | default(false) }}"
+      bfd_configured: "{{ bfd_validation.bfd_configured | default(false) }}"
       bfd_enabled_interfaces: "{{ bfd_interfaces_config | length if bfd_interfaces_config is defined else 0 }}"
       total_sessions: "{{ bfd_neighbors | length if bfd_neighbors is defined else 0 }}"
       sessions_up: "{{ bfd_sessions_up | length if bfd_sessions_up is defined else 0 }}"
