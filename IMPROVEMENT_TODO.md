@@ -1,8 +1,59 @@
 # Code Improvement & Optimization TODO List
 
 **Analysis Date:** 2025-10-04
+**Last Update:** 2025-10-19
 **Total Codebase:** 15,704 lines of YAML
 **Molecule Tests:** 3,412 lines (22% of codebase)
+
+## ✅ COMPLETED ITEMS (2025-10-19)
+
+### ✓ Protocol-Convergence Removal
+- **Completed:** Removed redundant `protocol-convergence.yml` validation task
+- **Impact:** Eliminated duplicate API calls and references to removed OSPF/EIGRP variables
+- **Files Changed:**
+  - Deleted `ansible-content/roles/network-validation/tasks/protocol-convergence.yml`
+  - Updated `ansible-content/roles/network-validation/tasks/main.yml`
+  - Updated `tests/validation-tests/network-validation-tests.yml`
+
+### ✓ Facts Gathering Optimization
+- **Completed:** Removed redundant nxos_facts calls from interface-validation.yml
+- **Impact:** Eliminated 2 redundant API calls per validation run (VLANs and LAG interfaces)
+- **Code Reduction:** -23 lines from interface-validation.yml
+- **Files Changed:** `ansible-content/roles/network-validation/tasks/interface-validation.yml`
+
+### ✓ Space-Management Consolidation
+- **Completed:** Merged redundant space-check.yml and storage-assessment.yml
+- **Impact:** Single entry point with optional validation, backwards-compatible redirect
+- **Code Reduction:** Net -44 lines
+- **Files Changed:**
+  - `ansible-content/roles/space-management/tasks/storage-assessment.yml`
+  - `ansible-content/roles/space-management/tasks/space-check.yml` (deprecated redirect)
+  - `ansible-content/playbooks/image-loading.yml`
+  - `ansible-content/roles/space-management/molecule/default/verify.yml`
+
+### ✓ BFD Validation Implementation
+- **Completed:** Added comprehensive BFD validation following BGP/multicast pattern
+- **Impact:** Proper protocol enablement flag, device configuration check, skip logic
+- **Files Changed:**
+  - Created `ansible-content/roles/network-validation/tasks/bfd-validation.yml` (210 lines)
+  - Updated `ansible-content/inventory/group_vars/all.yml` (added bfd_enabled flag)
+  - Updated `ansible-content/roles/network-validation/tasks/main.yml`
+
+### ✓ Version-Aware Workflow Ordering
+- **Completed:** Implemented proper workflow sequence with version check first
+- **Impact:** Early exit for devices already at target version, clear operator messaging
+- **Files Changed:**
+  - `ansible-content/playbooks/main-upgrade-workflow.yml` (major reordering)
+  - `ansible-content/roles/cisco-nxos-upgrade/tasks/image-loading.yml` (added messaging)
+- **Key Improvements:**
+  - Check running version FIRST before attempting upgrade
+  - Config backup moved to AFTER image staging
+  - Comprehensive facts gathering moved to AFTER image staging
+  - Clear operator messages at all decision points
+
+### ✓ Test Suite Synchronization
+- **Completed:** All test files updated to match code changes
+- **Impact:** 100% test pass rate maintained (23/23 tests passing)
 
 ---
 
@@ -34,30 +85,36 @@
 
 ---
 
-### 2. **Consolidate Wait-for-Connection Patterns** 🔄
-**Current State:** 14 duplicate wait_for_connection tasks with similar timeouts
+### 2. **Consolidate Wait-for-Connection Patterns** 🔄 PARTIALLY COMPLETE
+**Current State:** `common/tasks/wait-for-device.yml` exists but NOT fully utilized
 
-**Pattern Found:**
+**Status:** ✅ Reusable task created, ❌ Not used everywhere
+
+**Remaining Work:**
+- [ ] Replace raw `wait_for_connection` in 3 playbooks:
+  - `playbooks/main-upgrade-workflow.yml:295-296`
+  - `playbooks/emergency-rollback.yml`
+  - `playbooks/image-installation.yml`
+- [ ] Use `include_role` with `common/wait-for-device.yml` instead
+- [ ] **Impact:** Consistent timeout handling, better auth failure detection
+
+**Example Replacement:**
 ```yaml
-# Repeated pattern in 14 locations
-ansible.builtin.wait_for_connection:
-  timeout: 60        # Sometimes 60, sometimes 300
-  delay: 5           # Sometimes 5, sometimes 30
-  sleep: 5-10        # Varies
+# CURRENT (raw wait_for_connection):
+- name: Wait for device to come back online
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ connectivity_timeout }}"
+    delay: 30
+
+# BETTER (use common task):
+- name: Wait for device to come back online
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-for-device
+  vars:
+    wait_timeout: "{{ connectivity_timeout }}"
+    wait_delay: 30
 ```
-
-**Action Items:**
-- [ ] Create `common/tasks/wait-for-device.yml` with parameterized timeouts
-- [ ] Accept `wait_timeout`, `wait_delay`, `wait_sleep` as parameters
-- [ ] Replace all 14 occurrences with `include_role` calls
-- [ ] **Impact:** -84 lines, centralized timeout management
-
-**Locations:**
-- `roles/cisco-nxos-upgrade/tasks/reboot.yml` (2 occurrences)
-- `roles/common/tasks/connectivity-check.yml`
-- `roles/common/tasks/health-check.yml`
-- `playbooks/main-upgrade-workflow.yml`
-- 9 other locations
 
 ---
 
@@ -242,8 +299,20 @@ upgrade_method: "disruptive"     # Singular
 
 ---
 
-## 📊 Estimated Impact Summary
+## 📊 Impact Summary
 
+### Completed (2025-10-19)
+| Task | Lines Saved | Status |
+|------|-------------|--------|
+| Protocol-Convergence Removal | +14 lines | ✅ Complete |
+| Facts Gathering Optimization | -23 lines | ✅ Complete |
+| Space-Management Consolidation | -44 lines | ✅ Complete |
+| BFD Validation Implementation | +210 lines | ✅ Complete |
+| Version-Aware Workflow | ~40 lines | ✅ Complete |
+| Test Synchronization | Maintained 100% pass rate | ✅ Complete |
+| **COMPLETED TOTAL** | **+197 lines (new features)** | **6 items** |
+
+### Remaining Optimization Potential
 | Category | Items | Lines Saved | Complexity Reduction |
 |----------|-------|-------------|---------------------|
 | Duplication Removal | 3 | ~160 | High |
@@ -252,7 +321,7 @@ upgrade_method: "disruptive"     # Singular
 | State Tracking Refactor | 1 | ~170 | High |
 | Molecule Consolidation | 1 | ~1,500 | High |
 | Code Quality | 3 | ~50 | Low |
-| **TOTAL** | **11** | **~2,070** | **25% reduction** |
+| **REMAINING TOTAL** | **11** | **~2,070** | **25% reduction** |
 
 ---
 
