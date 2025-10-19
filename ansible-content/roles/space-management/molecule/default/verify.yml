@@ -132,7 +132,6 @@
         - "{{ role_path }}/tasks/main.yml"
         - "{{ role_path }}/tasks/storage-assessment.yml"
         - "{{ role_path }}/tasks/platform-assessment.yml"
-        - "{{ role_path }}/tasks/space-check.yml"
 
     - name: Verify consolidated task files exist
       ansible.builtin.assert:

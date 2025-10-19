@@ -1,45 +1,23 @@
 ---
-# Storage Space Check Tasks
-# Platform-agnostic storage space validation
+# DEPRECATED: This file is deprecated and will be removed in a future version
+# Use storage-assessment.yml with validate_space: true instead
+#
+# Migration:
+#   OLD: tasks_from: space-check, vars: {required_space_gb: X}
+#   NEW: tasks_from: storage-assessment, vars: {validate_space: true, minimum_free_space_gb: X}
+#
+# This file now redirects to storage-assessment.yml for backwards compatibility
 
-- name: Run platform-agnostic storage assessment
-  ansible.builtin.include_tasks: platform-assessment.yml
+- name: Redirect to consolidated storage-assessment.yml
+  ansible.builtin.include_tasks: storage-assessment.yml
+  vars:
+    validate_space: true
+    minimum_free_space_gb: "{{ required_space_gb }}"
 
-- name: Set space check results from storage_info
-  ansible.builtin.set_fact:
-    space_check_passed: "{{ storage_info.free_space_gb | float >= minimum_free_space_gb | float }}"
-
-- name: Validate storage space availability
-  ansible.builtin.assert:
-    that:
-      - storage_info.free_space_gb | float >= minimum_free_space_gb | float
-    fail_msg: "Insufficient storage space: {{ storage_info.free_space_gb }}GB available, {{ minimum_free_space_gb }}GB required"
-    success_msg: "Storage space check passed: {{ storage_info.free_space_gb }}GB available, {{ minimum_free_space_gb }}GB required"
-  when: not ansible_check_mode
-
-- name: Display storage check results
+- name: Deprecation warning for space-check.yml
   ansible.builtin.debug:
     msg:
-      - "=== Storage Space Check ==="
-      - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ platform }}"
-      - "Required Space: {{ minimum_free_space_gb }}GB"
-      - "Available Space: {{ storage_info.free_space_gb }}GB"
-      - "Total Space: {{ storage_info.total_space_gb }}GB"
-      - "Status: {{ 'PASS' if space_check_passed else 'FAIL' }}"
-      - "=========================="
-
-- name: Record space check completion
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: metrics-export
-  vars:
-    metric_type: "storage_check"
-    metric_data:
-      device_id: "{{ inventory_hostname }}"
-      platform: "{{ platform }}"
-      required_space_gb: "{{ minimum_free_space_gb }}"
-      available_space_gb: "{{ storage_info.free_space_gb }}"
-      total_space_gb: "{{ storage_info.total_space_gb }}"
-      status: "{{ 'success' if space_check_passed else 'failed' }}"
-      timestamp: "{{ ansible_date_time.iso8601 }}"
+      - "WARNING: space-check.yml is deprecated"
+      - "Please update to use: tasks_from: storage-assessment"
+      - "With vars: validate_space: true, minimum_free_space_gb: {{ required_space_gb }}"
+  when: show_debug | bool

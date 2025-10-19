@@ -27,9 +27,10 @@
     - name: Check device storage capacity
       ansible.builtin.include_role:
         name: space-management
-        tasks_from: space-check
+        tasks_from: storage-assessment
       vars:
-        required_space_gb: "{{ firmware_size_gb }}"
+        validate_space: true
+        minimum_free_space_gb: "{{ firmware_size_gb }}"
 
     - name: Platform-specific image loading
       block:
