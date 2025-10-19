@@ -25,9 +25,7 @@
       ansible.builtin.assert:
         that:
           - available_bytes | int > (target_image_size | int)
-        fail_msg: >-
-          Insufficient space: {{ available_bytes }} bytes available,
-          {{ target_image_size }} required
+        fail_msg: "Insufficient space: {{ available_bytes }} bytes available, {{ target_image_size }} required"
 
 - name: Transfer image file (Server-Initiated PUSH)
   block:

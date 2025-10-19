@@ -142,8 +142,7 @@
           - >
             "not metamako_upgrade_state.metamux_enabled or
               'enabled' in post_metamux_status.stdout | lower"
-        fail_msg: >
-          "Specialized components not functioning correctly after upgrade"
+        fail_msg: "Specialized components not functioning correctly after upgrade"
 
 - name: Log installation completion
   ansible.builtin.debug:

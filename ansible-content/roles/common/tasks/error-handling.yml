@@ -24,9 +24,7 @@
 
 - name: Send failure notification
   ansible.builtin.debug:
-    msg: >-
-      ALERT: Task failure on {{ inventory_hostname }} - {{
-        ansible_failed_task.name }}
+    msg: "ALERT: Task failure on {{ inventory_hostname }} - {{ ansible_failed_task.name }}"
   when:
     - task_failed is defined
     - task_failed

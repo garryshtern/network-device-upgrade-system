@@ -57,9 +57,7 @@
           - >
             fortios_upgrade_state.current_step <
               fortios_upgrade_state.upgrade_path | length
-        fail_msg: >
-          "Invalid upgrade path, version format,
-            license issue, or step configuration"
+        fail_msg: "Invalid upgrade path, version format, license issue, or step configuration"
 
     - name: Execute multi-step upgrade process
       ansible.builtin.include_tasks: multi-step-upgrade.yml

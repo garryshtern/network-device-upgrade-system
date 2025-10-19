@@ -37,9 +37,7 @@
 
 - name: Log InfluxDB export status
   ansible.builtin.debug:
-    msg: >-
-      Metrics exported to InfluxDB: {{ 'SUCCESS' if
-        influx_export_result is succeeded else 'FAILED' }}
+    msg: "Metrics exported to InfluxDB: {{ 'SUCCESS' if influx_export_result is succeeded else 'FAILED' }}"
   when: influx_export_result is defined
 
 - name: Export metrics to local file (backup/debugging)

@@ -22,9 +22,7 @@
       ansible.builtin.assert:
         that:
           - device_architecture != 'unknown'
-        fail_msg: >
-          Unsupported Opengear device model:
-          {{ opengear_upgrade_state.device_model }}
+        fail_msg: "Unsupported Opengear device model: {{ opengear_upgrade_state.device_model }}"
 
     - name: Set upgrade method configuration
       ansible.builtin.set_fact:
@@ -45,11 +43,7 @@
           - >
             opengear_upgrade_state.target_version is
             match(version_pattern.pattern)
-        fail_msg: >
-          Version format mismatch for {{ device_architecture }} devices.
-          Expected: {{ version_pattern.description }}
-          Example: {{ version_pattern.example }}
-          Provided: {{ opengear_upgrade_state.target_version }}
+        fail_msg: "Version format mismatch for {{ device_architecture }} devices. Expected: {{ version_pattern.description }}, Example: {{ version_pattern.example }}, Provided: {{ opengear_upgrade_state.target_version }}"
 
     - name: Generate target firmware filename
       ansible.builtin.set_fact:
@@ -83,9 +77,7 @@
       ansible.builtin.assert:
         that:
           - opengear_storage_path | length > 0
-        fail_msg: >
-          No valid storage path found from:
-          {{ upgrade_config.storage_paths }}
+        fail_msg: "No valid storage path found from: {{ upgrade_config.storage_paths }}"
 
     - name: Check available storage space in detected mount
       ansible.builtin.raw: |
@@ -114,10 +106,7 @@
       ansible.builtin.assert:
         that:
           - available_space_mb | int > required_space_mb | int
-        fail_msg: >
-          Insufficient storage space.
-          Available: {{ available_space_mb }}MB,
-          Required: {{ required_space_mb }}MB
+        fail_msg: "Insufficient storage space. Available: {{ available_space_mb }}MB, Required: {{ required_space_mb }}MB"
 
     - name: Validate firmware file extension for device architecture
       ansible.builtin.assert:
@@ -127,10 +116,7 @@
              target_firmware_filename.endswith('.flash')) or
             (device_architecture == 'current_cli' and
              target_firmware_filename.endswith('.raucb'))
-        fail_msg: >
-          Firmware file extension mismatch for
-          {{ device_architecture }} devices:
-          {{ target_firmware_filename }}
+        fail_msg: "Firmware file extension mismatch for {{ device_architecture }} devices: {{ target_firmware_filename }}"
 
 - name: Firmware transfer preparation
   block:

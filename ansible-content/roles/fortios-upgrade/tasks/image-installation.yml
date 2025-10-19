@@ -122,9 +122,7 @@
           - >-
             fortios_upgrade_state.target_version in
             post_install_system_status.meta.results.version
-        fail_msg: >-
-          Installation completed but target version not active:
-          {{ post_install_system_status.meta.results.version }}
+        fail_msg: "Installation completed but target version not active: {{ post_install_system_status.meta.results.version }}"
 
     - name: Verify system health post-installation
       fortinet.fortios.fortios_monitor_fact:
