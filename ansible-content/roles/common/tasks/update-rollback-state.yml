@@ -1,0 +1,31 @@
+---
+# Update Emergency Rollback State
+# Reusable task for tracking rollback progress
+#
+# Required variables:
+#   step_name: Name of the rollback step (e.g., 'status_assessment')
+#   step_status: Status of the step - either 'completed' or 'failed'
+#
+# Optional variables:
+#   update_current_step: Set to true to also update current_step field (default: false)
+#
+# Example usage:
+#   - name: Mark firmware rollback complete
+#     ansible.builtin.include_role:
+#       name: common
+#       tasks_from: update-rollback-state
+#     vars:
+#       step_name: "firmware_rollback"
+#       step_status: "completed"
+
+- name: Update rollback state - mark step as {{ step_status }}
+  ansible.builtin.set_fact:
+    rollback_state: >
+      {{ rollback_state | combine({
+        'steps_' + step_status: rollback_state['steps_' + step_status] + [step_name],
+        'current_step': step_name if (update_current_step | default(false)) else rollback_state.current_step
+      }) }}
+  when:
+    - step_name is defined
+    - step_status is defined
+    - step_status in ['completed', 'failed']

@@ -66,22 +66,21 @@
                 msg: "Device status check failed - continuing with rollback"
 
         - name: Mark status assessment complete
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_completed': rollback_state.steps_completed +
-                ['status_assessment']
-              }) }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "status_assessment"
+            step_status: "completed"
 
       rescue:
         - name: Mark status assessment failed
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_failed': rollback_state.steps_failed +
-                ['status_assessment']
-                })
-              }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "status_assessment"
+            step_status: "failed"
 
     # Step 2: Platform-specific firmware rollback
     - name: Step 2 - Firmware rollback
@@ -144,21 +143,21 @@
             - restore_firmware
 
         - name: Mark firmware rollback complete
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_completed': rollback_state.steps_completed +
-                ['firmware_rollback']
-              }) }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "firmware_rollback"
+            step_status: "completed"
 
       rescue:
         - name: Mark firmware rollback failed
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_failed': rollback_state.steps_failed +
-                ['firmware_rollback']
-              }) }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "firmware_rollback"
+            step_status: "failed"
 
     # Step 3: Configuration rollback
     - name: Step 3 - Configuration rollback
@@ -196,21 +195,21 @@
             - latest_backup is defined
 
         - name: Mark config rollback complete
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_completed': rollback_state.steps_completed +
-                ['config_rollback']
-              }) }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "config_rollback"
+            step_status: "completed"
 
       rescue:
         - name: Mark config rollback failed
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_failed': rollback_state.steps_failed +
-                ['config_rollback']
-              }) }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "config_rollback"
+            step_status: "failed"
 
     # Step 4: Device reboot (if required)
     - name: Step 4 - Device reboot
@@ -237,21 +236,21 @@
           when: restore_firmware | bool
 
         - name: Mark rollback reboot complete
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_completed': rollback_state.steps_completed +
-                ['rollback_reboot']
-              }) }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "rollback_reboot"
+            step_status: "completed"
 
       rescue:
         - name: Mark rollback reboot failed
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_failed': rollback_state.steps_failed +
-                ['rollback_reboot']
-              }) }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "rollback_reboot"
+            step_status: "failed"
 
     # Step 5: Post-rollback validation
     - name: Step 5 - Post-rollback validation
@@ -285,21 +284,21 @@
             compare_with_baseline: false
 
         - name: Mark post-rollback validation complete
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_completed': rollback_state.steps_completed +
-                ['post_rollback_validation']
-              }) }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "post_rollback_validation"
+            step_status: "completed"
 
       rescue:
         - name: Mark post-rollback validation failed
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{ rollback_state | combine({
-                'steps_failed': rollback_state.steps_failed +
-                ['post_rollback_validation']
-              }) }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-state
+          vars:
+            step_name: "post_rollback_validation"
+            step_status: "failed"
 
   post_tasks:
     - name: Calculate rollback duration

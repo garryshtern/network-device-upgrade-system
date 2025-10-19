@@ -146,3 +146,13 @@ common_upgrade_state:
   upgrade_start_time: ""
   upgrade_end_time: ""
   upgrade_status: "not_started"
+
+# Platform-to-role mapping for dynamic role selection
+# Maps platform identifier to upgrade role name
+platform_role_map:
+  nxos: "cisco-nxos-upgrade"
+  ios: "cisco-iosxe-upgrade"
+  fortios: "fortios-upgrade"
+  metamako_mos: "metamako-mos-upgrade"
+  metamako: "metamako-mos-upgrade"
+  opengear: "opengear-upgrade"

@@ -66,12 +66,8 @@
       - >
         not (metamako_upgrade_state.metawatch_running
           and metamako_upgrade_state.metamux_running)
-    fail_msg: >
-      "MetaWatch and MetaMux cannot be
-        running simultaneously on the same device"
-    success_msg: >
-      "✓ Application configuration valid -
-        only one specialized application active"
+    fail_msg: "MetaWatch and MetaMux cannot be running simultaneously on the same device"
+    success_msg: "✓ Application configuration valid - only one specialized application active"
 
 - name: Store pre-upgrade application baseline
   ansible.builtin.set_fact:

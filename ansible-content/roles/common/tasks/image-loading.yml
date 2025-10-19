@@ -18,42 +18,14 @@
 
 - name: Platform-specific image loading
   block:
-    # Cisco NX-OS Image Loading
-    - name: Load Cisco NX-OS image
+    - name: Load firmware image (platform-specific)
       ansible.builtin.include_role:
-        name: cisco-nxos-upgrade
-        tasks_from: image-loading
-      when: ansible_network_os | is_platform('nxos')
-
-    # Cisco IOS-XE Image Loading
-    - name: Load Cisco IOS-XE image
-      ansible.builtin.include_role:
-        name: cisco-iosxe-upgrade
-        tasks_from: image-loading
-      when: ansible_network_os | is_platform('ios')
-
-    # Metamako MOS Image Loading
-    - name: Load Metamako MOS image
-      ansible.builtin.include_role:
-        name: metamako-mos-upgrade
-        tasks_from: image-loading
-      when: ansible_network_os | is_platform('metamako')
-
-    # Opengear Image Loading
-    - name: Load Opengear image
-      ansible.builtin.include_role:
-        name: opengear-upgrade
-        tasks_from: image-loading
-      when: ansible_network_os | is_platform('opengear')
-
-    # FortiOS Image Loading
-    - name: Load FortiOS image
-      ansible.builtin.include_role:
-        name: fortios-upgrade
+        name: "{{ platform_role_map[platform] }}"
         tasks_from: image-loading
       when:
-        - ansible_network_os | is_platform('fortios')
-        - not ansible_check_mode
+        - platform is defined
+        - platform in platform_role_map
+        - not (platform == 'fortios' and ansible_check_mode)
 
 - name: Verify image integrity
   ansible.builtin.include_role:
