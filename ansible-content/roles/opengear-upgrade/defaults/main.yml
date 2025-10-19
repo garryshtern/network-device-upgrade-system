@@ -55,10 +55,13 @@ service_check_timeout: 120
 # Console server check settings
 console_targets: []
 
-# Upgrade state initialization
-opengear_upgrade_state:
-  device_model: ''
-  device_type: 'console_server'
-  serial_ports: []
-  power_ports: []
-  web_session: ''
+# Upgrade state initialization (extends common_upgrade_state from group_vars)
+opengear_upgrade_state: "{{
+  common_upgrade_state | combine({
+    'device_model': '',
+    'device_type': 'console_server',
+    'serial_ports': [],
+    'power_ports': [],
+    'web_session': ''
+  })
+}}"

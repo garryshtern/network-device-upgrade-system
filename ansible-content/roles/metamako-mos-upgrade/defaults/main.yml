@@ -73,15 +73,18 @@ application_source: ""
 eos_extension_filename: ""
 eos_extension_source: ""
 
-# Metawatch/Metamux settings
-metamako_upgrade_state:
-  metawatch_installed: false
-  metawatch_running: false
-  metawatch_sync_status: 'N/A'
-  metawatch_telemetry_status: 'N/A'
-  metamux_installed: false
-  metamux_running: false
-  device_type: ''
-  latency_mode: 'normal'
-  metawatch_enabled: false
-  metamux_enabled: false
+# Metawatch/Metamux settings (extends common_upgrade_state from group_vars)
+metamako_upgrade_state: "{{
+  common_upgrade_state | combine({
+    'metawatch_installed': false,
+    'metawatch_running': false,
+    'metawatch_sync_status': 'N/A',
+    'metawatch_telemetry_status': 'N/A',
+    'metamux_installed': false,
+    'metamux_running': false,
+    'device_type': '',
+    'latency_mode': 'normal',
+    'metawatch_enabled': false,
+    'metamux_enabled': false
+  })
+}}"

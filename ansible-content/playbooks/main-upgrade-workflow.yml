@@ -47,8 +47,7 @@
       when:
         - ansible_check_mode is defined
         - ansible_check_mode
-        - ansible_network_os is defined
-        - platform == 'metamako_mos'
+        - ansible_network_os | is_platform('metamako')
 
     - name: Validate required variables
       ansible.builtin.assert:
@@ -255,41 +254,31 @@
           ansible.builtin.include_role:
             name: cisco-nxos-upgrade
             tasks_from: image-installation
-          when:
-            - ansible_network_os is defined
-            - platform == 'nxos'
+          when: ansible_network_os | is_platform('nxos')
 
         - name: Install firmware - Cisco IOS-XE
           ansible.builtin.include_role:
             name: cisco-iosxe-upgrade
             tasks_from: image-installation
-          when:
-            - ansible_network_os is defined
-            - platform == 'ios'
+          when: ansible_network_os | is_platform('ios')
 
         - name: Install firmware - FortiOS
           ansible.builtin.include_role:
             name: fortios-upgrade
             tasks_from: image-installation
-          when:
-            - ansible_network_os is defined
-            - platform == 'fortios'
+          when: ansible_network_os | is_platform('fortios')
 
         - name: Install firmware - Metamako MOS
           ansible.builtin.include_role:
             name: metamako-mos-upgrade
             tasks_from: image-installation
-          when:
-            - ansible_network_os is defined
-            - platform == 'metamako_mos'
+          when: ansible_network_os | is_platform('metamako')
 
         - name: Install firmware - Opengear
           ansible.builtin.include_role:
             name: opengear-upgrade
             tasks_from: image-installation
-          when:
-            - ansible_network_os is defined
-            - platform == 'opengear'
+          when: ansible_network_os | is_platform('opengear')
 
         - name: Wait for device to come back online
           ansible.builtin.wait_for_connection:

@@ -23,36 +23,28 @@
       ansible.builtin.include_role:
         name: cisco-nxos-upgrade
         tasks_from: image-loading
-      when:
-        - ansible_network_os is defined
-        - platform == 'nxos'
+      when: ansible_network_os | is_platform('nxos')
 
     # Cisco IOS-XE Image Loading
     - name: Load Cisco IOS-XE image
       ansible.builtin.include_role:
         name: cisco-iosxe-upgrade
         tasks_from: image-loading
-      when:
-        - ansible_network_os is defined
-        - platform == 'ios'
+      when: ansible_network_os | is_platform('ios')
 
     # Metamako MOS Image Loading
     - name: Load Metamako MOS image
       ansible.builtin.include_role:
         name: metamako-mos-upgrade
         tasks_from: image-loading
-      when:
-        - ansible_network_os is defined
-        - platform == 'metamako_mos'
+      when: ansible_network_os | is_platform('metamako')
 
     # Opengear Image Loading
     - name: Load Opengear image
       ansible.builtin.include_role:
         name: opengear-upgrade
         tasks_from: image-loading
-      when:
-        - ansible_network_os is defined
-        - platform == 'opengear'
+      when: ansible_network_os | is_platform('opengear')
 
     # FortiOS Image Loading
     - name: Load FortiOS image
@@ -60,8 +52,7 @@
         name: fortios-upgrade
         tasks_from: image-loading
       when:
-        - ansible_network_os is defined
-        - platform == 'fortios'
+        - ansible_network_os | is_platform('fortios')
         - not ansible_check_mode
 
 - name: Verify image integrity
