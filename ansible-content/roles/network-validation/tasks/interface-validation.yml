@@ -96,81 +96,58 @@
       when:
         - interface_errors.TABLE_interface is defined
 
-- name: VLAN assignment validation (NX-OS)
+- name: VLAN assignment validation (NX-OS - uses pre-gathered facts)
   when:
     - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
+    - ansible_network_resources is defined
+    - ansible_network_resources.vlans is defined
   block:
-    - name: Get VLAN configuration using nxos_facts
-      cisco.nxos.nxos_facts:
-        gather_subset:
-          - '!all'
-          - '!min'
-        gather_network_resources:
-          - vlans
-      register: vlan_facts
-
-    - name: Debug VLAN facts gathered from device
+    - name: Debug VLAN facts from pre-gathered data
       ansible.builtin.debug:
         msg:
-          - "=== NX-OS Facts Debug (VLANs) ==="
+          - "=== NX-OS VLAN Facts (Pre-gathered) ==="
           - "Device: {{ inventory_hostname }}"
-          - "Gather succeeded: {{ vlan_facts is succeeded }}"
-          - "FULL ansible_net_resources.vlans: {{ ansible_net_resources.vlans | to_nice_json }}"
+          - "Total VLANs: {{ ansible_network_resources.vlans | length }}"
+          - "FULL ansible_network_resources.vlans: {{ ansible_network_resources.vlans | to_nice_json }}"
       when:
         - show_debug | bool
-        - vlan_facts is defined
 
     - name: Validate VLAN assignments
       ansible.builtin.debug:
         msg: |
           VLAN Summary:
-          Active VLANs: {{ ansible_net_resources.vlans |
+          Active VLANs: {{ ansible_network_resources.vlans |
             selectattr('enabled', 'equalto', true) | list | length }}
-          Total VLANs: {{ ansible_net_resources.vlans | length }}
-      when:
-        - vlan_facts is defined
-        - ansible_net_resources.vlans is defined
+          Total VLANs: {{ ansible_network_resources.vlans | length }}
 
-- name: Link aggregation validation (NX-OS)
+- name: Link aggregation validation (NX-OS - uses pre-gathered facts)
   when:
     - ansible_network_os is defined
     - platform == 'nxos'
     - not ansible_check_mode
+    - ansible_network_resources is defined
+    - ansible_network_resources.lag_interfaces is defined
   block:
-    - name: Get port-channel configuration using nxos_facts
-      cisco.nxos.nxos_facts:
-        gather_subset:
-          - '!all'
-          - '!min'
-        gather_network_resources:
-          - lag_interfaces
-      register: portchannel_facts
-      failed_when: false
-
-    - name: Debug LAG interface facts gathered from device
+    - name: Debug LAG interface facts from pre-gathered data
       ansible.builtin.debug:
         msg:
-          - "=== NX-OS Facts Debug (LAG Interfaces) ==="
+          - "=== NX-OS LAG Facts (Pre-gathered) ==="
           - "Device: {{ inventory_hostname }}"
-          - "Gather succeeded: {{ portchannel_facts is succeeded }}"
-          - "FULL ansible_net_resources.lag_interfaces: {{ ansible_net_resources.lag_interfaces | to_nice_json }}"
+          - "Total Port-Channels: {{ ansible_network_resources.lag_interfaces | length }}"
+          - "FULL ansible_network_resources.lag_interfaces: {{ ansible_network_resources.lag_interfaces | to_nice_json }}"
       when:
         - show_debug | bool
-        - portchannel_facts is defined
 
     - name: Validate port-channel states
       ansible.builtin.debug:
         msg: |
           Port-Channel Summary:
-          {% for pc in ansible_net_resources.lag_interfaces  %}
+          {% for pc in ansible_network_resources.lag_interfaces  %}
           - >-
             {{ pc.name }}: {{ pc.members | length }} members
           {% endfor %}
-      when:
-        - portchannel_facts is defined
-        - ansible_net_resources.lag_interfaces is defined
 
 - name: Optics diagnostics validation (NX-OS)
   when:
