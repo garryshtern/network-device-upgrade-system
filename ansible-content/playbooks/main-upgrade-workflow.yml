@@ -3,12 +3,12 @@
 # REDESIGNED: Proper workflow sequence with fail-fast validation
 #
 # Workflow Steps:
-# 1. Check connectivity (basic platform-specific commands)
+# 1. Check connectivity (basic connection test only)
 # 2. Check space (cleanup if needed, then recheck)
-# 3. Upload images (server-initiated PUSH only)
-# 4. Run pre-checks (BGP/OSPF/interfaces - must pass to continue)
+# 3. Version check + ensure image staged (check bootflash, upload if needed) + config backup
+# 4. Comprehensive facts gathering + pre-upgrade validation (AFTER image staged)
 # 5. Install images and reboot
-# 6. Run post-checks & compare (failure triggers optional rollback)
+# 6. Post-upgrade validation + compare (failure triggers optional rollback)
 #
 # CRITICAL: Steps 1-5 must pass or workflow STOPS
 # Step 6 failure triggers optional rollback only
@@ -86,20 +86,31 @@
           - "======================================="
 
   tasks:
-    # STEP 1: Check Connectivity
-    # Uses platform-specific commands (not generic "show version")
+    # STEP 1: Basic Connectivity Check
+    # Simple connection test - comprehensive facts gathered in STEP 4 (after image staged)
     # MUST PASS or workflow STOPS
-    - name: "STEP 1: Connectivity Check"
+    - name: "STEP 1: Basic Connectivity Check"
       block:
-        - name: Platform-specific connectivity validation
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: connectivity-check
+        - name: Test basic device connectivity
+          ansible.builtin.wait_for_connection:
+            timeout: "{{ connectivity_timeout }}"
+
+        - name: Connectivity confirmed
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "CONNECTIVITY ESTABLISHED"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "Status: Connected successfully"
+              - "Note: Comprehensive facts will be gathered after image staging"
+              - "=========================================="
 
       rescue:
         - name: Connectivity check failed - STOP workflow
           ansible.builtin.fail:
-            msg: "STEP 1 FAILED: Connectivity check failed. Workflow stopped."
+            msg: "STEP 1 FAILED: Cannot connect to device {{ inventory_hostname }}. Workflow stopped."
 
     # STEP 2: Check Space (Cleanup if Needed)
     # Only runs cleanup if insufficient space detected
@@ -132,21 +143,56 @@
     # STEP 3: Upload Images
     # Server-initiated PUSH only (no device-initiated pulls)
     # MUST PASS or workflow STOPS
-    - name: "STEP 3: Image Upload"
+    - name: "STEP 3: Version Check and Image Upload"
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Verify firmware image availability
+        - name: Check current running version
+          ansible.builtin.include_role:
+            name: image-validation
+            tasks_from: version-verification
+
+        - name: Compare current version to target version
+          ansible.builtin.set_fact:
+            already_running_target_version: "{{ current_firmware_version == target_firmware }}"
+
+        - name: Report if already running target version
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "ALREADY RUNNING TARGET VERSION"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "Current Version: {{ current_firmware_version }}"
+              - "Target Version: {{ target_firmware }}"
+              - "Status: NO UPGRADE NEEDED"
+              - "Action: Skipping upgrade for this device"
+              - "=========================================="
+          when: already_running_target_version | bool
+
+        - name: End upgrade for this host if already running target version
+          ansible.builtin.meta: end_host
+          when: already_running_target_version | bool
+
+        - name: Report upgrade needed
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "UPGRADE REQUIRED"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "Current Version: {{ current_firmware_version }}"
+              - "Target Version: {{ target_firmware }}"
+              - "Status: PROCEEDING WITH UPGRADE"
+              - "=========================================="
+          when: not already_running_target_version | bool
+
+        - name: Verify firmware image availability (local file check)
           ansible.builtin.include_role:
             name: image-validation
             tasks_from: integrity-audit
 
-        - name: Backup current configuration
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: config-backup
-
-        - name: Upload firmware image to device
+        - name: Ensure firmware image on device (check bootflash + upload if needed)
           ansible.builtin.include_role:
             name: common
             tasks_from: image-loading
@@ -156,19 +202,29 @@
             name: image-validation
             tasks_from: hash-verification
 
+        - name: Backup current configuration (after confirming image is staged)
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: config-backup
+
       rescue:
         - name: Image upload failed - STOP workflow
           ansible.builtin.fail:
-            msg: "STEP 3 FAILED: Image upload failed. Workflow stopped."
+            msg: "STEP 3 FAILED: Image upload or version check failed. Workflow stopped."
 
-    # STEP 4: Run Pre-Checks
-    # Comprehensive validation: BGP, OSPF, interfaces
-    # Optional protocols handled conditionally
+    # STEP 4: Comprehensive Facts Gathering and Pre-Upgrade Validation
+    # Facts gathering happens AFTER image is confirmed staged (not before)
+    # Comprehensive validation: BGP, interfaces, routing, etc.
     # MUST PASS or workflow STOPS
-    - name: "STEP 4: Pre-Upgrade Validation"
+    - name: "STEP 4: Facts Gathering and Pre-Upgrade Validation"
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
+        - name: Gather comprehensive device facts (after confirming image staged)
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: connectivity-check
+
         - name: Capture pre-upgrade network state
           ansible.builtin.include_role:
             name: network-validation
@@ -186,7 +242,7 @@
       rescue:
         - name: Pre-upgrade validation failed - STOP workflow
           ansible.builtin.fail:
-            msg: "STEP 4 FAILED: Pre-upgrade validation failed. Workflow stopped."
+            msg: "STEP 4 FAILED: Facts gathering or pre-upgrade validation failed. Workflow stopped."
 
     # STEP 5: Install Images and Reboot
     # Platform-specific installation

@@ -126,11 +126,34 @@
     target_firmware_exists: >
       "{{ 'No such file' not in firmware_exists_check.stdout[0] }}"
 
-- name: Skip download if firmware already exists
+- name: Report firmware already staged on device
   ansible.builtin.debug:
-    msg: >
-      "Target firmware {{ target_firmware_version }} already exists on device"
+    msg:
+      - "=========================================="
+      - "FIRMWARE ALREADY STAGED"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Firmware: {{ target_firmware_version }}"
+      - "Location: bootflash:{{ target_firmware_version }}"
+      - "Status: SKIPPING UPLOAD"
+      - "Action: Proceeding to installation phase"
+      - "=========================================="
   when: target_firmware_exists
+
+- name: Report firmware upload starting
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "UPLOADING FIRMWARE TO DEVICE"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Firmware: {{ target_firmware_version }}"
+      - "Source: {{ local_firmware_path }}"
+      - "Destination: bootflash:{{ target_firmware_version }}"
+      - "Method: SCP (Server-Initiated PUSH)"
+      - "Status: STARTING UPLOAD..."
+      - "=========================================="
+  when: not target_firmware_exists
 
 - name: Transfer firmware image to device (Server-Initiated PUSH)
   when: not target_firmware_exists
