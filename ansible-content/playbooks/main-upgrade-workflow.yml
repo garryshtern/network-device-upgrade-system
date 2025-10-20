@@ -86,15 +86,60 @@
 
   tasks:
     # STEP 1: Basic Connectivity Check
-    # Simple connection test - comprehensive facts gathered in STEP 4 (after image staged)
+    # Gather basic facts to verify connectivity and get device info
     # MUST PASS or workflow STOPS
     - name: "STEP 1: Basic Connectivity Check"
       block:
-        - name: Test basic device connectivity
+        - name: Gather basic device facts (NX-OS)
+          cisco.nxos.nxos_facts:
+            gather_subset:
+              - hardware
+              - min
+          when: platform == 'nxos'
+
+        - name: Gather basic device facts (IOS-XE)
+          cisco.ios.ios_facts:
+            gather_subset:
+              - hardware
+              - min
+          when: platform == 'ios'
+
+        - name: Test basic connectivity (other platforms)
           ansible.builtin.wait_for_connection:
             timeout: "{{ connectivity_timeout }}"
+          when: platform not in ['nxos', 'ios']
+
+        - name: Verify facts gathered successfully (Cisco platforms)
+          ansible.builtin.assert:
+            that:
+              - ansible_net_version is defined
+              - ansible_net_hostname is defined
+              - ansible_net_model is defined
+            fail_msg: "Failed to gather basic device facts. Check connectivity and authentication."
+          when: platform in ['nxos', 'ios']
+
+        - name: Set current firmware version from facts
+          ansible.builtin.set_fact:
+            current_firmware_version: "{{ ansible_net_version }}"
+          when: platform in ['nxos', 'ios']
 
         - name: Connectivity confirmed
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "CONNECTIVITY ESTABLISHED"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "Hostname: {{ ansible_net_hostname }}"
+              - "Current Version: {{ current_firmware_version }}"
+              - "Model: {{ ansible_net_model }}"
+              - "Status: Connected successfully"
+              - "Note: Comprehensive facts will be gathered after image staging"
+              - "=========================================="
+          when: platform in ['nxos', 'ios']
+
+        - name: Connectivity confirmed (other platforms)
           ansible.builtin.debug:
             msg:
               - "=========================================="
@@ -105,6 +150,7 @@
               - "Status: Connected successfully"
               - "Note: Comprehensive facts will be gathered after image staging"
               - "=========================================="
+          when: platform not in ['nxos', 'ios']
 
       rescue:
         - name: Connectivity check failed - STOP workflow
@@ -146,12 +192,13 @@
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Check current running version
+        - name: Check current running version (non-Cisco platforms)
           ansible.builtin.include_role:
             name: image-validation
             tasks_from: version-verification
+          when: platform not in ['nxos', 'ios']
 
-        - name: Compare current version to target version
+        - name: Compare current version to target firmware
           ansible.builtin.set_fact:
             already_running_target_version: "{{ current_firmware_version == target_firmware }}"
 

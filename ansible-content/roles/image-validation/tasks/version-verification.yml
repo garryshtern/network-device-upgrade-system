@@ -86,7 +86,7 @@
       Actual version:   {{ actual_firmware_version }}
     success_msg: "Firmware version verification passed: {{ actual_firmware_version }}"
   when:
-    - strict_version_check  | bool
+    - strict_version_check | bool
     - actual_firmware_version != 'unknown'
 
 - name: Warning for version check in non-strict mode
@@ -96,7 +96,7 @@
       Expected: {{ expected_firmware_version }}
       Actual:   {{ actual_firmware_version }}
       Match:    {{ version_matches }}
-  when: not (strict_version_check  | bool)
+  when: not (strict_version_check | bool)
 
 - name: Set version verification result
   ansible.builtin.set_fact:
@@ -104,6 +104,5 @@
       "{{ version_matches and actual_firmware_version != 'unknown' }}"
     expected_version: "{{ expected_firmware_version }}"
     actual_version: "{{ actual_firmware_version }}"
-    version_check_mode: >-
-      {{ 'strict' if (strict_version_check |
-        default(true) | bool) else 'non-strict' }}
+    current_firmware_version: "{{ actual_firmware_version }}"
+    version_check_mode: "{{ 'strict' if (strict_version_check | bool) else 'non-strict' }}"
