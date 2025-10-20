@@ -22,9 +22,9 @@
     firmware_version: "{{ target_firmware }}"
     platform_specific_firmware: "{{ platform_firmware }}"
 
-    # Security - SSH keys preferred over passwords
-    ansible_ssh_private_key_file: "{{ ssh_key_file | default(omit) }}"
-    ansible_ssh_pass: "{{ ssh_password | default(omit) }}"
+    # Note: SSH authentication credentials are configured in group_vars/all.yml
+    # based on platform-specific vault variables (vault_cisco_nxos_ssh_key, etc.)
+    # DO NOT override ansible_ssh_private_key_file or ansible_password here
 
     # Batch tracking
     batch_id: "{{ ansible_play_batch | hash('md5') }}"
