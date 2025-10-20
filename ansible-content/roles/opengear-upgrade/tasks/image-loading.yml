@@ -13,8 +13,8 @@
           Content-Type: "application/json"
         body_format: json
         body:
-          username: "{{ opengear_username }}"
-          password: "{{ opengear_password }}"
+          username: "{{ vault_opengear_username }}"
+          password: "{{ vault_opengear_password }}"
         validate_certs: false
       register: opengear_auth
       when: not ansible_check_mode
@@ -28,14 +28,14 @@
 
     - name: Store authentication token
       ansible.builtin.set_fact:
-        opengear_api_token: "{{ opengear_auth.json.token }}"
+        vault_opengear_api_token: "{{ opengear_auth.json.token }}"
 
     - name: Check available storage space
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/storage"
         method: GET
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: storage_info
       when: not ansible_check_mode
@@ -92,7 +92,7 @@
         url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/start"
         method: POST
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
           Content-Type: "application/json"
         body_format: json
         body:
@@ -122,7 +122,7 @@
             upload_session.json.session_id }}/chunk"
         method: POST
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
           Content-Type: "application/octet-stream"
         body: >
           "{{ lookup('file', local_firmware_path, rstrip=False) | b64decode }}"
@@ -143,7 +143,7 @@
             upload_session.json.session_id }}/complete"
         method: POST
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: upload_complete
       when: not ansible_check_mode
@@ -156,7 +156,7 @@
         url: "https://{{ ansible_host }}/api/v1/system/firmware/list"
         method: GET
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: firmware_list
       when: not ansible_check_mode

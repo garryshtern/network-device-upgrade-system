@@ -7,7 +7,7 @@
     url: "https://{{ ansible_host }}/api/v1/power/outlets"
     method: GET
     headers:
-      Authorization: "Token {{ opengear_api_token }}"
+      Authorization: "Token {{ vault_opengear_api_token }}"
     validate_certs: false
   register: power_outlets_info
 
@@ -22,7 +22,7 @@
     url: "https://{{ ansible_host }}/api/v1/power/outlets/{{ item.id }}/status"
     method: GET
     headers:
-      Authorization: "Token {{ opengear_api_token }}"
+      Authorization: "Token {{ vault_opengear_api_token }}"
     validate_certs: false
   register: outlet_status
   loop: "{{ opengear_upgrade_state.power_ports }}"
@@ -45,7 +45,7 @@
         url: "https://{{ ansible_host }}/api/v1/power/status"
         method: GET
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: power_capacity
 
@@ -72,7 +72,7 @@
     url: "https://{{ ansible_host }}/api/v1/environmental/sensors"
     method: GET
     headers:
-      Authorization: "Token {{ opengear_api_token }}"
+      Authorization: "Token {{ vault_opengear_api_token }}"
     validate_certs: false
   register: environmental_sensors
   failed_when: false

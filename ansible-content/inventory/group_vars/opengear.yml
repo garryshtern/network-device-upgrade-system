@@ -14,12 +14,7 @@ ansible_host: "{{ inventory_hostname }}"
 # Credentials are dynamically mapped in group_vars/all.yml based on platform
 # ansible_user, ansible_password, ansible_ssh_private_key_file set in all.yml
 # SSH connection options configured globally in ansible.cfg
-
-# Opengear-specific credential variables for API access
-opengear_username: "{{ vault_opengear_username }}"
-opengear_password: "{{ vault_opengear_password }}"
-# API token authentication (preferred for API connections)
-opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
+# API credentials (vault_opengear_*) used directly in role tasks
 
 # Platform specific settings
 vendor: "opengear"
