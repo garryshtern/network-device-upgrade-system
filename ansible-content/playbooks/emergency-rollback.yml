@@ -37,11 +37,11 @@
     - name: Step 1 - Device status assessment
       block:
         - name: Update rollback step
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{
-                rollback_state | combine({'current_step': 'status_assessment'})
-              }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-step
+          vars:
+            step_name: status_assessment
 
         - name: Test device connectivity
           block:
@@ -86,11 +86,11 @@
     - name: Step 2 - Firmware rollback
       block:
         - name: Update rollback step
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{
-                rollback_state | combine({'current_step': 'firmware_rollback'})
-              }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-step
+          vars:
+            step_name: firmware_rollback
 
         - name: Rollback Cisco NX-OS firmware
           ansible.builtin.include_role:
@@ -163,11 +163,11 @@
     - name: Step 3 - Configuration rollback
       block:
         - name: Update rollback step
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{
-                rollback_state | combine({'current_step': 'config_rollback'})
-              }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-step
+          vars:
+            step_name: config_rollback
 
         - name: Find latest configuration backup
           ansible.builtin.find:
@@ -215,11 +215,11 @@
     - name: Step 4 - Device reboot
       block:
         - name: Update rollback step
-          ansible.builtin.set_fact:
-            rollback_state: >
-              {{
-                rollback_state | combine({'current_step': 'rollback_reboot'})
-              }}
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: update-rollback-step
+          vars:
+            step_name: rollback_reboot
 
         - name: Reboot device for rollback
           ansible.builtin.include_role:

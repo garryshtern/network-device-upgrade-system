@@ -1,0 +1,10 @@
+---
+# Update rollback state step
+# Reusable task for updating rollback_state.current_step fact
+#
+# Required parameters:
+#   step_name: Name of the current rollback step
+
+- name: Update rollback step to {{ step_name }}
+  ansible.builtin.set_fact:
+    rollback_state: "{{ rollback_state | combine({'current_step': step_name}) }}"

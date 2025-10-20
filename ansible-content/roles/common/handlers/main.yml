@@ -1,8 +1,16 @@
 ---
 # Common Role Handlers
-# Reusable handlers for repeated patterns across playbooks
+# Handlers for deferred actions triggered by 'notify'
+#
+# NOTE: For immediate state updates (validation results, rollback state),
+# use reusable task files instead:
+#   - common/tasks/record-validation-result.yml
+#   - common/tasks/update-rollback-step.yml
+#
+# Handlers are appropriate for:
+#   - Service restarts
+#   - Cleanup operations
+#   - Log rotations
+#   - Notification delivery
 
-- name: Export metrics to monitoring systems
-  ansible.builtin.set_fact:
-    _metrics_export_pending: true
-  changed_when: false
+# Currently no handlers defined - use include_tasks for repeated patterns

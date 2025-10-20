@@ -53,13 +53,21 @@
           when: compare_with_baseline
 
         - name: Mark BGP validation as passed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['bgp_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: bgp_validation
+            test_status: passed
 
       rescue:
         - name: Mark BGP validation as failed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['bgp_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: bgp_validation
+            test_status: failed
 
     # Interface Validation
     - name: Interface State Validation
@@ -82,13 +90,21 @@
           when: compare_with_baseline
 
         - name: Mark interface validation as passed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['interface_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: interface_validation
+            test_status: passed
 
       rescue:
         - name: Mark interface validation as failed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['interface_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: interface_validation
+            test_status: failed
 
     # Routing Validation
     - name: Routing State Validation
@@ -111,13 +127,21 @@
           when: compare_with_baseline
 
         - name: Mark routing validation as passed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['routing_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: routing_validation
+            test_status: passed
 
       rescue:
         - name: Mark routing validation as failed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['routing_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: routing_validation
+            test_status: failed
 
     # Multicast Validation (if applicable)
     - name: Multicast State Validation
@@ -146,22 +170,34 @@
             - compare_with_baseline
 
         - name: Mark multicast validation as passed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['multicast_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: multicast_validation
+            test_status: passed
           when:
             - platform in ['nxos', 'ios']
             - multicast_enabled | bool
 
         - name: Mark multicast validation as skipped
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_skipped': validation_results.tests_skipped + ['multicast_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: multicast_validation
+            test_status: skipped
           when:
             - not (platform in ['nxos', 'ios'] and multicast_enabled | bool)
 
       rescue:
         - name: Mark multicast validation as failed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['multicast_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: multicast_validation
+            test_status: failed
 
     # ARP Table Validation
     - name: ARP Table Validation
@@ -184,13 +220,21 @@
           when: compare_with_baseline
 
         - name: Mark ARP validation as passed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['arp_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: arp_validation
+            test_status: passed
 
       rescue:
         - name: Mark ARP validation as failed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['arp_validation']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: arp_validation
+            test_status: failed
 
     # Protocol Convergence Check
     - name: Protocol Convergence Validation
@@ -203,13 +247,21 @@
             convergence_timeout: "{{ validation_timeout }}"
 
         - name: Mark convergence validation as passed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['protocol_convergence']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: protocol_convergence
+            test_status: passed
 
       rescue:
         - name: Mark convergence validation as failed
-          ansible.builtin.set_fact:
-            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['protocol_convergence']}) }}"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: record-validation-result
+          vars:
+            test_name: protocol_convergence
+            test_status: failed
 
   post_tasks:
     - name: Generate validation summary

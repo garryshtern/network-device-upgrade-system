@@ -1,0 +1,13 @@
+---
+# Record validation test result
+# Reusable task for updating validation_results fact
+#
+# Required parameters:
+#   test_name: Name of the test (e.g., 'bgp_validation', 'interface_validation')
+#   test_status: Status of the test ('passed', 'failed', 'skipped')
+
+- name: Record validation result for {{ test_name }}
+  ansible.builtin.set_fact:
+    validation_results: "{{ validation_results | combine({result_key: validation_results[result_key] + [test_name]}) }}"
+  vars:
+    result_key: "{{ 'tests_' ~ test_status }}"
