@@ -55,6 +55,17 @@
 - **Completed:** All test files updated to match code changes
 - **Impact:** 100% test pass rate maintained (23/23 tests passing)
 
+### ✓ SSH Configuration Fix (2025-10-20)
+- **Completed:** Fixed deprecated ssh_args and authentication issues
+- **Impact:** Resolved container test failures and deprecation warnings
+- **Changes:**
+  - Removed duplicate deprecated `ssh_args` from [connection] section
+  - Kept only valid `ssh_args` in [ssh_connection] section
+  - Removed restrictive `PreferredAuthentications=publickey` setting
+  - Now allows multiple auth methods (publickey, password, keyboard-interactive)
+- **Result:** All 23/23 tests passing including Container_Tests
+- **Files Changed:** `ansible-content/ansible.cfg`
+
 ### ✓ Critical Folded Scalar Elimination (2025-10-19 Evening)
 - **Completed:** Eliminated ALL folded scalars in CRITICAL functional contexts
 - **Impact:** Removed runtime failure risks from folded scalar whitespace insertion
@@ -132,24 +143,22 @@ nxos_upgrade_state: "{{ common_upgrade_state | combine({'issu_capable': false, .
 
 ## 🟡 MEDIUM PRIORITY - Optimization
 
-### 4. **Implement Ansible Handlers** 🔔
-**Current State:** NO handlers directory exists - missed optimization
+### 4. **~~Implement Ansible Handlers~~** ❌ REJECTED (2025-10-20)
+**Status:** Analyzed and rejected - not appropriate for this codebase
 
-**Candidates for Handlers:**
-```yaml
-# Repeated notification patterns:
-- Export metrics after task completion (15+ occurrences)
-- Update rollback state (17 occurrences in emergency-rollback.yml)
-- Record validation results (8+ occurrences)
-- Save baseline state (6 occurrences)
-```
+**Decision Rationale:**
+- Metrics export is deliberate action, not a notification pattern
+- Handlers execute at play end → too late for real-time monitoring
+- Current `include_role` pattern is already DRY and explicit
+- No actual code reduction (same logic, different call method)
+- Handlers add complexity without benefit for this use case
 
-**Action Items:**
-- [ ] Create `common/handlers/main.yml`
-- [ ] Add handler: `export_metrics` (notify after success)
-- [ ] Add handler: `update_rollback_state` (consolidate state tracking)
-- [ ] Add handler: `save_validation_baseline`
-- [ ] **Impact:** -100+ lines, better task flow
+**Analysis Results:**
+- **Metrics export:** 6 occurrences - already uses reusable task file
+- **Rollback state:** Not event-driven, requires immediate updates
+- **Validation results:** Context-specific, not suitable for handlers
+
+**Conclusion:** Keep current task-based patterns. Handlers are for service restarts/notifications, not for orchestration logic.
 
 ---
 
