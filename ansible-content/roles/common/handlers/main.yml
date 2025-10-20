@@ -1,0 +1,8 @@
+---
+# Common Role Handlers
+# Reusable handlers for repeated patterns across playbooks
+
+- name: Export metrics to monitoring systems
+  ansible.builtin.set_fact:
+    _metrics_export_pending: true
+  changed_when: false

@@ -128,9 +128,9 @@
             that:
               - storage_info is defined
               - storage_info.free_space_gb >= (required_space_gb | float)
-            fail_msg: >
-              Insufficient storage space. Available: {{ storage_info.free_space_gb }}GB,
-              Required: {{ required_space_gb }}GB
+            fail_msg:
+              - "Insufficient storage space."
+              - "Available: {{ storage_info.free_space_gb }}GB, Required: {{ required_space_gb }}GB"
           when:
             - not ansible_check_mode or inventory_hostname != 'localhost'
 
@@ -300,9 +300,9 @@
 
             - name: Log post-validation failure
               ansible.builtin.debug:
-                msg: >
-                  WARNING: Post-upgrade validation failed.
-                  Rollback {{ 'executed' if rollback_on_failure else 'skipped (disabled)' }}.
+                msg:
+                  - "WARNING: Post-upgrade validation failed."
+                  - "Rollback {{ 'executed' if rollback_on_failure else 'skipped (disabled)' }}."
 
           always:
             - name: Mark upgrade with validation warnings

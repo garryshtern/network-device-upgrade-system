@@ -41,39 +41,25 @@
             tasks_from: bgp-validation
           vars:
             capture_mode: "validation"
-            output_file: >
-              {{ validation_results_path }}/{{ inventory_hostname }}/
-              bgp_current_{{ validation_timestamp }}.json
+            output_file: "{{ validation_results_path }}/{{ inventory_hostname }}/bgp_current_{{ validation_timestamp }}.json"
 
         - name: Compare BGP with baseline
           ansible.builtin.include_role:
             name: network-validation
             tasks_from: bgp-comparison
           vars:
-            baseline_file: >
-              {{ baseline_data_path }}/{{ inventory_hostname }}/
-              bgp_baseline_*.json
-            current_file: >
-              {{ validation_results_path }}/{{ inventory_hostname }}/
-              bgp_current_{{ validation_timestamp }}.json
+            baseline_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/bgp_baseline_*.json"
+            current_file: "{{ validation_results_path }}/{{ inventory_hostname }}/bgp_current_{{ validation_timestamp }}.json"
           when: compare_with_baseline
 
         - name: Mark BGP validation as passed
           ansible.builtin.set_fact:
-            validation_results: >
-              {{ validation_results | combine({
-                'tests_passed':
-                  validation_results.tests_passed + ['bgp_validation']
-              }) }}
+            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['bgp_validation']}) }}"
 
       rescue:
         - name: Mark BGP validation as failed
           ansible.builtin.set_fact:
-            validation_results: >
-              {{ validation_results | combine({
-                'tests_failed':
-                  validation_results.tests_failed + ['bgp_validation']
-              }) }}
+            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['bgp_validation']}) }}"
 
     # Interface Validation
     - name: Interface State Validation
@@ -84,38 +70,25 @@
             tasks_from: interface-validation
           vars:
             capture_mode: "validation"
-            output_file: >
-              {{ validation_results_path }}/{{ inventory_hostname }}/
-              interfaces_current_{{ validation_timestamp }}.json
+            output_file: "{{ validation_results_path }}/{{ inventory_hostname }}/interfaces_current_{{ validation_timestamp }}.json"
 
         - name: Compare interfaces with baseline
           ansible.builtin.include_role:
             name: network-validation
             tasks_from: interface-comparison
           vars:
-            baseline_file: >
-              {{ baseline_data_path }}/{{ inventory_hostname }}/
-              interfaces_baseline_*.json
-            current_file: >
-              {{ validation_results_path }}/{{ inventory_hostname }}/
-              interfaces_current_{{ validation_timestamp }}.json
+            baseline_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/interfaces_baseline_*.json"
+            current_file: "{{ validation_results_path }}/{{ inventory_hostname }}/interfaces_current_{{ validation_timestamp }}.json"
           when: compare_with_baseline
 
         - name: Mark interface validation as passed
           ansible.builtin.set_fact:
-            validation_results: >
-              {{ validation_results | combine({
-                'tests_passed':
-                  validation_results.tests_passed + ['interface_validation']
-              }) }}
+            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['interface_validation']}) }}"
 
       rescue:
         - name: Mark interface validation as failed
           ansible.builtin.set_fact:
-            validation_results: >
-              "{{ validation_results | combine({'tests_failed':
-                  validation_results.tests_failed
-                    + ['interface_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['interface_validation']}) }}"
 
     # Routing Validation
     - name: Routing State Validation
@@ -126,35 +99,25 @@
             tasks_from: routing-validation
           vars:
             capture_mode: "validation"
-            output_file: >
-              "{{ validation_results_path }}/{{ inventory_hostname
-                }}/routing_current_{{ validation_timestamp }}.json"
+            output_file: "{{ validation_results_path }}/{{ inventory_hostname }}/routing_current_{{ validation_timestamp }}.json"
 
         - name: Compare routing with baseline
           ansible.builtin.include_role:
             name: network-validation
             tasks_from: routing-comparison
           vars:
-            baseline_file: >
-              "{{ baseline_data_path }}/{{
-                inventory_hostname }}/routing_baseline_*.json"
-            current_file: >
-              "{{ validation_results_path }}/{{ inventory_hostname
-                }}/routing_current_{{ validation_timestamp }}.json"
+            baseline_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/routing_baseline_*.json"
+            current_file: "{{ validation_results_path }}/{{ inventory_hostname }}/routing_current_{{ validation_timestamp }}.json"
           when: compare_with_baseline
 
         - name: Mark routing validation as passed
           ansible.builtin.set_fact:
-            validation_results: >
-              "{{ validation_results | combine({'tests_passed':
-                  validation_results.tests_passed + ['routing_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['routing_validation']}) }}"
 
       rescue:
         - name: Mark routing validation as failed
           ansible.builtin.set_fact:
-            validation_results: >-
-              {{ validation_results | combine({'tests_failed':
-                validation_results.tests_failed + ['routing_validation']}) }}
+            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['routing_validation']}) }}"
 
     # Multicast Validation (if applicable)
     - name: Multicast State Validation
@@ -165,55 +128,40 @@
             tasks_from: multicast-validation
           vars:
             capture_mode: "validation"
-            output_file: >-
-              {{ validation_results_path }}/{{ inventory_hostname
-                }}/multicast_current_{{ validation_timestamp }}.json
+            output_file: "{{ validation_results_path }}/{{ inventory_hostname }}/multicast_current_{{ validation_timestamp }}.json"
           when:
             - platform in ['nxos', 'ios']
-            - multicast_enabled  | bool
+            - multicast_enabled | bool
 
         - name: Compare multicast with baseline
           ansible.builtin.include_role:
             name: network-validation
             tasks_from: multicast-comparison
           vars:
-            baseline_file: >
-              "{{ baseline_data_path }}/{{
-                inventory_hostname }}/multicast_baseline_*.json"
-            current_file: >
-              "{{ validation_results_path }}/{{ inventory_hostname
-                }}/multicast_current_{{ validation_timestamp }}.json"
+            baseline_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/multicast_baseline_*.json"
+            current_file: "{{ validation_results_path }}/{{ inventory_hostname }}/multicast_current_{{ validation_timestamp }}.json"
           when:
             - platform in ['nxos', 'ios']
-            - multicast_enabled  | bool
+            - multicast_enabled | bool
             - compare_with_baseline
 
         - name: Mark multicast validation as passed
           ansible.builtin.set_fact:
-            validation_results: >
-              "{{ validation_results | combine({'tests_passed':
-                  validation_results.tests_passed
-                    + ['multicast_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['multicast_validation']}) }}"
           when:
             - platform in ['nxos', 'ios']
-            - multicast_enabled  | bool
+            - multicast_enabled | bool
 
         - name: Mark multicast validation as skipped
           ansible.builtin.set_fact:
-            validation_results: >-
-              {{ validation_results | combine({'tests_skipped':
-                validation_results.tests_skipped + ['multicast_validation']}) }}
-          when: >
-            not (platform in ['nxos', 'ios']
-              and multicast_enabled  | bool)
+            validation_results: "{{ validation_results | combine({'tests_skipped': validation_results.tests_skipped + ['multicast_validation']}) }}"
+          when:
+            - not (platform in ['nxos', 'ios'] and multicast_enabled | bool)
 
       rescue:
         - name: Mark multicast validation as failed
           ansible.builtin.set_fact:
-            validation_results: >
-              "{{ validation_results | combine({'tests_failed':
-                  validation_results.tests_failed
-                    + ['multicast_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['multicast_validation']}) }}"
 
     # ARP Table Validation
     - name: ARP Table Validation
@@ -224,35 +172,25 @@
             tasks_from: arp-validation
           vars:
             capture_mode: "validation"
-            output_file: >
-              "{{ validation_results_path }}/{{ inventory_hostname
-                }}/arp_current_{{ validation_timestamp }}.json"
+            output_file: "{{ validation_results_path }}/{{ inventory_hostname }}/arp_current_{{ validation_timestamp }}.json"
 
         - name: Compare ARP with baseline
           ansible.builtin.include_role:
             name: network-validation
             tasks_from: arp-comparison
           vars:
-            baseline_file: >
-              "{{ baseline_data_path }}/{{
-                inventory_hostname }}/arp_baseline_*.json"
-            current_file: >
-              "{{ validation_results_path }}/{{ inventory_hostname
-                }}/arp_current_{{ validation_timestamp }}.json"
+            baseline_file: "{{ baseline_data_path }}/{{ inventory_hostname }}/arp_baseline_*.json"
+            current_file: "{{ validation_results_path }}/{{ inventory_hostname }}/arp_current_{{ validation_timestamp }}.json"
           when: compare_with_baseline
 
         - name: Mark ARP validation as passed
           ansible.builtin.set_fact:
-            validation_results: >
-              "{{ validation_results | combine({'tests_passed':
-                  validation_results.tests_passed + ['arp_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['arp_validation']}) }}"
 
       rescue:
         - name: Mark ARP validation as failed
           ansible.builtin.set_fact:
-            validation_results: >
-              "{{ validation_results | combine({'tests_failed':
-                  validation_results.tests_failed + ['arp_validation']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['arp_validation']}) }}"
 
     # Protocol Convergence Check
     - name: Protocol Convergence Validation
@@ -266,26 +204,18 @@
 
         - name: Mark convergence validation as passed
           ansible.builtin.set_fact:
-            validation_results: >
-              "{{ validation_results | combine({'tests_passed':
-                  validation_results.tests_passed
-                    + ['protocol_convergence']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_passed': validation_results.tests_passed + ['protocol_convergence']}) }}"
 
       rescue:
         - name: Mark convergence validation as failed
           ansible.builtin.set_fact:
-            validation_results: >
-              "{{ validation_results | combine({'tests_failed':
-                  validation_results.tests_failed
-                    + ['protocol_convergence']}) }}"
+            validation_results: "{{ validation_results | combine({'tests_failed': validation_results.tests_failed + ['protocol_convergence']}) }}"
 
   post_tasks:
     - name: Generate validation summary
       ansible.builtin.template:
         src: templates/validation-summary.j2
-        dest: >
-          "{{ validation_results_path }}/{{ inventory_hostname
-            }}/validation_summary_{{ validation_timestamp }}.json"
+        dest: "{{ validation_results_path }}/{{ inventory_hostname }}/validation_summary_{{ validation_timestamp }}.json"
         mode: '0644'
       vars:
         summary_data: "{{ validation_results }}"
@@ -293,13 +223,9 @@
 
     - name: Calculate validation score
       ansible.builtin.set_fact:
-        validation_score: >-
-          {{ (validation_results.tests_passed | length /
-             (validation_results.tests_passed | length +
-              validation_results.tests_failed | length) * 100) | round(2) }}
-      when: >
-        (validation_results.tests_passed | length +
-          validation_results.tests_failed | length) > 0
+        validation_score: "{{ (validation_results.tests_passed | length / (validation_results.tests_passed | length + validation_results.tests_failed | length) * 100) | round(2) }}"
+      when:
+        - (validation_results.tests_passed | length + validation_results.tests_failed | length) > 0
 
     - name: Record validation metrics
       ansible.builtin.include_role:
@@ -331,11 +257,9 @@
           - "Tests Passed: {{ validation_results.tests_passed | length }}"
           - "Tests Failed: {{ validation_results.tests_failed | length }}"
           - "Tests Skipped: {{ validation_results.tests_skipped | length }}"
-          - "Validation Score: {{ validation_score  }}%"
+          - "Validation Score: {{ validation_score }}%"
           - "Overall Status: {{ 'PASS' if validation_passed else 'FAIL' }}"
-          - >-
-            Results Location: {{ validation_results_path }}/{{
-            inventory_hostname }}/
+          - "Results Location: {{ validation_results_path }}/{{ inventory_hostname }}/"
           - "=================================="
 
     - name: Fail if validation failed

@@ -45,9 +45,7 @@
     - application_source is defined
 - name: Verify application file exists
   ansible.netcommon.cli_command:
-    command: >
-      dir flash:{{ application_filename
-      }}
+    command: "dir flash:{{ application_filename }}"
   changed_when: false
   register: app_file_check
   when: application_action == 'install'
@@ -113,8 +111,7 @@
     - eos_extension_source is defined
 - name: Verify EOS extension file exists
   ansible.netcommon.cli_command:
-    command: >
-      dir flash:{{ eos_extension_filename }}
+    command: "dir flash:{{ eos_extension_filename }}"
   register: eos_file_check
   when: eos_extension_action == 'install'
 - name: Install EOS extension from flash

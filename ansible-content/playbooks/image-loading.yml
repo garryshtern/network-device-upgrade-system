@@ -19,9 +19,9 @@
       delegate_to: localhost
     - name: Fail if firmware file not found
       ansible.builtin.fail:
-        msg: >-
-          Firmware file not found:
-          {{ firmware_source_path }}/{{ firmware_version }}
+        msg:
+          - "Firmware file not found:"
+          - "{{ firmware_source_path }}/{{ firmware_version }}"
       when: not firmware_file.stat.exists
 
     - name: Check device storage capacity

@@ -75,8 +75,7 @@ eos_extension_source: ""
 
 # Metawatch/Metamux settings (extends common_upgrade_state from group_vars)
 metamako_upgrade_state: "{{
-  common_upgrade_state | combine({
-    'metawatch_installed': false,
+  common_upgrade_state | combine({'metawatch_installed': false,
     'metawatch_running': false,
     'metawatch_sync_status': 'N/A',
     'metawatch_telemetry_status': 'N/A',
@@ -85,6 +84,5 @@ metamako_upgrade_state: "{{
     'device_type': '',
     'latency_mode': 'normal',
     'metawatch_enabled': false,
-    'metamux_enabled': false
-  })
+    'metamux_enabled': false})
 }}"

@@ -243,9 +243,7 @@
     - name: Generate compliance report
       ansible.builtin.template:
         src: "templates/compliance-report.j2"
-        dest: >
-          "{{ audit_results_path }}/{{ inventory_hostname
-            }}/compliance_report_{{ audit_timestamp }}.json"
+        dest: "{{ audit_results_path }}/{{ inventory_hostname }}/compliance_report_{{ audit_timestamp }}.json"
         mode: "0644"
       vars:
         report_data: "{{ compliance_results }}"
@@ -333,6 +331,4 @@
 
     - name: Compliance audit completion
       ansible.builtin.debug:
-        msg: >-
-          "Compliance audit completed for {{ inventory_hostname
-            }} - Score: {{ compliance_percentage }}%"
+        msg: "Compliance audit completed for {{ inventory_hostname }} - Score: {{ compliance_percentage }}%"
