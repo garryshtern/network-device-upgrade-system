@@ -127,7 +127,7 @@
           ansible.builtin.assert:
             that:
               - storage_info is defined
-              - storage_info.free_space_gb >= (required_space_gb | float)
+              - (storage_info.free_space_gb | float) >= (required_space_gb | float)
             fail_msg:
               - "Insufficient storage space."
               - "Available: {{ storage_info.free_space_gb }}GB, Required: {{ required_space_gb }}GB"

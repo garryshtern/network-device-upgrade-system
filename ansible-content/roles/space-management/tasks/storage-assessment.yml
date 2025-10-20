@@ -18,13 +18,13 @@
   ansible.builtin.set_fact:
     storage_info: >-
       {{ storage_info | combine({
-        'used_space_gb': storage_info.total_space_gb
-          - storage_info.free_space_gb,
-        'usage_percentage': ((storage_info.total_space_gb
-          - storage_info.free_space_gb) / storage_info.total_space_gb * 100)
+        'used_space_gb': (storage_info.total_space_gb | float)
+          - (storage_info.free_space_gb | float),
+        'usage_percentage': (((storage_info.total_space_gb | float)
+          - (storage_info.free_space_gb | float)) / (storage_info.total_space_gb | float) * 100)
           | round(1)
       }) }}
-  when: storage_info.total_space_gb > 0
+  when: (storage_info.total_space_gb | float) > 0
 
 - name: Optional validation block
   when:
