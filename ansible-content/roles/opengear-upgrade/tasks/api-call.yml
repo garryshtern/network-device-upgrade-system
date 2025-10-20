@@ -1,0 +1,53 @@
+---
+# Reusable Opengear REST API Call Task
+#
+# This task abstracts the repetitive ansible.builtin.uri calls used throughout
+# the opengear-upgrade role, reducing code duplication and improving maintainability.
+#
+# IMPORTANT: Result is always stored in 'opengear_api_response' variable
+# Callers should immediately copy this to their own variable if needed.
+#
+# Required Parameters:
+#   api_endpoint: API endpoint path (e.g., "/system/info", "/auth/login")
+#   api_method: HTTP method (GET, POST, etc.)
+#
+# Optional Parameters:
+#   api_body: Request body data (dict/list)
+#   api_body_format: Body format (used when api_body is defined)
+#   api_timeout: Request timeout in seconds (default from role defaults: 30)
+#   api_use_auth: Include Authorization header (default from role defaults: true)
+#   api_extra_headers: Additional HTTP headers (default from role defaults: {})
+#   api_failed_when: Custom failure condition (default from role defaults: false)
+#   api_when_condition: When condition for the task (default from role defaults: true)
+#
+# Note: Default values are defined in roles/opengear-upgrade/defaults/main.yml
+#
+# Usage Example:
+#   - name: Get system information
+#     ansible.builtin.include_tasks: api-call.yml
+#     vars:
+#       api_endpoint: "/system/info"
+#       api_method: "GET"
+#
+#   - name: Store result in custom variable
+#     ansible.builtin.set_fact:
+#       system_info: "{{ opengear_api_response }}"
+
+- name: "Execute Opengear API call: {{ api_method }} {{ api_endpoint }}"
+  ansible.builtin.uri:
+    url: "https://{{ ansible_host }}/api/v1{{ api_endpoint }}"
+    method: "{{ api_method }}"
+    headers: >-
+      {{
+        api_use_auth | ternary(
+          {'Authorization': 'Token ' + vault_opengear_api_token},
+          {}
+        ) | combine(api_extra_headers)
+      }}
+    body: "{{ api_body if api_body is defined else omit }}"
+    body_format: "{{ api_body_format if api_body is defined else omit }}"
+    validate_certs: false
+    timeout: "{{ api_timeout }}"
+  register: opengear_api_response
+  failed_when: api_failed_when
+  when: api_when_condition

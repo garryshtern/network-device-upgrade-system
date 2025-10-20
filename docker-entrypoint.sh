@@ -527,29 +527,10 @@ build_ansible_options() {
     echo "$ansible_opts|$extra_vars"
 }
 
-# Common function to execute ansible-playbook with shared logic
-execute_ansible_playbook() {
-    local mode="$1"  # "syntax-check", "dry-run", or "run"
-    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
-
-    # Use ansible-content/inventory directory with explicit config
-    # This ensures group_vars is discovered in the inventory directory
+# Setup inventory - create symlink to custom inventory if provided
+setup_inventory() {
     local ansible_inventory_dir="ansible-content/inventory"
     local ansible_inventory="${ansible_inventory_dir}/hosts.yml"
-
-    # Mode-specific logging
-    case "$mode" in
-        syntax-check)
-            log "Running syntax check on: $playbook"
-            ;;
-        dry-run)
-            log "Running dry run on: $playbook"
-            ;;
-        run)
-            warn "EXECUTING ACTUAL PLAYBOOK - CHANGES WILL BE MADE"
-            log "Running playbook: $playbook"
-            ;;
-    esac
 
     # If user provided INVENTORY_FILE, symlink it to hosts.yml
     if [[ -n "${INVENTORY_FILE:-}" ]]; then
@@ -579,6 +560,31 @@ execute_ansible_playbook() {
     else
         log "Using default inventory: ${ansible_inventory}"
     fi
+}
+
+# Common function to execute ansible-playbook with shared logic
+execute_ansible_playbook() {
+    local mode="$1"  # "syntax-check", "dry-run", or "run"
+    local playbook="${ANSIBLE_PLAYBOOK:-$DEFAULT_PLAYBOOK}"
+
+    # Use ansible-content/inventory directory with explicit config
+    # This ensures group_vars is discovered in the inventory directory
+    local ansible_inventory_dir="ansible-content/inventory"
+    local ansible_inventory="${ansible_inventory_dir}/hosts.yml"
+
+    # Mode-specific logging
+    case "$mode" in
+        syntax-check)
+            log "Running syntax check on: $playbook"
+            ;;
+        dry-run)
+            log "Running dry run on: $playbook"
+            ;;
+        run)
+            warn "EXECUTING ACTUAL PLAYBOOK - CHANGES WILL BE MADE"
+            log "Running playbook: $playbook"
+            ;;
+    esac
 
     # Build authentication and configuration
     local opts_and_vars
@@ -822,16 +828,20 @@ run_tests() {
 # Main execution logic
 main() {
     local command="${1:-syntax-check}"
-    
+
     # Handle help first
     if [[ "$command" == "help" ]] || [[ "$command" == "--help" ]] || [[ "$command" == "-h" ]]; then
         usage
         exit 0
     fi
-    
+
+    # Setup inventory (create symlink if custom inventory provided)
+    # Must be done BEFORE validate_environment which checks TARGET_HOSTS against inventory
+    setup_inventory
+
     # Validate environment
     validate_environment
-    
+
     # Execute command
     case "$command" in
         "syntax-check")

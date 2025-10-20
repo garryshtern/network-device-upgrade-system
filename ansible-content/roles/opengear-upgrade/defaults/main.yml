@@ -11,6 +11,13 @@ auto_detect_architecture: true
 fallback_architecture: "legacy"
 api_test_timeout: 10
 
+# API call defaults (for api-call.yml reusable task)
+api_use_auth: true
+api_extra_headers: {}
+api_timeout: 30
+api_failed_when: false
+api_when_condition: true
+
 # Legacy architecture settings (older Opengear devices)
 legacy_upgrade_method: "cli"
 legacy_reboot_required: true
