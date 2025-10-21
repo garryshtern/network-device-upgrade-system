@@ -55,7 +55,8 @@
         - name: Validate network convergence
           ansible.builtin.include_role:
             name: network-validation
-            tasks_from: protocol-convergence
+          vars:
+            validation_phase: "pre_installation"
 
         - name: Final device health check
           ansible.builtin.include_role:

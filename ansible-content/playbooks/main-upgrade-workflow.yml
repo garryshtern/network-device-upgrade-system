@@ -314,10 +314,28 @@
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
+        - name: Display STEP 4 entry
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "STEP 4: STARTING NETWORK VALIDATION"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "About to gather network resources..."
+              - "=========================================="
+
         - name: Gather comprehensive network resources for validation
           ansible.builtin.include_role:
             name: common
             tasks_from: network-resources-gathering
+
+        - name: Display network resources gathering completion
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "NETWORK RESOURCES GATHERED - PROCEEDING TO VALIDATION"
+              - "=========================================="
 
         - name: Capture pre-upgrade network state
           ansible.builtin.include_role:
@@ -370,10 +388,28 @@
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
+        - name: Display STEP 6 entry
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "STEP 6: POST-UPGRADE VALIDATION"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "About to gather post-upgrade network resources..."
+              - "=========================================="
+
         - name: Gather comprehensive network resources for post-upgrade validation
           ansible.builtin.include_role:
             name: common
             tasks_from: network-resources-gathering
+
+        - name: Display network resources gathering completion
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "POST-UPGRADE RESOURCES GATHERED - PROCEEDING TO VALIDATION"
+              - "=========================================="
 
         - name: Capture post-upgrade network state
           ansible.builtin.include_role:
