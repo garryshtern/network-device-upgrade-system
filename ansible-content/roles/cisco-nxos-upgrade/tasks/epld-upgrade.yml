@@ -53,9 +53,8 @@
       ansible.builtin.assert:
         that:
           - has_dual_sup_for_epld or allow_disruptive_epld
-        fail_msg: >-
-          EPLD upgrade requires dual supervisors or explicit
-          approval for disruptive upgrade
+        fail_msg:
+          - "EPLD upgrade requires dual supervisors or explicit approval for disruptive upgrade"
 
 - name: EPLD upgrade execution
   block:

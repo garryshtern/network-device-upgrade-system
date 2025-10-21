@@ -221,9 +221,9 @@
         that:
           - opengear_upgrade_state.target_version
             in post_install_info.json.version
-        fail_msg: >
-          "Installation completed but target version not
-            active: {{ post_install_info.json.version }}"
+        fail_msg:
+          - "Installation completed but target version not active:"
+          - "{{ post_install_info.json.version }}"
 
     - name: Verify system health after installation
       ansible.builtin.uri:

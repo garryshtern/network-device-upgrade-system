@@ -54,10 +54,10 @@
           - >-
             storage_info.json.available_mb | int >
               (target_firmware_size_mb | int)
-        fail_msg: >-
-          Insufficient storage space: {{ storage_info.json.available_mb }}MB
-          available, {{ target_firmware_size_mb |
-            default(100) }}MB required
+        fail_msg:
+          - "Insufficient storage space:"
+          - "Available: {{ storage_info.json.available_mb }}MB"
+          - "Required: {{ target_firmware_size_mb }}MB"
 
 - name: Prepare firmware image for upload
   block:

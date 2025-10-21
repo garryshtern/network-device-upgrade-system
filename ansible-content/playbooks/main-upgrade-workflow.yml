@@ -115,12 +115,14 @@
               - ansible_net_version is defined
               - ansible_net_hostname is defined
               - ansible_net_model is defined
+              - ansible_net_image is defined
             fail_msg: "Failed to gather basic device facts. Check connectivity and authentication."
           when: platform in ['nxos', 'ios']
 
-        - name: Set current firmware version from facts
+        - name: Set current firmware from facts
           ansible.builtin.set_fact:
             current_firmware_version: "{{ ansible_net_version }}"
+            current_firmware_image: "{{ ansible_net_image }}"
           when: platform in ['nxos', 'ios']
 
         - name: Connectivity confirmed
@@ -133,6 +135,7 @@
               - "Platform: {{ platform }}"
               - "Hostname: {{ ansible_net_hostname }}"
               - "Current Version: {{ current_firmware_version }}"
+              - "Current Image: {{ current_firmware_image }}"
               - "Model: {{ ansible_net_model }}"
               - "Status: Connected successfully"
               - "Note: Comprehensive facts will be gathered after image staging"
@@ -198,29 +201,68 @@
             tasks_from: version-verification
           when: platform not in ['nxos', 'ios']
 
-        - name: Compare current version to target firmware
+        - name: Compare current image to target firmware (Cisco platforms)
+          ansible.builtin.set_fact:
+            already_running_target_version: "{{ current_firmware_image == target_firmware }}"
+          when: platform in ['nxos', 'ios']
+
+        - name: Compare current version to target firmware (non-Cisco platforms)
           ansible.builtin.set_fact:
             already_running_target_version: "{{ current_firmware_version == target_firmware }}"
+          when: platform not in ['nxos', 'ios']
 
-        - name: Report if already running target version
+        - name: Report if already running target firmware (Cisco platforms)
           ansible.builtin.debug:
             msg:
               - "=========================================="
-              - "ALREADY RUNNING TARGET VERSION"
+              - "ALREADY RUNNING TARGET FIRMWARE"
               - "=========================================="
               - "Device: {{ inventory_hostname }}"
-              - "Current Version: {{ current_firmware_version }}"
-              - "Target Version: {{ target_firmware }}"
+              - "Current Image: {{ current_firmware_image }}"
+              - "Target Firmware: {{ target_firmware }}"
               - "Status: NO UPGRADE NEEDED"
               - "Action: Skipping upgrade for this device"
               - "=========================================="
-          when: already_running_target_version | bool
+          when:
+            - already_running_target_version | bool
+            - platform in ['nxos', 'ios']
 
-        - name: End upgrade for this host if already running target version
+        - name: Report if already running target firmware (non-Cisco platforms)
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "ALREADY RUNNING TARGET FIRMWARE"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "Current Version: {{ current_firmware_version }}"
+              - "Target Firmware: {{ target_firmware }}"
+              - "Status: NO UPGRADE NEEDED"
+              - "Action: Skipping upgrade for this device"
+              - "=========================================="
+          when:
+            - already_running_target_version | bool
+            - platform not in ['nxos', 'ios']
+
+        - name: End upgrade for this host if already running target firmware
           ansible.builtin.meta: end_host
           when: already_running_target_version | bool
 
-        - name: Report upgrade needed
+        - name: Report upgrade needed (Cisco platforms)
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "UPGRADE REQUIRED"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "Current Image: {{ current_firmware_image }}"
+              - "Target Firmware: {{ target_firmware }}"
+              - "Status: PROCEEDING WITH UPGRADE"
+              - "=========================================="
+          when:
+            - not already_running_target_version | bool
+            - platform in ['nxos', 'ios']
+
+        - name: Report upgrade needed (non-Cisco platforms)
           ansible.builtin.debug:
             msg:
               - "=========================================="
@@ -228,10 +270,12 @@
               - "=========================================="
               - "Device: {{ inventory_hostname }}"
               - "Current Version: {{ current_firmware_version }}"
-              - "Target Version: {{ target_firmware }}"
+              - "Target Firmware: {{ target_firmware }}"
               - "Status: PROCEEDING WITH UPGRADE"
               - "=========================================="
-          when: not already_running_target_version | bool
+          when:
+            - not already_running_target_version | bool
+            - platform not in ['nxos', 'ios']
 
         - name: Verify firmware image availability (local file check)
           ansible.builtin.include_role:

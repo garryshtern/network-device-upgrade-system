@@ -87,9 +87,9 @@
       ansible.builtin.assert:
         that:
           - firmware_validation.json.valid == true
-        fail_msg: >-
-          "Firmware validation failed: {{ firmware_validation.json.message |
-              default('Unknown error') }}"
+        fail_msg:
+          - "Firmware validation failed:"
+          - "{{ firmware_validation.json.message }}"
 
     - name: Install firmware
       ansible.builtin.uri:

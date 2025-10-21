@@ -73,9 +73,7 @@
     - name: Wait for device to stabilize after step upgrade
       ansible.builtin.pause:
         seconds: 30
-        prompt: >-
-          Waiting for FortiOS to stabilize after step
-          {{ fortios_upgrade_state.step_number }}
+        prompt: "Waiting for FortiOS to stabilize after step {{ fortios_upgrade_state.step_number }}"
 
     - name: Verify step upgrade completion
       fortinet.fortios.fortios_monitor_fact:

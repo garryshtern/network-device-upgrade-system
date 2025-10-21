@@ -34,6 +34,7 @@ opengear_image_directory: "/tmp"
 opengear_backup_image_directory: "/var/backups"
 opengear_image_extension: "bin"
 opengear_verify_image_checksum: true
+target_firmware_size_mb: 100
 
 # Storage management
 opengear_minimum_free_space_mb: 1024

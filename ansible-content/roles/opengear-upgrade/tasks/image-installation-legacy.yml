@@ -92,9 +92,7 @@
     - name: Wait for users to prepare
       ansible.builtin.pause:
         seconds: 60
-        prompt: >
-          Allowing time for active session users to prepare
-          for disconnection
+        prompt: "Allowing time for active session users to prepare for disconnection"
       when: active_sessions_check.stdout | trim | int > 0
 
 - name: Execute firmware installation based on device architecture
@@ -150,18 +148,15 @@
             'complete' in upgrade_execution.stdout.lower() or
             'programming' in upgrade_execution.stdout.lower() or
             'installed' in upgrade_execution.stdout.lower()
-        fail_msg: >
-          {{ upgrade_config.command }} command did not report
-          successful completion
+        fail_msg:
+          - "{{ upgrade_config.command }} command did not report successful completion"
 
 - name: Handle device reboot and recovery
   block:
     - name: Wait for automatic reboot to begin
       ansible.builtin.pause:
         seconds: 45
-        prompt: >
-          Waiting for {{ upgrade_config.command }} to complete and
-          trigger automatic reboot
+        prompt: "Waiting for {{ upgrade_config.command }} to complete and trigger automatic reboot"
 
     - name: Wait for device to become unreachable (reboot confirmation)
       ansible.builtin.wait_for:
@@ -221,11 +216,11 @@
         that:
           - opengear_upgrade_state.target_version in post_upgrade_version
           - pre_upgrade_version != post_upgrade_version
-        fail_msg: >
-          Installation completed but target version not active:
-          Previous: {{ pre_upgrade_version }}
-          Current: {{ post_upgrade_version }}
-          Expected: {{ opengear_upgrade_state.target_version }}
+        fail_msg:
+          - "Installation completed but target version not active:"
+          - "Previous: {{ pre_upgrade_version }}"
+          - "Current: {{ post_upgrade_version }}"
+          - "Expected: {{ opengear_upgrade_state.target_version }}"
 
     - name: Verify system health after installation
       ansible.builtin.raw: |
