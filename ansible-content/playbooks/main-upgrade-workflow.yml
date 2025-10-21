@@ -370,6 +370,11 @@
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
+        - name: Gather comprehensive network resources for post-upgrade validation
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: network-resources-gathering
+
         - name: Capture post-upgrade network state
           ansible.builtin.include_role:
             name: network-validation
