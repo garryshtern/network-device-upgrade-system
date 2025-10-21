@@ -2,14 +2,9 @@
 # Check ISSU Capability for Cisco NX-OS Devices
 # Determines if In-Service Software Upgrade is supported
 # REFACTORED: Uses nxos_facts instead of show commands
-
-- name: Gather hardware facts for ISSU capability check
-  cisco.nxos.nxos_facts:
-    gather_subset:
-      - hardware
-  register: hardware_facts
-  when:
-    - not ansible_check_mode
+#
+# Note: Hardware facts already gathered in STEP 1 of main workflow
+# ansible_net_model, ansible_net_platform already available
 
 - name: Check current ISSU state impact
   cisco.nxos.nxos_command:

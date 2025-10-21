@@ -9,19 +9,8 @@
         '.*[-_]([0-9]+[0-9\\.\\-a-zA-Z]*)\\.(bin|nxos|spa|pkg|out|mos|tar\\.gz|dgz)$',
         '\\1') }}"
 
-- name: Gather device facts to get current version (Cisco NX-OS)
-  cisco.nxos.nxos_facts:
-    gather_subset:
-      - hardware
-  register: nxos_version_output
-  when: platform == 'nxos'
-
-- name: Gather device facts to get current version (Cisco IOS-XE)
-  cisco.ios.ios_facts:
-    gather_subset:
-      - hardware
-  register: ios_version_output
-  when: platform == 'ios'
+# Note: For Cisco platforms, facts are already gathered in STEP 1 of main workflow
+# ansible_net_version is already available - no need to re-gather
 
 - name: Get current firmware version (FortiOS)
   fortinet.fortios.fortios_monitor_fact:

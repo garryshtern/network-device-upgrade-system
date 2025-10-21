@@ -1,0 +1,121 @@
+---
+# Comprehensive Network Resources Gathering
+# Gathers all network resources needed for validation (BGP, interfaces, routing, VLANs, etc.)
+# Called AFTER basic connectivity is established and image is staged
+#
+# Prerequisites:
+# - Basic facts already gathered (ansible_net_version, ansible_net_hostname, etc.)
+# - Platform variable defined
+# - Device connection established
+#
+# Gathers:
+# - Configuration facts: BGP, interfaces, VLANs, LAG, LACP, BFD, route-maps, etc.
+# - Operational state: ARP, MAC, routing tables, multicast, BFD neighbors
+
+- name: NX-OS comprehensive network resources gathering
+  when: platform == 'nxos'
+  block:
+    - name: Gather comprehensive NX-OS network resources
+      cisco.nxos.nxos_facts:
+        gather_subset:
+          - all
+        gather_network_resources:
+          - interfaces
+          - l2_interfaces
+          - l3_interfaces
+          - vlans
+          - lag_interfaces
+          - lacp_interfaces
+          - bfd_interfaces
+          - bgp_global
+          - bgp_address_family
+          - bgp_neighbor_address_family
+          - route_maps
+          - prefix_lists
+          - static_routes
+          - lldp_global
+          - lldp_interfaces
+          - ntp_global
+          - snmp_server
+          - logging_global
+          - hostname
+        available_network_resources: true
+      register: nxos_network_resources
+
+    - name: Gather NX-OS operational state data
+      cisco.nxos.nxos_command:
+        commands:
+          - show ip arp vrf all | json
+          - show mac address-table | json
+          - show ip route vrf all | json
+          - show forwarding ipv4 route | json
+          - show bfd neighbors vrf all | json
+          - show ip pim interface | json
+          - show ip pim neighbor | json
+          - show ip pim rp | json
+          - show ip igmp interface | json
+          - show ip igmp groups | json
+      register: nxos_validation_data
+      changed_when: false
+      failed_when: false
+
+    - name: Display gathered network resources summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "NETWORK RESOURCES GATHERED"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ platform }}"
+          - "Gathered Resources: {{ ansible_net_gather_network_resources | default([]) | join(', ') }}"
+          - "Available Resources: {{ ansible_network_resources | default({}) | dict2items | map(attribute='key') | list | join(', ') }}"
+          - "Operational Data: ARP, MAC, Routing, BFD, Multicast"
+          - "Status: Ready for validation"
+          - "=========================================="
+      when: show_debug | bool
+
+  rescue:
+    - name: Network resources gathering failed
+      ansible.builtin.fail:
+        msg: |
+          Failed to gather comprehensive network resources for {{ inventory_hostname }}.
+
+          This is required for pre-upgrade validation.
+          Please check:
+          - Device is still reachable
+          - Platform configuration is correct
+          - Network resource modules are supported on this device
+
+- name: IOS-XE comprehensive network resources gathering
+  when: platform == 'ios'
+  block:
+    - name: Gather comprehensive IOS-XE facts
+      cisco.ios.ios_facts:
+        gather_subset:
+          - all
+      register: ios_network_resources
+
+    - name: Display gathered network resources summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "NETWORK RESOURCES GATHERED"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ platform }}"
+          - "Status: Ready for validation"
+          - "=========================================="
+      when: show_debug | bool
+
+  rescue:
+    - name: Network resources gathering failed
+      ansible.builtin.fail:
+        msg: |
+          Failed to gather comprehensive network resources for {{ inventory_hostname }}.
+
+          This is required for pre-upgrade validation.
+
+- name: Skip network resources gathering for other platforms
+  ansible.builtin.debug:
+    msg: "Platform {{ platform }} does not require comprehensive network resources gathering at this stage"
+  when: platform not in ['nxos', 'ios']

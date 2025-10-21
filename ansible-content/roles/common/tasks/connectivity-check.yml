@@ -72,34 +72,14 @@
             (platform == 'fortios') | ternary(vault_fortios_api_token | default(omit), omit)
           }}
 
-    - name: Step 1 & 2 - Connect and retrieve version information (tests auth and connection)
+    - name: Step 1 & 2 - Connect and retrieve basic device information (tests auth and connection)
       when: not ansible_check_mode
       block:
-        - name: Gather comprehensive NX-OS facts for validation (hardware, interfaces, BGP, VLANs, routing, BFD)
+        - name: Gather basic NX-OS facts for connectivity verification
           cisco.nxos.nxos_facts:
             gather_subset:
-              - all
-            gather_network_resources:
-              - interfaces
-              - l2_interfaces
-              - l3_interfaces
-              - vlans
-              - lag_interfaces
-              - lacp_interfaces
-              - bfd_interfaces
-              - bgp_global
-              - bgp_address_family
-              - bgp_neighbor_address_family
-              - route_maps
-              - prefix_lists
-              - static_routes
-              - lldp_global
-              - lldp_interfaces
-              - ntp_global
-              - snmp_server
-              - logging_global
-              - hostname
-            available_network_resources: true
+              - hardware
+              - min
           register: nxos_facts_output
           when: platform == 'nxos'
 
@@ -120,85 +100,17 @@
             - nxos_facts_output is defined
             - nxos_facts_output is succeeded
 
-        - name: Gather additional NX-OS validation data (ARP, MAC, routing, multicast, BFD)
-          cisco.nxos.nxos_command:
-            commands:
-              - show ip arp vrf all | json
-              - show mac address-table | json
-              - show ip route vrf all | json
-              - show forwarding ipv4 route | json
-              - show bfd neighbors vrf all | json
-              - show ip pim interface | json
-              - show ip pim neighbor | json
-              - show ip pim rp | json
-              - show ip igmp interface | json
-              - show ip igmp groups | json
-          register: nxos_validation_data
-          changed_when: false
-          when:
-            - platform == 'nxos'
-            - nxos_facts_output is succeeded
-          failed_when: false
-
-        - name: Display all NX-OS facts after successful connection
+        - name: Display basic NX-OS facts after successful connection
           ansible.builtin.debug:
             msg:
-              - "=== NX-OS Device Facts ==="
-              - "--- Device Identity ---"
+              - "=== NX-OS Basic Connectivity Verified ==="
               - "Hostname: {{ ansible_net_hostname | default('N/A') }}"
               - "Model: {{ ansible_net_model | default('N/A') }}"
-              - "Serial Number: {{ ansible_net_serialnum | default('N/A') }}"
-              - "--- Software & Image ---"
+              - "Serial: {{ ansible_net_serialnum | default('N/A') }}"
               - "OS Version: {{ ansible_net_version | default('N/A') }}"
               - "Image: {{ ansible_net_image | default('N/A') }}"
-              - "License Host ID: {{ ansible_net_license_hostid | default('N/A') }}"
-              - "--- System Resources ---"
-              - "Memory Total: {{ ansible_net_memtotal_mb | default('N/A') }} MB"
-              - "Memory Free: {{ ansible_net_memfree_mb | default('N/A') }} MB"
-              - "File Systems: {{ ansible_net_filesystems | default([]) | join(', ') }}"
-              - "--- Network Configuration ---"
-              - "IPv4 Addresses: {{ ansible_net_all_ipv4_addresses | default([]) | join(', ') }}"
-              - "IPv6 Addresses: {{ ansible_net_all_ipv6_addresses | default([]) | join(', ') }}"
-              - "VLANs: {{ vlan_list | default([]) | join(', ') }}"
-              - "--- Interfaces ---"
-              - "Interface Names: {{ interfaces_list | default({}) | list | join(', ') }}"
-              - "Interface Details: {{ ansible_net_interfaces | default({}) | dict2items | map(attribute='key') | list | join(', ') }}"
-              - "--- Active Configuration ---"
-              - "Config Length: {{ ansible_net_config | default('') | length }} characters"
-              - "Config Available: {{ 'Yes' if ansible_net_config is defined and ansible_net_config else 'No' }}"
-              - "--- Network Resources Gathered ---"
-              - "Gathered Resources: {{ ansible_net_gather_network_resources | default([]) | join(', ') }}"
-              - "Available Network Resources: {{ ansible_network_resources | default({}) | dict2items | map(attribute='key') | list | join(', ') }}"
-              - "--- Collection Details ---"
-              - "Gathered Subsets: {{ ansible_net_gather_subset | default([]) | join(', ') }}"
-              - "Transport: {{ ansible_net_api | default('N/A') }}"
-              - "Python Version: {{ ansible_net_python_version | default('N/A') }}"
-              - "=========================="
-          when:
-            - platform == 'nxos'
-            - nxos_facts_output is succeeded
-
-        - name: Dump detailed NX-OS facts (lists and dictionaries)
-          ansible.builtin.debug:
-            msg:
-              - "=== NX-OS Detailed Facts Dump ==="
-              - "--- File Systems List ---"
-              - "{{ ansible_net_filesystems | default([]) | to_nice_json }}"
-              - "--- All IPv4 Addresses List ---"
-              - "{{ ansible_net_all_ipv4_addresses | default([]) | to_nice_json }}"
-              - "--- All IPv6 Addresses List ---"
-              - "{{ ansible_net_all_ipv6_addresses | default([]) | to_nice_json }}"
-              - "--- Interfaces Dictionary ---"
-              - "{{ ansible_net_interfaces | default({}) | to_nice_json }}"
-              - "--- Network Resources Dictionary ---"
-              - "{{ ansible_network_resources | default({}) | to_nice_json }}"
-              - "--- Gathered Network Resources List ---"
-              - "{{ ansible_net_gather_network_resources | default([]) | to_nice_json }}"
-              - "--- Gathered Subsets List ---"
-              - "{{ ansible_net_gather_subset | default([]) | to_nice_json }}"
-              - "--- Neighbors (LLDP/CDP) ---"
-              - "{{ ansible_net_neighbors | default({}) | to_nice_json }}"
-              - "================================="
+              - "Status: Connected"
+              - "========================================"
           when:
             - platform == 'nxos'
             - nxos_facts_output is succeeded

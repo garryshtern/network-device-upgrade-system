@@ -306,18 +306,18 @@
           ansible.builtin.fail:
             msg: "STEP 3 FAILED: Image upload or version check failed. Workflow stopped."
 
-    # STEP 4: Comprehensive Facts Gathering and Pre-Upgrade Validation
-    # Facts gathering happens AFTER image is confirmed staged (not before)
+    # STEP 4: Comprehensive Network Resources Gathering and Pre-Upgrade Validation
+    # Network resources gathered AFTER image is confirmed staged (not before)
     # Comprehensive validation: BGP, interfaces, routing, etc.
     # MUST PASS or workflow STOPS
-    - name: "STEP 4: Facts Gathering and Pre-Upgrade Validation"
+    - name: "STEP 4: Network Resources Gathering and Pre-Upgrade Validation"
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Gather comprehensive device facts (after confirming image staged)
+        - name: Gather comprehensive network resources for validation
           ansible.builtin.include_role:
             name: common
-            tasks_from: connectivity-check
+            tasks_from: network-resources-gathering
 
         - name: Capture pre-upgrade network state
           ansible.builtin.include_role:
@@ -336,7 +336,7 @@
       rescue:
         - name: Pre-upgrade validation failed - STOP workflow
           ansible.builtin.fail:
-            msg: "STEP 4 FAILED: Facts gathering or pre-upgrade validation failed. Workflow stopped."
+            msg: "STEP 4 FAILED: Network resources gathering or pre-upgrade validation failed. Workflow stopped."
 
     # STEP 5: Install Images and Reboot
     # Platform-specific installation

@@ -2,12 +2,9 @@
 # Cisco NX-OS Image Installation Tasks
 # Installs and activates firmware images using nxos_install_os module
 # REFACTORED: Uses cisco.nxos.nxos_install_os instead of manual install commands
-
-- name: Gather current system facts
-  cisco.nxos.nxos_facts:
-    gather_subset:
-      - hardware
-  register: system_facts
+#
+# Note: Hardware facts already gathered in STEP 1 of main workflow
+# ansible_net_image, ansible_net_version, ansible_net_platform already available
 
 - name: Display current system information
   ansible.builtin.debug:
