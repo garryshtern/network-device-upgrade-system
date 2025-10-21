@@ -12,6 +12,24 @@
 # - Configuration facts: BGP, interfaces, VLANs, LAG, LACP, BFD, route-maps, etc.
 # - Operational state: ARP, MAC, routing tables, multicast, BFD neighbors
 
+- name: Verify platform variable is defined
+  ansible.builtin.assert:
+    that:
+      - platform is defined
+      - platform != ''
+    fail_msg: "Platform variable is not defined or empty. Cannot gather network resources without platform information."
+
+- name: Display platform being processed
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "NETWORK RESOURCES GATHERING"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "Supported platforms: nxos, ios"
+      - "=========================================="
+
 - name: NX-OS comprehensive network resources gathering
   when: platform == 'nxos'
   block:
