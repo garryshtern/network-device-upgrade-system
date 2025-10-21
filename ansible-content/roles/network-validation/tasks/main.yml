@@ -1,7 +1,7 @@
 ---
 # Network Validation Role - Main Tasks
 # Comprehensive network state validation and comparison
-# STRICT GATE: Uses platform-specific facts gathered in connectivity-check
+# PREREQUISITE: Caller MUST call network-resources-gathering BEFORE this role
 #
 # DESIGN: Single when clause for all platform-specific tasks
 # All NX-OS validation tasks grouped under one block with single platform gate
