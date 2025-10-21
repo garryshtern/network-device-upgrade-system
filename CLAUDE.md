@@ -27,7 +27,31 @@ Network device upgrade management system for 1000+ heterogeneous network devices
    - Implement comprehensive error handling with block/rescue patterns
    - Validate all Ansible task syntax against current best practices
 
-4. **Variable Management** (MANDATORY):
+4. **YAML Formatting Standards** (MANDATORY):
+   - **NEVER use folded scalars (`|`, `>`, `>-`) for `msg` parameters in debug/fail tasks**
+   - **ALWAYS use YAML list syntax for messages**
+   - Example CORRECT:
+     ```yaml
+     - name: Display results
+       ansible.builtin.debug:
+         msg:
+           - "Line 1"
+           - "Line 2: {{ variable }}"
+           - "Line 3"
+     ```
+   - Example INCORRECT:
+     ```yaml
+     - name: Display results
+       ansible.builtin.debug:
+         msg: |
+           Line 1
+           Line 2: {{ variable }}
+           Line 3
+     ```
+   - Folded scalars in messages cause maintenance issues and inconsistent formatting
+   - Use inline conditionals in list items if needed: `"{{ 'text' if condition else '' }}"`
+
+5. **Variable Management** (MANDATORY):
    - **NEVER use `| default()` filter in playbooks or tasks**
    - **NEVER use `| default()` filter in when conditionals**
    - **NEVER use `and` in when conditionals** - use YAML list format instead

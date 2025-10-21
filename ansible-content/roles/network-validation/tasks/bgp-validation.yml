@@ -217,34 +217,24 @@
 # Step 11: Display results
 - name: Display BGP validation results
   ansible.builtin.debug:
-    msg: |
-      BGP Validation Results for {{ inventory_hostname }}:
-      Status: {{ 'PASSED' if bgp_validation.passed else 'FAILED' }}
-      BGP Configured: {{ bgp_validation.bgp_configured }}
-      Total Neighbors: {{ bgp_validation.summary.total_neighbors }}
-      Established Neighbors: {{ bgp_validation.summary.established_neighbors }}
-      Total Prefixes: {{ bgp_validation.summary.total_prefixes }}
-      {% if bgp_validation_mode == 'post_upgrade' and bgp_comparison != {} %}
-      Baseline Comparison:
-        - Neighbor Count Match: {{ bgp_comparison.neighbor_count_match }}
-        - Established Count Match: {{ bgp_comparison.established_count_match }}
-        - Prefix Variance: {{ bgp_comparison.prefix_variance_percentage | round(2) }}%
-      {% if bgp_comparison.new_down_neighbors | length > 0 %}
-        - New Down Neighbors: {{ bgp_comparison.new_down_neighbors | join(', ') }}
-      {% endif %}
-      {% if bgp_comparison.recovered_neighbors | length > 0 %}
-        - Recovered Neighbors: {{ bgp_comparison.recovered_neighbors | join(', ') }}
-      {% endif %}
-      {% endif %}
-      {% if bgp_validation.errors | length > 0 %}
-      Errors:
-      {% for error in bgp_validation.errors %}
-        - {{ error }}
-      {% endfor %}
-      {% endif %}
-      {% if bgp_validation.warnings | length > 0 %}
-      Warnings:
-      {% for warning in bgp_validation.warnings %}
-        - {{ warning }}
-      {% endfor %}
-      {% endif %}
+    msg:
+      - "=========================================="
+      - "BGP Validation Results"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Status: {{ 'PASSED' if bgp_validation.passed else 'FAILED' }}"
+      - "BGP Configured: {{ bgp_validation.bgp_configured }}"
+      - "Total Neighbors: {{ bgp_validation.summary.total_neighbors }}"
+      - "Established Neighbors: {{ bgp_validation.summary.established_neighbors }}"
+      - "Total Prefixes: {{ bgp_validation.summary.total_prefixes }}"
+      - "{{ '--- Baseline Comparison ---' if (bgp_validation_mode == 'post_upgrade' and bgp_comparison != {}) else '' }}"
+      - "{{ 'Neighbor Count Match: ' + (bgp_comparison.neighbor_count_match | string) if (bgp_validation_mode == 'post_upgrade' and bgp_comparison != {}) else '' }}"
+      - "{{ 'Established Count Match: ' + (bgp_comparison.established_count_match | string) if (bgp_validation_mode == 'post_upgrade' and bgp_comparison != {}) else '' }}"
+      - "{{ 'Prefix Variance: ' + (bgp_comparison.prefix_variance_percentage | round(2) | string) + '%' if (bgp_validation_mode == 'post_upgrade' and bgp_comparison != {}) else '' }}"
+      - "{{ 'New Down Neighbors: ' + (bgp_comparison.new_down_neighbors | join(', ')) if (bgp_validation_mode == 'post_upgrade' and bgp_comparison != {} and bgp_comparison.new_down_neighbors | length > 0) else '' }}"
+      - "{{ 'Recovered Neighbors: ' + (bgp_comparison.recovered_neighbors | join(', ')) if (bgp_validation_mode == 'post_upgrade' and bgp_comparison != {} and bgp_comparison.recovered_neighbors | length > 0) else '' }}"
+      - "{{ '--- Errors ---' if bgp_validation.errors | length > 0 else '' }}"
+      - "{{ bgp_validation.errors | join('\n') if bgp_validation.errors | length > 0 else '' }}"
+      - "{{ '--- Warnings ---' if bgp_validation.warnings | length > 0 else '' }}"
+      - "{{ bgp_validation.warnings | join('\n') if bgp_validation.warnings | length > 0 else '' }}"
+      - "=========================================="
