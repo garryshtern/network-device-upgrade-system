@@ -1,0 +1,38 @@
+---
+# Debug playbook to test network-resources-gathering.yml in isolation
+# Tests if the task file executes properly with different platform values
+
+- name: Test Network Resources Gathering Execution
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  vars:
+    platform: "nxos"
+    inventory_hostname: "test-device-01"
+    show_debug: true
+
+  tasks:
+    - name: Display test start
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "TESTING NETWORK-RESOURCES-GATHERING"
+          - "=========================================="
+          - "Platform: {{ platform }}"
+          - "Device: {{ inventory_hostname }}"
+          - "=========================================="
+
+    - name: Test calling network-resources-gathering
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: network-resources-gathering
+
+    - name: Display test completion
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "TEST COMPLETED"
+          - "=========================================="
+          - "If you see this, the task file executed without errors"
+          - "Check above output for actual fact gathering tasks"
+          - "=========================================="

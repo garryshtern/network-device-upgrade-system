@@ -3,6 +3,16 @@
 # Extracted from image-loading.yml playbook for task inclusion
 # Downloads and stages firmware images on network devices
 
+- name: Display image loading entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "ENTERING IMAGE LOADING TASK"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "=========================================="
+
 - name: Set image loading variables
   ansible.builtin.set_fact:
     firmware_source_path: "{{ firmware_base_path }}"

@@ -6,6 +6,18 @@
 # DESIGN: Single when clause for all platform-specific tasks
 # All NX-OS validation tasks grouped under one block with single platform gate
 
+- name: Display network validation entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "ENTERING NETWORK-VALIDATION ROLE"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "Validation Phase: {{ validation_phase | default('not specified') }}"
+      - "WARNING: Facts MUST be gathered before this role"
+      - "=========================================="
+
 - name: NX-OS Network Validation
   when: platform == 'nxos'
   block:
