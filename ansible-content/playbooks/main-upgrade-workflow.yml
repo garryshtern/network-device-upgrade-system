@@ -123,6 +123,7 @@
           ansible.builtin.set_fact:
             current_firmware_version: "{{ ansible_net_version }}"
             current_firmware_image: "{{ ansible_net_image }}"
+            current_firmware_image_filename: "{{ ansible_net_image | regex_replace('^.*/', '') }}"
           when: platform in ['nxos', 'ios']
 
         - name: Connectivity confirmed
@@ -136,6 +137,7 @@
               - "Hostname: {{ ansible_net_hostname }}"
               - "Current Version: {{ current_firmware_version }}"
               - "Current Image: {{ current_firmware_image }}"
+              - "Image Filename: {{ current_firmware_image_filename }}"
               - "Model: {{ ansible_net_model }}"
               - "Status: Connected successfully"
               - "Note: Comprehensive facts will be gathered after image staging"
@@ -203,7 +205,7 @@
 
         - name: Compare current image to target firmware (Cisco platforms)
           ansible.builtin.set_fact:
-            already_running_target_version: "{{ current_firmware_image == target_firmware }}"
+            already_running_target_version: "{{ current_firmware_image_filename == target_firmware }}"
           when: platform in ['nxos', 'ios']
 
         - name: Compare current version to target firmware (non-Cisco platforms)
@@ -219,8 +221,9 @@
               - "=========================================="
               - "Device: {{ inventory_hostname }}"
               - "Current Image: {{ current_firmware_image }}"
+              - "Image Filename: {{ current_firmware_image_filename }}"
               - "Target Firmware: {{ target_firmware }}"
-              - "Status: NO UPGRADE NEEDED"
+              - "Status: NO UPGRADE NEEDED ({{ current_firmware_image_filename }} == {{ target_firmware }})"
               - "Action: Skipping upgrade for this device"
               - "=========================================="
           when:
@@ -255,8 +258,9 @@
               - "=========================================="
               - "Device: {{ inventory_hostname }}"
               - "Current Image: {{ current_firmware_image }}"
+              - "Image Filename: {{ current_firmware_image_filename }}"
               - "Target Firmware: {{ target_firmware }}"
-              - "Status: PROCEEDING WITH UPGRADE"
+              - "Status: PROCEEDING WITH UPGRADE ({{ current_firmware_image_filename }} != {{ target_firmware }})"
               - "=========================================="
           when:
             - not already_running_target_version | bool

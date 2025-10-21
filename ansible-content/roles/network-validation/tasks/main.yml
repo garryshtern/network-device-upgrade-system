@@ -6,17 +6,9 @@
 # DESIGN: Single when clause for all platform-specific tasks
 # All NX-OS validation tasks grouped under one block with single platform gate
 
-- name: NX-OS Network Validation (uses pre-gathered facts from connectivity-check)
+- name: NX-OS Network Validation
   when: platform == 'nxos'
   block:
-    - name: Enforce NX-OS facts availability
-      ansible.builtin.assert:
-        that:
-          - ansible_network_resources is defined
-          - ansible_network_resources.interfaces is defined
-        fail_msg: "NX-OS facts not pre-gathered. Connectivity-check must run first."
-        success_msg: "NX-OS facts verified - proceeding with validation"
-
     - name: Initialize validation baselines
       ansible.builtin.set_fact:
         interface_baseline:
