@@ -47,6 +47,11 @@
           vars:
             required_phase: "phase_1_complete"
 
+        - name: Gather comprehensive network resources for validation
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: network-resources-gathering
+
         - name: Validate network convergence
           ansible.builtin.include_role:
             name: network-validation
@@ -155,6 +160,11 @@
             tasks_from: health-check
           vars:
             check_type: "post_installation"
+
+        - name: Gather comprehensive network resources for validation
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: network-resources-gathering
 
         - name: Validate network services
           ansible.builtin.include_role:

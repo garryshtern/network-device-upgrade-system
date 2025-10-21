@@ -32,6 +32,12 @@
           tests_failed: []
           tests_skipped: []
 
+    # Gather comprehensive network resources BEFORE validation
+    - name: Gather comprehensive network resources for validation
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: network-resources-gathering
+
     # BGP Validation
     - name: BGP State Validation
       block:
