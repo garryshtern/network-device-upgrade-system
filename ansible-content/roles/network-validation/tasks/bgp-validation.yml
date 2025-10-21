@@ -1,140 +1,71 @@
 ---
 # BGP State Validation Tasks
-# UPDATED: Only validates if BGP is configured on device
-# Skips validation if BGP is not in use
+# Redesigned: Collect data first, build final structure once with vars
+# No scattered combine() operations
 
-- name: Initialize BGP validation results
+# Step 1: Determine validation mode
+- name: Determine validation mode
   ansible.builtin.set_fact:
-    bgp_validation:
-      device: "{{ inventory_hostname }}"
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      validation_type: "bgp"
-      baseline: {}
-      current: {}
-      comparison: {}
-      passed: true
-      errors: []
-      warnings: []
-      bgp_configured: false
+    bgp_validation_mode: >-
+      {{
+        validation_mode if (validation_mode is defined and validation_mode != 'full')
+        else (capture_mode if (capture_mode is defined and capture_mode != 'snapshot')
+        else (validation_type if (validation_type is defined and validation_type != 'pre_upgrade')
+        else check_type))
+      }}
 
-- name: Set BGP configured for check mode
-  ansible.builtin.set_fact:
-    bgp_validation: "{{ bgp_validation | combine({'bgp_configured': true}) }}"
-  when: ansible_check_mode
-
-- name: Set validation mode (use first defined value)
-  ansible.builtin.set_fact:
-    validation_mode: "{{ validation_mode }}"
-  when: validation_mode is defined and validation_mode != 'full'
-
-- name: Set validation mode from capture_mode
-  ansible.builtin.set_fact:
-    validation_mode: "{{ capture_mode }}"
-  when:
-    - validation_mode is not defined or validation_mode == 'full'
-    - capture_mode is defined
-    - capture_mode != 'snapshot'
-
-- name: Set validation mode from validation_type
-  ansible.builtin.set_fact:
-    validation_mode: "{{ validation_type }}"
-  when:
-    - validation_mode is not defined or validation_mode == 'full'
-    - validation_type is defined
-    - validation_type != 'pre_upgrade'
-
-- name: Set validation mode from check_type
-  ansible.builtin.set_fact:
-    validation_mode: "{{ check_type }}"
-  when: validation_mode is not defined or validation_mode == 'full'
-
-- name: Use pre-gathered BGP configuration from connectivity-check
+# Step 2: Extract BGP data from pre-gathered facts
+- name: Extract BGP configuration from pre-gathered facts
   when:
     - not ansible_check_mode
-    - ansible_network_os is defined
     - platform == 'nxos'
-  block:
-    - name: Debug pre-gathered BGP facts
-      ansible.builtin.debug:
-        msg:
-          - "=== NX-OS BGP Facts (Pre-gathered) ==="
-          - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ platform }}"
-          - "ansible_network_resources defined: {{ ansible_network_resources is defined }}"
-          - "BGP Global configured: {{ ansible_network_resources.bgp_global is defined }}"
-          - "BGP Address Family configured: {{ ansible_network_resources.bgp_address_family is defined }}"
-          - "BGP Neighbor Address Family configured: {{ ansible_network_resources.bgp_neighbor_address_family is defined }}"
-      when: show_debug | bool
+    - ansible_network_resources is defined
+    - ansible_network_resources.bgp_global is defined
+    - ansible_network_resources.bgp_global.as_number is defined
+  ansible.builtin.set_fact:
+    bgp_is_configured: true
+    bgp_asn: "{{ ansible_network_resources.bgp_global.as_number }}"
+    bgp_router_id: "{{ ansible_network_resources.bgp_global.router_id | default('') }}"
+    bgp_neighbors: "{{ ansible_network_resources.bgp_global.neighbors | default([]) }}"
 
-    - name: Determine if BGP is configured and extract data from pre-gathered facts
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'bgp_configured': bgp_is_configured}) }}"
-        bgp_asn: "{{ ansible_network_resources.bgp_global.as_number }}"
-        bgp_router_id: "{{ ansible_network_resources.bgp_global.router_id }}"
-        bgp_neighbors: "{{ ansible_network_resources.bgp_global.neighbors }}"
-      vars:
-        bgp_is_configured: >-
-          {{
-            (ansible_network_resources is defined and
-             ansible_network_resources.bgp_global is defined and
-             ansible_network_resources.bgp_global.as_number is defined)
-          }}
-      when:
-        - ansible_network_resources is defined
-        - ansible_network_resources.bgp_global is defined
+- name: Set BGP not configured
+  when: bgp_is_configured is not defined
+  ansible.builtin.set_fact:
+    bgp_is_configured: false
+    bgp_neighbors: []
 
-  rescue:
-    - name: Handle missing BGP facts (not pre-gathered)
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'warnings': bgp_validation.warnings + ['BGP facts not available - skipping BGP validation'], 'bgp_configured': false}) }}"
-
-- name: Skip BGP validation if not configured
-  ansible.builtin.debug:
-    msg: "BGP is not configured on {{ inventory_hostname }} - skipping BGP validation"
-  when: not bgp_validation.bgp_configured
-
+# Step 3: Analyze BGP neighbor states (if configured)
 - name: Analyze BGP neighbor states
-  when: bgp_validation.bgp_configured
-  block:
-    - name: Count BGP neighbor states
-      ansible.builtin.set_fact:
-        bgp_neighbors_established: >-
-          {{ bgp_neighbors |
-             selectattr('neighbor_state', 'defined') |
-             selectattr('neighbor_state', 'equalto', 'Established') |
-             list | length }}
-        bgp_neighbors_total: "{{ bgp_neighbors | length }}"
-      when:
-        - bgp_neighbors is defined
-        - not ansible_check_mode
-
-  rescue:
-    - name: Log BGP detailed statistics failure
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'warnings': bgp_validation.warnings + ['Could not retrieve detailed BGP statistics']}) }}"
-
-- name: Analyze BGP neighbor states
+  when:
+    - bgp_is_configured
+    - bgp_neighbors | length > 0
   ansible.builtin.set_fact:
     bgp_analysis:
       total_neighbors: "{{ bgp_neighbors | length }}"
-      established_neighbors: "{{ bgp_neighbors | selectattr('state', 'equalto', 'Established') | list | length }}"
-      idle_neighbors: "{{ bgp_neighbors | selectattr('state', 'equalto', 'Idle') | list | length }}"
-      connecting_neighbors: "{{ bgp_neighbors | selectattr('state', 'equalto', 'Connect') | list | length }}"
-      active_neighbors: "{{ bgp_neighbors | selectattr('state', 'equalto', 'Active') | list | length }}"
-      total_received_prefixes: "{{ bgp_neighbors | sum(attribute='received_prefixes') }}"
+      established_neighbors: "{{ bgp_neighbors | selectattr('state', 'defined') | selectattr('state', 'equalto', 'Established') | list | length }}"
+      idle_neighbors: "{{ bgp_neighbors | selectattr('state', 'defined') | selectattr('state', 'equalto', 'Idle') | list | length }}"
+      connecting_neighbors: "{{ bgp_neighbors | selectattr('state', 'defined') | selectattr('state', 'equalto', 'Connect') | list | length }}"
+      active_neighbors: "{{ bgp_neighbors | selectattr('state', 'defined') | selectattr('state', 'equalto', 'Active') | list | length }}"
+      total_received_prefixes: "{{ bgp_neighbors | sum(attribute='received_prefixes', start=0) }}"
       down_neighbors: "{{ bgp_neighbors | rejectattr('state', 'equalto', 'Established') | list }}"
-  when:
-    - bgp_validation.bgp_configured
-    - bgp_neighbors is defined
 
-- name: Store current BGP state
+- name: Set empty BGP analysis when not configured
+  when: not bgp_is_configured or bgp_neighbors | length == 0
   ansible.builtin.set_fact:
-    bgp_validation: "{{ bgp_validation | combine({'current': {'neighbors': bgp_neighbors , 'analysis': bgp_analysis , 'collection_time': lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')}}) }}"
-  when:
-    - bgp_validation.bgp_configured
+    bgp_analysis:
+      total_neighbors: 0
+      established_neighbors: 0
+      idle_neighbors: 0
+      connecting_neighbors: 0
+      active_neighbors: 0
+      total_received_prefixes: 0
+      down_neighbors: []
 
-- name: Load baseline BGP state if available
-  when: bgp_validation.bgp_configured
+# Step 4: Load baseline if available (post-upgrade mode only)
+- name: Load baseline BGP state
+  when:
+    - bgp_is_configured
+    - bgp_validation_mode == 'post_upgrade'
   block:
     - name: Check for existing baseline
       ansible.builtin.stat:
@@ -145,216 +76,175 @@
     - name: Load baseline data
       ansible.builtin.set_fact:
         bgp_baseline: "{{ lookup('file', baseline_base_path + '/' + inventory_hostname + '_bgp_baseline.json') | from_json }}"
-      when:
-        - baseline_file.stat.exists
-        - validation_mode == 'post_upgrade'
-
-    - name: Store baseline in validation results
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'baseline': bgp_baseline }) }}"
-      when: bgp_baseline is defined
+      when: baseline_file.stat.exists
 
   rescue:
-    - name: Handle baseline loading failure
+    - name: Set empty baseline on failure
       ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'warnings': bgp_validation.warnings + ['Could not load BGP baseline for comparison']}) }}"
+        bgp_baseline: {}
 
-- name: Save baseline BGP state (pre-upgrade only)
+- name: Set empty baseline when not applicable
+  when: not bgp_is_configured or bgp_validation_mode != 'post_upgrade'
+  ansible.builtin.set_fact:
+    bgp_baseline: {}
+
+# Step 5: Compare with baseline (post-upgrade only)
+- name: Compare BGP states with baseline
   when:
-    - bgp_validation.bgp_configured
-    - validation_mode == 'pre_upgrade'
+    - bgp_is_configured
+    - bgp_validation_mode == 'post_upgrade'
+    - bgp_baseline != {}
+    - bgp_baseline.analysis is defined
+  ansible.builtin.set_fact:
+    bgp_comparison:
+      neighbor_count_match: "{{ bgp_baseline.analysis.total_neighbors == bgp_analysis.total_neighbors }}"
+      established_count_match: "{{ bgp_baseline.analysis.established_neighbors == bgp_analysis.established_neighbors }}"
+      prefix_count_variance: "{{ ((bgp_analysis.total_received_prefixes - bgp_baseline.analysis.total_received_prefixes) | abs) }}"
+      prefix_variance_percentage: >-
+        {{
+          ((bgp_analysis.total_received_prefixes - bgp_baseline.analysis.total_received_prefixes) /
+           (bgp_baseline.analysis.total_received_prefixes | default(1))) * 100 | abs
+        }}
+      new_down_neighbors: >-
+        {{
+          (bgp_neighbors | rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list) |
+          difference(bgp_baseline.neighbors | default([]) | rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list)
+        }}
+      recovered_neighbors: >-
+        {{
+          (bgp_baseline.neighbors | default([]) | rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list) |
+          difference(bgp_neighbors | rejectattr('state', 'equalto', 'Established') | map(attribute='neighbor_ip') | list)
+        }}
+
+- name: Set empty comparison when not applicable
+  when: not bgp_is_configured or bgp_validation_mode != 'post_upgrade' or bgp_baseline == {}
+  ansible.builtin.set_fact:
+    bgp_comparison: {}
+
+# Step 6: Calculate validation errors
+- name: Build validation errors list
+  ansible.builtin.set_fact:
+    bgp_errors: |
+      {%- set errors = [] -%}
+      {%- if bgp_is_configured and bgp_analysis.established_neighbors == 0 -%}
+        {%- set _ = errors.append('No BGP neighbors in Established state') -%}
+      {%- endif -%}
+      {%- if bgp_validation_mode == 'post_upgrade' and bgp_comparison != {} -%}
+        {%- if not bgp_comparison.neighbor_count_match -%}
+          {%- set _ = errors.append('BGP neighbor count mismatch: baseline=' + (bgp_baseline.analysis.total_neighbors | string) + ', current=' + (bgp_analysis.total_neighbors | string)) -%}
+        {%- endif -%}
+        {%- if not bgp_comparison.established_count_match -%}
+          {%- set _ = errors.append('Established BGP neighbor count mismatch: baseline=' + (bgp_baseline.analysis.established_neighbors | string) + ', current=' + (bgp_analysis.established_neighbors | string)) -%}
+        {%- endif -%}
+        {%- if bgp_comparison.prefix_variance_percentage | float > 10 -%}
+          {%- set _ = errors.append('BGP prefix count variance exceeds 10%: ' + (bgp_comparison.prefix_variance_percentage | round(2) | string) + '%') -%}
+        {%- endif -%}
+        {%- for neighbor in bgp_comparison.new_down_neighbors -%}
+          {%- set _ = errors.append('BGP neighbor down after upgrade: ' + neighbor) -%}
+        {%- endfor -%}
+      {%- endif -%}
+      {{ errors }}
+
+# Step 7: Determine pass/fail status
+- name: Calculate BGP validation passed status
+  ansible.builtin.set_fact:
+    bgp_passed: >-
+      {{
+        (not bgp_is_configured) or
+        ansible_check_mode or
+        (
+          bgp_analysis.established_neighbors | int > 0 and
+          (bgp_validation_mode == 'pre_upgrade' or
+           bgp_comparison == {} or
+           (bgp_comparison.neighbor_count_match and
+            bgp_comparison.established_count_match and
+            bgp_comparison.prefix_variance_percentage | float <= 10 and
+            bgp_comparison.new_down_neighbors | length == 0))
+        )
+      }}
+
+# Step 8: Build complete BGP validation structure in ONE task
+- name: Build complete BGP validation result
+  ansible.builtin.set_fact:
+    bgp_validation:
+      device: "{{ inventory_hostname }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      validation_type: "bgp"
+      bgp_configured: "{{ bgp_is_configured }}"
+      baseline: "{{ bgp_baseline }}"
+      current:
+        neighbors: "{{ bgp_neighbors }}"
+        analysis: "{{ bgp_analysis }}"
+        collection_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      comparison: "{{ bgp_comparison }}"
+      passed: "{{ bgp_passed }}"
+      errors: "{{ bgp_errors }}"
+      warnings: "{{ [] if bgp_is_configured else ['BGP not configured - validation skipped'] }}"
+      summary:
+        total_neighbors: "{{ bgp_analysis.total_neighbors }}"
+        established_neighbors: "{{ bgp_analysis.established_neighbors }}"
+        total_prefixes: "{{ bgp_analysis.total_received_prefixes }}"
+
+# Step 9: Save baseline (pre-upgrade only)
+- name: Save baseline BGP state
+  when:
+    - bgp_is_configured
+    - bgp_validation_mode == 'pre_upgrade'
   ansible.builtin.copy:
     content: "{{ bgp_validation.current | to_nice_json }}"
     dest: "{{ baseline_base_path }}/{{ inventory_hostname }}_bgp_baseline.json"
     mode: '0644'
   delegate_to: localhost
 
-- name: Compare BGP states (post-upgrade validation)
-  when:
-    - bgp_validation.bgp_configured
-    - validation_mode == 'post_upgrade'
-    - bgp_validation.baseline != {}
-  block:
-    - name: Perform BGP state comparison
-      ansible.builtin.set_fact:
-        bgp_comparison:
-          neighbor_count_match: "{{ bgp_validation.baseline.analysis.total_neighbors  == bgp_validation.current.analysis.total_neighbors  }}"
-          established_count_match: "{{ bgp_validation.baseline.analysis.established_neighbors  == bgp_validation.current.analysis.established_neighbors  }}"
-          prefix_count_variance: "{{ ((bgp_validation.current.analysis.total_received_prefixes  - bgp_validation.baseline.analysis.total_received_prefixes ) | abs) }}"
-          prefix_variance_percentage: "{{ ((bgp_validation.current.analysis.total_received_prefixes - bgp_validation.baseline.analysis.total_received_prefixes) / (bgp_validation.baseline.analysis.total_received_prefixes) * 100) | abs }}"
-          new_down_neighbors: []
-          recovered_neighbors: []
-
-    - name: Identify neighbor state changes
-      ansible.builtin.set_fact:
-        bgp_comparison: "{{ bgp_comparison | combine({'new_down_neighbors': current_down_neighbors | difference(baseline_down_neighbors ), 'recovered_neighbors': baseline_down_neighbors  | difference(current_down_neighbors)}) }}"
-      vars:
-        current_down_neighbors: >-
-          {{ bgp_validation.current.neighbors |
-            rejectattr('state', 'equalto', 'Established') |
-            map(attribute='neighbor_ip') | list }}
-        baseline_down_neighbors: >-
-          {{ bgp_validation.baseline.neighbors |
-            default([]) | rejectattr('state', 'equalto', 'Established') |
-            map(attribute='neighbor_ip') | list }}
-
-    - name: Store comparison results
-      ansible.builtin.set_fact:
-        bgp_validation: "{{ bgp_validation | combine({'comparison': bgp_comparison}) }}"
-
-- name: Evaluate BGP validation results
-  when:
-    - bgp_validation.bgp_configured
-    - not ansible_check_mode
-  ansible.builtin.set_fact:
-    bgp_validation_passed: "{{
-      bgp_validation.current.analysis.established_neighbors | int > 0 and
-      (validation_mode == 'pre_upgrade' or
-       (bgp_validation.comparison.neighbor_count_match and
-        bgp_validation.comparison.established_count_match and
-        bgp_validation.comparison.prefix_variance_percentage | int <= 10 and
-        bgp_validation.comparison.new_down_neighbors | length == 0))
-    }}"
-
-- name: Set BGP validation passed for check mode or when not configured
-  ansible.builtin.set_fact:
-    bgp_validation_passed: true
-  when:
-    - ansible_check_mode or not bgp_validation.bgp_configured
-
-- name: Add validation errors for failures
-  when: bgp_validation.bgp_configured
-  ansible.builtin.set_fact:
-    bgp_validation: "{{ bgp_validation | combine({'errors': bgp_validation.errors + validation_errors}) }}"
-  vars:
-    validation_errors: |
-      {%- set errors = [] -%}
-      {%- if bgp_validation.current.analysis.established_neighbors
-         == 0 -%}
-        {%- set _ = errors.append('No BGP neighbors in Established state') -%}
-      {%- endif -%}
-      {%- if validation_mode == 'post_upgrade'
-        and bgp_validation.baseline != {} -%}
-        {%- if not bgp_validation.comparison.neighbor_count_match
-           -%}
-          {%- set _ = errors.append('BGP neighbor count mismatch: >
-            baseline=' +
-              (bgp_validation.baseline.analysis.total_neighbors |
-               default(0) | string) +
-              ', current=' +
-              (bgp_validation.current.analysis.total_neighbors |
-               default(0) | string)) -%}
-        {%- endif -%}
-        {%- if not bgp_validation.comparison.established_count_match
-           -%}
-          {%- set _ = errors.append(
-              'Established BGP neighbor count mismatch: >
-            baseline=' +
-              (bgp_validation.baseline.analysis.established_neighbors |
-               default(0) | string) +
-              ', current=' +
-              (bgp_validation.current.analysis.established_neighbors |
-               default(0) | string)) -%}
-        {%- endif -%}
-        {%- if bgp_validation.comparison.prefix_variance_percentage
-           > 10 -%}
-          {%- set _ = errors.append(
-              'BGP prefix count variance exceeds 10%: >
-            ' +
-              (bgp_validation.comparison.prefix_variance_percentage |
-               default(0) | round(2) | string) + '%') -%}
-        {%- endif -%}
-        {%- for neighbor in bgp_validation.comparison.new_down_neighbors
-           -%}
-          {%- set _ = errors.append(
-              'BGP neighbor down after upgrade: ' + neighbor) -%}
-        {%- endfor -%}
-      {%- endif -%}
-        {{ errors }}
-
-- name: Set final BGP validation status
-  ansible.builtin.set_fact:
-    bgp_validation: >-
-      {{
-        bgp_validation | combine({
-          'passed': bgp_validation_passed,
-          'summary': {
-            'total_neighbors': bgp_validation.current.analysis.total_neighbors ,
-            'established_neighbors': bgp_validation.current.analysis.established_neighbors ,
-            'total_prefixes': bgp_validation.current.analysis.total_received_prefixes
-          }
-        })
-      }}
-
+# Step 10: Log to InfluxDB
 - name: Log BGP validation to InfluxDB
+  when:
+    - influxdb_url is defined
+    - send_metrics
   ansible.builtin.uri:
-    url: >
-      "{{ influxdb_url }}/api/v2/write?bucket={{
-        influxdb_bucket }}&org={{ influxdb_org }}"
+    url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
     method: POST
     headers:
       Authorization: "Token {{ influxdb_token }}"
     body: >-
-      network_validation,device_id={{ inventory_hostname }},
-      validation_type=bgp,protocol=bgp
-      baseline_count={{
-        bgp_validation.baseline.analysis.total_neighbors
-      }},current_count={{
-        bgp_validation.current.analysis.established_neighbors
-      }},validation_success={{
-        bgp_validation.passed | lower
-      }},convergence_time=0
-      {{ ansible_play_batch | hash('md5') }}000000000
-  when:
-    - influxdb_url is defined
-    - send_metrics
+      network_validation,device_id={{ inventory_hostname }},validation_type=bgp,protocol=bgp
+      baseline_count={{ bgp_baseline.analysis.total_neighbors | default(0) }},
+      current_count={{ bgp_analysis.established_neighbors }},
+      validation_success={{ bgp_passed | lower }},
+      convergence_time=0 {{ ansible_play_batch | hash('md5') }}000000000
   failed_when: false
 
+# Step 11: Display results
 - name: Display BGP validation results
   ansible.builtin.debug:
     msg: |
       BGP Validation Results for {{ inventory_hostname }}:
       Status: {{ 'PASSED' if bgp_validation.passed else 'FAILED' }}
-      Total Neighbors: {{
-        bgp_validation.current.analysis.total_neighbors  }}
-      Established Neighbors: {{
-        bgp_validation.current.analysis.established_neighbors |
-        default(0) }}
-      Total Prefixes: {{
-        bgp_validation.current.analysis.total_received_prefixes |
-        default(0) }}
-      {% if validation_mode == 'post_upgrade' and
-            bgp_validation.baseline != {} %}
+      BGP Configured: {{ bgp_validation.bgp_configured }}
+      Total Neighbors: {{ bgp_validation.summary.total_neighbors }}
+      Established Neighbors: {{ bgp_validation.summary.established_neighbors }}
+      Total Prefixes: {{ bgp_validation.summary.total_prefixes }}
+      {% if bgp_validation_mode == 'post_upgrade' and bgp_comparison != {} %}
       Baseline Comparison:
-      - Neighbor Count Match: {{
-          bgp_validation.comparison.neighbor_count_match |
-          default('N/A') }}
-      - Established Count Match: {{
-          bgp_validation.comparison.established_count_match |
-          default('N/A') }}
-      - Prefix Variance: {{
-          bgp_validation.comparison.prefix_variance_percentage |
-          default(0) | round(2) }}%
-      {% if bgp_validation.comparison.new_down_neighbors |
-              default([]) | length > 0 %}
-      - New Down Neighbors: {{
-          bgp_validation.comparison.new_down_neighbors | join(', ') }}
+        - Neighbor Count Match: {{ bgp_comparison.neighbor_count_match }}
+        - Established Count Match: {{ bgp_comparison.established_count_match }}
+        - Prefix Variance: {{ bgp_comparison.prefix_variance_percentage | round(2) }}%
+      {% if bgp_comparison.new_down_neighbors | length > 0 %}
+        - New Down Neighbors: {{ bgp_comparison.new_down_neighbors | join(', ') }}
       {% endif %}
-      {% if bgp_validation.comparison.recovered_neighbors |
-              default([]) | length > 0 %}
-      - Recovered Neighbors: {{
-          bgp_validation.comparison.recovered_neighbors | join(', ') }}
+      {% if bgp_comparison.recovered_neighbors | length > 0 %}
+        - Recovered Neighbors: {{ bgp_comparison.recovered_neighbors | join(', ') }}
       {% endif %}
       {% endif %}
       {% if bgp_validation.errors | length > 0 %}
       Errors:
       {% for error in bgp_validation.errors %}
-      - {{ error }}
+        - {{ error }}
       {% endfor %}
       {% endif %}
       {% if bgp_validation.warnings | length > 0 %}
       Warnings:
       {% for warning in bgp_validation.warnings %}
-      - {{ warning }}
+        - {{ warning }}
       {% endfor %}
       {% endif %}
