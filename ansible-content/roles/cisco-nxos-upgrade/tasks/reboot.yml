@@ -72,12 +72,12 @@
 - name: Validate system came up with new firmware
   ansible.builtin.assert:
     that:
-      - target_firmware_version is defined
-      - target_firmware_version | regex_replace('\\.bin$', '')
+      - target_firmware is defined
+      - target_firmware | regex_replace('\\.bin$', '')
         in post_reboot_version
     fail_msg: |
       Device did not boot with target firmware version
-      Expected: {{ target_firmware_version }}
+      Expected: {{ target_firmware }}
       Actual version: {{ post_reboot_version }}
   when: reboot_reason == 'firmware_upgrade'
 

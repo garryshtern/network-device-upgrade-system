@@ -31,7 +31,7 @@
   ansible.builtin.include_tasks: epld-upgrade.yml
   when:
     - upgrade_epld
-    - target_epld_image is defined
+    - target_epld_firmware is defined
 
 - name: Execute upgrade based on ISSU capability
   ansible.builtin.include_tasks: "{{ upgrade_task_file }}"

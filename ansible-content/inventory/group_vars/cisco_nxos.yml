@@ -41,8 +41,7 @@ min_free_space_mb: 2000
 cleanup_old_images: true
 keep_image_count: 2
 
-# Firmware filename patterns (MANDATORY - per docs/firmware-naming-standards.md)
-# NOTE: .M is part of target_firmware_version (e.g., "10.4.5.M")
+# Device model patterns for platform identification
 device_model_patterns:
   - regex: "N9K-C92.*"
     platform: "nexus_9000"
@@ -53,18 +52,6 @@ device_model_patterns:
   - regex: "N3K-C354.*"
     platform: "nexus_3548"
     model_prefix: "N3K-C354"
-
-firmware_filename_patterns:
-  nexus_9000:
-    default: "nxos64-cs.{{ target_firmware_version }}.bin"
-  nexus_3548:
-    default: "nxos64-msll.{{ target_firmware_version }}.bin"
-  default: "nxos64-cs.{{ target_firmware_version }}.bin"
-
-epld_firmware_patterns:
-  nexus_9000:
-    default: "n9000-epld.{{ target_epld_version if target_epld_version != '' else target_firmware_version }}.img"
-  default: "n9000-epld.{{ target_epld_version if target_epld_version != '' else target_firmware_version }}.img"
 
 # Validation specific to NX-OS
 validate_vdc_mode: true
@@ -94,10 +81,9 @@ check_rp_reachability: true
 vdc_mode: false
 target_vdc: "{{ ansible_host }}-vdc"
 
-# Boot variables (MANDATORY: Use compliant naming per docs/firmware-naming-standards.md)
-# Default to nxos64-cs pattern for Nexus 9000 (most common)
-# NOTE: .M is part of target_firmware_version (e.g., "10.4.5.M")
-primary_boot_image: "bootflash:///nxos64-cs.{{ target_firmware_version }}.bin"
+# Boot variables
+# NOTE: target_firmware is the complete firmware filename (e.g., "nxos.10.3.1.bin")
+primary_boot_image: "bootflash:///{{ target_firmware }}"
 secondary_boot_image: "bootflash:///nxos64-cs.backup.bin"
 
 # Feature validation

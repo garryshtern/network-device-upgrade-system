@@ -255,12 +255,12 @@ test_epld_configurations() {
                  export INVENTORY_FILE="tests/container-tests/mockups/inventory/production.yml" && \
                  bash docker-entrypoint.sh syntax-check 2>&1 | grep -q "enable_epld_upgrade=true"'
 
-    # Test EPLD image specification
-    run_test "EPLD image specification" \
-        bash -c 'export TARGET_EPLD_IMAGE="n9000-epld.9.3.16.M.img" && \
+    # Test EPLD firmware specification
+    run_test "EPLD firmware specification" \
+        bash -c 'export TARGET_EPLD_FIRMWARE="n9000-epld.9.3.16.M.img" && \
                  export TARGET_HOSTS="cisco-switch-01" && \
                  export INVENTORY_FILE="tests/container-tests/mockups/inventory/production.yml" && \
-                 bash docker-entrypoint.sh syntax-check 2>&1 | grep -q "target_epld_image=n9000-epld.9.3.16.M.img"'
+                 bash docker-entrypoint.sh syntax-check 2>&1 | grep -q "target_epld_firmware=n9000-epld.9.3.16.M.img"'
 
     # Test disruptive EPLD upgrade
     run_test "Disruptive EPLD upgrade" \

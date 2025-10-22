@@ -29,10 +29,10 @@
     - name: Check EPLD upgrade requirements
       cisco.nxos.nxos_command:
         commands:
-          - show install all impact epld {{ target_epld_image }}
+          - show install all impact epld {{ target_epld_firmware }}
       register: epld_impact_check
       failed_when: false
-      when: target_epld_image is defined
+      when: target_epld_firmware is defined
 
 - name: EPLD compatibility validation
   block:
@@ -62,30 +62,30 @@
       cisco.nxos.nxos_file_copy:
         file_system: "bootflash:"
         local_file: "{{ epld_image_source }}"
-        remote_file: "{{ target_epld_image }}"
+        remote_file: "{{ target_epld_firmware }}"
         file_pull: false  # Server pushes to device
         connect_ssh_port: "{{ ansible_ssh_port }}"
         vrf: "{{ management_vrf }}"
       register: epld_stage_result
       delegate_to: localhost
-      when: target_epld_image is defined
+      when: target_epld_firmware is defined
       vars:
         ansible_connection: local
 
     - name: Verify EPLD image staging
       cisco.nxos.nxos_command:
         commands:
-          - "dir bootflash:{{ target_epld_image }}"
+          - "dir bootflash:{{ target_epld_firmware }}"
       register: epld_image_verification
-      when: target_epld_image is defined
+      when: target_epld_firmware is defined
 
     - name: Execute EPLD upgrade
       cisco.nxos.nxos_command:
         commands:
-          - "install all epld {{ target_epld_image }} module {{ item }}"
+          - "install all epld {{ target_epld_firmware }} module {{ item }}"
       register: epld_upgrade_result
       loop: "{{ epld_modules_to_upgrade }}"
-      when: target_epld_image is defined
+      when: target_epld_firmware is defined
 
 - name: EPLD upgrade monitoring
   block:
@@ -151,10 +151,10 @@
     - name: Remove staged EPLD image (optional)
       cisco.nxos.nxos_command:
         commands:
-          - "delete bootflash:{{ target_epld_image }}"
+          - "delete bootflash:{{ target_epld_firmware }}"
       when:
         - cleanup_epld_images
-        - target_epld_image is defined
+        - target_epld_firmware is defined
       failed_when: false
 
     - name: Document EPLD upgrade completion

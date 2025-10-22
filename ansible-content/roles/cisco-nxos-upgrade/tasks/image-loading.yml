@@ -27,47 +27,26 @@
             {%- endif -%}
           {%- endfor -%}
 
-    - name: Set firmware filename pattern
-      ansible.builtin.set_fact:
-        firmware_filename: >-
-          {%- if device_platform and
-              device_platform in firmware_filename_patterns -%}
-            {%- set platform_patterns =
-                firmware_filename_patterns[device_platform] -%}
-            {%- if device_model in platform_patterns -%}
-              {{ platform_patterns[device_model] }}
-            {%- else -%}
-              {{ platform_patterns.default }}
-            {%- endif -%}
-          {%- else -%}
-            nxos64-cs.{{ target_firmware_version }}.bin
-          {%- endif -%}
-
     - name: Set firmware paths
       ansible.builtin.set_fact:
-        local_firmware_path: "{{ firmware_base_path }}/{{ firmware_filename }}"
+        firmware_filename: "{{ target_firmware }}"
+        local_firmware_path: "{{ firmware_base_path }}/{{ target_firmware }}"
 
-    - name: Set EPLD firmware filename (if EPLD upgrade enabled)
+    - name: Validate EPLD firmware filename provided (if EPLD upgrade enabled)
+      ansible.builtin.assert:
+        that:
+          - target_epld_firmware is defined
+          - target_epld_firmware | length > 0
+        fail_msg:
+          - "EPLD upgrade enabled but target_epld_firmware not provided"
+          - "You must explicitly specify the EPLD firmware filename"
+          - "Example: target_epld_firmware=n9000-epld.10.3.1.img"
+      when: enable_epld_upgrade | bool
+
+    - name: Set EPLD firmware paths (if EPLD upgrade enabled)
       ansible.builtin.set_fact:
-        epld_firmware_filename: >-
-          {%- if enable_epld_upgrade -%}
-            {%- if device_platform and
-                device_platform in epld_firmware_patterns -%}
-              {{ epld_firmware_patterns[device_platform].default }}
-            {%- else -%}
-              n9000-epld.{{
-                target_epld_version if target_epld_version != ''
-                else target_firmware_version }}.img
-            {%- endif -%}
-          {%- else -%}
-
-          {%- endif -%}
-        local_epld_path: >-
-          {%- if enable_epld_upgrade -%}
-            {{ firmware_base_path }}/{{ epld_firmware_filename }}
-          {%- else -%}
-
-          {%- endif -%}
+        epld_firmware_filename: "{{ target_epld_firmware }}"
+        local_epld_path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
       when: enable_epld_upgrade | bool
 
     - name: Display firmware selection
@@ -78,8 +57,8 @@
           - "Firmware File: {{ firmware_filename }}"
           - "Full Path: {{ local_firmware_path }}"
           - "EPLD Enabled: {{ enable_epld_upgrade }}"
-          - "EPLD File: {{ epld_firmware_filename if epld_firmware_filename != '' else 'N/A' }}"
-          - "EPLD Path: {{ local_epld_path if local_epld_path != '' else 'N/A' }}"
+          - "EPLD File: {{ epld_firmware_filename if (enable_epld_upgrade | bool) else 'N/A' }}"
+          - "EPLD Path: {{ local_epld_path if (enable_epld_upgrade | bool) else 'N/A' }}"
 
 # NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
 # STEP 3 ran "dir bootflash:" and stored image list in storage_info.images_found
@@ -87,7 +66,7 @@
 
 - name: Check if target firmware already exists on device
   ansible.builtin.set_fact:
-    target_firmware_exists: "{{ target_firmware_version in storage_info.images_found }}"
+    target_firmware_exists: "{{ target_firmware in storage_info.images_found }}"
   when:
     - storage_info is defined
     - storage_info.images_found is defined
@@ -104,8 +83,8 @@
       - "FIRMWARE ALREADY STAGED"
       - "=========================================="
       - "Device: {{ inventory_hostname }}"
-      - "Firmware: {{ target_firmware_version }}"
-      - "Location: bootflash:{{ target_firmware_version }}"
+      - "Firmware: {{ target_firmware }}"
+      - "Location: bootflash:{{ target_firmware }}"
       - "Status: SKIPPING UPLOAD"
       - "Action: Proceeding to installation phase"
       - "=========================================="
@@ -118,9 +97,9 @@
       - "UPLOADING FIRMWARE TO DEVICE"
       - "=========================================="
       - "Device: {{ inventory_hostname }}"
-      - "Firmware: {{ target_firmware_version }}"
+      - "Firmware: {{ target_firmware }}"
       - "Source: {{ local_firmware_path }}"
-      - "Destination: bootflash:{{ target_firmware_version }}"
+      - "Destination: bootflash:{{ target_firmware }}"
       - "Method: SCP (Server-Initiated PUSH)"
       - "Status: STARTING UPLOAD..."
       - "=========================================="
@@ -149,7 +128,7 @@
       cisco.nxos.nxos_file_copy:
         file_system: "bootflash:"
         local_file: "{{ local_firmware_path }}"
-        remote_file: "{{ target_firmware_version }}"
+        remote_file: "{{ target_firmware }}"
         file_pull: false  # Server pushes to device
       register: nxos_file_copy_result
 
@@ -163,7 +142,7 @@
 - name: Verify firmware file on device
   cisco.nxos.nxos_command:
     commands:
-      - dir bootflash:{{ target_firmware_version }} | json
+      - dir bootflash:{{ target_firmware }} | json
   register: firmware_verification
 
 - name: Parse firmware file information
@@ -180,7 +159,7 @@
 - name: Calculate MD5 hash of firmware file on device
   cisco.nxos.nxos_command:
     commands:
-      - show file bootflash:{{ target_firmware_version }} md5sum
+      - show file bootflash:{{ target_firmware }} md5sum
   register: nxos_firmware_hash
   when: firmware_md5_hash is defined
 
@@ -197,7 +176,7 @@
 - name: Set image loading results
   ansible.builtin.set_fact:
     nxos_image_loading_results:
-      firmware_file: "{{ target_firmware_version }}"
+      firmware_file: "{{ target_firmware }}"
       file_size_bytes: "{{ firmware_file_info.file_list[0].size }}"
       loading_successful: true
       hash_verified: "{{ firmware_md5_hash is defined }}"

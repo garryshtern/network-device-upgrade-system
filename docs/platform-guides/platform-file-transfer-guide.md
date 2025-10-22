@@ -58,28 +58,20 @@ device_model_patterns:
   - { regex: "N3K-C354.*", platform: "nexus_3000", model_prefix: "N3K-C354" }
   - { regex: "N7K-C70.*", platform: "nexus_7000", model_prefix: "N7K-C70" }
 
-# Firmware filename resolution
-# NOTE: .M/.F suffixes are part of target_version variable when present
-firmware_filename_patterns:
-  nexus_9000:
-    default: "nxos64-cs.{{ target_firmware_version }}.bin"
-  nexus_3548:
-    default: "nxos64-msll.{{ target_firmware_version }}.bin"
-  default: "nxos64-cs.{{ target_firmware_version }}.bin"
-
-# Example version variables:
-# target_firmware_version: "10.1.2" → nxos64-cs.10.1.2.bin
-# target_firmware_version: "10.4.5.M" → nxos64-cs.10.4.5.M.bin
-# target_firmware_version: "10.2.2.F" → nxos64-cs.10.2.2.F.bin
+# Example firmware filenames (passed directly via target_firmware):
+# nxos64-cs.10.1.2.bin (Nexus 9000 standard)
+# nxos64-cs.10.4.5.M.bin (Nexus 9000 with .M suffix)
+# nxos64-msll.10.2.2.bin (Nexus 3548)
+# nxos.10.3.1.bin (generic format)
 ```
 
 **Key Characteristics**:
-- Uses standard SSH/SCP file transfer
+- Uses standard SSH/SCP file transfer (server-initiated PUSH)
 - Supports large firmware files (up to 8GB)
 - Files stored in bootflash: filesystem
-- Verification via SHA512 hash comparison
+- Verification via MD5 hash comparison
 - Requires SSH service enabled on device
-- **Automatic platform-specific firmware selection** based on device model detection
+- **Firmware filename passed directly as runtime parameter** - no automatic construction
 
 **Upgrade Mechanism**:
 - ISSU (In-Service Software Upgrade) for compatible models
@@ -115,22 +107,20 @@ device_model_patterns:
   - { regex: "C85.*", platform: "catalyst_8000", model_prefix: "C85" }
   - { regex: "ISR43.*", platform: "isr_4000", model_prefix: "ISR43" }
 
-# Hardware-specific firmware patterns
-firmware_filename_patterns:
-  catalyst_9000:
-    C9200: "cat9k_lite_iosxe.{{ target_version }}.SPA.bin"
-    C9400: "cat9k_iosxe.{{ target_version }}.SPA.bin"
-  catalyst_8000:
-    C8500L: "c8000aes-universalk9.{{ target_version }}.SPA.bin"
+# Example firmware filenames (passed directly via target_firmware):
+# cat9k_iosxe.17.09.04a.SPA.bin (Catalyst 9000)
+# cat9k_lite_iosxe.17.06.05.SPA.bin (Catalyst 9200)
+# c8000aes-universalk9.17.09.03a.SPA.bin (Catalyst 8000)
+# isr4300-universalk9_ias.17.03.06.SPA.bin (ISR 4000)
 ```
 
 **Key Characteristics**:
-- Primary: SCP for large files
+- Primary: SCP for server-initiated PUSH transfers
 - Fallback: HTTP/HTTPS for smaller files
 - Install mode vs. bundle mode support
 - Flash filesystem management
 - Space validation before transfer
-- **Hardware-specific firmware selection** based on device model detection
+- **Firmware filename passed directly as runtime parameter** - no automatic construction
 
 **Upgrade Mechanism**:
 - Install mode: `install add file` commands
@@ -200,15 +190,10 @@ device_model_patterns:
   - { regex: "OM2[12].*", platform: "operations_manager", model_prefix: "OM2" }
   - { regex: "IM72.*", platform: "infrastructure_manager", model_prefix: "IM72" }
 
-# Model-specific firmware patterns
-firmware_filename_patterns:
-  console_manager_legacy:
-    CM7100: "cm71xx-{{ target_version }}.flash"
-  console_manager_modern:
-    CM8100: "console_manager-{{ target_version }}-production-signed.raucb"
-  operations_manager:
-    OM2100: "operations_manager-{{ target_version }}-production-signed.raucb"
-    OM2200: "operations_manager-{{ target_version }}-production-signed.raucb"
+# Example firmware filenames (passed directly via target_firmware):
+# cm71xx-5.16.4.flash (Legacy CLI - CM7100)
+# console_manager-24.10.1-production-signed.raucb (Current CLI - CM8100)
+# operations_manager-24.10.1-production-signed.raucb (OM2100/OM2200)
 ```
 
 **Key Characteristics**:
@@ -216,7 +201,7 @@ firmware_filename_patterns:
 - Modern devices: `puginstall` command (.raucb files)
 - Files must be pre-staged in `/tmp` or mounted storage
 - Architecture-specific command sets
-- **Model-specific firmware patterns** with different naming conventions
+- **Firmware filename passed directly as runtime parameter** - no automatic construction
 
 **Upgrade Mechanism**:
 - Architecture-dependent upgrade commands

@@ -259,7 +259,7 @@ Defined in: `ansible-content/inventory/group_vars/cisco_nxos.yml`
 | `enable_epld_upgrade` | bool | `false` | Enable EPLD (Electronic Programmable Logic Device) upgrade |
 | `epld_upgrade_timeout` | int | `7200` | EPLD upgrade timeout (seconds) |
 | `allow_disruptive_epld` | bool | `false` | Allow disruptive EPLD upgrades |
-| `target_epld_version` | string | `""` | Target EPLD version (optional) |
+| `target_epld_firmware` | string | `""` | **REQUIRED** EPLD firmware filename (e.g., `n9000-epld.10.3.1.img`) - must be explicitly provided when `enable_epld_upgrade=true` |
 
 ### NX-OS Specific Timeouts
 
@@ -277,30 +277,30 @@ Defined in: `ansible-content/inventory/group_vars/cisco_nxos.yml`
 | `cleanup_old_images` | bool | `true` | Clean up old firmware images |
 | `keep_image_count` | int | `2` | Number of images to retain |
 
-### Firmware Filename Patterns
+### Device Model Patterns
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `firmware_filename_patterns` | dict | Platform-specific | Platform-specific firmware naming patterns |
-| `epld_firmware_patterns` | dict | Platform-specific | EPLD firmware naming patterns |
-| `device_model_patterns` | list | Platform-specific | Device model detection patterns |
+| `device_model_patterns` | list | Platform-specific | Device model detection patterns for platform identification |
 
-**Example Firmware Patterns**:
+**Example Device Model Patterns**:
 ```yaml
-firmware_filename_patterns:
-  nexus_9000:
-    default: "nxos64-cs.{{ target_firmware_version }}.bin"
-  nexus_3548:
-    default: "nxos64-msll.{{ target_firmware_version }}.bin"
+device_model_patterns:
+  - regex: "N9K-C92.*"
+    platform: "nexus_9000"
+    model_prefix: "N9K-C92"
+  - regex: "N9K-C93.*"
+    platform: "nexus_9000"
+    model_prefix: "N9K-C93"
 ```
 
-**Note**: `.M` and `.F` suffixes are OPTIONAL. Versions like `10.4.5`, `10.4.5.M`, and `10.4.5.F` are all valid.
+**Note**: Firmware filenames are now passed directly via `target_firmware` parameter (e.g., `nxos.10.3.1.bin`). No automatic filename construction.
 
 ### Boot Variables
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `primary_boot_image` | string | `bootflash:///nxos64-cs.{{ target_firmware_version }}.bin` | Primary boot image |
+| `primary_boot_image` | string | `bootflash:///{{ target_firmware }}` | Primary boot image (uses target_firmware filename) |
 | `secondary_boot_image` | string | `bootflash:///nxos64-cs.backup.bin` | Secondary boot image |
 
 ### Validation Settings
@@ -392,20 +392,14 @@ Defined in: `ansible-content/inventory/group_vars/cisco_iosxe.yml`
 | `install_mode_timeout` | int | `3600` | Install mode timeout (seconds) |
 | `bundle_mode_timeout` | int | `1800` | Bundle mode timeout (seconds) |
 
-### Firmware Filename Patterns
+### Firmware Specification
 
-Complex firmware patterns by hardware platform (Catalyst 9000, 3850, ISR 4000, ASR 1000, Catalyst 8000):
+**Note**: Firmware filenames are now passed directly via `target_firmware` parameter. No automatic filename construction.
 
-```yaml
-firmware_filename_patterns:
-  catalyst_9000:
-    C9300: "cat9k_lite_iosxe.{{ target_version }}.SPA.bin"
-    C9400: "cat9k_iosxe.{{ target_version }}.SPA.bin"
-  isr_4000:
-    ISR4331: "isr4300-universalk9_ias.{{ target_version }}.SPA.bin"
+Example:
+```bash
+target_firmware="cat9k_iosxe.17.06.05.SPA.bin"
 ```
-
-See `group_vars/cisco_iosxe.yml` for complete patterns.
 
 ### Storage Settings
 
@@ -752,14 +746,11 @@ Defined in: `ansible-content/inventory/group_vars/opengear.yml`
 |-----------|------|---------|-------------|
 | `firmware_filename_patterns` | dict | Architecture-specific | Firmware patterns by device architecture |
 
-**Example Patterns**:
-```yaml
-firmware_filename_patterns:
-  legacy_cli:
-    CM7100: "cm71xx-{{ target_version }}.flash"  # 5.x.x
-  current_cli:
-    CM8100: "console_manager-{{ target_version }}-production-signed.raucb"  # YY.MM.x
-```
+**Note**: Firmware filenames are now passed directly via `target_firmware` parameter.
+
+**Example Filenames**:
+- Legacy CLI: `cm71xx-5.16.4.flash`
+- Current CLI: `console_manager-24.10.1-production-signed.raucb`
 
 ### Version Formats
 
@@ -1033,8 +1024,9 @@ Parameters are resolved in the following order (highest to lowest priority):
    hosts:
      nxos-switch-01:
        ansible_host: 192.168.1.10
-       target_firmware_version: "10.4.5.M"
    ```
+
+   **Note**: `target_firmware` is passed as a runtime parameter, not defined in inventory.
 
 4. **group_vars/<platform>.yml**: Platform-specific defaults
    ```yaml
@@ -1091,12 +1083,12 @@ all:
         nxos-core-01:
           ansible_host: 10.0.1.10
           platform: nxos
-          target_firmware_version: "10.4.5.M"
           enable_issu: true
           validate_bgp: true
           expected_bgp_neighbors: ["10.0.0.1", "10.0.0.2"]
           site_name: "datacenter-east"
           device_role: "core-switch"
+          # Note: target_firmware passed via --extra-vars at runtime
 
     cisco_iosxe:
       hosts:
@@ -1165,8 +1157,8 @@ issu_timeout: 3600
 
 # EPLD Settings
 enable_epld_upgrade: true
-target_epld_version: "10.4.5"
 allow_disruptive_epld: false
+# Note: target_epld_firmware (e.g., n9000-epld.10.3.1.img) passed via --extra-vars
 
 # Validation
 validate_bgp: true

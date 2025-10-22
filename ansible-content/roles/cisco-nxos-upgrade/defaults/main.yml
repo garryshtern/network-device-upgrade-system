@@ -102,7 +102,7 @@ cleanup_epld_images: false  # Cleanup EPLD images after upgrade
 epld_modules_to_upgrade: ['all']  # Modules to upgrade (default all)
 epld_firmware_filename: ""  # EPLD firmware filename
 local_epld_path: ""  # Local path to EPLD firmware
-target_epld_version: ""  # Target EPLD version (defaults to target_firmware_version)
+target_epld_firmware: ""  # EPLD firmware filename (REQUIRED if enable_epld_upgrade=true)
 
 # Platform and Connectivity
 device_platform: "generic"  # Platform family

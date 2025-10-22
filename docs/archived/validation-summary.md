@@ -102,7 +102,7 @@ export FORTIOS_PASSWORD="fortios-secret456"
 
 **EPLD Features:**
 - `ENABLE_EPLD_UPGRADE="true"` → `enable_epld_upgrade=true`
-- `TARGET_EPLD_IMAGE="n9000-epld.9.3.16.img"` → `target_epld_image=n9000-epld.9.3.16.img`
+- `TARGET_EPLD_FIRMWARE="n9000-epld.9.3.16.img"` → `target_epld_firmware=n9000-epld.9.3.16.img` (REQUIRED when EPLD enabled)
 - `EPLD_GOLDEN_UPGRADE="true"` → `epld_golden_upgrade=true`
 
 ### 🔥 FortiOS Multi-Step Upgrades - VERIFIED WORKING

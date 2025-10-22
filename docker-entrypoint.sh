@@ -461,8 +461,8 @@ build_ansible_options() {
     if [[ -n "${EPLD_UPGRADE_TIMEOUT:-}" ]]; then
         extra_vars="$extra_vars epld_upgrade_timeout=${EPLD_UPGRADE_TIMEOUT}"
     fi
-    if [[ -n "${TARGET_EPLD_IMAGE:-}" ]]; then
-        extra_vars="$extra_vars target_epld_image=${TARGET_EPLD_IMAGE}"
+    if [[ -n "${TARGET_EPLD_FIRMWARE:-}" ]]; then
+        extra_vars="$extra_vars target_epld_firmware=${TARGET_EPLD_FIRMWARE}"
     fi
 
     # Multi-step upgrade (FortiOS - default: false in group_vars/fortios.yml)

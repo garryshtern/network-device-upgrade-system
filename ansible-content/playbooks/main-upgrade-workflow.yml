@@ -60,7 +60,6 @@
     - name: Set firmware version for workflow
       ansible.builtin.set_fact:
         firmware_version: "{{ target_firmware }}"
-        target_firmware_version: "{{ target_firmware }}"
 
     - name: Set upgrade start timestamp
       ansible.builtin.set_fact:

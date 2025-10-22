@@ -11,12 +11,12 @@
     msg:
       - "Current image: {{ ansible_net_image }}"
       - "Current version: {{ ansible_net_version }}"
-      - "Target image: {{ target_firmware_version }}"
+      - "Target image: {{ target_firmware }}"
       - "Platform: {{ ansible_net_platform }}"
 
 - name: Install NX-OS image using nxos_install_os module
   cisco.nxos.nxos_install_os:
-    system_image_file: "{{ target_firmware_version }}"
+    system_image_file: "{{ target_firmware }}"
     issu: desired
   register: install_result
   vars:
@@ -31,7 +31,7 @@
 - name: Set installation completion status
   ansible.builtin.set_fact:
     nxos_installation_results:
-      target_firmware: "{{ target_firmware_version }}"
+      target_firmware: "{{ target_firmware }}"
       installation_method: "{{ installation_method }}"
       boot_variables_updated: "{{ boot_update_successful }}"
       issu_performed: "{{ installation_method == 'issu' }}"
