@@ -309,11 +309,6 @@
             name: common
             tasks_from: image-loading
 
-        - name: Verify uploaded image integrity
-          ansible.builtin.include_role:
-            name: image-validation
-            tasks_from: hash-verification
-
         - name: Backup current configuration (after confirming image is staged)
           ansible.builtin.include_role:
             name: common
