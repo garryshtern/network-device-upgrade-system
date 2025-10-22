@@ -258,6 +258,11 @@
             name: image-validation
             tasks_from: integrity-audit
 
+        - name: Verify firmware SHA512 hash (MANDATORY)
+          ansible.builtin.include_role:
+            name: image-validation
+            tasks_from: hash-verification
+
       rescue:
         - name: Version check or image verification failed - STOP workflow
           ansible.builtin.fail:
