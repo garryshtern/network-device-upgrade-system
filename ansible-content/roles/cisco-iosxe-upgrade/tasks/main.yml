@@ -7,35 +7,20 @@
     iosxe_upgrade_state: >
       "{{ iosxe_upgrade_state | combine({'current_version': current_firmware_version}) }}"
 
-- name: Determine platform-specific firmware filename
-  block:
-    - name: Extract device model
-      ansible.builtin.set_fact:
-        device_model: "{{ iosxe_facts.ansible_facts.ansible_net_model }}"
+- name: Set firmware paths
+  ansible.builtin.set_fact:
+    firmware_filename: "{{ target_firmware }}"
+    local_firmware_path: "{{ firmware_base_path }}/{{ target_firmware }}"
+    target_image_path: "bootflash:{{ target_firmware }}"
 
-    - name: Determine device platform family
-      ansible.builtin.set_fact:
-        device_platform: >-
-          {%- for pattern in device_model_patterns -%}
-            {%- if device_model is match(pattern.regex) -%}
-              {{ pattern.platform }}
-            {%- endif -%}
-          {%- endfor -%}
-
-    - name: Set firmware paths
-      ansible.builtin.set_fact:
-        firmware_filename: "{{ target_firmware }}"
-        local_firmware_path: "{{ firmware_base_path }}/{{ target_firmware }}"
-        target_image_path: "bootflash:{{ target_firmware }}"
-
-    - name: Display firmware selection
-      ansible.builtin.debug:
-        msg:
-          - "Device Model: {{ device_model }}"
-          - "Platform Family: {{ device_platform }}"
-          - "Firmware File: {{ firmware_filename }}"
-          - "Local Path: {{ local_firmware_path }}"
-          - "Target Path: {{ target_image_path }}"
+- name: Display firmware selection
+  ansible.builtin.debug:
+    msg:
+      - "Device: {{ inventory_hostname }}"
+      - "Model: {{ ansible_net_model }}"
+      - "Firmware File: {{ firmware_filename }}"
+      - "Local Path: {{ local_firmware_path }}"
+      - "Target Path: {{ target_image_path }}"
 
 - name: Check install mode capability
   ansible.builtin.include_tasks: check-install-mode.yml

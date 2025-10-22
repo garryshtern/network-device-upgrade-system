@@ -3,62 +3,38 @@
 # Securely transfers firmware images from server to device
 # SECURITY: Uses server-initiated PUSH transfers (not device-initiated PULL)
 
-- name: Determine platform-specific firmware filename
-  block:
-    - name: Get device model information
-      cisco.nxos.nxos_command:
-        commands:
-          - show module | json
-      register: nxos_module_info
+- name: Set firmware paths
+  ansible.builtin.set_fact:
+    firmware_filename: "{{ target_firmware }}"
+    local_firmware_path: "{{ firmware_base_path }}/{{ target_firmware }}"
 
-    - name: Extract device model
-      ansible.builtin.set_fact:
-        device_model: >-
-          {{ nxos_facts.ansible_facts.ansible_net_model |
-             default(nxos_module_info.stdout[0].
-                     TABLE_modinfo.ROW_modinfo[0].model) }}
+- name: Validate EPLD firmware filename provided (if EPLD upgrade enabled)
+  ansible.builtin.assert:
+    that:
+      - target_epld_firmware is defined
+      - target_epld_firmware | length > 0
+    fail_msg:
+      - "EPLD upgrade enabled but target_epld_firmware not provided"
+      - "You must explicitly specify the EPLD firmware filename"
+      - "Example: target_epld_firmware=n9000-epld.10.3.1.img"
+  when: enable_epld_upgrade | bool
 
-    - name: Determine device platform family
-      ansible.builtin.set_fact:
-        device_platform: >-
-          {%- for pattern in device_model_patterns -%}
-            {%- if device_model is match(pattern.regex) -%}
-              {{ pattern.platform }}
-            {%- endif -%}
-          {%- endfor -%}
+- name: Set EPLD firmware paths (if EPLD upgrade enabled)
+  ansible.builtin.set_fact:
+    epld_firmware_filename: "{{ target_epld_firmware }}"
+    local_epld_path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
+  when: enable_epld_upgrade | bool
 
-    - name: Set firmware paths
-      ansible.builtin.set_fact:
-        firmware_filename: "{{ target_firmware }}"
-        local_firmware_path: "{{ firmware_base_path }}/{{ target_firmware }}"
-
-    - name: Validate EPLD firmware filename provided (if EPLD upgrade enabled)
-      ansible.builtin.assert:
-        that:
-          - target_epld_firmware is defined
-          - target_epld_firmware | length > 0
-        fail_msg:
-          - "EPLD upgrade enabled but target_epld_firmware not provided"
-          - "You must explicitly specify the EPLD firmware filename"
-          - "Example: target_epld_firmware=n9000-epld.10.3.1.img"
-      when: enable_epld_upgrade | bool
-
-    - name: Set EPLD firmware paths (if EPLD upgrade enabled)
-      ansible.builtin.set_fact:
-        epld_firmware_filename: "{{ target_epld_firmware }}"
-        local_epld_path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
-      when: enable_epld_upgrade | bool
-
-    - name: Display firmware selection
-      ansible.builtin.debug:
-        msg:
-          - "Device Model: {{ device_model }}"
-          - "Platform Family: {{ device_platform }}"
-          - "Firmware File: {{ firmware_filename }}"
-          - "Full Path: {{ local_firmware_path }}"
-          - "EPLD Enabled: {{ enable_epld_upgrade }}"
-          - "EPLD File: {{ epld_firmware_filename if (enable_epld_upgrade | bool) else 'N/A' }}"
-          - "EPLD Path: {{ local_epld_path if (enable_epld_upgrade | bool) else 'N/A' }}"
+- name: Display firmware selection
+  ansible.builtin.debug:
+    msg:
+      - "Device: {{ inventory_hostname }}"
+      - "Model: {{ ansible_net_model }}"
+      - "Firmware File: {{ firmware_filename }}"
+      - "Full Path: {{ local_firmware_path }}"
+      - "EPLD Enabled: {{ enable_epld_upgrade }}"
+      - "EPLD File: {{ epld_firmware_filename if (enable_epld_upgrade | bool) else 'N/A' }}"
+      - "EPLD Path: {{ local_epld_path if (enable_epld_upgrade | bool) else 'N/A' }}"
 
 # NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
 # STEP 3 ran "dir bootflash:" and stored image list in storage_info.images_found
