@@ -82,27 +82,20 @@
           - "EPLD Path: {{ local_epld_path if local_epld_path != '' else 'N/A' }}"
 
 # NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
-# No need to re-check here - STEP 3 ensures sufficient space before calling this task
+# STEP 3 ran "dir bootflash:" and stored image list in storage_info.images_found
+# Reuse that data instead of running another dir command
 
-- name: Check if target firmware already exists
-  cisco.nxos.nxos_command:
-    commands:
-      - dir bootflash:{{ target_firmware_version }}
-  register: firmware_exists_check
-  failed_when: false
-
-- name: Log firmware check failures
-  ansible.builtin.debug:
-    msg: "Warning: Failed to check existing firmware: {{ firmware_exists_check.msg if firmware_exists_check.msg is defined else 'Unknown error' }}"
-  when:
-    - firmware_exists_check is defined
-    - firmware_exists_check.failed is defined
-    - firmware_exists_check.failed | bool
-
-- name: Set firmware exists flag
+- name: Check if target firmware already exists on device
   ansible.builtin.set_fact:
-    target_firmware_exists: >
-      "{{ 'No such file' not in firmware_exists_check.stdout[0] }}"
+    target_firmware_exists: "{{ target_firmware_version in storage_info.images_found }}"
+  when:
+    - storage_info is defined
+    - storage_info.images_found is defined
+
+- name: Set firmware does not exist if storage_info not available
+  ansible.builtin.set_fact:
+    target_firmware_exists: false
+  when: storage_info is not defined or storage_info.images_found is not defined
 
 - name: Report firmware already staged on device
   ansible.builtin.debug:
