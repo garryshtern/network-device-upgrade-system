@@ -5,9 +5,8 @@
 - name: Run integrity audit (file existence, size, permissions, extension)
   ansible.builtin.include_tasks: integrity-audit.yml
 
-- name: Run hash verification (checksum validation)
+- name: Run hash verification (MANDATORY - SHA512 checksum validation)
   ansible.builtin.include_tasks: hash-verification.yml
-  when: expected_hash is defined
 
 - name: Run version verification (extract and validate version from filename)
   ansible.builtin.include_tasks: version-verification.yml

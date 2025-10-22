@@ -1,9 +1,42 @@
 ---
 # Hash verification tasks
+# MANDATORY: SHA512 hash file must exist for all firmware images
 
-- name: Initialize expected_hash to empty string
+- name: Check for SHA512 hash file
+  ansible.builtin.stat:
+    path: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
+  register: hash_file_stat
+  delegate_to: localhost
+
+- name: Enforce mandatory SHA512 hash file requirement
+  ansible.builtin.assert:
+    that:
+      - hash_file_stat.stat.exists
+    fail_msg:
+      - "MANDATORY SHA512 hash file missing!"
+      - "Required file: {{ firmware_base_path }}/{{ target_firmware }}.sha512"
+      - "Hash verification is REQUIRED for all firmware uploads"
+      - "Create the hash file with: sha512sum {{ target_firmware }} > {{ target_firmware }}.sha512"
+
+- name: Read SHA512 hash from file
+  ansible.builtin.slurp:
+    src: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
+  register: expected_hash_content
+  delegate_to: localhost
+
+- name: Extract and validate SHA512 hash value
   ansible.builtin.set_fact:
-    expected_hash: ""
+    expected_hash: "{{ (expected_hash_content.content | b64decode).split()[0] | trim }}"
+
+- name: Verify SHA512 hash format is valid
+  ansible.builtin.assert:
+    that:
+      - expected_hash | length == 128
+      - expected_hash is match('^[a-f0-9]{128}$')
+    fail_msg:
+      - "Invalid SHA512 hash format in {{ target_firmware }}.sha512"
+      - "Hash value: {{ expected_hash }}"
+      - "Expected: 128 hexadecimal characters"
 
 - name: Calculate SHA512 hash of firmware file
   ansible.builtin.stat:
@@ -13,59 +46,20 @@
   register: firmware_file_hash
   delegate_to: localhost
 
-- name: Look for expected hash file
-  ansible.builtin.stat:
-    path: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
-  register: hash_file_stat
-  delegate_to: localhost
-
-- name: Read expected hash from file
-  ansible.builtin.slurp:
-    src: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
-  register: expected_hash_content
-  delegate_to: localhost
-  when: hash_file_stat.stat.exists
-
-- name: Extract expected hash value
-  ansible.builtin.set_fact:
-    expected_hash: >
-      "{{ (expected_hash_content.content | b64decode).split()[0] | trim }}"
-  when: hash_file_stat.stat.exists
-
-- name: Use provided hash if no hash file exists
-  ansible.builtin.set_fact:
-    expected_hash: "{{ firmware_expected_hash  }}"
-  when:
-    - not hash_file_stat.stat.exists
-    - firmware_expected_hash is defined
-
-- name: Verify hash matches expected value
+- name: Verify firmware SHA512 hash matches expected value
   ansible.builtin.assert:
     that:
-      - expected_hash | length > 0
       - firmware_file_hash.stat.checksum == expected_hash
-    fail_msg: "Hash verification failed for {{ target_firmware }}: calculated {{ firmware_file_hash.stat.checksum }} != expected {{ expected_hash }}"
-    success_msg: "Hash verification passed for {{ target_firmware }}"
-  when:
-    - expected_hash | length > 0
-    - firmware_file_hash.stat is defined
-    - firmware_file_hash.stat.checksum is defined
-
-- name: Warning when no hash available
-  ansible.builtin.debug:
-    msg:
-      - "WARNING: No expected hash found for {{ target_firmware }}"
-      - "To enable hash verification, provide either:"
-      - "  - A .sha512 file alongside the firmware"
-      - "  - Set firmware_expected_hash variable"
-  when: expected_hash | length == 0
+    fail_msg:
+      - "Firmware SHA512 hash verification FAILED!"
+      - "File: {{ target_firmware }}"
+      - "Expected: {{ expected_hash }}"
+      - "Calculated: {{ firmware_file_hash.stat.checksum }}"
+      - "The firmware file may be corrupted or the hash file is incorrect"
+    success_msg: "SHA512 hash verification passed for {{ target_firmware }}"
 
 - name: Set hash verification result
   ansible.builtin.set_fact:
-    hash_verification_passed: >
-      {{ expected_hash | length > 0 and
-         firmware_file_hash.stat is defined and
-         firmware_file_hash.stat.checksum is defined and
-         firmware_file_hash.stat.checksum == expected_hash }}
-    calculated_hash: "{{ firmware_file_hash.stat.checksum if firmware_file_hash.stat is defined and firmware_file_hash.stat.checksum is defined else 'unavailable' }}"
-    expected_hash_value: "{{ expected_hash if expected_hash | length > 0 else 'none' }}"
+    hash_verification_passed: true
+    calculated_hash: "{{ firmware_file_hash.stat.checksum }}"
+    expected_hash_value: "{{ expected_hash }}"
