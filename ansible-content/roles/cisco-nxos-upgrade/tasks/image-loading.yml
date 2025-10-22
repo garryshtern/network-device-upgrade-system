@@ -89,7 +89,7 @@
 
 - name: Parse storage information
   ansible.builtin.set_fact:
-    nxos_storage_data: "{{ nxos_storage_info.stdout[0] | from_json }}"
+    nxos_storage_data: "{{ nxos_storage_info.stdout[0] }}"
 
 - name: Calculate free space
   ansible.builtin.set_fact:
@@ -202,7 +202,7 @@
 
 - name: Parse firmware file information
   ansible.builtin.set_fact:
-    firmware_file_info: "{{ firmware_verification.stdout[0] | from_json }}"
+    firmware_file_info: "{{ firmware_verification.stdout[0] }}"
 
 - name: Validate firmware file integrity
   ansible.builtin.assert:

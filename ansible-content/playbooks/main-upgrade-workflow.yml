@@ -4,14 +4,15 @@
 #
 # Workflow Steps:
 # 1. Check connectivity (basic connection test only)
-# 2. Check space (cleanup if needed, then recheck)
-# 3. Version check + ensure image staged (check bootflash, upload if needed) + config backup
-# 4. Comprehensive facts gathering + pre-upgrade validation (AFTER image staged)
-# 5. Install images and reboot
-# 6. Post-upgrade validation + compare (failure triggers optional rollback)
+# 2. Version check + verify image availability (local file check)
+# 3. Check space (cleanup if needed, then recheck) - AFTER knowing image size
+# 4. Ensure image staged (check bootflash, upload if needed) + config backup
+# 5. Comprehensive facts gathering + pre-upgrade validation (AFTER image staged)
+# 6. Install images and reboot
+# 7. Post-upgrade validation + compare (failure triggers optional rollback)
 #
-# CRITICAL: Steps 1-5 must pass or workflow STOPS
-# Step 6 failure triggers optional rollback only
+# CRITICAL: Steps 1-6 must pass or workflow STOPS
+# Step 7 failure triggers optional rollback only
 
 - name: Network Device Upgrade - Master Workflow
   hosts: "{{ target_hosts }}"
@@ -162,38 +163,10 @@
           ansible.builtin.fail:
             msg: "STEP 1 FAILED: Cannot connect to device {{ inventory_hostname }}. Workflow stopped."
 
-    # STEP 2: Check Space (Cleanup if Needed)
-    # Only runs cleanup if insufficient space detected
+    # STEP 2: Version Check and Image Verification
+    # Check if upgrade needed and verify local image file exists
     # MUST PASS or workflow STOPS
-    - name: "STEP 2: Storage Space Validation"
-      block:
-        - name: Storage assessment with automatic cleanup if needed
-          ansible.builtin.include_role:
-            name: space-management
-            tasks_from: storage-assessment
-          vars:
-            minimum_free_space_gb: "{{ required_space_gb }}"
-
-        - name: Verify sufficient space available
-          ansible.builtin.assert:
-            that:
-              - storage_info is defined
-              - (storage_info.free_space_gb | float) >= (required_space_gb | float)
-            fail_msg:
-              - "Insufficient storage space."
-              - "Available: {{ storage_info.free_space_gb }}GB, Required: {{ required_space_gb }}GB"
-          when:
-            - not ansible_check_mode or inventory_hostname != 'localhost'
-
-      rescue:
-        - name: Storage validation failed - STOP workflow
-          ansible.builtin.fail:
-            msg: "STEP 2 FAILED: Storage space validation failed. Workflow stopped."
-
-    # STEP 3: Upload Images
-    # Server-initiated PUSH only (no device-initiated pulls)
-    # MUST PASS or workflow STOPS
-    - name: "STEP 3: Version Check and Image Upload"
+    - name: "STEP 2: Version Check and Image Verification"
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
@@ -286,6 +259,47 @@
             name: image-validation
             tasks_from: integrity-audit
 
+      rescue:
+        - name: Version check or image verification failed - STOP workflow
+          ansible.builtin.fail:
+            msg: "STEP 2 FAILED: Version check or image verification failed. Workflow stopped."
+
+    # STEP 3: Check Space (Cleanup if Needed)
+    # Only runs cleanup if insufficient space detected
+    # Runs AFTER image verification so we know the image size
+    # MUST PASS or workflow STOPS
+    - name: "STEP 3: Storage Space Validation"
+      block:
+        - name: Storage assessment with automatic cleanup if needed
+          ansible.builtin.include_role:
+            name: space-management
+            tasks_from: storage-assessment
+          vars:
+            minimum_free_space_gb: "{{ required_space_gb }}"
+
+        - name: Verify sufficient space available
+          ansible.builtin.assert:
+            that:
+              - storage_info is defined
+              - (storage_info.free_space_gb | float) >= (required_space_gb | float)
+            fail_msg:
+              - "Insufficient storage space."
+              - "Available: {{ storage_info.free_space_gb }}GB, Required: {{ required_space_gb }}GB"
+          when:
+            - not ansible_check_mode or inventory_hostname != 'localhost'
+
+      rescue:
+        - name: Storage validation failed - STOP workflow
+          ansible.builtin.fail:
+            msg: "STEP 3 FAILED: Storage space validation failed. Workflow stopped."
+
+    # STEP 4: Upload Images and Config Backup
+    # Server-initiated PUSH only (no device-initiated pulls)
+    # MUST PASS or workflow STOPS
+    - name: "STEP 4: Image Upload and Config Backup"
+      when:
+        - not ansible_check_mode or inventory_hostname != 'localhost'
+      block:
         - name: Ensure firmware image on device (check bootflash + upload if needed)
           ansible.builtin.include_role:
             name: common
@@ -304,21 +318,21 @@
       rescue:
         - name: Image upload failed - STOP workflow
           ansible.builtin.fail:
-            msg: "STEP 3 FAILED: Image upload or version check failed. Workflow stopped."
+            msg: "STEP 4 FAILED: Image upload or config backup failed. Workflow stopped."
 
-    # STEP 4: Comprehensive Network Resources Gathering and Pre-Upgrade Validation
+    # STEP 5: Comprehensive Network Resources Gathering and Pre-Upgrade Validation
     # Network resources gathered AFTER image is confirmed staged (not before)
     # Comprehensive validation: BGP, interfaces, routing, etc.
     # MUST PASS or workflow STOPS
-    - name: "STEP 4: Network Resources Gathering and Pre-Upgrade Validation"
+    - name: "STEP 5: Network Resources Gathering and Pre-Upgrade Validation"
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Display STEP 4 entry
+        - name: Display STEP 5 entry
           ansible.builtin.debug:
             msg:
               - "=========================================="
-              - "STEP 4: STARTING NETWORK VALIDATION"
+              - "STEP 5: STARTING NETWORK VALIDATION"
               - "=========================================="
               - "Device: {{ inventory_hostname }}"
               - "Platform: {{ platform }}"
@@ -354,12 +368,12 @@
       rescue:
         - name: Pre-upgrade validation failed - STOP workflow
           ansible.builtin.fail:
-            msg: "STEP 4 FAILED: Network resources gathering or pre-upgrade validation failed. Workflow stopped."
+            msg: "STEP 5 FAILED: Network resources gathering or pre-upgrade validation failed. Workflow stopped."
 
-    # STEP 5: Install Images and Reboot
+    # STEP 6: Install Images and Reboot
     # Platform-specific installation
     # MUST PASS or workflow STOPS
-    - name: "STEP 5: Firmware Installation"
+    - name: "STEP 6: Firmware Installation"
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
@@ -379,20 +393,20 @@
       rescue:
         - name: Installation failed - STOP workflow
           ansible.builtin.fail:
-            msg: "STEP 5 FAILED: Installation failed. Workflow stopped."
+            msg: "STEP 6 FAILED: Installation failed. Workflow stopped."
 
-    # STEP 6: Post-Checks and Comparison
+    # STEP 7: Post-Checks and Comparison
     # Compare to pre-upgrade state
     # Failure triggers OPTIONAL rollback (does not stop workflow)
-    - name: "STEP 6: Post-Upgrade Validation"
+    - name: "STEP 7: Post-Upgrade Validation"
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Display STEP 6 entry
+        - name: Display STEP 7 entry
           ansible.builtin.debug:
             msg:
               - "=========================================="
-              - "STEP 6: POST-UPGRADE VALIDATION"
+              - "STEP 7: POST-UPGRADE VALIDATION"
               - "=========================================="
               - "Device: {{ inventory_hostname }}"
               - "Platform: {{ platform }}"

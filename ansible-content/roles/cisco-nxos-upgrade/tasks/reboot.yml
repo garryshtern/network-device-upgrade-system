@@ -105,7 +105,7 @@
   ansible.builtin.set_fact:
     interfaces_down_post_reboot: >-
       {{ post_reboot_interfaces.stdout[0] |
-        from_json | json_query(
+        json_query(
         'TABLE_interface.ROW_interface[?state != `up`]') | length }}
 
 - name: Set reboot completion status
