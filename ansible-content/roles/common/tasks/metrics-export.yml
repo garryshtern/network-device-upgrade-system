@@ -6,17 +6,23 @@
   ansible.builtin.meta: end_host
   when: metric_data | length == 0
 
-- name: Build InfluxDB line protocol entry
-  ansible.builtin.set_fact:
-    influx_line_parts:
-      - "{{ metric_type }}"
-      - "device_id={{ inventory_hostname }},platform={{ platform }}"
+- name: Build InfluxDB line protocol metrics
+  when:
+    - send_metrics | bool
+    - influxdb_url is defined
+    - influxdb_token is defined
+  block:
+    - name: Build InfluxDB line protocol entry
+      ansible.builtin.set_fact:
+        influx_line_parts:
+          - "{{ metric_type }}"
+          - "device_id={{ inventory_hostname }},platform={{ platform }}"
 
-- name: Add metric fields to line protocol
-  ansible.builtin.set_fact:
-    influx_fields_list: "{{ influx_fields_list | default([]) + [item.key + '=' + item.value | string] }}"
-  loop: "{{ metric_data | dict2items }}"
-  when: metric_data | length > 0
+    - name: Add metric fields to line protocol
+      ansible.builtin.set_fact:
+        influx_fields_list: "{{ influx_fields_list | default([]) + [item.key + '=' + item.value | string] }}"
+      loop: "{{ metric_data | dict2items }}"
+      when: metric_data | length > 0
 
 - name: Export metrics to InfluxDB
   ansible.builtin.uri:
@@ -56,14 +62,14 @@
     method: POST
     headers:
       Content-Type: "application/json"
-      Authorization: "Bearer {{ metrics_webhook_token  }}"
+      Authorization: "Bearer {{ metrics_webhook_token }}"
     body_format: json
     body:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       device_id: "{{ inventory_hostname }}"
       metric_type: "{{ metric_type }}"
       platform: "{{ platform }}"
-      data: "{{ metric_data  }}"
+      data: "{{ metric_data }}"
   register: webhook_export_result
   when:
     - metrics_webhook_url is defined
@@ -80,7 +86,7 @@
     body_format: json
     body:
       name: "{{ inventory_hostname }}"
-      custom_fields: "{{ netbox_custom_fields  }}"
+      custom_fields: "{{ netbox_custom_fields }}"
     status_code: [200, 201]
   when:
     - netbox_url is defined
@@ -99,7 +105,7 @@
       webhook_export: >-
         {{ 'success' if webhook_export_result is succeeded else
           'failed' if webhook_export_result is defined else 'skipped' }}
-      local_log: "{{ log_metrics_locally  }}"
+      local_log: "{{ log_metrics_locally }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display metrics export summary
