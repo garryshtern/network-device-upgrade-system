@@ -3,19 +3,8 @@
 # Securely transfers firmware images from server to device
 # SECURITY: Uses server-initiated PUSH transfers when possible
 
-- name: Pre-load system checks
-  block:
-    - name: Check available disk space
-      fortinet.fortios.fortios_monitor_fact:
-        vdom: "root"
-        selector: "system_storage"
-      register: storage_info
-
-    - name: Verify sufficient space
-      ansible.builtin.assert:
-        that:
-          - storage_info.meta.results.available_mb | int > 1000
-        fail_msg: "Insufficient disk space for firmware download"
+# NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
+# No need to re-check here - STEP 3 ensures sufficient space before calling this task
 
 - name: Secure local image upload (Server-Initiated PUSH ONLY)
   block:

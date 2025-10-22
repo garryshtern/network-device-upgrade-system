@@ -81,30 +81,8 @@
           - "EPLD File: {{ epld_firmware_filename if epld_firmware_filename != '' else 'N/A' }}"
           - "EPLD Path: {{ local_epld_path if local_epld_path != '' else 'N/A' }}"
 
-- name: Get current storage information
-  cisco.nxos.nxos_command:
-    commands:
-      - "dir bootflash: | json"
-  register: nxos_storage_info
-
-- name: Parse storage information
-  ansible.builtin.set_fact:
-    nxos_storage_data: "{{ nxos_storage_info.stdout[0] }}"
-
-- name: Calculate free space
-  ansible.builtin.set_fact:
-    available_space_mb: >
-      "{{ (nxos_storage_data.dir_size.free | int / 1024 / 1024) | int }}"
-    required_space_mb: >
-      "{{ firmware_size_mb if (firmware_size_mb | int) > 0 else nxos_minimum_free_space_mb }}"
-
-- name: Verify sufficient storage space
-  ansible.builtin.assert:
-    that:
-      - available_space_mb | int >= required_space_mb | int
-    fail_msg:
-      - "Insufficient storage space."
-      - "Available: {{ available_space_mb }}MB, Required: {{ required_space_mb }}MB"
+# NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
+# No need to re-check here - STEP 3 ensures sufficient space before calling this task
 
 - name: Check if target firmware already exists
   cisco.nxos.nxos_command:

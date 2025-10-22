@@ -3,16 +3,9 @@
 # Secure server-initiated transfers for ultra-low latency hardware
 # SECURITY: Uses server-initiated PUSH transfers (not device-initiated PULL)
 
-- name: Check current storage usage
-  ansible.netcommon.cli_command:
-    command: show system storage
-  changed_when: false
-  register: storage_status
-- name: Verify sufficient space
-  ansible.builtin.assert:
-    that:
-      - "'available' in storage_status.stdout | lower"
-    fail_msg: Insufficient storage space for image loading
+# NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
+# No need to re-check here - STEP 3 ensures sufficient space before calling this task
+
 - name: Verify upgrade server connectivity (from server side)
   ansible.builtin.wait_for:
     host: '{{ ansible_host }}'

@@ -30,34 +30,8 @@
       ansible.builtin.set_fact:
         vault_opengear_api_token: "{{ opengear_auth.json.token }}"
 
-    - name: Check available storage space
-      ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/storage"
-        method: GET
-        headers:
-          Authorization: "Token {{ vault_opengear_api_token }}"
-        validate_certs: false
-      register: storage_info
-      when: not ansible_check_mode
-
-    - name: Simulate storage check in check mode
-      ansible.builtin.set_fact:
-        storage_info:
-          json:
-            available_mb: 500
-            total_mb: 1000
-      when: ansible_check_mode
-
-    - name: Validate sufficient storage space
-      ansible.builtin.assert:
-        that:
-          - >-
-            storage_info.json.available_mb | int >
-              (target_firmware_size_mb | int)
-        fail_msg:
-          - "Insufficient storage space:"
-          - "Available: {{ storage_info.json.available_mb }}MB"
-          - "Required: {{ target_firmware_size_mb }}MB"
+# NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
+# No need to re-check here - STEP 3 ensures sufficient space before calling this task
 
 - name: Prepare firmware image for upload
   block:

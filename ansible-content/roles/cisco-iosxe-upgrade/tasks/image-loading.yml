@@ -3,29 +3,8 @@
 # Handles secure server-initiated file transfer and staging
 # SECURITY: Uses server-initiated PUSH transfers (not device-initiated PULL)
 
-- name: Pre-transfer validation
-  block:
-    - name: Check available space
-      cisco.ios.ios_command:
-        commands:
-          - "dir bootflash: | include bytes"
-      register: space_check
-
-    - name: Parse available space
-      ansible.builtin.set_fact:
-        available_bytes: >-
-          {{
-            space_check.stdout[0]
-            | regex_search('(\\d+) bytes free')
-            | regex_replace(' bytes free', '')
-            | int
-          }}
-
-    - name: Verify sufficient space
-      ansible.builtin.assert:
-        that:
-          - available_bytes | int > (target_image_size | int)
-        fail_msg: "Insufficient space: {{ available_bytes }} bytes available, {{ target_image_size }} required"
+# NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
+# No need to re-check here - STEP 3 ensures sufficient space before calling this task
 
 - name: Transfer image file (Server-Initiated PUSH)
   block:
