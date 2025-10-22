@@ -42,7 +42,7 @@
 
 - name: Check if target firmware already exists on device
   ansible.builtin.set_fact:
-    target_firmware_exists: "{{ target_firmware in (storage_info.images_found | map('first') | list) }}"
+    target_firmware_exists: "{{ target_firmware in storage_info.images_found }}"
   when:
     - storage_info is defined
     - storage_info.images_found is defined

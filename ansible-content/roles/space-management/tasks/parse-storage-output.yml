@@ -6,7 +6,7 @@
   ansible.builtin.set_fact:
     parsed_storage:
       files: "{{ storage_output.stdout[0] | regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+)') }}"
-      images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(bin|img))') }}"
+      images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(?:bin|img))') }}"
       total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
       free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
   when: platform == 'nxos'
@@ -33,7 +33,7 @@
   ansible.builtin.set_fact:
     parsed_storage:
       files: "{{ storage_output.stdout | regex_findall('(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+)') }}"
-      images: "{{ storage_output.stdout | regex_findall('\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+\\.(iso|swix))') }}"
+      images: "{{ storage_output.stdout | regex_findall('\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+\\.(?:iso|swix))') }}"
       total_bytes: "{{ storage_output.stdout | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
       free_bytes: "{{ storage_output.stdout | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
   when: platform == 'metamako_mos'
