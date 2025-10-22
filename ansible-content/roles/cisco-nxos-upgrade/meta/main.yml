@@ -20,6 +20,5 @@ galaxy_info:
 
 dependencies:
   - role: common
-  - role: network-validation
   - role: image-validation
   - role: space-management
