@@ -60,7 +60,7 @@
           ansible.builtin.assert:
             that:
               - "'file_pull: false' in nxos_tasks_content"
-              - "'delegate_to: localhost' in nxos_tasks_content"
+              - "'nxos_file_copy' in nxos_tasks_content"
               - "'Server-Initiated PUSH' in nxos_tasks_content"
             success_msg: "✅ NX-OS uses server-initiated PUSH transfers"
             fail_msg: "❌ NX-OS does not implement server-initiated PUSH transfers"

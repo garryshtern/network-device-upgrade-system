@@ -151,12 +151,7 @@
         local_file: "{{ local_firmware_path }}"
         remote_file: "{{ target_firmware_version }}"
         file_pull: false  # Server pushes to device
-        connect_ssh_port: "{{ ansible_ssh_port }}"
-        vrf: "{{ management_vrf }}"
       register: nxos_file_copy_result
-      delegate_to: localhost
-      vars:
-        ansible_connection: local
 
     - name: Verify secure file transfer completed successfully
       ansible.builtin.assert:
