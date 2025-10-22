@@ -55,6 +55,10 @@ platform_firmware: {}  # Platform-specific firmware mappings
 phase_1_timeout: 3600  # Image loading phase (1 hour)
 phase_2_timeout: 1800  # Installation phase (30 minutes)
 
+# File transfer settings (async operations)
+file_transfer_timeout: 3600  # Maximum time for file transfers (1 hour)
+file_transfer_poll_interval: 10  # Status check interval during transfer (seconds)
+
 # Backup and rollback
 backup_enabled: true
 rollback_on_failure: true

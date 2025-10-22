@@ -52,19 +52,33 @@
     target_firmware_exists: false
   when: storage_info is not defined or storage_info.images_found is not defined
 
-- name: Report firmware already staged on device
-  ansible.builtin.debug:
-    msg:
-      - "=========================================="
-      - "FIRMWARE ALREADY STAGED"
-      - "=========================================="
-      - "Device: {{ inventory_hostname }}"
-      - "Firmware: {{ target_firmware }}"
-      - "Location: bootflash:{{ target_firmware }}"
-      - "Status: SKIPPING UPLOAD"
-      - "Action: Proceeding to installation phase"
-      - "=========================================="
+- name: Firmware already staged - skip upload
   when: target_firmware_exists
+  block:
+    - name: Report firmware already staged on device
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "FIRMWARE ALREADY STAGED"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Firmware: {{ target_firmware }}"
+          - "Location: bootflash:{{ target_firmware }}"
+          - "Status: SKIPPING UPLOAD"
+          - "Action: Proceeding to installation phase"
+          - "=========================================="
+
+    - name: Set image loading results for already staged firmware
+      ansible.builtin.set_fact:
+        nxos_image_loading_results:
+          firmware_file: "{{ target_firmware }}"
+          file_size_bytes: "{{ firmware_file_info.size_bytes }}"
+          source_sha512: "{{ calculated_hash if calculated_hash is defined else 'not_verified' }}"
+          device_sha512: "skipped"
+          hash_verified: false
+          file_uploaded: false
+          loading_successful: true
+          loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Report firmware upload starting
   ansible.builtin.debug:
@@ -107,8 +121,8 @@
         remote_file: "{{ target_firmware }}"
         file_pull: false  # Server pushes to device
       register: nxos_file_copy_result
-      async: 3600  # Allow up to 1 hour for large files
-      poll: 10  # Check status every 10 seconds
+      async: "{{ file_transfer_timeout }}"
+      poll: "{{ file_transfer_poll_interval }}"
 
     - name: Display file transfer results
       ansible.builtin.debug:
@@ -128,61 +142,77 @@
           - "Actual status: {{ nxos_file_copy_result.transfer_status }}"
           - "Full result: {{ nxos_file_copy_result | to_nice_json }}"
 
-- name: Verify firmware file on device
-  cisco.nxos.nxos_command:
-    commands:
-      - dir bootflash:{{ target_firmware }} | json
-  register: firmware_verification
+- name: Post-upload verification
+  when: not target_firmware_exists
+  block:
+    - name: Re-assess storage after firmware upload
+      ansible.builtin.include_role:
+        name: space-management
 
-- name: Parse firmware file information
-  ansible.builtin.set_fact:
-    firmware_file_info: "{{ firmware_verification.stdout[0] }}"
+    - name: Verify firmware file exists on device after upload
+      ansible.builtin.assert:
+        that:
+          - target_firmware in storage_info.images_found
+        fail_msg:
+          - "Firmware file not found on device after upload"
+          - "Expected file: {{ target_firmware }}"
+          - "Files found: {{ storage_info.images_found }}"
 
-- name: Validate firmware file integrity
-  ansible.builtin.assert:
-    that:
-      - firmware_file_info.file_list | length > 0
-      - firmware_file_info.file_list[0].size > 1024000  # Minimum 1MB
-    fail_msg: "Firmware file validation failed"
+    - name: Extract uploaded firmware file size from parsed storage
+      ansible.builtin.set_fact:
+        uploaded_firmware_size: "{{ parsed_storage.files | selectattr('1', 'equalto', target_firmware) | map(attribute='0') | first | int }}"
 
-- name: Calculate MD5 hash of firmware file on device
-  cisco.nxos.nxos_command:
-    commands:
-      - show file bootflash:{{ target_firmware }} md5sum
-  register: nxos_firmware_hash
-  when: firmware_md5_hash is defined
+    - name: Validate uploaded file size matches source
+      ansible.builtin.assert:
+        that:
+          - uploaded_firmware_size == firmware_file_info.size_bytes
+        fail_msg:
+          - "Uploaded file size mismatch!"
+          - "Expected (source): {{ firmware_file_info.size_bytes }} bytes"
+          - "Actual (device): {{ uploaded_firmware_size }} bytes"
+          - "File: {{ target_firmware }}"
 
-- name: Verify firmware MD5 hash
-  ansible.builtin.assert:
-    that:
-      - firmware_md5_hash in nxos_firmware_hash.stdout[0]
-    fail_msg: |
-      Firmware MD5 hash mismatch!
-      Expected: {{ firmware_md5_hash }}
-      Device hash output: {{ nxos_firmware_hash.stdout[0] }}
-  when: firmware_md5_hash is defined
+    - name: Calculate SHA512 hash of firmware file on device
+      cisco.nxos.nxos_command:
+        commands:
+          - show file bootflash:{{ target_firmware }} sha512sum
+      register: nxos_firmware_hash_result
 
-- name: Set image loading results
-  ansible.builtin.set_fact:
-    nxos_image_loading_results:
-      firmware_file: "{{ target_firmware }}"
-      file_size_bytes: "{{ firmware_file_info.file_list[0].size }}"
-      loading_successful: true
-      hash_verified: "{{ firmware_md5_hash is defined }}"
-      loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+    - name: Extract device SHA512 hash from output
+      ansible.builtin.set_fact:
+        device_firmware_hash: "{{ nxos_firmware_hash_result.stdout[0] | regex_search('[a-f0-9]{128}') }}"
 
-- name: Display image loading results
-  ansible.builtin.debug:
-    msg:
-      - >
-        "Secure firmware image transfer completed
-          successfully (Server-Initiated PUSH)"
-      - "Local Source: {{ local_firmware_path }}"
-      - >
-        "Remote Destination: {{ ansible_host }}:bootflash:{{
-          nxos_image_loading_results.firmware_file }}"
-      - >-
-        File Size: {{ (nxos_image_loading_results.file_size_bytes |
-          int / 1024 / 1024) | round(2) }}MB
-      - "Transfer Method: SCP (server-initiated)"
-      - "Hash Verified: {{ nxos_image_loading_results.hash_verified }}"
+    - name: Verify firmware SHA512 hash matches source
+      ansible.builtin.assert:
+        that:
+          - calculated_hash is defined
+          - device_firmware_hash is defined
+          - device_firmware_hash == calculated_hash
+        fail_msg:
+          - "Firmware SHA512 hash verification FAILED!"
+          - "Expected (source): {{ calculated_hash if calculated_hash is defined else 'MISSING - hash verification is MANDATORY' }}"
+          - "Actual (device): {{ device_firmware_hash }}"
+          - "File: {{ target_firmware }}"
+          - "Hash verification is REQUIRED for all firmware uploads"
+
+    - name: Set image loading results after upload
+      ansible.builtin.set_fact:
+        nxos_image_loading_results:
+          firmware_file: "{{ target_firmware }}"
+          file_size_bytes: "{{ uploaded_firmware_size }}"
+          source_sha512: "{{ calculated_hash }}"
+          device_sha512: "{{ device_firmware_hash }}"
+          hash_verified: true
+          file_uploaded: true
+          loading_successful: true
+          loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+    - name: Display image loading results after upload
+      ansible.builtin.debug:
+        msg:
+          - "Secure firmware image transfer completed successfully (Server-Initiated PUSH)"
+          - "Local Source: {{ local_firmware_path }}"
+          - "Remote Destination: {{ ansible_host }}:bootflash:{{ nxos_image_loading_results.firmware_file }}"
+          - "File Size: {{ (nxos_image_loading_results.file_size_bytes | int / 1024 / 1024) | round(2) }}MB"
+          - "Transfer Method: SCP (server-initiated)"
+          - "SHA512 Verified: {{ nxos_image_loading_results.hash_verified }}"
