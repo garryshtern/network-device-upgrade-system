@@ -99,3 +99,9 @@ required_features:
 max_interface_errors: 100
 max_crc_errors: 50
 max_late_collisions: 10
+
+# NX-OS file transfer globals
+# Valid transfer_status values from cisco.nxos.nxos_file_copy module
+nxos_valid_transfer_statuses:
+  - "No Transfer: File already copied to remote device."
+  - "Sent: File copied to remote device."

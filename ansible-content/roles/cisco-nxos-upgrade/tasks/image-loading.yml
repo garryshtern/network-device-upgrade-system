@@ -114,15 +114,19 @@
       ansible.builtin.debug:
         msg:
           - "File transfer completed"
-          - "Status: {{ nxos_file_copy_result.transfer_status | default('N/A') }}"
+          - "Status: {{ nxos_file_copy_result.transfer_status }}"
           - "Changed: {{ nxos_file_copy_result.changed }}"
-          - "File already exists: {{ nxos_file_copy_result.file_already_exists | default(false) }}"
 
     - name: Verify secure file transfer completed successfully
       ansible.builtin.assert:
         that:
           - nxos_file_copy_result is succeeded
-        fail_msg: "Secure firmware file transfer failed: {{ nxos_file_copy_result | to_nice_json }}"
+          - nxos_file_copy_result.transfer_status in nxos_valid_transfer_statuses
+        fail_msg:
+          - "Secure firmware file transfer failed or returned invalid status"
+          - "Expected status: {{ nxos_valid_transfer_statuses }}"
+          - "Actual status: {{ nxos_file_copy_result.transfer_status }}"
+          - "Full result: {{ nxos_file_copy_result | to_nice_json }}"
 
 - name: Verify firmware file on device
   cisco.nxos.nxos_command:
