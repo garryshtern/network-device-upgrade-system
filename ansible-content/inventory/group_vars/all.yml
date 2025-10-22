@@ -99,6 +99,7 @@ protocol_convergence_timeout: 300
 
 # Security settings
 hash_verification_enabled: true
+hash_file_extension: "sha512sum"  # Extension for hash files (e.g., firmware.bin.sha512sum)
 signature_validation_enabled: false  # Enable if vendor supports it
 cleanup_images_after_upgrade: false
 

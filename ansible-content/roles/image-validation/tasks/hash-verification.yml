@@ -4,7 +4,7 @@
 
 - name: Check for SHA512 hash file
   ansible.builtin.stat:
-    path: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
+    path: "{{ firmware_base_path }}/{{ target_firmware }}.{{ hash_file_extension }}"
   register: hash_file_stat
   delegate_to: localhost
 
@@ -14,13 +14,13 @@
       - hash_file_stat.stat.exists
     fail_msg:
       - "MANDATORY SHA512 hash file missing!"
-      - "Required file: {{ firmware_base_path }}/{{ target_firmware }}.sha512"
+      - "Required file: {{ firmware_base_path }}/{{ target_firmware }}.{{ hash_file_extension }}"
       - "Hash verification is REQUIRED for all firmware uploads"
-      - "Create the hash file with: sha512sum {{ target_firmware }} > {{ target_firmware }}.sha512"
+      - "Create the hash file with: sha512sum {{ target_firmware }} > {{ target_firmware }}.{{ hash_file_extension }}"
 
 - name: Read SHA512 hash from file
   ansible.builtin.slurp:
-    src: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
+    src: "{{ firmware_base_path }}/{{ target_firmware }}.{{ hash_file_extension }}"
   register: expected_hash_content
   delegate_to: localhost
 
@@ -34,7 +34,7 @@
       - expected_hash | length == 128
       - expected_hash is match('^[a-f0-9]{128}$')
     fail_msg:
-      - "Invalid SHA512 hash format in {{ target_firmware }}.sha512"
+      - "Invalid SHA512 hash format in {{ target_firmware }}.{{ hash_file_extension }}"
       - "Hash value: {{ expected_hash }}"
       - "Expected: 128 hexadecimal characters"
 
