@@ -1,45 +1,20 @@
 ---
 # Interface State Validation
-# Validates interface operational status, error counters, and optics
+# Validates interface operational status (up/down)
 # Uses pre-gathered facts from connectivity-check (ansible_network_resources.interfaces)
-# Only gathers error counters (not available via facts)
 
-- name: Gather interface error counters (NX-OS)
+- name: Debug pre-gathered interface facts (NX-OS)
+  ansible.builtin.debug:
+    msg:
+      - "=== NX-OS Interface Facts (Pre-gathered) ==="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "ansible_network_resources.interfaces: {{ ansible_network_resources.interfaces | default([]) | length }} interfaces"
+      - "ansible_network_resources.l2_interfaces: {{ ansible_network_resources.l2_interfaces | default([]) | length }} L2 interfaces"
+      - "ansible_network_resources.l3_interfaces: {{ ansible_network_resources.l3_interfaces | default([]) | length }} L3 interfaces"
   when:
-    - ansible_network_os is defined
+    - show_debug | bool
     - platform == 'nxos'
-    - not ansible_check_mode
-  block:
-    - name: Get interface operational state (error counters)
-      cisco.nxos.nxos_command:
-        commands:
-          - show interface counters errors | json
-      register: nxos_interface_errors
-
-    - name: Debug pre-gathered interface facts
-      ansible.builtin.debug:
-        msg:
-          - "=== NX-OS Interface Facts (Pre-gathered) ==="
-          - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ platform }}"
-          - "ansible_network_resources.interfaces: {{ ansible_network_resources.interfaces | default([]) | length }} interfaces"
-          - "ansible_network_resources.l2_interfaces: {{ ansible_network_resources.l2_interfaces | default([]) | length }} L2 interfaces"
-          - "ansible_network_resources.l3_interfaces: {{ ansible_network_resources.l3_interfaces | default([]) | length }} L3 interfaces"
-      when: show_debug | bool
-
-- name: Gather interface information (IOS-XE)
-  when:
-    - ansible_network_os is defined
-    - platform == 'ios'
-    - not ansible_check_mode
-  block:
-    - name: Get interface status (IOS-XE)
-      cisco.ios.ios_command:
-        commands:
-          - show ip interface brief
-          - show interfaces summary
-          - show interfaces counters errors
-      register: ios_interface_info
 
 - name: Parse interface status for NX-OS
   when:
@@ -52,11 +27,6 @@
     - name: Extract NX-OS interface data from pre-gathered facts
       ansible.builtin.set_fact:
         all_interfaces: "{{ ansible_network_resources.interfaces }}"
-        interface_errors: >-
-          {{
-            nxos_interface_errors.stdout[0] if (nxos_interface_errors.stdout[0] is mapping) else
-            (nxos_interface_errors.stdout[0] | from_json)
-          }}
 
     - name: Parse interface states from pre-gathered facts
       ansible.builtin.set_fact:
@@ -82,104 +52,6 @@
         that:
           - up_interfaces  | length > 0
         fail_msg: "No interfaces are in 'up' state"
-
-    - name: Check for interface errors
-      ansible.builtin.debug:
-        msg: |
-          Interface Error Summary:
-          {% for intf in interface_errors.TABLE_interface.ROW_interface
-             %}
-          {% if intf.in_error | int > 0 or intf.out_error | int > 0 %}
-          - >-
-            {{ intf.interface }}: In Errors: {{
-              intf.in_error }}, Out Errors: {{ intf.out_error }}
-          {% endif %}
-          {% endfor %}
-      when:
-        - interface_errors.TABLE_interface is defined
-
-- name: VLAN assignment validation (NX-OS - uses pre-gathered facts)
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-    - ansible_network_resources is defined
-    - ansible_network_resources.vlans is defined
-  block:
-    - name: Debug VLAN facts from pre-gathered data
-      ansible.builtin.debug:
-        msg:
-          - "=== NX-OS VLAN Facts (Pre-gathered) ==="
-          - "Device: {{ inventory_hostname }}"
-          - "Total VLANs: {{ ansible_network_resources.vlans | length }}"
-          - "FULL ansible_network_resources.vlans: {{ ansible_network_resources.vlans | to_nice_json }}"
-      when:
-        - show_debug | bool
-
-    - name: Validate VLAN assignments
-      ansible.builtin.debug:
-        msg: |
-          VLAN Summary:
-          Active VLANs: {{ ansible_network_resources.vlans |
-            selectattr('enabled', 'equalto', true) | list | length }}
-          Total VLANs: {{ ansible_network_resources.vlans | length }}
-
-- name: Link aggregation validation (NX-OS - uses pre-gathered facts)
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-    - ansible_network_resources is defined
-    - ansible_network_resources.lag_interfaces is defined
-  block:
-    - name: Debug LAG interface facts from pre-gathered data
-      ansible.builtin.debug:
-        msg:
-          - "=== NX-OS LAG Facts (Pre-gathered) ==="
-          - "Device: {{ inventory_hostname }}"
-          - "Total Port-Channels: {{ ansible_network_resources.lag_interfaces | length }}"
-          - "FULL ansible_network_resources.lag_interfaces: {{ ansible_network_resources.lag_interfaces | to_nice_json }}"
-      when:
-        - show_debug | bool
-
-    - name: Validate port-channel states
-      ansible.builtin.debug:
-        msg: |
-          Port-Channel Summary:
-          {% for pc in ansible_network_resources.lag_interfaces %}
-          - >-
-            {{ pc.name }}: {{ pc.members | length }} members
-          {% endfor %}
-
-- name: Optics diagnostics validation (NX-OS)
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-  block:
-    - name: Get transceiver information
-      cisco.nxos.nxos_command:
-        commands:
-          - show interface transceiver details | json
-      register: transceiver_info
-      failed_when: false
-
-    - name: Check SFP/QSFP status
-      ansible.builtin.debug:
-        msg: |
-          Transceiver Status:
-          {% for intf in transceiver_info.stdout[0] | from_json |
-            json_query('TABLE_interface.ROW_interface')  %}
-          {% if intf.sfp is defined %}
-          - >-
-            {{ intf.interface }}: {{ intf.sfp }}
-            ({{ intf.type }})
-          {% endif %}
-          {% endfor %}
-      when:
-        - transceiver_info is defined
-        - transceiver_info is not skipped
-        - transceiver_info.stdout is defined
 
 - name: Store interface baseline (for comparison)
   ansible.builtin.set_fact:

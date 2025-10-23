@@ -6,7 +6,7 @@
   ansible.builtin.meta: end_host
   when: metric_data | length == 0
 
-- name: Build InfluxDB line protocol metrics
+- name: InfluxDB metrics export
   when:
     - send_metrics | bool
     - influxdb_url is defined
@@ -24,27 +24,23 @@
       loop: "{{ metric_data | dict2items }}"
       when: metric_data | length > 0
 
-- name: Export metrics to InfluxDB
-  ansible.builtin.uri:
-    url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
-    method: POST
-    headers:
-      Authorization: "Token {{ influxdb_token }}"
-      Content-Type: "text/plain; charset=utf-8"
-    body: "{{ metric_type }},device_id={{ inventory_hostname }},platform={{ platform }} {{ influx_fields_list | join(',') }}"
-    status_code: [204]
-  register: influx_export_result
-  when:
-    - influxdb_url is defined
-    - influxdb_token is defined
-    - send_metrics | bool
-    - influx_fields_list is defined
-  failed_when: false
+    - name: Export metrics to InfluxDB
+      ansible.builtin.uri:
+        url: "{{ influxdb_url }}/api/v2/write?bucket={{ influxdb_bucket }}&org={{ influxdb_org }}"
+        method: POST
+        headers:
+          Authorization: "Token {{ influxdb_token }}"
+          Content-Type: "text/plain; charset=utf-8"
+        body: "{{ metric_type }},device_id={{ inventory_hostname }},platform={{ platform }} {{ influx_fields_list | join(',') }}"
+        status_code: [204]
+      register: influx_export_result
+      when: influx_fields_list is defined
+      failed_when: false
 
-- name: Log InfluxDB export status
-  ansible.builtin.debug:
-    msg: "Metrics exported to InfluxDB: {{ 'SUCCESS' if influx_export_result is succeeded else 'FAILED' }}"
-  when: influx_export_result is defined
+    - name: Log InfluxDB export status
+      ansible.builtin.debug:
+        msg: "Metrics exported to InfluxDB: {{ 'SUCCESS' if influx_export_result is succeeded else 'FAILED' }}"
+      when: influx_export_result is defined
 
 - name: Export metrics to local file (backup/debugging)
   ansible.builtin.lineinfile:
