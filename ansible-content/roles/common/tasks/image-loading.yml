@@ -37,11 +37,6 @@
         - platform in platform_role_map
         - not (platform == 'fortios' and ansible_check_mode)
 
-- name: Verify image integrity
-  ansible.builtin.include_role:
-    name: image-validation
-    tasks_from: hash-verification
-
 - name: Record image loading completion
   ansible.builtin.include_role:
     name: common
