@@ -62,9 +62,11 @@
       ansible.builtin.set_fact:
         up_interfaces: >-
           {{ all_interfaces |
+            selectattr('enabled', 'defined') |
             selectattr('enabled', 'equalto', true) | list }}
         down_interfaces: >-
           {{ all_interfaces |
+            selectattr('enabled', 'defined') |
             selectattr('enabled', 'equalto', false) | list }}
       when:
         - all_interfaces | length > 0
@@ -144,7 +146,7 @@
       ansible.builtin.debug:
         msg: |
           Port-Channel Summary:
-          {% for pc in ansible_network_resources.lag_interfaces  %}
+          {% for pc in ansible_network_resources.lag_interfaces %}
           - >-
             {{ pc.name }}: {{ pc.members | length }} members
           {% endfor %}
