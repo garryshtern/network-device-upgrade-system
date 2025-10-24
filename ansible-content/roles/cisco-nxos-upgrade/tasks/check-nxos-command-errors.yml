@@ -22,25 +22,27 @@
 
 - name: Process nxos_command output and check for errors
   ansible.builtin.set_fact:
-    "{{ item.key }}": "{{ command_result.stdout[item.value] }}"
+    "{{ mapping_item.key }}": "{{ command_result.stdout[mapping_item.value] }}"
   loop: "{{ variable_mapping | dict2items }}"
   when:
-    - command_result is succeeded
-    - "'ERROR:' not in (command_result.stdout[item.value] | string)"
+    - command_result.failed is not defined or not command_result.failed
+    - "'ERROR:' not in (command_result.stdout[mapping_item.value] | string)"
   loop_control:
-    label: "{{ item.key }}"
+    loop_var: mapping_item
+    label: "{{ mapping_item.key }}"
 
 - name: Check for errors and fail if required
   block:
     - name: Detect errors in command output
       ansible.builtin.set_fact:
-        error_list: "{{ error_list | default([]) + [{'variable': item.key, 'index': item.value, 'output': command_result.stdout[item.value]}] }}"
+        error_list: "{{ error_list | default([]) + [{'variable': mapping_item.key, 'index': mapping_item.value, 'output': command_result.stdout[mapping_item.value]}] }}"
       loop: "{{ variable_mapping | dict2items }}"
       when:
-        - command_result is succeeded
-        - "'ERROR:' in (command_result.stdout[item.value] | string)"
+        - command_result.failed is not defined or not command_result.failed
+        - "'ERROR:' in (command_result.stdout[mapping_item.value] | string)"
       loop_control:
-        label: "{{ item.key }}"
+        loop_var: mapping_item
+        label: "{{ mapping_item.key }}"
 
     - name: Fail with error details if required data has errors
       ansible.builtin.fail:
