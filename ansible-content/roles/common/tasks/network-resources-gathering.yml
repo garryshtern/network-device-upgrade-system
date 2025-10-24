@@ -214,13 +214,27 @@
       loop_control:
         label: "{{ item.mapping.keys() | list | first }}"
 
-    - name: Extract ARP and MAC lists
+    - name: Normalize ARP ROW_vrf to list (handles single VRF or multiple VRFs)
       ansible.builtin.set_fact:
-        arp_entries_list: "{{ gathered_arp_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_adj') | map(attribute='ROW_adj') | flatten }}"
-        mac_entries_list: "{{ gathered_mac_data.TABLE_mac_address.ROW_mac_address }}"
+        arp_row_vrf_list: "{{ [gathered_arp_data.TABLE_vrf.ROW_vrf] if gathered_arp_data.TABLE_vrf.ROW_vrf is mapping else gathered_arp_data.TABLE_vrf.ROW_vrf }}"
       when:
         - gathered_arp_data is defined
+        - gathered_arp_data.TABLE_vrf is defined
+        - gathered_arp_data.TABLE_vrf.ROW_vrf is defined
+
+    - name: Extract ARP entries list from all VRFs
+      ansible.builtin.set_fact:
+        arp_entries_list: "{{ arp_row_vrf_list | map(attribute='TABLE_adj') | map(attribute='ROW_adj') | flatten }}"
+      when:
+        - arp_row_vrf_list is defined
+
+    - name: Normalize MAC ROW_mac_address to list (handles single entry or multiple entries)
+      ansible.builtin.set_fact:
+        mac_entries_list: "{{ [gathered_mac_data.TABLE_mac_address.ROW_mac_address] if gathered_mac_data.TABLE_mac_address.ROW_mac_address is mapping else gathered_mac_data.TABLE_mac_address.ROW_mac_address }}"
+      when:
         - gathered_mac_data is defined
+        - gathered_mac_data.TABLE_mac_address is defined
+        - gathered_mac_data.TABLE_mac_address.ROW_mac_address is defined
 
     - name: Extract RIB routes list
       ansible.builtin.set_fact:
