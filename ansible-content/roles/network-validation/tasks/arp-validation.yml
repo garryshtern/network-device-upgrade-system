@@ -19,7 +19,10 @@
         that:
           - nxos_validation_data is defined
           - nxos_validation_data.stdout is defined
-        fail_msg: "NX-OS validation data not available - network-resources-gathering must run first"
+          - nxos_validation_data.stdout | length == 2
+        fail_msg:
+          - "NX-OS validation data not available (ARP and MAC)"
+          - "network-resources-gathering must run successfully before ARP validation"
 
     - name: Extract ARP and MAC data from pre-gathered data
       ansible.builtin.set_fact:

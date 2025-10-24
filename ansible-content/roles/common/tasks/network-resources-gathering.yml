@@ -60,11 +60,17 @@
         available_network_resources: true
       register: nxos_network_resources
 
-    - name: Gather NX-OS operational state data
+    - name: Gather NX-OS operational state data (ARP and MAC required)
       cisco.nxos.nxos_command:
         commands:
           - show ip arp vrf all | json
           - show mac address-table | json
+      register: nxos_validation_data
+      changed_when: false
+
+    - name: Gather NX-OS operational state data (optional)
+      cisco.nxos.nxos_command:
+        commands:
           - show ip route vrf all | json
           - show forwarding ipv4 route | json
           - show bfd neighbors vrf all | json
@@ -73,7 +79,7 @@
           - show ip pim rp | json
           - show ip igmp interface | json
           - show ip igmp groups | json
-      register: nxos_validation_data
+      register: nxos_optional_validation_data
       changed_when: false
       failed_when: false
 
