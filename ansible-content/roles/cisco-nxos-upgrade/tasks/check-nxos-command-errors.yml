@@ -20,40 +20,34 @@
 # - Sets variables as defined in variable_mapping (only if no ERROR)
 # - If fail_on_error=true and ERROR found: Fails with detailed error message
 
+- name: Check if command has valid output
+  ansible.builtin.set_fact:
+    command_has_error: >-
+      {{
+        command_result.stdout is not defined or
+        (command_result.stdout is defined and (command_result.stdout | map('string') | select('search', 'ERROR:') | list | length > 0))
+      }}
+
 - name: Process nxos_command output and check for errors
   ansible.builtin.set_fact:
     "{{ mapping_item.key }}": "{{ command_result.stdout[mapping_item.value] }}"
   loop: "{{ variable_mapping | dict2items }}"
   when:
-    - command_result.failed is not defined or not command_result.failed
+    - not (command_has_error | bool)
+    - command_result.stdout | length > mapping_item.value
     - "'ERROR:' not in (command_result.stdout[mapping_item.value] | string)"
   loop_control:
     loop_var: mapping_item
     label: "{{ mapping_item.key }}"
 
-- name: Check for errors and fail if required
-  block:
-    - name: Detect errors in command output
-      ansible.builtin.set_fact:
-        error_list: "{{ error_list | default([]) + [{'variable': mapping_item.key, 'index': mapping_item.value, 'output': command_result.stdout[mapping_item.value]}] }}"
-      loop: "{{ variable_mapping | dict2items }}"
-      when:
-        - command_result.failed is not defined or not command_result.failed
-        - "'ERROR:' in (command_result.stdout[mapping_item.value] | string)"
-      loop_control:
-        loop_var: mapping_item
-        label: "{{ mapping_item.key }}"
-
-    - name: Fail with error details if required data has errors
-      ansible.builtin.fail:
-        msg:
-          - "ERROR detected in required NX-OS command output"
-          - "Device: {{ inventory_hostname }}"
-          - "Failed commands:"
-          - "{% for error in error_list %}"
-          - "  - {{ error.variable }} (stdout[{{ error.index }}]): {{ error.output }}"
-          - "{% endfor %}"
-      when:
-        - fail_on_error | bool
-        - error_list is defined
-        - error_list | length > 0
+- name: Fail if required data missing and fail_on_error is true
+  ansible.builtin.fail:
+    msg:
+      - "Required NX-OS command data failed"
+      - "Device: {{ inventory_hostname }}"
+      - "Reason: {{ 'No stdout (Invalid command or execution failure)' if command_result.stdout is not defined else 'ERROR found in command output' }}"
+      - "Command result: {{ command_result }}"
+  when:
+    - fail_on_error is defined
+    - fail_on_error | bool
+    - command_has_error | bool
