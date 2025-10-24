@@ -1,7 +1,7 @@
 ---
 # BFD (Bidirectional Forwarding Detection) Validation
 # Validates BFD interfaces, neighbors, and session states
-# Uses pre-gathered data from connectivity-check (nxos_validation_data)
+# Uses pre-parsed data from network-resources-gathering (bfd_sessions_list)
 # DESIGN: Single block pattern with platform gate
 # PATTERN: Only validates if BFD is configured on device (same as BGP/multicast)
 #
@@ -36,28 +36,16 @@
   block:
     - name: Extract BFD interfaces from pre-gathered facts
       ansible.builtin.set_fact:
-        bfd_interfaces_config: "{{ ansible_network_resources.bfd_interfaces if ansible_network_resources.bfd_interfaces is defined else [] }}"
+        bfd_interfaces_config: "{{ ansible_network_resources.bfd_interfaces }}"
       when:
         - ansible_network_resources is defined
+        - ansible_network_resources.bfd_interfaces is defined
 
-    - name: Extract BFD neighbor data from pre-gathered data
+    - name: Use pre-parsed BFD session data
       ansible.builtin.set_fact:
-        bfd_neighbor_data: "{{ nxos_validation_data.stdout[4] }}"
+        bfd_neighbors: "{{ bfd_sessions_list }}"
       when:
-        - nxos_validation_data is defined
-        - nxos_validation_data.stdout is defined
-
-    - name: Parse BFD neighbor data
-      ansible.builtin.set_fact:
-        bfd_neighbor_table: "{{ bfd_neighbor_data if bfd_neighbor_data is mapping else (bfd_neighbor_data | from_json) }}"
-      when:
-        - bfd_neighbor_data is defined
-
-    - name: Extract BFD neighbor sessions
-      ansible.builtin.set_fact:
-        bfd_neighbors: "{{ bfd_neighbor_table.TABLE_vrf.ROW_vrf | map(attribute='TABLE_adj') | map(attribute='ROW_adj') | flatten if bfd_neighbor_table.TABLE_vrf is defined else [] }}"
-      when:
-        - bfd_neighbor_table is defined
+        - bfd_sessions_list is defined
 
     - name: Determine if BFD is configured on device
       ansible.builtin.set_fact:

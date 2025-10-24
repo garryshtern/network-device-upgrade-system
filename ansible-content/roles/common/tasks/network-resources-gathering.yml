@@ -79,9 +79,122 @@
           - show ip pim rp | json
           - show ip igmp interface | json
           - show ip igmp groups | json
+          - show ip mroute summary | json
+          - show ip mroute | json
       register: nxos_optional_validation_data
       changed_when: false
       failed_when: false
+
+    - name: Parse operational data (required)
+      ansible.builtin.set_fact:
+        gathered_arp_data: "{{ nxos_validation_data.stdout[0] | from_json }}"
+        gathered_mac_data: "{{ nxos_validation_data.stdout[1] | from_json }}"
+      when: nxos_validation_data is succeeded
+
+    - name: Parse operational data (optional)
+      ansible.builtin.set_fact:
+        gathered_rib_data: "{{ nxos_optional_validation_data.stdout[0] | from_json }}"
+        gathered_fib_data: "{{ nxos_optional_validation_data.stdout[1] | from_json }}"
+        gathered_bfd_data: "{{ nxos_optional_validation_data.stdout[2] | from_json }}"
+        gathered_pim_interface_data: "{{ nxos_optional_validation_data.stdout[3] | from_json }}"
+        gathered_pim_neighbor_data: "{{ nxos_optional_validation_data.stdout[4] | from_json }}"
+        gathered_pim_rp_data: "{{ nxos_optional_validation_data.stdout[5] | from_json }}"
+        gathered_igmp_interface_data: "{{ nxos_optional_validation_data.stdout[6] | from_json }}"
+        gathered_igmp_groups_data: "{{ nxos_optional_validation_data.stdout[7] | from_json }}"
+        gathered_mroute_summary_data: "{{ nxos_optional_validation_data.stdout[8] | from_json }}"
+        gathered_mroute_data: "{{ nxos_optional_validation_data.stdout[9] | from_json }}"
+      when: nxos_optional_validation_data is succeeded
+
+    - name: Extract ARP and MAC lists
+      ansible.builtin.set_fact:
+        arp_entries_list: "{{ gathered_arp_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_adj') | map(attribute='ROW_adj') | flatten }}"
+        mac_entries_list: "{{ gathered_mac_data.TABLE_mac_address.ROW_mac_address }}"
+      when:
+        - gathered_arp_data is defined
+        - gathered_mac_data is defined
+
+    - name: Extract routing and BFD lists
+      ansible.builtin.set_fact:
+        rib_routes_list: "{{ gathered_rib_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_addrf') | map(attribute='ROW_addrf') | map(attribute='TABLE_prefix') | map(attribute='ROW_prefix') | flatten }}"
+        fib_entries_list: "{{ gathered_fib_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_prefix') | map(attribute='ROW_prefix') | flatten }}"
+      when:
+        - gathered_arp_data is defined
+        - gathered_mac_data is defined
+        - gathered_rib_data is defined
+        - gathered_fib_data is defined
+
+    - name: Extract BFD sessions list
+      ansible.builtin.set_fact:
+        bfd_sessions_list: "{{ gathered_bfd_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_adj') | map(attribute='ROW_adj') | flatten }}"
+      when:
+        - gathered_bfd_data is defined
+        - gathered_bfd_data.TABLE_vrf is defined
+
+    - name: Extract PIM interface list
+      ansible.builtin.set_fact:
+        pim_interfaces_list: "{{ gathered_pim_interface_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_iod') | map(attribute='ROW_iod') | flatten }}"
+      when:
+        - gathered_pim_interface_data is defined
+        - gathered_pim_interface_data.TABLE_vrf is defined
+
+    - name: Extract PIM neighbor list
+      ansible.builtin.set_fact:
+        pim_neighbors_list: "{{ gathered_pim_neighbor_data.TABLE_ctx.ROW_ctx | map(attribute='TABLE_neighbor') | map(attribute='ROW_neighbor') | flatten }}"
+      when:
+        - gathered_pim_neighbor_data is defined
+        - gathered_pim_neighbor_data.TABLE_ctx is defined
+
+    - name: Extract PIM RP list
+      ansible.builtin.set_fact:
+        pim_rps_list: "{{ gathered_pim_rp_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_rp') | map(attribute='ROW_rp') | flatten }}"
+      when:
+        - gathered_pim_rp_data is defined
+        - gathered_pim_rp_data.TABLE_vrf is defined
+
+    - name: Extract IGMP interface list
+      ansible.builtin.set_fact:
+        igmp_interfaces_list: "{{ gathered_igmp_interface_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_iod') | map(attribute='ROW_iod') | flatten }}"
+      when:
+        - gathered_igmp_interface_data is defined
+        - gathered_igmp_interface_data.TABLE_vrf is defined
+
+    - name: Extract IGMP groups list
+      ansible.builtin.set_fact:
+        igmp_groups_list: "{{ gathered_igmp_groups_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_group') | map(attribute='ROW_group') | flatten }}"
+      when:
+        - gathered_igmp_groups_data is defined
+        - gathered_igmp_groups_data.TABLE_vrf is defined
+
+    - name: Extract mroute summary
+      ansible.builtin.set_fact:
+        mroute_summary: "{{ gathered_mroute_summary_data }}"
+      when:
+        - gathered_mroute_summary_data is defined
+
+    - name: Extract mroute entries list
+      ansible.builtin.set_fact:
+        mroute_entries_list: "{{ gathered_mroute_data.TABLE_mroute.ROW_mroute }}"
+      when:
+        - gathered_mroute_data is defined
+        - gathered_mroute_data.TABLE_mroute is defined
+
+    - name: Build operational data statistics
+      ansible.builtin.set_fact:
+        operational_stats:
+          arp_entries: "{{ arp_entries_list | length if arp_entries_list is defined else 0 }}"
+          mac_entries: "{{ mac_entries_list | length if mac_entries_list is defined else 0 }}"
+          rib_routes: "{{ rib_routes_list | length if rib_routes_list is defined else 0 }}"
+          fib_entries: "{{ fib_entries_list | length if fib_entries_list is defined else 0 }}"
+          bfd_sessions: "{{ bfd_sessions_list | length if bfd_sessions_list is defined else 0 }}"
+          pim_interfaces: "{{ pim_interfaces_list | length if pim_interfaces_list is defined else 0 }}"
+          pim_neighbors: "{{ pim_neighbors_list | length if pim_neighbors_list is defined else 0 }}"
+          pim_rps: "{{ pim_rps_list | length if pim_rps_list is defined else 0 }}"
+          igmp_interfaces: "{{ igmp_interfaces_list | length if igmp_interfaces_list is defined else 0 }}"
+          igmp_groups: "{{ igmp_groups_list | length if igmp_groups_list is defined else 0 }}"
+          mroute_entries: "{{ mroute_entries_list | length if mroute_entries_list is defined else 0 }}"
+      when:
+        - arp_entries_list is defined
+        - mac_entries_list is defined
 
     - name: Display gathered network resources summary
       ansible.builtin.debug:
@@ -93,10 +206,25 @@
           - "Platform: {{ platform }}"
           - "Gathered Resources: {{ ansible_net_gather_network_resources | default([]) | join(', ') }}"
           - "Available Resources: {{ ansible_network_resources | default({}) | dict2items | map(attribute='key') | list | join(', ') }}"
-          - "Operational Data: ARP, MAC, Routing, BFD, Multicast"
+          - "Operational Data (Required):"
+          - "  - ARP entries: {{ operational_stats.arp_entries }}"
+          - "  - MAC entries: {{ operational_stats.mac_entries }}"
+          - "Operational Data (Optional - Routing/BFD):"
+          - "  - RIB routes: {{ operational_stats.rib_routes }}"
+          - "  - FIB entries: {{ operational_stats.fib_entries }}"
+          - "  - BFD sessions: {{ operational_stats.bfd_sessions }}"
+          - "Operational Data (Optional - Multicast):"
+          - "  - PIM interfaces: {{ operational_stats.pim_interfaces }}"
+          - "  - PIM neighbors: {{ operational_stats.pim_neighbors }}"
+          - "  - PIM RPs: {{ operational_stats.pim_rps }}"
+          - "  - IGMP interfaces: {{ operational_stats.igmp_interfaces }}"
+          - "  - IGMP groups: {{ operational_stats.igmp_groups }}"
+          - "  - Mroute entries: {{ operational_stats.mroute_entries }}"
           - "Status: Ready for validation"
           - "=========================================="
-      when: show_debug | bool
+      when:
+        - show_debug | bool
+        - operational_stats is defined
 
   rescue:
     - name: Network resources gathering failed

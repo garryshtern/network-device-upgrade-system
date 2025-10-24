@@ -1,7 +1,7 @@
 ---
 # Routing Protocol Validation
 # Validates RIB, FIB, and route consistency (static, BGP, connected routes only)
-# Uses pre-gathered data from connectivity-check (nxos_validation_data)
+# Uses pre-parsed data from network-resources-gathering (rib_routes_list, fib_entries_list)
 # DESIGN: Single block pattern with platform gate
 #
 # FEATURES:
@@ -15,92 +15,16 @@
   when:
     - platform == 'nxos'
     - not ansible_check_mode
+    - rib_routes_list is defined
+    - fib_entries_list is defined
   block:
-    - name: Extract RIB and FIB from pre-gathered data
+    - name: Use pre-parsed RIB and FIB data
       ansible.builtin.set_fact:
-        rib_data: "{{ nxos_validation_data.stdout[2] }}"
-        fib_data: "{{ nxos_validation_data.stdout[3] }}"
-      when:
-        - nxos_validation_data is defined
-        - nxos_validation_data.stdout is defined
-
-    - name: Parse RIB data (routing table)
-      ansible.builtin.set_fact:
-        routing_table: "{{ rib_data if rib_data is mapping else (rib_data | from_json) }}"
-      when:
-        - rib_data is defined
-
-    - name: Parse FIB data (forwarding table)
-      ansible.builtin.set_fact:
-        forwarding_table: "{{ fib_data if fib_data is mapping else (fib_data | from_json) }}"
-      when:
-        - fib_data is defined
-
-    - name: Extract route counts from RIB
-      ansible.builtin.set_fact:
-        total_routes: >-
-          {{
-            routing_table.TABLE_vrf.ROW_vrf
-            | map(attribute='TABLE_addrf')
-            | map(attribute='ROW_addrf')
-            | map(attribute='TABLE_prefix')
-            | map(attribute='ROW_prefix')
-            | flatten
-            | length
-          }}
-        static_routes: >-
-          {{
-            routing_table.TABLE_vrf.ROW_vrf
-            | map(attribute='TABLE_addrf')
-            | map(attribute='ROW_addrf')
-            | map(attribute='TABLE_prefix')
-            | map(attribute='ROW_prefix')
-            | flatten
-            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined')
-            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'static')
-            | list
-          }}
-        connected_routes: >-
-          {{
-            routing_table.TABLE_vrf.ROW_vrf
-            | map(attribute='TABLE_addrf')
-            | map(attribute='ROW_addrf')
-            | map(attribute='TABLE_prefix')
-            | map(attribute='ROW_prefix')
-            | flatten
-            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined')
-            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'direct')
-            | list
-          }}
-        bgp_routes: >-
-          {{
-            routing_table.TABLE_vrf.ROW_vrf
-            | map(attribute='TABLE_addrf')
-            | map(attribute='ROW_addrf')
-            | map(attribute='TABLE_prefix')
-            | map(attribute='ROW_prefix')
-            | flatten
-            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined')
-            | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'bgp')
-            | list
-          }}
-      when:
-        - routing_table is defined
-        - routing_table.TABLE_vrf is defined
-
-    - name: Extract FIB statistics
-      ansible.builtin.set_fact:
-        fib_entries: >-
-          {{
-            forwarding_table.TABLE_vrf.ROW_vrf
-            | map(attribute='TABLE_prefix')
-            | map(attribute='ROW_prefix')
-            | flatten
-            | length
-          }}
-      when:
-        - forwarding_table is defined
-        - forwarding_table.TABLE_vrf is defined
+        total_routes: "{{ rib_routes_list | length }}"
+        fib_entries: "{{ fib_entries_list | length }}"
+        static_routes: "{{ rib_routes_list | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined') | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'static') | list }}"
+        connected_routes: "{{ rib_routes_list | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined') | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'direct') | list }}"
+        bgp_routes: "{{ rib_routes_list | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined') | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'bgp') | list }}"
 
     - name: Validate RIB-FIB consistency
       ansible.builtin.set_fact:

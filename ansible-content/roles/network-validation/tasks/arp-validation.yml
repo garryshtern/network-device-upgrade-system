@@ -1,7 +1,7 @@
 ---
 # ARP and MAC Table Validation
 # Validates ARP table entries and MAC address table
-# Uses pre-gathered data from connectivity-check (nxos_validation_data)
+# Uses pre-parsed data from network-resources-gathering (arp_entries_list, mac_entries_list)
 # DESIGN: Single block pattern with platform gate
 #
 # FEATURES:
@@ -14,36 +14,19 @@
     - platform == 'nxos'
     - not ansible_check_mode
   block:
-    - name: Enforce NX-OS validation data availability
+    - name: Enforce pre-parsed ARP and MAC data availability
       ansible.builtin.assert:
         that:
-          - nxos_validation_data is defined
-          - nxos_validation_data.stdout is defined
-          - nxos_validation_data.stdout | length == 2
+          - arp_entries_list is defined
+          - mac_entries_list is defined
         fail_msg:
-          - "NX-OS validation data not available (ARP and MAC)"
+          - "Pre-parsed ARP and MAC data not available"
           - "network-resources-gathering must run successfully before ARP validation"
 
-    - name: Extract ARP and MAC data from pre-gathered data
+    - name: Use pre-parsed ARP and MAC data
       ansible.builtin.set_fact:
-        arp_data: "{{ nxos_validation_data.stdout[0] }}"
-        mac_data: "{{ nxos_validation_data.stdout[1] }}"
-
-    - name: Parse ARP table data
-      ansible.builtin.set_fact:
-        arp_table: "{{ arp_data if arp_data is mapping else (arp_data | from_json) }}"
-
-    - name: Parse MAC table data
-      ansible.builtin.set_fact:
-        mac_table: "{{ mac_data if mac_data is mapping else (mac_data | from_json) }}"
-
-    - name: Extract ARP entries
-      ansible.builtin.set_fact:
-        arp_entries: "{{ arp_table.TABLE_vrf.ROW_vrf | map(attribute='TABLE_adj') | map(attribute='ROW_adj') | flatten }}"
-
-    - name: Extract MAC entries
-      ansible.builtin.set_fact:
-        mac_entries: "{{ mac_table.TABLE_mac_address.ROW_mac_address }}"
+        arp_entries: "{{ arp_entries_list }}"
+        mac_entries: "{{ mac_entries_list }}"
 
     - name: Classify ARP entries by type
       ansible.builtin.set_fact:

@@ -1,76 +1,41 @@
 ---
 # Multicast Protocol Validation
 # Validates PIM, IGMP, RP configuration, and multicast routing
-# Uses pre-gathered data from connectivity-check (nxos_validation_data)
+# Uses pre-parsed data from network-resources-gathering
 # DESIGN: Single block pattern with platform gate
+#
+# DATA SOURCES:
+# - PIM/IGMP/mroute: Pre-parsed from network-resources-gathering (pim_*_list, igmp_*_list, mroute_*)
+# - Anycast RP: Gathered on-demand (not in base requirements, optional)
 #
 # FEATURES:
 # - PIM neighbor and interface validation
 # - IGMP group and interface validation
 # - RP (Rendezvous Point) configuration and reachability
-# - Anycast RP validation (not pre-gathered)
-# - Multicast routing table validation (not pre-gathered)
+# - Anycast RP validation (gathered on-demand)
+# - Multicast routing table validation (pre-parsed)
 # - Only validates if PIM is configured
 
-- name: NX-OS Multicast Validation (uses pre-gathered PIM/IGMP data from connectivity-check)
+- name: NX-OS Multicast Validation (uses pre-parsed PIM/IGMP/mroute data from network-resources-gathering)
   when:
     - platform == 'nxos'
     - not ansible_check_mode
     - multicast_enabled | bool
   block:
-    - name: Extract PIM and IGMP data from pre-gathered data
+    - name: Use pre-parsed PIM and IGMP data (if available)
       ansible.builtin.set_fact:
-        pim_interface_data: "{{ nxos_validation_data.stdout[5] }}"
-        pim_neighbor_data: "{{ nxos_validation_data.stdout[6] }}"
-        pim_rp_data: "{{ nxos_validation_data.stdout[7] }}"
-        igmp_interface_data: "{{ nxos_validation_data.stdout[8] }}"
-        igmp_groups_data: "{{ nxos_validation_data.stdout[9] }}"
+        pim_interfaces: "{{ pim_interfaces_list }}"
+        pim_neighbors: "{{ pim_neighbors_list }}"
+        pim_rp_info: "{{ pim_rps_list }}"
+        igmp_interfaces: "{{ igmp_interfaces_list }}"
+        igmp_groups: "{{ igmp_groups_list }}"
+        pim_configured: "{{ (pim_interfaces_list | length > 0) or (pim_neighbors_list | length > 0) }}"
       when:
-        - nxos_validation_data is defined
-        - nxos_validation_data.stdout is defined
-
-    - name: Parse PIM data
-      ansible.builtin.set_fact:
-        pim_interface_table: "{{ pim_interface_data if pim_interface_data is mapping else (pim_interface_data | from_json) }}"
-        pim_neighbor_table: "{{ pim_neighbor_data if pim_neighbor_data is mapping else (pim_neighbor_data | from_json) }}"
-        pim_rp_table: "{{ pim_rp_data if pim_rp_data is mapping else (pim_rp_data | from_json) }}"
-      when:
-        - pim_interface_data is defined
-        - pim_neighbor_data is defined
-        - pim_rp_data is defined
-
-    - name: Parse IGMP data
-      ansible.builtin.set_fact:
-        igmp_interface_table: "{{ igmp_interface_data if igmp_interface_data is mapping else (igmp_interface_data | from_json) }}"
-        igmp_groups_table: "{{ igmp_groups_data if igmp_groups_data is mapping else (igmp_groups_data | from_json) }}"
-      when:
-        - igmp_interface_data is defined
-        - igmp_groups_data is defined
-
-    - name: Extract PIM entries
-      ansible.builtin.set_fact:
-        pim_interfaces: "{{ pim_interface_table.TABLE_intf.ROW_intf if pim_interface_table.TABLE_intf is defined else [] }}"
-        pim_neighbors: "{{ pim_neighbor_table.TABLE_neighbor.ROW_neighbor if pim_neighbor_table.TABLE_neighbor is defined else [] }}"
-        pim_rp_info: "{{ pim_rp_table.TABLE_rp.ROW_rp if pim_rp_table.TABLE_rp is defined else [] }}"
-      when:
-        - pim_interface_table is defined
-        - pim_neighbor_table is defined
-        - pim_rp_table is defined
-
-    - name: Extract IGMP entries
-      ansible.builtin.set_fact:
-        igmp_interfaces: "{{ igmp_interface_table.TABLE_intf.ROW_intf if igmp_interface_table.TABLE_intf is defined else [] }}"
-        igmp_groups: "{{ igmp_groups_table.TABLE_group.ROW_group if igmp_groups_table.TABLE_group is defined else [] }}"
-      when:
-        - igmp_interface_table is defined
-        - igmp_groups_table is defined
-
-    - name: Check if PIM is configured
-      ansible.builtin.set_fact:
-        pim_configured: "{{ (pim_interfaces | length > 0) or (pim_neighbors | length > 0) }}"
-      when:
-        - pim_interfaces is defined
-        - pim_neighbors is defined
+        - pim_interfaces_list is defined
+        - pim_neighbors_list is defined
+        - pim_rps_list is defined
+        - igmp_interfaces_list is defined
+        - igmp_groups_list is defined
 
     - name: Classify PIM neighbor states
       ansible.builtin.set_fact:
@@ -116,21 +81,11 @@
         - anycast_rp_info is defined
         - anycast_rp_info is succeeded
 
-    - name: Get multicast routing table (not pre-gathered)
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip mroute summary | json
-          - show ip mroute | json
-      register: mroute_info
-      failed_when: false
-
-    - name: Parse multicast routes
+    - name: Use pre-parsed mroute data (if available)
       ansible.builtin.set_fact:
-        mroute_summary: "{{ mroute_info.stdout[0] | from_json }}"
-        mroute_entries: "{{ mroute_info.stdout[1] | from_json | json_query('TABLE_mroute.ROW_mroute') }}"
+        mroute_entries: "{{ mroute_entries_list }}"
       when:
-        - mroute_info is defined
-        - mroute_info is succeeded
+        - mroute_entries_list is defined
 
 - name: Store multicast baseline (NX-OS)
   when:
