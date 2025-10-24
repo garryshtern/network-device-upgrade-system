@@ -222,15 +222,19 @@
         - gathered_arp_data is defined
         - gathered_mac_data is defined
 
-    - name: Extract routing and BFD lists
+    - name: Extract RIB routes list
       ansible.builtin.set_fact:
         rib_routes_list: "{{ gathered_rib_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_addrf') | map(attribute='ROW_addrf') | map(attribute='TABLE_prefix') | map(attribute='ROW_prefix') | flatten }}"
+      when:
+        - gathered_rib_data is defined
+        - gathered_rib_data.TABLE_vrf is defined
+
+    - name: Extract FIB entries list
+      ansible.builtin.set_fact:
         fib_entries_list: "{{ gathered_fib_data.TABLE_vrf.ROW_vrf | map(attribute='TABLE_prefix') | map(attribute='ROW_prefix') | flatten }}"
       when:
-        - gathered_arp_data is defined
-        - gathered_mac_data is defined
-        - gathered_rib_data is defined
         - gathered_fib_data is defined
+        - gathered_fib_data.TABLE_vrf is defined
 
     - name: Extract BFD sessions list
       ansible.builtin.set_fact:
@@ -279,6 +283,7 @@
         mroute_summary: "{{ gathered_mroute_summary_data }}"
       when:
         - gathered_mroute_summary_data is defined
+        - gathered_mroute_summary_data.TABLE_vrf is defined
 
     - name: Extract mroute entries list
       ansible.builtin.set_fact:
@@ -286,6 +291,13 @@
       when:
         - gathered_mroute_data is defined
         - gathered_mroute_data.TABLE_mroute is defined
+
+    - name: Extract Anycast RP sets
+      ansible.builtin.set_fact:
+        anycast_rp_sets: "{{ gathered_anycast_rp_data.TABLE_anycast_rp.ROW_anycast_rp }}"
+      when:
+        - gathered_anycast_rp_data is defined
+        - gathered_anycast_rp_data.TABLE_anycast_rp is defined
 
     - name: Build operational data statistics
       ansible.builtin.set_fact:
@@ -301,9 +313,6 @@
           igmp_interfaces: "{{ igmp_interfaces_list | length if igmp_interfaces_list is defined else 0 }}"
           igmp_groups: "{{ igmp_groups_list | length if igmp_groups_list is defined else 0 }}"
           mroute_entries: "{{ mroute_entries_list | length if mroute_entries_list is defined else 0 }}"
-      when:
-        - arp_entries_list is defined
-        - mac_entries_list is defined
 
     - name: Display gathered network resources summary
       ansible.builtin.debug:

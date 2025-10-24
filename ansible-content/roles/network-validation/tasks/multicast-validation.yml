@@ -8,7 +8,7 @@
 # - PIM interfaces/neighbors/RPs: pim_interfaces_list, pim_neighbors_list, pim_rps_list
 # - IGMP interfaces/groups: igmp_interfaces_list, igmp_groups_list
 # - Multicast routes: mroute_entries_list, mroute_summary
-# - Anycast RP: gathered_anycast_rp_data
+# - Anycast RP: anycast_rp_sets
 #
 # FEATURES:
 # - PIM neighbor and interface validation
@@ -69,18 +69,6 @@
       when:
         - show_debug | bool
 
-    - name: Use pre-parsed Anycast RP data (if available)
-      ansible.builtin.set_fact:
-        anycast_rp_sets: "{{ gathered_anycast_rp_data | json_query('TABLE_anycast_rp.ROW_anycast_rp') }}"
-      when:
-        - gathered_anycast_rp_data is defined
-
-    - name: Use pre-parsed mroute data (if available)
-      ansible.builtin.set_fact:
-        mroute_entries: "{{ mroute_entries_list }}"
-      when:
-        - mroute_entries_list is defined
-
 - name: Store multicast baseline (NX-OS)
   when:
     - platform == 'nxos'
@@ -96,7 +84,7 @@
       igmp_groups_total: "{{ igmp_groups | length if igmp_groups is defined else 0 }}"
       rp_count: "{{ pim_rp_info | length if pim_rp_info is defined else 0 }}"
       anycast_rp_sets: "{{ anycast_rp_sets | length if anycast_rp_sets is defined else 0 }}"
-      mroute_entries: "{{ mroute_entries | length if mroute_entries is defined else 0 }}"
+      mroute_entries: "{{ mroute_entries_list | length if mroute_entries_list is defined else 0 }}"
 
 - name: Store multicast baseline for check mode
   when:
