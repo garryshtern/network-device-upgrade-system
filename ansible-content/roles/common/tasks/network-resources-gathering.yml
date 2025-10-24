@@ -87,22 +87,22 @@
 
     - name: Parse operational data (required)
       ansible.builtin.set_fact:
-        gathered_arp_data: "{{ nxos_validation_data.stdout[0] | from_json }}"
-        gathered_mac_data: "{{ nxos_validation_data.stdout[1] | from_json }}"
+        gathered_arp_data: "{{ nxos_validation_data.stdout[0] }}"
+        gathered_mac_data: "{{ nxos_validation_data.stdout[1] }}"
       when: nxos_validation_data is succeeded
 
     - name: Parse operational data (optional)
       ansible.builtin.set_fact:
-        gathered_rib_data: "{{ nxos_optional_validation_data.stdout[0] | from_json }}"
-        gathered_fib_data: "{{ nxos_optional_validation_data.stdout[1] | from_json }}"
-        gathered_bfd_data: "{{ nxos_optional_validation_data.stdout[2] | from_json }}"
-        gathered_pim_interface_data: "{{ nxos_optional_validation_data.stdout[3] | from_json }}"
-        gathered_pim_neighbor_data: "{{ nxos_optional_validation_data.stdout[4] | from_json }}"
-        gathered_pim_rp_data: "{{ nxos_optional_validation_data.stdout[5] | from_json }}"
-        gathered_igmp_interface_data: "{{ nxos_optional_validation_data.stdout[6] | from_json }}"
-        gathered_igmp_groups_data: "{{ nxos_optional_validation_data.stdout[7] | from_json }}"
-        gathered_mroute_summary_data: "{{ nxos_optional_validation_data.stdout[8] | from_json }}"
-        gathered_mroute_data: "{{ nxos_optional_validation_data.stdout[9] | from_json }}"
+        gathered_rib_data: "{{ nxos_optional_validation_data.stdout[0] }}"
+        gathered_fib_data: "{{ nxos_optional_validation_data.stdout[1] }}"
+        gathered_bfd_data: "{{ nxos_optional_validation_data.stdout[2] }}"
+        gathered_pim_interface_data: "{{ nxos_optional_validation_data.stdout[3] }}"
+        gathered_pim_neighbor_data: "{{ nxos_optional_validation_data.stdout[4] }}"
+        gathered_pim_rp_data: "{{ nxos_optional_validation_data.stdout[5] }}"
+        gathered_igmp_interface_data: "{{ nxos_optional_validation_data.stdout[6] }}"
+        gathered_igmp_groups_data: "{{ nxos_optional_validation_data.stdout[7] }}"
+        gathered_mroute_summary_data: "{{ nxos_optional_validation_data.stdout[8] }}"
+        gathered_mroute_data: "{{ nxos_optional_validation_data.stdout[9] }}"
       when: nxos_optional_validation_data is succeeded
 
     - name: Extract ARP and MAC lists
