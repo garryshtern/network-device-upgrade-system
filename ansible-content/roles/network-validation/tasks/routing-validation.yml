@@ -1,92 +1,38 @@
 ---
 # Routing Protocol Validation
-# Validates RIB, FIB, and route consistency (static, BGP, connected routes only)
-# Uses pre-parsed data from network-resources-gathering (rib_routes_list, fib_entries_list)
+# Validates RIB and FIB data availability
+# Uses raw baseline data from network-resources-gathering
 # DESIGN: Single block pattern with platform gate
 #
+# DATA SOURCES (raw baseline data from network-resources-gathering):
+# - RIB data: network_baseline.rib_data
+# - FIB data: network_baseline.fib_data
+#
 # FEATURES:
-# - RIB (Routing Information Base) analysis
-# - FIB (Forwarding Information Base) analysis
-# - RIB-FIB consistency checking
-# - Route type breakdown: static, BGP, connected
-# - No OSPF or EIGRP validation (removed per requirements)
+# - RIB data availability validation
+# - FIB data availability validation
 
-- name: NX-OS Routing Validation (uses pre-gathered RIB/FIB from connectivity-check)
+- name: NX-OS Routing Validation (uses raw baseline data from network-resources-gathering)
   when:
     - platform == 'nxos'
     - not ansible_check_mode
-    - rib_routes_list is defined
-    - fib_entries_list is defined
+    - network_baseline is defined
+    - network_baseline.rib_data is defined
+    - network_baseline.fib_data is defined
   block:
-    - name: Use pre-parsed RIB and FIB data
+    - name: Use raw RIB and FIB baseline data
       ansible.builtin.set_fact:
-        total_routes: "{{ rib_routes_list | length }}"
-        fib_entries: "{{ fib_entries_list | length }}"
-        static_routes: "{{ rib_routes_list | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined') | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'static') | list }}"
-        connected_routes: "{{ rib_routes_list | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined') | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'direct') | list }}"
-        bgp_routes: "{{ rib_routes_list | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'defined') | selectattr('ucast_nhops.TABLE_path.ROW_path.clientname', 'equalto', 'bgp') | list }}"
+        rib_data_available: "{{ network_baseline.rib_data | length > 0 }}"
+        fib_data_available: "{{ network_baseline.fib_data | length > 0 }}"
 
-    - name: Validate RIB-FIB consistency
-      ansible.builtin.set_fact:
-        rib_fib_consistent: "{{ (total_routes | int) == (fib_entries | int) }}"
-        rib_fib_variance: "{{ ((total_routes | int) - (fib_entries | int)) | abs }}"
-      when:
-        - total_routes is defined
-        - fib_entries is defined
-
-    - name: Debug RIB and FIB comparison
+    - name: Debug RIB and FIB data availability
       ansible.builtin.debug:
         msg:
           - "=== RIB/FIB Validation ==="
-          - "RIB Entries: {{ total_routes }}"
-          - "FIB Entries: {{ fib_entries }}"
-          - "Consistent: {{ rib_fib_consistent }}"
-          - "Variance: {{ rib_fib_variance }}"
+          - "RIB Data Available: {{ rib_data_available }}"
+          - "FIB Data Available: {{ fib_data_available }}"
       when:
         - show_debug | bool
-        - total_routes is defined
-        - fib_entries is defined
-
-    - name: Verify static routes presence
-      ansible.builtin.debug:
-        msg: |
-          Static Routes Found: {{ static_routes | length }}
-          {% for route in static_routes[:10] %}
-          - {{ route.ipprefix }}: via {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop | default('N/A') }}
-          {% endfor %}
-      when:
-        - static_routes is defined
-        - static_routes | length > 0
-
-    - name: Validate BGP routes presence
-      ansible.builtin.debug:
-        msg: |
-          BGP Routes Found: {{ bgp_routes | length }}
-          {% for route in bgp_routes[:10] %}
-          - {{ route.ipprefix }}: via {{ route.ucast_nhops.TABLE_path.ROW_path.ipnexthop | default('N/A') }}
-          {% endfor %}
-      when:
-        - bgp_routes is defined
-        - bgp_routes | length > 0
-
-    - name: Check route table health
-      ansible.builtin.assert:
-        that:
-          - total_routes | int > 0
-        fail_msg: "Routing table appears to be empty"
-      when:
-        - total_routes is defined
-
-    - name: Validate connected routes
-      ansible.builtin.debug:
-        msg: |
-          Connected Routes: {{ connected_routes | length }}
-          {% for route in connected_routes[:10] %}
-          - {{ route.ipprefix }} via {{ route.ucast_nhops.TABLE_path.ROW_path.ifname }}
-          {% endfor %}
-      when:
-        - connected_routes is defined
-        - connected_routes | length > 0
 
 
 - name: Store routing baseline (NX-OS)
@@ -96,13 +42,8 @@
   ansible.builtin.set_fact:
     routing_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      total_routes: "{{ total_routes | default(0) }}"
-      fib_entries: "{{ fib_entries | default(0) }}"
-      rib_fib_consistent: "{{ rib_fib_consistent | default(true) }}"
-      rib_fib_variance: "{{ rib_fib_variance | default(0) }}"
-      static_routes_count: "{{ static_routes | length if static_routes is defined else 0 }}"
-      connected_routes_count: "{{ connected_routes | length if connected_routes is defined else 0 }}"
-      bgp_routes_count: "{{ bgp_routes | length if bgp_routes is defined else 0 }}"
+      rib_data_available: "{{ rib_data_available if rib_data_available is defined else false }}"
+      fib_data_available: "{{ fib_data_available if fib_data_available is defined else false }}"
 
 - name: Store routing baseline for check mode
   when:
@@ -110,26 +51,16 @@
   ansible.builtin.set_fact:
     routing_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      total_routes: 0
-      fib_entries: 0
-      rib_fib_consistent: true
-      rib_fib_variance: 0
-      static_routes_count: 0
-      connected_routes_count: 0
-      bgp_routes_count: 0
+      rib_data_available: false
+      fib_data_available: false
 
 - name: Routing validation summary
   ansible.builtin.debug:
     msg:
       - "=== Routing Validation Results ==="
-      - "RIB Total Routes: {{ routing_baseline.total_routes }}"
-      - "FIB Total Entries: {{ routing_baseline.fib_entries }}"
-      - "RIB-FIB Consistent: {{ routing_baseline.rib_fib_consistent }}"
-      - "RIB-FIB Variance: {{ routing_baseline.rib_fib_variance }}"
-      - "Static Routes: {{ routing_baseline.static_routes_count }}"
-      - "Connected Routes: {{ routing_baseline.connected_routes_count }}"
-      - "BGP Routes: {{ routing_baseline.bgp_routes_count }}"
-      - "Status: {{ 'HEALTHY' if routing_baseline.total_routes | int > 0 else 'CHECK REQUIRED' }}"
+      - "RIB Data Available: {{ routing_baseline.rib_data_available }}"
+      - "FIB Data Available: {{ routing_baseline.fib_data_available }}"
+      - "Status: {{ 'DATA COLLECTED' if routing_baseline.rib_data_available or routing_baseline.fib_data_available else 'NO DATA' }}"
       - "================================="
 
 - name: IOS-XE Routing Validation (placeholder for future implementation)

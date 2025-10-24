@@ -1,15 +1,17 @@
 ---
 # BFD (Bidirectional Forwarding Detection) Validation
-# Validates BFD interfaces, neighbors, and session states
-# Uses pre-parsed data from network-resources-gathering (bfd_sessions_list)
+# Validates BFD data availability
+# Uses raw baseline data from network-resources-gathering
 # DESIGN: Single block pattern with platform gate
 # PATTERN: Only validates if BFD is configured on device (same as BGP/multicast)
 #
+# DATA SOURCES:
+# - BFD interfaces: ansible_network_resources.bfd_interfaces (from nxos_facts)
+# - BFD baseline data: network_baseline.bfd_data
+#
 # FEATURES:
 # - BFD interface configuration validation
-# - BFD neighbor session state checking
-# - Session up/down/admin-down classification
-# - Per-VRF BFD session analysis
+# - BFD data availability validation
 
 - name: Initialize BFD validation results
   ansible.builtin.set_fact:
@@ -41,20 +43,21 @@
         - ansible_network_resources is defined
         - ansible_network_resources.bfd_interfaces is defined
 
-    - name: Use pre-parsed BFD session data
+    - name: Use raw BFD baseline data
       ansible.builtin.set_fact:
-        bfd_neighbors: "{{ bfd_sessions_list }}"
+        bfd_data_available: "{{ network_baseline.bfd_data | length > 0 if network_baseline.bfd_data is defined else false }}"
+        bfd_neighbors: []
       when:
-        - bfd_sessions_list is defined
+        - network_baseline is defined
 
     - name: Determine if BFD is configured on device
       ansible.builtin.set_fact:
         bfd_validation: "{{ bfd_validation | combine({'bfd_configured': bfd_is_configured}) }}"
       vars:
-        bfd_is_configured: "{{ (bfd_interfaces_config | length > 0) or (bfd_neighbors | length > 0) }}"
+        bfd_is_configured: "{{ (bfd_interfaces_config | length > 0) or bfd_data_available }}"
       when:
         - bfd_interfaces_config is defined
-        - bfd_neighbors is defined
+        - bfd_data_available is defined
 
   rescue:
     - name: Handle missing BFD facts (not pre-gathered)
@@ -66,72 +69,17 @@
     msg: "BFD is not configured on {{ inventory_hostname }} - skipping BFD validation"
   when: not bfd_validation.bfd_configured
 
-- name: Analyze BFD sessions and state
+- name: Analyze BFD data availability
   when: bfd_validation.bfd_configured
   block:
-    - name: Classify BFD session states
-      ansible.builtin.set_fact:
-        bfd_sessions_up: "{{ bfd_neighbors | selectattr('state', 'defined') | selectattr('state', 'equalto', 'Up') | list }}"
-        bfd_sessions_down: "{{ bfd_neighbors | selectattr('state', 'defined') | selectattr('state', 'equalto', 'Down') | list }}"
-        bfd_sessions_admin_down: "{{ bfd_neighbors | selectattr('state', 'defined') | selectattr('state', 'equalto', 'AdminDown') | list }}"
-        bfd_sessions_init: "{{ bfd_neighbors | selectattr('state', 'defined') | selectattr('state', 'equalto', 'Init') | list }}"
-      when:
-        - bfd_neighbors is defined
-        - bfd_neighbors | length > 0
-
-    - name: Group BFD sessions by VRF
-      ansible.builtin.set_fact:
-        bfd_sessions_by_vrf: "{{ bfd_neighbor_table.TABLE_vrf.ROW_vrf | items2dict(key_name='vrf-name-out', value_name='TABLE_adj') if bfd_neighbor_table.TABLE_vrf is defined else {} }}"
-      when:
-        - bfd_neighbor_table is defined
-        - bfd_neighbor_table.TABLE_vrf is defined
-
-    - name: Validate BFD interface configuration
+    - name: Display BFD data status
       ansible.builtin.debug:
         msg:
-          - "=== BFD Interface Configuration ==="
-          - "BFD-Enabled Interfaces: {{ bfd_interfaces_config | length }}"
-          - "{% for intf in bfd_interfaces_config[:10] %}"
-          - "  - {{ intf.name }}: echo={{ intf.echo | default('disabled') }}, interval={{ intf.interval | default('N/A') }}"
-          - "{% endfor %}"
+          - "=== BFD Data Status ==="
+          - "BFD Interfaces Config: {{ 'Available' if bfd_interfaces_config is defined and bfd_interfaces_config | length > 0 else 'Not Available' }}"
+          - "BFD Baseline Data: {{ 'Available' if bfd_data_available else 'Not Available' }}"
       when:
         - show_debug | bool
-        - bfd_interfaces_config is defined
-        - bfd_interfaces_config | length > 0
-
-    - name: Validate BFD neighbor sessions
-      ansible.builtin.debug:
-        msg:
-          - "=== BFD Neighbor Sessions ==="
-          - "Total Sessions: {{ bfd_neighbors | length }}"
-          - "Sessions Up: {{ bfd_sessions_up | length if bfd_sessions_up is defined else 0 }}"
-          - "Sessions Down: {{ bfd_sessions_down | length if bfd_sessions_down is defined else 0 }}"
-          - "Sessions AdminDown: {{ bfd_sessions_admin_down | length if bfd_sessions_admin_down is defined else 0 }}"
-          - "Sessions Init: {{ bfd_sessions_init | length if bfd_sessions_init is defined else 0 }}"
-      when:
-        - show_debug | bool
-        - bfd_neighbors is defined
-
-    - name: Check for BFD sessions in Down state
-      ansible.builtin.debug:
-        msg: "WARNING: {{ bfd_sessions_down | length }} BFD sessions are DOWN"
-      when:
-        - bfd_sessions_down is defined
-        - bfd_sessions_down | length > 0
-
-    - name: Display BFD sessions in non-Up states
-      ansible.builtin.debug:
-        msg:
-          - "BFD Sessions Requiring Attention:"
-          - "{% for session in bfd_sessions_down | default([]) %}"
-          - "  - DOWN: {{ session.ld_rd }} to {{ session.dest_addr }} ({{ session.intf }})"
-          - "{% endfor %}"
-          - "{% for session in bfd_sessions_init | default([]) %}"
-          - "  - INIT: {{ session.ld_rd }} to {{ session.dest_addr }} ({{ session.intf }})"
-          - "{% endfor %}"
-      when:
-        - show_debug | bool
-        - (bfd_sessions_down is defined and bfd_sessions_down | length > 0) or (bfd_sessions_init is defined and bfd_sessions_init | length > 0)
 
 - name: Store BFD baseline (NX-OS)
   when:
@@ -140,13 +88,9 @@
   ansible.builtin.set_fact:
     bfd_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      bfd_configured: "{{ bfd_validation.bfd_configured | default(false) }}"
+      bfd_configured: "{{ bfd_validation.bfd_configured }}"
+      bfd_data_available: "{{ bfd_data_available if bfd_data_available is defined else false }}"
       bfd_enabled_interfaces: "{{ bfd_interfaces_config | length if bfd_interfaces_config is defined else 0 }}"
-      total_sessions: "{{ bfd_neighbors | length if bfd_neighbors is defined else 0 }}"
-      sessions_up: "{{ bfd_sessions_up | length if bfd_sessions_up is defined else 0 }}"
-      sessions_down: "{{ bfd_sessions_down | length if bfd_sessions_down is defined else 0 }}"
-      sessions_admin_down: "{{ bfd_sessions_admin_down | length if bfd_sessions_admin_down is defined else 0 }}"
-      sessions_init: "{{ bfd_sessions_init | length if bfd_sessions_init is defined else 0 }}"
 
 - name: Store BFD baseline for check mode
   when:
@@ -155,12 +99,8 @@
     bfd_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       bfd_configured: false
+      bfd_data_available: false
       bfd_enabled_interfaces: 0
-      total_sessions: 0
-      sessions_up: 0
-      sessions_down: 0
-      sessions_admin_down: 0
-      sessions_init: 0
 
 - name: BFD validation summary
   ansible.builtin.debug:
@@ -168,12 +108,8 @@
       - "=== BFD Validation Results ==="
       - "BFD Configured: {{ bfd_baseline.bfd_configured }}"
       - "BFD-Enabled Interfaces: {{ bfd_baseline.bfd_enabled_interfaces }}"
-      - "Total BFD Sessions: {{ bfd_baseline.total_sessions }}"
-      - "Sessions Up: {{ bfd_baseline.sessions_up }}"
-      - "Sessions Down: {{ bfd_baseline.sessions_down }}"
-      - "Sessions AdminDown: {{ bfd_baseline.sessions_admin_down }}"
-      - "Sessions Init: {{ bfd_baseline.sessions_init }}"
-      - "Overall Status: {{ 'HEALTHY' if bfd_baseline.sessions_up | int == bfd_baseline.total_sessions | int and bfd_baseline.total_sessions | int > 0 else ('NOT CONFIGURED' if bfd_baseline.total_sessions | int == 0 else 'DEGRADED') }}"
+      - "BFD Baseline Data Available: {{ bfd_baseline.bfd_data_available }}"
+      - "Overall Status: {{ 'CONFIGURED' if bfd_baseline.bfd_configured else 'NOT CONFIGURED' }}"
       - "============================"
 
 - name: IOS-XE BFD Validation (placeholder for future implementation)

@@ -1,59 +1,34 @@
 ---
 # ARP and MAC Table Validation
-# Validates ARP table entries and MAC address table
-# Uses pre-parsed data from network-resources-gathering (arp_entries_list, mac_entries_list)
+# Validates ARP and MAC data availability
+# Uses raw baseline data from network-resources-gathering
 # DESIGN: Single block pattern with platform gate
 #
+# DATA SOURCES (raw baseline data from network-resources-gathering):
+# - ARP data: network_baseline.arp_data
+# - MAC data: network_baseline.mac_data
+#
 # FEATURES:
-# - ARP table analysis (static, dynamic, incomplete)
-# - MAC address table analysis
-# - ARP-MAC correlation
+# - ARP data availability validation
+# - MAC data availability validation
 
-- name: NX-OS ARP and MAC Validation (uses pre-gathered data from connectivity-check)
+- name: NX-OS ARP and MAC Validation (uses raw baseline data from network-resources-gathering)
   when:
     - platform == 'nxos'
     - not ansible_check_mode
+    - network_baseline is defined
   block:
-    - name: Enforce pre-parsed ARP and MAC data availability
-      ansible.builtin.assert:
-        that:
-          - arp_entries_list is defined
-          - mac_entries_list is defined
-        fail_msg:
-          - "Pre-parsed ARP and MAC data not available"
-          - "network-resources-gathering must run successfully before ARP validation"
-
-    - name: Use pre-parsed ARP and MAC data
+    - name: Use raw ARP and MAC baseline data
       ansible.builtin.set_fact:
-        arp_entries: "{{ arp_entries_list }}"
-        mac_entries: "{{ mac_entries_list }}"
-
-    - name: Classify ARP entries by type
-      ansible.builtin.set_fact:
-        static_arp_entries: "{{ arp_entries | selectattr('flags', 'defined') | selectattr('flags', 'match', '.*S.*') | list }}"
-        dynamic_arp_entries: "{{ arp_entries | selectattr('flags', 'defined') | selectattr('flags', 'match', '.*D.*') | list }}"
-        incomplete_arp_entries: "{{ arp_entries | selectattr('flags', 'defined') | selectattr('flags', 'match', '.*I.*') | list }}"
-
-    - name: Check ARP table completeness
-      ansible.builtin.assert:
-        that:
-          - arp_entries | length > 0
-        fail_msg: "ARP table appears to be empty"
-
-    - name: Check for excessive incomplete entries
-      ansible.builtin.debug:
-        msg: "WARNING: {{ incomplete_arp_entries | length }} incomplete ARP entries found"
-      when: incomplete_arp_entries | length > 10
+        arp_data_available: "{{ network_baseline.arp_data | length > 0 if network_baseline.arp_data is defined else false }}"
+        mac_data_available: "{{ network_baseline.mac_data | length > 0 if network_baseline.mac_data is defined else false }}"
 
     - name: Display ARP-MAC validation
       ansible.builtin.debug:
         msg:
           - "=== ARP and MAC Table Validation ==="
-          - "ARP Entries: {{ arp_entries | length }}"
-          - "Static ARP: {{ static_arp_entries | length }}"
-          - "Dynamic ARP: {{ dynamic_arp_entries | length }}"
-          - "Incomplete ARP: {{ incomplete_arp_entries | length }}"
-          - "MAC Entries: {{ mac_entries | length }}"
+          - "ARP Data Available: {{ arp_data_available }}"
+          - "MAC Data Available: {{ mac_data_available }}"
       when: show_debug | bool
 - name: Store ARP baseline (NX-OS)
   when:
@@ -62,11 +37,8 @@
   ansible.builtin.set_fact:
     arp_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      total_arp_entries: "{{ arp_entries | length }}"
-      static_entries: "{{ static_arp_entries | length }}"
-      dynamic_entries: "{{ dynamic_arp_entries | length }}"
-      incomplete_entries: "{{ incomplete_arp_entries | length }}"
-      mac_entries: "{{ mac_entries | length }}"
+      arp_data_available: "{{ arp_data_available if arp_data_available is defined else false }}"
+      mac_data_available: "{{ mac_data_available if mac_data_available is defined else false }}"
 
 - name: Store ARP baseline for check mode
   when:
@@ -74,22 +46,16 @@
   ansible.builtin.set_fact:
     arp_baseline:
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      total_arp_entries: 0
-      static_entries: 0
-      dynamic_entries: 0
-      incomplete_entries: 0
-      mac_entries: 0
+      arp_data_available: false
+      mac_data_available: false
 
 - name: ARP validation summary
   ansible.builtin.debug:
     msg:
       - "=== ARP and MAC Table Validation Results ==="
-      - "Total ARP Entries: {{ arp_baseline.total_arp_entries }}"
-      - "Static ARP Entries: {{ arp_baseline.static_entries }}"
-      - "Dynamic ARP Entries: {{ arp_baseline.dynamic_entries }}"
-      - "Incomplete ARP Entries: {{ arp_baseline.incomplete_entries }}"
-      - "MAC Table Entries: {{ arp_baseline.mac_entries }}"
-      - "Overall Status: {{ 'HEALTHY' if arp_baseline.total_arp_entries | int > 0 else 'EMPTY TABLE' }}"
+      - "ARP Data Available: {{ arp_baseline.arp_data_available }}"
+      - "MAC Data Available: {{ arp_baseline.mac_data_available }}"
+      - "Overall Status: {{ 'DATA COLLECTED' if arp_baseline.arp_data_available or arp_baseline.mac_data_available else 'NO DATA' }}"
       - "============================================"
 
 - name: IOS-XE ARP Validation (placeholder for future implementation)

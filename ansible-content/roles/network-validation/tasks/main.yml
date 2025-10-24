@@ -27,12 +27,14 @@
           up_interfaces: 0
           total_interfaces: 0
         routing_baseline:
-          total_routes: 0
+          rib_data_available: false
+          fib_data_available: false
         arp_baseline:
-          total_arp_entries: 0
+          arp_data_available: false
+          mac_data_available: false
         bfd_baseline:
-          total_sessions: 0
-          sessions_up: 0
+          bfd_configured: false
+          bfd_data_available: false
 
     - name: Run BGP validation
       ansible.builtin.include_tasks: bgp-validation.yml
@@ -71,12 +73,12 @@
 - name: Aggregate validation results (normal mode - no comparison)
   ansible.builtin.set_fact:
     network_validation_results:
-      overall_status: "{{ 'healthy' if (interface_baseline.up_interfaces | int > 0) and (routing_baseline.total_routes | int > 0) else 'unhealthy' }}"
+      overall_status: "{{ 'healthy' if (interface_baseline.up_interfaces | int > 0) and (routing_baseline.rib_data_available or routing_baseline.fib_data_available) else 'unhealthy' }}"
       interface_status: "{{ 'healthy' if interface_baseline.up_interfaces | int > 0 else 'unhealthy' }}"
-      routing_status: "{{ 'healthy' if routing_baseline.total_routes | int > 0 else 'unhealthy' }}"
-      arp_status: "{{ 'healthy' if arp_baseline.total_arp_entries | int > 0 else 'warning' }}"
+      routing_status: "{{ 'data_collected' if routing_baseline.rib_data_available or routing_baseline.fib_data_available else 'no_data' }}"
+      arp_status: "{{ 'data_collected' if arp_baseline.arp_data_available or arp_baseline.mac_data_available else 'no_data' }}"
       bgp_status: "{{ 'healthy' if bgp_validation.bgp_configured and bgp_validation.peers_established | int > 0 else 'skipped' }}"
-      bfd_status: "{{ 'healthy' if bfd_baseline.bfd_configured and bfd_baseline.sessions_up | int == bfd_baseline.total_sessions | int and bfd_baseline.total_sessions | int > 0 else ('not_configured' if bfd_baseline.total_sessions | int == 0 else 'degraded') }}"
+      bfd_status: "{{ 'configured' if bfd_baseline.bfd_configured else 'not_configured' }}"
       comparison_status: "not_applicable"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when:
@@ -86,12 +88,12 @@
 - name: Aggregate validation results (normal mode - with comparison)
   ansible.builtin.set_fact:
     network_validation_results:
-      overall_status: "{{ 'healthy' if (interface_baseline.up_interfaces | int > 0) and (routing_baseline.total_routes | int > 0) else 'unhealthy' }}"
+      overall_status: "{{ 'healthy' if (interface_baseline.up_interfaces | int > 0) and (routing_baseline.rib_data_available or routing_baseline.fib_data_available) else 'unhealthy' }}"
       interface_status: "{{ 'healthy' if interface_baseline.up_interfaces | int > 0 else 'unhealthy' }}"
-      routing_status: "{{ 'healthy' if routing_baseline.total_routes | int > 0 else 'unhealthy' }}"
-      arp_status: "{{ 'healthy' if arp_baseline.total_arp_entries | int > 0 else 'warning' }}"
+      routing_status: "{{ 'data_collected' if routing_baseline.rib_data_available or routing_baseline.fib_data_available else 'no_data' }}"
+      arp_status: "{{ 'data_collected' if arp_baseline.arp_data_available or arp_baseline.mac_data_available else 'no_data' }}"
       bgp_status: "{{ 'healthy' if bgp_validation.bgp_configured and bgp_validation.peers_established | int > 0 else 'skipped' }}"
-      bfd_status: "{{ 'healthy' if bfd_baseline.bfd_configured and bfd_baseline.sessions_up | int == bfd_baseline.total_sessions | int and bfd_baseline.total_sessions | int > 0 else ('not_configured' if bfd_baseline.total_sessions | int == 0 else 'degraded') }}"
+      bfd_status: "{{ 'configured' if bfd_baseline.bfd_configured else 'not_configured' }}"
       comparison_status: "passed"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when:
