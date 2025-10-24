@@ -1,0 +1,57 @@
+---
+# Reusable Error Checker and Parser for nxos_command Output
+# Checks stdout entries for "ERROR:" and populates variables accordingly
+#
+# REQUIRED INPUT VARIABLES:
+# - command_result: The registered result from nxos_command
+# - variable_mapping: Dictionary mapping variable names to stdout indices
+#   Example: {'gathered_arp_data': 0, 'gathered_mac_data': 1}
+# - fail_on_error: Boolean - true if errors should fail the playbook (required data)
+#
+# BEHAVIOR:
+# - Iterates through variable_mapping
+# - For each variable:
+#   - If stdout[index] contains "ERROR:":
+#     - If fail_on_error=true: Dump error and fail
+#     - If fail_on_error=false: Skip defining this variable (leave undefined)
+#   - If no ERROR: Define the variable with stdout[index] data
+#
+# OUTPUT:
+# - Sets variables as defined in variable_mapping (only if no ERROR)
+# - If fail_on_error=true and ERROR found: Fails with detailed error message
+
+- name: Process nxos_command output and check for errors
+  ansible.builtin.set_fact:
+    "{{ item.key }}": "{{ command_result.stdout[item.value] }}"
+  loop: "{{ variable_mapping | dict2items }}"
+  when:
+    - command_result is succeeded
+    - "'ERROR:' not in (command_result.stdout[item.value] | string)"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Check for errors and fail if required
+  block:
+    - name: Detect errors in command output
+      ansible.builtin.set_fact:
+        error_list: "{{ error_list | default([]) + [{'variable': item.key, 'index': item.value, 'output': command_result.stdout[item.value]}] }}"
+      loop: "{{ variable_mapping | dict2items }}"
+      when:
+        - command_result is succeeded
+        - "'ERROR:' in (command_result.stdout[item.value] | string)"
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Fail with error details if required data has errors
+      ansible.builtin.fail:
+        msg:
+          - "ERROR detected in required NX-OS command output"
+          - "Device: {{ inventory_hostname }}"
+          - "Failed commands:"
+          - "{% for error in error_list %}"
+          - "  - {{ error.variable }} (stdout[{{ error.index }}]): {{ error.output }}"
+          - "{% endfor %}"
+      when:
+        - fail_on_error | bool
+        - error_list is defined
+        - error_list | length > 0

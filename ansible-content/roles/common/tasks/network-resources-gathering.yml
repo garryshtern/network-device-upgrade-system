@@ -86,24 +86,30 @@
       failed_when: false
 
     - name: Parse operational data (required)
-      ansible.builtin.set_fact:
-        gathered_arp_data: "{{ nxos_validation_data.stdout[0] }}"
-        gathered_mac_data: "{{ nxos_validation_data.stdout[1] }}"
-      when: nxos_validation_data is succeeded
+      ansible.builtin.include_tasks: check-nxos-command-errors.yml
+      vars:
+        command_result: "{{ nxos_validation_data }}"
+        variable_mapping:
+          gathered_arp_data: 0
+          gathered_mac_data: 1
+        fail_on_error: true
 
     - name: Parse operational data (optional)
-      ansible.builtin.set_fact:
-        gathered_rib_data: "{{ nxos_optional_validation_data.stdout[0] }}"
-        gathered_fib_data: "{{ nxos_optional_validation_data.stdout[1] }}"
-        gathered_bfd_data: "{{ nxos_optional_validation_data.stdout[2] }}"
-        gathered_pim_interface_data: "{{ nxos_optional_validation_data.stdout[3] }}"
-        gathered_pim_neighbor_data: "{{ nxos_optional_validation_data.stdout[4] }}"
-        gathered_pim_rp_data: "{{ nxos_optional_validation_data.stdout[5] }}"
-        gathered_igmp_interface_data: "{{ nxos_optional_validation_data.stdout[6] }}"
-        gathered_igmp_groups_data: "{{ nxos_optional_validation_data.stdout[7] }}"
-        gathered_mroute_summary_data: "{{ nxos_optional_validation_data.stdout[8] }}"
-        gathered_mroute_data: "{{ nxos_optional_validation_data.stdout[9] }}"
-      when: nxos_optional_validation_data is succeeded
+      ansible.builtin.include_tasks: check-nxos-command-errors.yml
+      vars:
+        command_result: "{{ nxos_optional_validation_data }}"
+        variable_mapping:
+          gathered_rib_data: 0
+          gathered_fib_data: 1
+          gathered_bfd_data: 2
+          gathered_pim_interface_data: 3
+          gathered_pim_neighbor_data: 4
+          gathered_pim_rp_data: 5
+          gathered_igmp_interface_data: 6
+          gathered_igmp_groups_data: 7
+          gathered_mroute_summary_data: 8
+          gathered_mroute_data: 9
+        fail_on_error: false
 
     - name: Extract ARP and MAC lists
       ansible.builtin.set_fact:
