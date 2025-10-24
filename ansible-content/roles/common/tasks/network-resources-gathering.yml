@@ -171,7 +171,7 @@
 
     - name: Parse operational data (required)
       ansible.builtin.include_role:
-        name: common
+        name: cisco-nxos-upgrade
         tasks_from: check-nxos-command-errors
       vars:
         command_result: "{{ nxos_validation_data }}"
@@ -182,7 +182,7 @@
 
     - name: Parse all optional operational data
       ansible.builtin.include_role:
-        name: common
+        name: cisco-nxos-upgrade
         tasks_from: check-nxos-command-errors
       vars:
         command_result: "{{ item.result }}"

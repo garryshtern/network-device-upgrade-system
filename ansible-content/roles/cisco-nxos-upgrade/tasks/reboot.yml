@@ -103,9 +103,7 @@
   register: post_reboot_interfaces
 
 - name: Check for errors in interface data
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: check-nxos-command-errors
+  ansible.builtin.include_tasks: check-nxos-command-errors.yml
   vars:
     command_result: "{{ post_reboot_interfaces }}"
     variable_mapping:
