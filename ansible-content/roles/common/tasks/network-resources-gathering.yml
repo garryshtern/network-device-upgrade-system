@@ -63,30 +63,116 @@
     - name: Gather NX-OS operational state data (ARP and MAC required)
       cisco.nxos.nxos_command:
         commands:
-          - show ip arp vrf all | json
-          - show mac address-table | json
+          - command: show ip arp vrf all
+            output: json
+          - command: show mac address-table
+            output: json
       register: nxos_validation_data
       changed_when: false
 
-    - name: Gather NX-OS operational state data (optional)
+    - name: Gather RIB data (optional)
       cisco.nxos.nxos_command:
         commands:
-          - show ip route vrf all | json
-          - show forwarding ipv4 route | json
-          - show bfd neighbors vrf all | json
-          - show ip pim interface | json
-          - show ip pim neighbor | json
-          - show ip pim rp | json
-          - show ip igmp interface | json
-          - show ip igmp groups | json
-          - show ip mroute summary | json
-          - show ip mroute | json
-      register: nxos_optional_validation_data
+          - command: show ip route vrf all
+            output: json
+      register: nxos_rib_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather FIB data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show forwarding ipv4 route
+            output: json
+      register: nxos_fib_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather BFD data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show bfd neighbors vrf all
+            output: json
+      register: nxos_bfd_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather PIM interface data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show ip pim interface
+            output: json
+      register: nxos_pim_interface_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather PIM neighbor data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show ip pim neighbor
+            output: json
+      register: nxos_pim_neighbor_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather PIM RP data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show ip pim rp
+            output: json
+      register: nxos_pim_rp_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather PIM Anycast RP data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show ip pim anycast-rp
+            output: json
+      register: nxos_anycast_rp_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather IGMP interface data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show ip igmp interface
+            output: json
+      register: nxos_igmp_interface_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather IGMP groups data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show ip igmp groups
+            output: json
+      register: nxos_igmp_groups_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather mroute summary data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show ip mroute summary
+            output: json
+      register: nxos_mroute_summary_data
+      changed_when: false
+      failed_when: false
+
+    - name: Gather mroute data (optional)
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show ip mroute
+            output: json
+      register: nxos_mroute_data
       changed_when: false
       failed_when: false
 
     - name: Parse operational data (required)
-      ansible.builtin.include_tasks: check-nxos-command-errors.yml
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: check-nxos-command-errors
       vars:
         command_result: "{{ nxos_validation_data }}"
         variable_mapping:
@@ -94,22 +180,39 @@
           gathered_mac_data: 1
         fail_on_error: true
 
-    - name: Parse operational data (optional)
-      ansible.builtin.include_tasks: check-nxos-command-errors.yml
+    - name: Parse all optional operational data
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: check-nxos-command-errors
       vars:
-        command_result: "{{ nxos_optional_validation_data }}"
-        variable_mapping:
-          gathered_rib_data: 0
-          gathered_fib_data: 1
-          gathered_bfd_data: 2
-          gathered_pim_interface_data: 3
-          gathered_pim_neighbor_data: 4
-          gathered_pim_rp_data: 5
-          gathered_igmp_interface_data: 6
-          gathered_igmp_groups_data: 7
-          gathered_mroute_summary_data: 8
-          gathered_mroute_data: 9
+        command_result: "{{ item.result }}"
+        variable_mapping: "{{ item.mapping }}"
         fail_on_error: false
+      loop:
+        - result: "{{ nxos_rib_data }}"
+          mapping: {gathered_rib_data: 0}
+        - result: "{{ nxos_fib_data }}"
+          mapping: {gathered_fib_data: 0}
+        - result: "{{ nxos_bfd_data }}"
+          mapping: {gathered_bfd_data: 0}
+        - result: "{{ nxos_pim_interface_data }}"
+          mapping: {gathered_pim_interface_data: 0}
+        - result: "{{ nxos_pim_neighbor_data }}"
+          mapping: {gathered_pim_neighbor_data: 0}
+        - result: "{{ nxos_pim_rp_data }}"
+          mapping: {gathered_pim_rp_data: 0}
+        - result: "{{ nxos_anycast_rp_data }}"
+          mapping: {gathered_anycast_rp_data: 0}
+        - result: "{{ nxos_igmp_interface_data }}"
+          mapping: {gathered_igmp_interface_data: 0}
+        - result: "{{ nxos_igmp_groups_data }}"
+          mapping: {gathered_igmp_groups_data: 0}
+        - result: "{{ nxos_mroute_summary_data }}"
+          mapping: {gathered_mroute_summary_data: 0}
+        - result: "{{ nxos_mroute_data }}"
+          mapping: {gathered_mroute_data: 0}
+      loop_control:
+        label: "{{ item.mapping.keys() | list | first }}"
 
     - name: Extract ARP and MAC lists
       ansible.builtin.set_fact:

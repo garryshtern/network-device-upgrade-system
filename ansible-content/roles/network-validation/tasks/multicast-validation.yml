@@ -4,15 +4,17 @@
 # Uses pre-parsed data from network-resources-gathering
 # DESIGN: Single block pattern with platform gate
 #
-# DATA SOURCES:
-# - PIM/IGMP/mroute: Pre-parsed from network-resources-gathering (pim_*_list, igmp_*_list, mroute_*)
-# - Anycast RP: Gathered on-demand (not in base requirements, optional)
+# DATA SOURCES (all pre-parsed from network-resources-gathering):
+# - PIM interfaces/neighbors/RPs: pim_interfaces_list, pim_neighbors_list, pim_rps_list
+# - IGMP interfaces/groups: igmp_interfaces_list, igmp_groups_list
+# - Multicast routes: mroute_entries_list, mroute_summary
+# - Anycast RP: gathered_anycast_rp_data
 #
 # FEATURES:
 # - PIM neighbor and interface validation
 # - IGMP group and interface validation
 # - RP (Rendezvous Point) configuration and reachability
-# - Anycast RP validation (gathered on-demand)
+# - Anycast RP validation (pre-parsed, optional)
 # - Multicast routing table validation (pre-parsed)
 # - Only validates if PIM is configured
 
@@ -67,19 +69,11 @@
       when:
         - show_debug | bool
 
-    - name: Get Anycast RP configuration (not pre-gathered)
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip pim anycast-rp | json
-      register: anycast_rp_info
-      failed_when: false
-
-    - name: Parse Anycast RP information
+    - name: Use pre-parsed Anycast RP data (if available)
       ansible.builtin.set_fact:
-        anycast_rp_sets: "{{ anycast_rp_info.stdout[0] | from_json | json_query('TABLE_anycast_rp.ROW_anycast_rp') }}"
+        anycast_rp_sets: "{{ gathered_anycast_rp_data | json_query('TABLE_anycast_rp.ROW_anycast_rp') }}"
       when:
-        - anycast_rp_info is defined
-        - anycast_rp_info is succeeded
+        - gathered_anycast_rp_data is defined
 
     - name: Use pre-parsed mroute data (if available)
       ansible.builtin.set_fact:

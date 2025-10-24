@@ -98,15 +98,27 @@
 - name: Verify critical interfaces are operational
   cisco.nxos.nxos_command:
     commands:
-      - show interface brief | json
+      - command: show interface brief
+        output: json
   register: post_reboot_interfaces
+
+- name: Check for errors in interface data
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: check-nxos-command-errors
+  vars:
+    command_result: "{{ post_reboot_interfaces }}"
+    variable_mapping:
+      interface_brief_data: 0
+    fail_on_error: true
 
 - name: Parse interface status
   ansible.builtin.set_fact:
     interfaces_down_post_reboot: >-
-      {{ post_reboot_interfaces.stdout[0] |
+      {{ interface_brief_data |
         json_query(
         'TABLE_interface.ROW_interface[?state != `up`]') | length }}
+  when: interface_brief_data is defined
 
 - name: Set reboot completion status
   ansible.builtin.set_fact:
