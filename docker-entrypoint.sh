@@ -107,6 +107,11 @@ COMMANDS:
 ENVIRONMENT VARIABLES:
     # Core Ansible Configuration
     ANSIBLE_PLAYBOOK   Playbook to execute (default: ${DEFAULT_PLAYBOOK})
+    ANSIBLE_TAGS       Workflow steps to execute (e.g., step1, step5, step6)
+                       Multiple tags: step1,step5 OR individual step with auto-dependencies
+                       Supported: step1-step7, connectivity, version_check, space_check,
+                                  image_upload, config_backup, pre_validation, install,
+                                  reboot, post_validation
     INVENTORY_FILE     Inventory file path (default: ${DEFAULT_INVENTORY})
                        Note: Use INVENTORY_FILE (not ANSIBLE_INVENTORY) to avoid conflicts
     ANSIBLE_CONFIG     Path to ansible.cfg file
@@ -187,6 +192,38 @@ EXAMPLES:
     docker run --rm \\
       -e TARGET_FIRMWARE=9.3.12 -e TARGET_HOSTS=cisco-switch-01 \\
       -e MAX_CONCURRENT=5 -e UPGRADE_PHASE=loading -e MAINTENANCE_WINDOW=false \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+    # Run individual workflow steps (with automatic dependency resolution)
+    # Step 1: Connectivity check only
+    docker run --rm \\
+      -e ANSIBLE_TAGS=step1 \\
+      -e TARGET_HOSTS=cisco-switch-01 \\
+      -e MAX_CONCURRENT=5 \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+
+    # Step 5: Pre-upgrade validation (auto-runs steps 1-4 as prerequisites)
+    docker run --rm \\
+      -e ANSIBLE_TAGS=step5 \\
+      -e TARGET_FIRMWARE=nxos.10.2.3.bin \\
+      -e TARGET_HOSTS=cisco-switch-01 \\
+      -e MAX_CONCURRENT=5 \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+
+    # Step 6: Firmware installation (auto-runs steps 1-5 as prerequisites)
+    docker run --rm \\
+      -e ANSIBLE_TAGS=step6 \\
+      -e TARGET_FIRMWARE=nxos.10.2.3.bin \\
+      -e TARGET_HOSTS=cisco-switch-01 \\
+      -e MAX_CONCURRENT=5 \\
+      -e MAINTENANCE_WINDOW=true \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+    # Step 7: Post-upgrade validation (requires step5 baseline from previous run)
+    docker run --rm \\
+      -e ANSIBLE_TAGS=step7 \\
+      -e TARGET_HOSTS=cisco-switch-01 \\
+      -e MAX_CONCURRENT=5 \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest run
 
     # SSH key authentication (recommended)
@@ -355,6 +392,12 @@ build_ansible_options() {
 
     # Setup SSH keys first
     setup_ssh_keys
+
+    # Add tags if specified
+    if [[ -n "${ANSIBLE_TAGS:-}" ]]; then
+        ansible_opts="$ansible_opts --tags ${ANSIBLE_TAGS}"
+        log "Workflow tags: ${ANSIBLE_TAGS}"
+    fi
 
     # Authentication: SSH Keys (highest priority)
     if [[ -n "${CISCO_NXOS_SSH_KEY_INTERNAL:-}" ]]; then
