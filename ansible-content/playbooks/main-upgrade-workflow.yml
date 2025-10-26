@@ -13,6 +13,85 @@
 #
 # CRITICAL: Steps 1-6 must pass or workflow STOPS
 # Step 7 failure triggers optional rollback only
+#
+# RUNNING INDIVIDUAL STAGES WITH AUTOMATIC DEPENDENCY RESOLUTION:
+# Each step automatically includes tags for its prerequisites, so dependencies
+# are maintained automatically when you specify a step.
+#
+# Run full workflow (all steps):
+#   ansible-playbook main-upgrade-workflow.yml --extra-vars="target_hosts=mydevice target_firmware=nxos.10.2.3.bin maintenance_window=true max_concurrent=1"
+#
+# Run individual steps (prerequisites run automatically):
+#   --tags step1              # Connectivity check only
+#   --tags step2              # Version check + step1 (auto)
+#   --tags step3              # Space check + step1,step2 (auto)
+#   --tags step4              # Image upload + step1,step2,step3 (auto)
+#   --tags step5              # Pre-validation + step1,step2,step3,step4 (auto)
+#   --tags step6              # Install + step1,step2,step3,step4,step5 (auto)
+#   --tags step7              # Post-validation + step1 (auto, assumes step5/step6 done previously)
+#
+# Examples with automatic dependencies:
+#   --tags step6              # Runs: step1 → step2 → step3 → step4 → step5 → step6
+#   --tags step5              # Runs: step1 → step2 → step3 → step4 → step5
+#   --tags step3              # Runs: step1 → step2 → step3
+#   --tags step7              # Runs: step1 → step7 (requires prior step5 baseline)
+#
+# Function-specific tags (still include dependencies):
+#   --tags connectivity       # step1 only
+#   --tags version_check      # step1 + step2
+#   --tags space_check        # step1 + step2 + step3
+#   --tags image_upload       # step1 + step2 + step3 + step4
+#   --tags config_backup      # step1 + step2 + step3 + step4
+#   --tags pre_validation     # step1 + step2 + step3 + step4 + step5
+#   --tags install            # step1 + step2 + step3 + step4 + step5 + step6
+#   --tags reboot             # step1 + step2 + step3 + step4 + step5 + step6
+#   --tags post_validation    # step1 + step7
+#   --tags network_validation # step1 + step2 + step3 + step4 + step5 + step7
+#
+# STEP DEPENDENCIES (AUTOMATICALLY RESOLVED):
+# Dependencies are maintained automatically via tag inheritance.
+# When you run a step, all prerequisite steps run automatically.
+#
+# STEP 1: No prerequisites (can run standalone)
+#         Provides: Basic facts (ansible_net_version, current_firmware_image, etc.)
+#         Auto-included by: All other steps
+#
+# STEP 2: Auto-includes: step1
+#         Provides: Verification that upgrade is needed and firmware file exists
+#         Auto-included by: step3, step4, step5, step6
+#
+# STEP 3: Auto-includes: step1, step2
+#         Provides: Confirmation of sufficient storage space
+#         Auto-included by: step4, step5, step6
+#
+# STEP 4: Auto-includes: step1, step2, step3
+#         Provides: Firmware staged on device, config backup saved
+#         Auto-included by: step5, step6
+#
+# STEP 5: Auto-includes: step1, step2, step3, step4
+#         Provides: network_baseline saved to filesystem, pre-validation results
+#         Auto-included by: step6
+#
+# STEP 6: Auto-includes: step1, step2, step3, step4, step5
+#         Provides: Device rebooted with new firmware
+#         Auto-included by: None (final install step)
+#
+# STEP 7: Auto-includes: step1 only
+#         Requires: STEP 5 baseline file from previous run (not auto-included)
+#         Provides: Post-upgrade validation, comparison with baseline
+#
+# COMMON USE CASES:
+# Full upgrade:        --tags step6 (auto-runs: step1→step2→step3→step4→step5→step6)
+# Pre-validation only: --tags step5 (auto-runs: step1→step2→step3→step4→step5)
+# Post-validation:     --tags step7 (auto-runs: step1→step7, requires prior step5 baseline)
+# Just upload image:   --tags step4 (auto-runs: step1→step2→step3→step4)
+# Just check version:  --tags step2 (auto-runs: step1→step2)
+#
+# BENEFITS OF AUTO-DEPENDENCY:
+# - No need to remember prerequisite chains
+# - Safe to run any step - dependencies always satisfied
+# - Cleaner command line (just specify what you want)
+# - Impossible to skip required prerequisites by accident
 
 - name: Network Device Upgrade - Master Workflow
   hosts: "{{ target_hosts }}"
@@ -89,6 +168,9 @@
     # Gather basic facts to verify connectivity and get device info
     # MUST PASS or workflow STOPS
     - name: "STEP 1: Basic Connectivity Check"
+      tags:
+        - step1
+        - connectivity
       block:
         - name: Gather basic device facts (NX-OS)
           cisco.nxos.nxos_facts:
@@ -165,7 +247,12 @@
     # STEP 2: Version Check and Image Verification
     # Check if upgrade needed and verify local image file exists
     # MUST PASS or workflow STOPS
+    # AUTO-DEPENDENCY: Requires step1
     - name: "STEP 2: Version Check and Image Verification"
+      tags:
+        - step1  # Include step1 tag so it runs when step2 is called
+        - step2
+        - version_check
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
@@ -272,7 +359,13 @@
     # Only runs cleanup if insufficient space detected
     # Runs AFTER image verification so we know the image size
     # MUST PASS or workflow STOPS
+    # AUTO-DEPENDENCY: Requires step1, step2
     - name: "STEP 3: Storage Space Validation"
+      tags:
+        - step1  # Include prerequisites
+        - step2
+        - step3
+        - space_check
       block:
         - name: Storage assessment with automatic cleanup if needed
           ansible.builtin.include_role:
@@ -300,7 +393,15 @@
     # STEP 4: Upload Images and Config Backup
     # Server-initiated PUSH only (no device-initiated pulls)
     # MUST PASS or workflow STOPS
+    # AUTO-DEPENDENCY: Requires step1, step2, step3
     - name: "STEP 4: Image Upload and Config Backup"
+      tags:
+        - step1  # Include all prerequisites
+        - step2
+        - step3
+        - step4
+        - image_upload
+        - config_backup
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
@@ -323,7 +424,16 @@
     # Network resources gathered AFTER image is confirmed staged (not before)
     # Comprehensive validation: BGP, interfaces, routing, etc.
     # MUST PASS or workflow STOPS
+    # AUTO-DEPENDENCY: Requires step1, step4 (step2/step3 implied by step4)
     - name: "STEP 5: Network Resources Gathering and Pre-Upgrade Validation"
+      tags:
+        - step1  # Include all prerequisites
+        - step2
+        - step3
+        - step4
+        - step5
+        - pre_validation
+        - network_validation
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
@@ -342,6 +452,8 @@
           ansible.builtin.include_role:
             name: common
             tasks_from: network-resources-gathering
+          vars:
+            validation_phase: "pre_upgrade"
 
         - name: Display network resources gathering completion
           ansible.builtin.debug:
@@ -372,7 +484,17 @@
     # STEP 6: Install Images and Reboot
     # Platform-specific installation
     # MUST PASS or workflow STOPS
+    # AUTO-DEPENDENCY: Requires step1, step4, step5 (step2/step3 implied by step4)
     - name: "STEP 6: Firmware Installation"
+      tags:
+        - step1  # Include all prerequisites
+        - step2
+        - step3
+        - step4
+        - step5
+        - step6
+        - install
+        - reboot
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
@@ -397,7 +519,14 @@
     # STEP 7: Post-Checks and Comparison
     # Compare to pre-upgrade state
     # Failure triggers OPTIONAL rollback (does not stop workflow)
+    # AUTO-DEPENDENCY: Requires step1 (step5 baseline from previous run, step6 upgrade done)
+    # NOTE: step5 baseline must exist from a prior run, step6 should have been run
     - name: "STEP 7: Post-Upgrade Validation"
+      tags:
+        - step1  # Only requires step1 for connectivity (assumes step5/step6 already done)
+        - step7
+        - post_validation
+        - network_validation
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
@@ -416,6 +545,8 @@
           ansible.builtin.include_role:
             name: common
             tasks_from: network-resources-gathering
+          vars:
+            validation_phase: "post_upgrade"
 
         - name: Display network resources gathering completion
           ansible.builtin.debug:

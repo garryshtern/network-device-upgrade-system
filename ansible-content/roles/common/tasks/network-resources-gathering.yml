@@ -258,6 +258,38 @@
         - show_debug | bool
         - network_baseline is defined
 
+    - name: Save network baseline to filesystem (pre-upgrade only)
+      ansible.builtin.copy:
+        content: "{{ network_baseline | to_nice_json }}"
+        dest: "{{ baseline_base_path }}/{{ inventory_hostname }}_network_baseline.json"
+        mode: '0644'
+      delegate_to: localhost
+      when:
+        - network_baseline is defined
+        - validation_phase is defined
+        - validation_phase == 'pre_upgrade'
+
+    - name: Load pre-upgrade baseline for comparison (post-upgrade only)
+      block:
+        - name: Check if baseline file exists
+          ansible.builtin.stat:
+            path: "{{ baseline_base_path }}/{{ inventory_hostname }}_network_baseline.json"
+          register: baseline_file
+          delegate_to: localhost
+
+        - name: Load baseline data
+          ansible.builtin.set_fact:
+            network_baseline_pre: "{{ lookup('file', baseline_base_path + '/' + inventory_hostname + '_network_baseline.json') | from_json }}"
+          when: baseline_file.stat.exists
+
+        - name: Store current state as post-upgrade data
+          ansible.builtin.set_fact:
+            network_baseline_post: "{{ network_baseline }}"
+
+      when:
+        - validation_phase is defined
+        - validation_phase == 'post_upgrade'
+
   rescue:
     - name: Network resources gathering failed
       ansible.builtin.fail:
