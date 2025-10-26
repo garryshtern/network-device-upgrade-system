@@ -4,6 +4,339 @@
 
 The `main-upgrade-workflow.yml` implements a comprehensive 7-step upgrade process designed for fail-fast validation and operational safety. Each step must pass before proceeding to the next, with the exception of STEP 7 which can trigger optional rollback.
 
+**Key Feature**: The workflow implements **automatic dependency resolution** through tag inheritance. When you run any step, all prerequisite steps execute automatically. This ensures safety (prerequisites cannot be skipped) while providing flexibility (run any step independently).
+
+## Table of Contents
+
+- [Automatic Dependency Resolution](#automatic-dependency-resolution)
+  - [Tag Inheritance Mechanism](#tag-inheritance-mechanism)
+  - [Dependency Chain](#dependency-chain)
+  - [Valid Execution Patterns](#valid-execution-patterns)
+  - [Network Baseline Persistence](#network-baseline-persistence)
+  - [Benefits](#benefits-of-automatic-dependency-resolution)
+- [Workflow Steps](#workflow-steps)
+  - [STEP 1: Connectivity Check](#step-1-connectivity-check)
+  - [STEP 2: Version Check and Image Verification](#step-2-version-check-and-image-verification)
+  - [STEP 3: Storage Space Validation](#step-3-storage-space-validation)
+  - [STEP 4: Image Upload and Config Backup](#step-4-image-upload-and-config-backup)
+  - [STEP 5: Network Resources Gathering and Pre-Upgrade Validation](#step-5-network-resources-gathering-and-pre-upgrade-validation)
+  - [STEP 6: Firmware Installation](#step-6-firmware-installation)
+  - [STEP 7: Post-Upgrade Validation](#step-7-post-upgrade-validation)
+- [Workflow Characteristics](#workflow-characteristics)
+- [Testing and Validation](#testing-and-validation)
+- [References](#references)
+
+## Automatic Dependency Resolution
+
+### Tag Inheritance Mechanism
+
+The workflow implements **automatic dependency resolution** through tag inheritance. Each step includes tags for all its prerequisites, ensuring dependencies are automatically satisfied when you run any step.
+
+#### How It Works
+
+When you specify a step to run (e.g., `--tags step5`), Ansible executes **all tasks** that match that tag. Since each step includes tags for its prerequisites, those prerequisites run automatically.
+
+**Example**: Running `--tags step5` executes tasks tagged with:
+- `step1` (basic connectivity)
+- `step2` (version check)
+- `step3` (space check)
+- `step4` (image upload)
+- `step5` (pre-validation)
+
+This ensures STEP 5 cannot run without its dependencies being satisfied first.
+
+### Dependency Chain
+
+```
+STEP 1: Basic Connectivity Check
+└─ No prerequisites (can run standalone)
+
+STEP 2: Version Check
+├─ Requires: STEP 1
+└─ Tags: [step1, step2, version_check]
+
+STEP 3: Storage Space Validation
+├─ Requires: STEP 1, STEP 2
+└─ Tags: [step1, step2, step3, space_check]
+
+STEP 4: Image Upload and Config Backup
+├─ Requires: STEP 1, STEP 2, STEP 3
+└─ Tags: [step1, step2, step3, step4, image_upload, config_backup]
+
+STEP 5: Pre-Upgrade Validation
+├─ Requires: STEP 1, STEP 2, STEP 3, STEP 4
+└─ Tags: [step1, step2, step3, step4, step5, pre_validation, network_validation]
+
+STEP 6: Firmware Installation
+├─ Requires: STEP 1, STEP 2, STEP 3, STEP 4, STEP 5
+└─ Tags: [step1, step2, step3, step4, step5, step6, install, reboot]
+
+STEP 7: Post-Upgrade Validation
+├─ Requires: STEP 1 (assumes STEP 5/6 completed previously)
+└─ Tags: [step1, step7, post_validation, network_validation]
+```
+
+### Visual Dependency Flow
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                           DEPENDENCY FLOW                                │
+│          (Arrows show what each step automatically includes)             │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────┐
+  │    STEP 1       │  ← Can run standalone
+  │  Connectivity   │  ← No prerequisites
+  │    Check        │  ← Tags: [step1, connectivity]
+  └────────┬────────┘
+           │
+           │ Required by all other steps
+           │
+           ├──────────────────────────────────────────────────────┐
+           │                                                      │
+           ▼                                                      │
+  ┌─────────────────┐                                            │
+  │    STEP 2       │  ← Auto-includes: STEP 1                   │
+  │ Version Check & │  ← Tags: [step1, step2, version_check]     │
+  │ Image Verify    │                                            │
+  └────────┬────────┘                                            │
+           │                                                      │
+           │ Required by: STEP 3, 4, 5, 6                        │
+           │                                                      │
+           ▼                                                      │
+  ┌─────────────────┐                                            │
+  │    STEP 3       │  ← Auto-includes: STEP 1, 2                │
+  │ Storage Space   │  ← Tags: [step1, step2, step3,             │
+  │   Validation    │     space_check]                           │
+  └────────┬────────┘                                            │
+           │                                                      │
+           │ Required by: STEP 4, 5, 6                           │
+           │                                                      │
+           ▼                                                      │
+  ┌─────────────────┐                                            │
+  │    STEP 4       │  ← Auto-includes: STEP 1, 2, 3             │
+  │  Image Upload & │  ← Tags: [step1, step2, step3, step4,      │
+  │  Config Backup  │     image_upload, config_backup]           │
+  └────────┬────────┘                                            │
+           │                                                      │
+           │ Required by: STEP 5, 6                              │
+           │                                                      │
+           ▼                                                      │
+  ┌─────────────────┐                                            │
+  │    STEP 5       │  ← Auto-includes: STEP 1, 2, 3, 4          │
+  │  Pre-Upgrade    │  ← Tags: [step1, step2, step3, step4,      │
+  │   Validation    │     step5, pre_validation,                 │
+  └────────┬────────┘     network_validation]                    │
+           │              SAVES BASELINE TO FILESYSTEM           │
+           │              (/tmp/network_baseline_*.json)         │
+           │                                                      │
+           │ Required by: STEP 6                                 │
+           │                                                      │
+           ▼                                                      │
+  ┌─────────────────┐                                            │
+  │    STEP 6       │  ← Auto-includes: STEP 1, 2, 3, 4, 5       │
+  │    Firmware     │  ← Tags: [step1, step2, step3, step4,      │
+  │  Installation   │     step5, step6, install, reboot]         │
+  └─────────────────┘                                            │
+                                                                 │
+                                                                 │
+  ┌─────────────────┐                                            │
+  │    STEP 7       │  ← Auto-includes: STEP 1 only ─────────────┘
+  │  Post-Upgrade   │  ← LOADS BASELINE FROM FILESYSTEM
+  │   Validation    │  ← (from previous STEP 5 run)
+  └─────────────────┘  ← Tags: [step1, step7, post_validation,
+                          network_validation]
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      EXECUTION EXAMPLES                                  │
+└──────────────────────────────────────────────────────────────────────────┘
+
+Run: --tags step1        Executes: [STEP 1]
+Run: --tags step2        Executes: [STEP 1 → STEP 2]
+Run: --tags step3        Executes: [STEP 1 → STEP 2 → STEP 3]
+Run: --tags step4        Executes: [STEP 1 → STEP 2 → STEP 3 → STEP 4]
+Run: --tags step5        Executes: [STEP 1 → STEP 2 → STEP 3 → STEP 4 → STEP 5]
+Run: --tags step6        Executes: [STEP 1 → STEP 2 → STEP 3 → STEP 4 → STEP 5 → STEP 6]
+Run: --tags step7        Executes: [STEP 1 → STEP 7]  (requires prior STEP 5)
+Run: (no tags)           Executes: [STEP 1 → ... → STEP 7]  (full workflow)
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      BASELINE PERSISTENCE                                │
+└──────────────────────────────────────────────────────────────────────────┘
+
+  DAY 1: Full Upgrade                    DAY 2: Post-Validation
+  ───────────────────                    ──────────────────────
+
+  --tags step6                           --tags step7
+       │                                      │
+       ├─ STEP 1-4 execute                   ├─ STEP 1 executes
+       │                                      │
+       ├─ STEP 5 executes                    ├─ STEP 7 executes
+       │  └─ Saves baseline ─────────────────┼─ Loads baseline
+       │     to filesystem                    │  from filesystem
+       │                                      │
+       └─ STEP 6 executes                    └─ Compares current
+          (installs firmware)                    state to baseline
+
+  Result: Device upgraded                Result: Network validated
+          Baseline saved                        against Day 1 baseline
+```
+
+### Valid Execution Patterns
+
+#### Full Upgrade Workflow
+```bash
+# Run all steps (default - no tags needed)
+ansible-playbook main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=mydevice target_firmware=nxos.10.2.3.bin maintenance_window=true max_concurrent=1"
+
+# Equivalent: explicitly specify step6 (all prerequisites run automatically)
+--tags step6
+# Executes: step1 → step2 → step3 → step4 → step5 → step6
+```
+
+#### Pre-Validation Only
+```bash
+# Prepare for upgrade without installing
+--tags step5
+# Executes: step1 → step2 → step3 → step4 → step5
+# Result: Image staged, baseline saved, ready for installation
+```
+
+#### Post-Validation Only
+```bash
+# Validate after upgrade (assumes step5 baseline exists from previous run)
+--tags step7
+# Executes: step1 → step7
+# Requires: STEP 5 baseline file from previous run
+```
+
+#### Image Upload Only
+```bash
+# Upload firmware without validation or installation
+--tags step4
+# Executes: step1 → step2 → step3 → step4
+# Result: Image on device, config backed up
+```
+
+#### Version Check Only
+```bash
+# Check if upgrade needed
+--tags step2
+# Executes: step1 → step2
+# Result: Determines if device needs upgrade
+```
+
+#### Connectivity Check Only
+```bash
+# Test basic connectivity
+--tags step1
+# Executes: step1 only
+# Result: Verify device reachable, gather basic facts
+```
+
+### Function-Specific Tags
+
+Additional tags allow running specific functions (still include dependencies):
+
+```bash
+--tags connectivity       # step1 only
+--tags version_check      # step1 + step2
+--tags space_check        # step1 + step2 + step3
+--tags image_upload       # step1 + step2 + step3 + step4
+--tags config_backup      # step1 + step2 + step3 + step4
+--tags pre_validation     # step1 + step2 + step3 + step4 + step5
+--tags install            # step1 + step2 + step3 + step4 + step5 + step6
+--tags reboot             # step1 + step2 + step3 + step4 + step5 + step6
+--tags post_validation    # step1 + step7
+--tags network_validation # step1 + step2 + step3 + step4 + step5 + step7
+```
+
+### Special Case: STEP 7 Independence
+
+STEP 7 (Post-Upgrade Validation) can run independently **IF** the STEP 5 baseline file exists from a previous run:
+
+```bash
+# Day 1: Run pre-validation and installation
+--tags step6  # Saves baseline in STEP 5, installs in STEP 6
+
+# Day 2: Run post-validation separately
+--tags step7  # Loads baseline from STEP 5 run, compares to current state
+```
+
+**Why this works**:
+- STEP 5 saves `network_baseline` to filesystem (persistent across runs)
+- STEP 7 loads `network_baseline_pre` from filesystem (not from memory)
+- STEP 7 only requires connectivity (STEP 1) to gather current state
+- Comparison logic works with saved baseline from any previous STEP 5 run
+
+**Use case**:
+- Run upgrade during maintenance window (STEP 6)
+- Validate network health hours/days later (STEP 7)
+- Allows time for network to stabilize before validation
+
+### Network Baseline Persistence
+
+```yaml
+# STEP 5: Pre-Upgrade Validation
+- name: Capture pre-upgrade network state
+  ansible.builtin.include_role:
+    name: network-validation
+  vars:
+    validation_phase: "pre_upgrade"
+    save_baseline: true  # Saves to filesystem
+
+# STEP 7: Post-Upgrade Validation
+- name: Capture post-upgrade network state
+  ansible.builtin.include_role:
+    name: network-validation
+  vars:
+    validation_phase: "post_upgrade"
+    compare_to_baseline: true  # Loads from filesystem
+```
+
+**Baseline storage location**:
+- `/tmp/network_baseline_{{ inventory_hostname }}.json`
+- Persists across playbook runs
+- Removed on successful validation or manual cleanup
+
+### Benefits of Automatic Dependency Resolution
+
+1. **Safety**: Impossible to skip required prerequisites by accident
+2. **Simplicity**: Just specify what you want, dependencies run automatically
+3. **Clarity**: No need to remember prerequisite chains
+4. **Flexibility**: Run any step independently or in combination
+5. **Consistency**: Dependencies always resolved the same way
+6. **Maintainability**: Add new dependencies by updating tags
+
+### Common Use Cases
+
+| Scenario | Command | Steps Executed | Result |
+|----------|---------|----------------|--------|
+| Full upgrade | `--tags step6` | 1→2→3→4→5→6 | Device upgraded |
+| Prepare only | `--tags step5` | 1→2→3→4→5 | Ready to install |
+| Upload only | `--tags step4` | 1→2→3→4 | Image on device |
+| Check version | `--tags step2` | 1→2 | Know if upgrade needed |
+| Post-validation | `--tags step7` | 1→7 | Validate after upgrade |
+| Full workflow | (no tags) | 1→2→3→4→5→6→7 | Complete upgrade |
+
+### Invalid Execution Patterns
+
+These patterns **will NOT work** as expected:
+
+```bash
+# WRONG: Cannot skip dependencies with --skip-tags
+--tags step6 --skip-tags step5
+# Problem: Breaks dependency chain, STEP 6 requires STEP 5 baseline
+
+# WRONG: Cannot run STEP 7 without prior STEP 5
+--tags step7  # (if no baseline file exists)
+# Problem: No baseline to compare against
+
+# WRONG: Cannot run STEP 6 without STEP 4
+# (Not possible with tag inheritance - step6 includes step4 tag)
+```
+
 ## Workflow Steps
 
 ### STEP 1: Connectivity Check
@@ -327,20 +660,56 @@ rescue:
 ### Syntax Validation
 
 ```bash
+# Full workflow syntax check
 ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
   --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1"
+
+# Specific step syntax check (e.g., pre-validation only)
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1" \
+  --tags step5
 ```
 
 ### Check Mode Testing
 
 ```bash
+# Full workflow check mode
 ansible-playbook --check --diff ansible-content/playbooks/main-upgrade-workflow.yml \
   --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1"
+
+# Test specific steps with tag inheritance
+ansible-playbook --check --diff ansible-content/playbooks/main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1" \
+  --tags step4  # Tests: step1 → step2 → step3 → step4
 ```
 
 ### Mock Inventory Testing
 
 All 23 test suites in `tests/` validate workflow behavior with mock inventories.
+
+### Tag-Based Testing Examples
+
+```bash
+# Test connectivity only
+ansible-playbook main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=test-device target_firmware=test.bin maintenance_window=true max_concurrent=1" \
+  --tags step1 --check
+
+# Test image upload workflow (no installation)
+ansible-playbook main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=test-device target_firmware=test.bin maintenance_window=true max_concurrent=1" \
+  --tags step4 --check
+
+# Test pre-validation workflow
+ansible-playbook main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=test-device target_firmware=test.bin maintenance_window=true max_concurrent=1" \
+  --tags step5 --check
+
+# Test post-validation independently (requires prior step5 run)
+ansible-playbook main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=test-device target_firmware=test.bin maintenance_window=true max_concurrent=1" \
+  --tags step7 --check
+```
 
 ## References
 

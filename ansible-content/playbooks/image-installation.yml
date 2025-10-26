@@ -1,4 +1,12 @@
 ---
+# DEPRECATED: This playbook is deprecated and will be removed in a future version.
+#
+# Please use main-upgrade-workflow.yml with tags instead:
+#   ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step6 \
+#     --extra-vars "target_hosts=mydevice target_firmware=firmware.bin maintenance_window=true max_concurrent=1"
+#
+# This provides the same functionality with automatic dependency resolution.
+#
 # Phase 2: Image Installation Playbook
 # Maintenance window required - installs and activates firmware
 # Includes reboot and service disruption

@@ -67,6 +67,14 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
 - `SHOW_DEBUG` - Enable verbose debug output (true/false, default: false)
   - Only set when explicitly 'true' - passes through to Ansible with | bool filter
 
+### Workflow Step Control
+- `ANSIBLE_TAGS` - Run individual workflow steps with automatic dependency resolution
+  - Single step: `step1`, `step5`, `step6`, etc.
+  - Multiple steps: `step1,step5` (comma-separated)
+  - Supported tags: `step1-step7`, `connectivity`, `version_check`, `space_check`, `image_upload`, `config_backup`, `pre_validation`, `install`, `reboot`, `post_validation`
+  - Automatic dependency resolution: Running `step6` automatically executes `step1-step5` first
+  - Leave unset to run full workflow
+
 ### Platform-Specific Upgrade Features
 - `ENABLE_EPLD_UPGRADE` - Enable EPLD firmware upgrades (Cisco NX-OS only, default: false)
   - Only set when explicitly 'true'
@@ -158,6 +166,274 @@ podman run --rm \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
+
+## Running Individual Workflow Steps
+
+The container supports running individual workflow steps using the `ANSIBLE_TAGS` environment variable, providing the same flexibility as bare-metal deployments with automatic dependency resolution.
+
+### Workflow Steps Overview
+
+The upgrade workflow is divided into 7 distinct steps:
+
+1. **STEP 1: Connectivity & Version Check** - Verify device access and current firmware version
+2. **STEP 2: Disk Space Check & Hash Verification** - Ensure sufficient storage and validate firmware integrity
+3. **STEP 3: Firmware Image Upload** - Transfer firmware to devices (skipped if already present)
+4. **STEP 4: Configuration Backup** - Backup running configuration before changes
+5. **STEP 5: Pre-Upgrade Network Validation** - Baseline network state (BGP, OSPF, interfaces, routing)
+6. **STEP 6: Firmware Installation & Reboot** - Install firmware and reboot devices (requires `MAINTENANCE_WINDOW=true`)
+7. **STEP 7: Post-Upgrade Network Validation** - Compare post-upgrade state against baseline
+
+### Automatic Dependency Resolution
+
+When you run a specific step, all prerequisite steps execute automatically:
+
+- Running `step6` automatically executes `step1`, `step2`, `step3`, `step4`, and `step5` first
+- Running `step5` automatically executes `step1`, `step2`, `step3`, and `step4` first
+- Running `step1` executes only connectivity and version checks
+- Running `step7` executes standalone (requires `step5` baseline from previous run)
+
+### Docker Examples
+
+#### Step 1: Connectivity Check Only
+```bash
+# Verify device connectivity and firmware version
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -v ./keys:/keys:ro \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
+  -e ANSIBLE_TAGS=step1 \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+```
+
+#### Step 2: Disk Space and Hash Verification
+```bash
+# Check storage capacity and verify firmware hash (auto-runs step1)
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -v ./firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ./keys:/keys:ro \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
+  -e ANSIBLE_TAGS=step2 \
+  -e TARGET_FIRMWARE=nxos.10.2.3.bin \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+```
+
+#### Step 4: Configuration Backup Only
+```bash
+# Backup device configurations (auto-runs steps 1-3)
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -v ./firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ./backups:/var/lib/network-upgrade/backups \
+  -v ./keys:/keys:ro \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
+  -e ANSIBLE_TAGS=step4 \
+  -e TARGET_FIRMWARE=nxos.10.2.3.bin \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Step 5: Pre-Upgrade Validation
+```bash
+# Run pre-upgrade validation and establish baseline (auto-runs steps 1-4)
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -v ./firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ./keys:/keys:ro \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
+  -e ANSIBLE_TAGS=step5 \
+  -e TARGET_FIRMWARE=nxos.10.2.3.bin \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+```
+
+#### Step 6: Firmware Installation
+```bash
+# Install firmware and reboot (auto-runs steps 1-5, requires maintenance window)
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -v ./firmware:/var/lib/network-upgrade/firmware:ro \
+  -v ./backups:/var/lib/network-upgrade/backups \
+  -v ./keys:/keys:ro \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
+  -e ANSIBLE_TAGS=step6 \
+  -e TARGET_FIRMWARE=nxos.10.2.3.bin \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  -e MAINTENANCE_WINDOW=true \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Step 7: Post-Upgrade Validation
+```bash
+# Validate network state after upgrade (standalone, requires step5 baseline)
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -v ./keys:/keys:ro \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
+  -e ANSIBLE_TAGS=step7 \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Podman Examples (RHEL8/9)
+
+#### Step 5: Pre-Upgrade Validation with SELinux
+```bash
+podman run --rm \
+  -v /opt/inventory:/opt/inventory:ro,Z \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
+  -v /opt/secrets/ssh-keys:/keys:ro,Z \
+  -e INVENTORY_FILE=/opt/inventory/hosts.yml \
+  -e ANSIBLE_TAGS=step5 \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
+  -e TARGET_HOSTS=datacenter-switches \
+  -e MAX_CONCURRENT=5 \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+```
+
+#### Step 6: Production Firmware Installation with SELinux
+```bash
+podman run --rm \
+  -v /opt/inventory:/opt/inventory:ro,Z \
+  -v /opt/firmware:/var/lib/network-upgrade/firmware:ro,Z \
+  -v /opt/backups:/var/lib/network-upgrade/backups:Z \
+  -v /opt/secrets/ssh-keys:/keys:ro,Z \
+  -e INVENTORY_FILE=/opt/inventory/production.yml \
+  -e ANSIBLE_TAGS=step6 \
+  -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
+  -e TARGET_HOSTS=datacenter-switches \
+  -e MAX_CONCURRENT=5 \
+  -e MAINTENANCE_WINDOW=true \
+  -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Advanced Tag Usage
+
+#### Multiple Steps
+```bash
+# Run only steps 1 and 5 (skips upload and backup)
+docker run --rm \
+  -e ANSIBLE_TAGS=step1,step5 \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+```
+
+#### Granular Tags
+```bash
+# Run only connectivity check (part of step1)
+docker run --rm \
+  -e ANSIBLE_TAGS=connectivity \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+
+# Run only pre-upgrade validation (part of step5)
+docker run --rm \
+  -e ANSIBLE_TAGS=pre_validation \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+```
+
+### Common Use Cases
+
+#### Testing Connectivity Before Maintenance Window
+```bash
+# Quick connectivity check during planning phase
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -e ANSIBLE_TAGS=step1 \
+  -e TARGET_HOSTS=all-switches \
+  -e MAX_CONCURRENT=10 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest dry-run
+```
+
+#### Pre-Staging Firmware
+```bash
+# Upload firmware outside maintenance window (steps 1-3)
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -v ./firmware:/var/lib/network-upgrade/firmware:ro \
+  -e ANSIBLE_TAGS=step3 \
+  -e TARGET_FIRMWARE=nxos.10.2.3.bin \
+  -e TARGET_HOSTS=datacenter-switches \
+  -e MAX_CONCURRENT=5 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Emergency Configuration Backup
+```bash
+# Backup configurations before emergency maintenance
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -v ./backups:/var/lib/network-upgrade/backups \
+  -e ANSIBLE_TAGS=config_backup \
+  -e TARGET_HOSTS=critical-devices \
+  -e MAX_CONCURRENT=10 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+#### Validation Only
+```bash
+# Run pre and post validation without upgrade
+docker run --rm \
+  -v ./inventory:/opt/inventory:ro \
+  -e ANSIBLE_TAGS=step5,step7 \
+  -e TARGET_HOSTS=cisco-switch-01 \
+  -e MAX_CONCURRENT=5 \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest run
+```
+
+### Workflow Step Dependencies
+
+Understanding the dependency chain:
+
+```
+step1 (connectivity, version_check)
+  |
+  v
+step2 (space_check, hash verification)
+  |
+  v
+step3 (image_upload)
+  |
+  v
+step4 (config_backup)
+  |
+  v
+step5 (pre_validation)
+  |
+  v
+step6 (install, reboot)
+  |
+  v
+step7 (post_validation) - standalone, requires step5 baseline
+```
+
+### Important Notes
+
+- **Step 7 Requirements**: Post-upgrade validation (`step7`) requires a baseline from `step5` to compare against. Run `step5` before the upgrade, then `step7` after.
+- **Maintenance Window**: Steps 1-5 can run without `MAINTENANCE_WINDOW=true`. Step 6 (installation) requires it.
+- **Firmware Upload**: Step 3 automatically skips if firmware already exists on device (idempotent).
+- **Dependency Resolution**: You cannot skip prerequisite steps. Running `step6` always executes `step1-step5` first.
+- **Tag Flexibility**: Use step-based tags (`step1-step7`) for workflow control or granular tags (`connectivity`, `pre_validation`) for specific tasks.
 
 ## Container Commands
 

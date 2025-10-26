@@ -4,9 +4,11 @@
 
 job_templates:
   # Phase 1: Health Check and Baseline Capture
-  - name: "Network Device Health Check"
+  # DEPRECATED: Use main-upgrade-workflow.yml with --tags step1 instead
+  - name: "Network Device Health Check (DEPRECATED)"
     description: >-
       Comprehensive device health validation and baseline network state capture
+      (DEPRECATED - use main-upgrade-workflow.yml --tags step1 instead)
     project: "Network Device Upgrade System"
     playbook: "ansible-content/playbooks/health-check.yml"
     inventory: "NetBox Dynamic Inventory"
@@ -39,10 +41,12 @@ job_templates:
           required: true
 
   # Phase 2: Image Loading (Business Hours Safe)
-  - name: "Firmware Image Loading"
+  # DEPRECATED: Use main-upgrade-workflow.yml with --tags step4 instead
+  - name: "Firmware Image Loading (DEPRECATED)"
     description: >-
       Download and stage firmware images on network devices
       (business hours safe)
+      (DEPRECATED - use main-upgrade-workflow.yml --tags step4 instead)
     project: "Network Device Upgrade System"
     playbook: "ansible-content/playbooks/image-loading.yml"
     inventory: "NetBox Dynamic Inventory"
@@ -83,9 +87,11 @@ job_templates:
           required: true
 
   # Phase 3: Image Installation (Maintenance Window Required)
-  - name: "Firmware Installation"
+  # DEPRECATED: Use main-upgrade-workflow.yml with --tags step6 instead
+  - name: "Firmware Installation (DEPRECATED)"
     description: >-
       Install and activate firmware images (requires maintenance window)
+      (DEPRECATED - use main-upgrade-workflow.yml --tags step6 instead)
     project: "Network Device Upgrade System"
     playbook: "ansible-content/playbooks/image-installation.yml"
     inventory: "NetBox Dynamic Inventory"
@@ -197,9 +203,11 @@ job_templates:
           required: true
 
   # Network State Validation
-  - name: "Network State Validation"
+  # DEPRECATED: Use main-upgrade-workflow.yml with --tags step5 or step7 instead
+  - name: "Network State Validation (DEPRECATED)"
     description: >-
       Comprehensive network state validation and comparison with baseline
+      (DEPRECATED - use main-upgrade-workflow.yml --tags step5 for pre-upgrade or --tags step7 for post-upgrade)
     project: "Network Device Upgrade System"
     playbook: "ansible-content/playbooks/network-validation.yml"
     inventory: "NetBox Dynamic Inventory"

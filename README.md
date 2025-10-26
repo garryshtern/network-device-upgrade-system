@@ -45,6 +45,8 @@ This system provides automated firmware upgrade capabilities for:
 
 ## Quick Start
 
+### System Installation
+
 ```bash
 # 1. Install base system
 ./install/setup-system.sh
@@ -70,6 +72,57 @@ export INFLUXDB_TOKEN="your_token_here"
 ./provision-dashboards.sh
 ```
 
+### Workflow Execution
+
+**Single Entry Point**: All upgrade operations use `main-upgrade-workflow.yml` with tag-based execution.
+
+```bash
+# Health check (connectivity validation) - STEP 1
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step1 \
+  -e target_hosts=mydevice -e max_concurrent=5
+
+# Pre-upgrade validation (network state baseline) - STEP 5
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step5 \
+  -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5
+
+# Image loading (business hours safe) - STEP 4
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step4 \
+  -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5
+
+# Full upgrade workflow (maintenance window)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  -e target_hosts=mydevice -e target_firmware=fw.bin \
+  -e max_concurrent=5 -e maintenance_window=true
+```
+
+**Container Usage** (Docker/Podman):
+```bash
+# Health check using container
+docker run --rm -v $(pwd)/inventory:/inventory \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest \
+  playbook main-upgrade-workflow.yml --tags step1 \
+  -e target_hosts=mydevice -e max_concurrent=5
+
+# Full upgrade using container
+docker run --rm -v $(pwd)/inventory:/inventory \
+  -e ANSIBLE_TAGS="step1,step2,step3,step4,step5,step6,step7,step8" \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest \
+  playbook main-upgrade-workflow.yml \
+  -e target_hosts=mydevice -e target_firmware=fw.bin \
+  -e max_concurrent=5 -e maintenance_window=true
+```
+
+**Deprecated Playbooks**: Individual playbooks have been consolidated into the main workflow:
+- `health-check.yml` → Use `--tags step1` instead
+- `network-validation.yml` → Use `--tags step5` (pre-upgrade) or `--tags step7` (post-upgrade)
+- `image-loading.yml` → Use `--tags step4` instead
+- `image-installation.yml` → Use `--tags step6` instead
+
+**Standalone Operational Playbooks** (still separate):
+- `emergency-rollback.yml` - Emergency rollback procedures
+- `compliance-audit.yml` - Security and compliance auditing
+- `config-backup.yml` - Configuration backup operations
+
 ## 🧪 Testing Framework
 
 **Comprehensive testing capabilities for Mac/Linux development without physical devices:**
@@ -85,11 +138,19 @@ export INFLUXDB_TOKEN="your_token_here"
 ### 🚀 **Quick Testing**
 ```bash
 # Syntax validation (100% clean)
-ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  -e target_hosts=localhost -e target_firmware=test.bin \
+  -e maintenance_window=true -e max_concurrent=1
 
 # Mock device testing (all 5 platforms)
 ansible-playbook -i tests/mock-inventories/all-platforms.yml --check \
-  ansible-content/playbooks/main-upgrade-workflow.yml
+  ansible-content/playbooks/main-upgrade-workflow.yml \
+  -e target_hosts=all -e target_firmware=test.bin \
+  -e maintenance_window=true -e max_concurrent=5
+
+# Tag-based testing (individual steps)
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step1 -e target_hosts=localhost -e max_concurrent=1
 
 # Complete test suite
 ./tests/run-all-tests.sh
@@ -258,13 +319,101 @@ network-upgrade-system/
 └── .claude/                   # Claude Code commands and workflows
 ```
 
-## Documentation
+## Workflow Execution Modes
 
-- 📘 [Installation Guide](docs/installation-guide.md) - Complete setup instructions
-- 🔄 [Upgrade Workflow Guide](docs/upgrade-workflow-guide.md) - Upgrade process and safety mechanisms  
-- 🏗️ [Platform Implementation Guide](docs/platform-implementation-status.md) - Technical implementation details
-- 📊 [Grafana Integration](docs/grafana-deployment.md) - Dashboard automation and monitoring  
-- 📖 [Documentation Hub](docs/README.md) - Complete documentation index
+The system uses **`main-upgrade-workflow.yml`** as the single entry point for all upgrade operations. Individual steps can be executed using Ansible tags, with automatic dependency resolution.
+
+### Available Execution Tags
+
+| Tag | Step Name | Description | Dependencies | Safe During Business Hours |
+|-----|-----------|-------------|--------------|---------------------------|
+| `step1` | Health Check | Initial connectivity validation | None | ✅ Yes |
+| `step2` | Hash Verification | SHA512 firmware integrity check | None | ✅ Yes |
+| `step3` | Pre-Upgrade Backup | Configuration backup before changes | step1 | ✅ Yes |
+| `step4` | Image Loading | Transfer firmware to device (PHASE 1) | step1, step2 | ✅ Yes |
+| `step5` | Pre-Upgrade Validation | Network state baseline capture | step1 | ✅ Yes |
+| `step6` | Image Installation | Install firmware and reboot (PHASE 2) | step4 | ⚠️ Maintenance Window |
+| `step7` | Post-Upgrade Validation | Network state verification | step6 | ⚠️ Maintenance Window |
+| `step8` | Metric Publishing | Send results to InfluxDB | step7 | ⚠️ Maintenance Window |
+
+### Execution Examples
+
+**Individual Step Execution:**
+```bash
+# Run only health check (STEP 1)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step1 \
+  -e target_hosts=mydevice \
+  -e max_concurrent=5
+
+# Run only image loading (STEP 4) - business hours safe
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step4 \
+  -e target_hosts=mydevice \
+  -e target_firmware=nxos-10.3.5.bin \
+  -e max_concurrent=5
+```
+
+**Multiple Step Execution:**
+```bash
+# Run PHASE 1: Health check + backup + image loading
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step1,step3,step4 \
+  -e target_hosts=mydevice \
+  -e target_firmware=nxos-10.3.5.bin \
+  -e max_concurrent=5
+
+# Run PHASE 2: Installation + validation (maintenance window)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step6,step7,step8 \
+  -e target_hosts=mydevice \
+  -e target_firmware=nxos-10.3.5.bin \
+  -e maintenance_window=true \
+  -e max_concurrent=5
+```
+
+**Full Workflow Execution:**
+```bash
+# Execute all steps (complete upgrade)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  -e target_hosts=mydevice \
+  -e target_firmware=nxos-10.3.5.bin \
+  -e maintenance_window=true \
+  -e max_concurrent=5
+```
+
+### Required Variables by Execution Mode
+
+| Execution Mode | Required Variables |
+|----------------|-------------------|
+| Health Check Only (step1) | `target_hosts`, `max_concurrent` |
+| Image Loading (step4) | `target_hosts`, `target_firmware`, `max_concurrent` |
+| Validation Only (step5/step7) | `target_hosts`, `target_firmware`, `max_concurrent` |
+| Full Upgrade | `target_hosts`, `target_firmware`, `maintenance_window`, `max_concurrent` |
+
+### Automatic Dependency Resolution
+
+The workflow automatically handles dependencies between steps:
+- **STEP 4** (Image Loading) requires **STEP 2** (Hash Verification) to pass first
+- **STEP 6** (Image Installation) requires **STEP 4** (Image Loading) to complete
+- **STEP 7** (Post-Validation) requires **STEP 6** (Installation) to finish
+- **STEP 8** (Metrics) requires **STEP 7** (Validation) to complete
+
+**Example**: Running `--tags step6` will automatically verify that step4 (image loading) was completed successfully.
+
+### Playbook Migration Guide
+
+For users migrating from legacy individual playbooks:
+
+| Legacy Playbook | New Command |
+|----------------|-------------|
+| `health-check.yml` | `main-upgrade-workflow.yml --tags step1` |
+| `network-validation.yml` (pre) | `main-upgrade-workflow.yml --tags step5` |
+| `network-validation.yml` (post) | `main-upgrade-workflow.yml --tags step7` |
+| `image-loading.yml` | `main-upgrade-workflow.yml --tags step4` |
+| `image-installation.yml` | `main-upgrade-workflow.yml --tags step6` |
+
+**Note**: Legacy playbooks are deprecated and will be removed in a future release. Migrate to tag-based execution.
 
 ## Support
 

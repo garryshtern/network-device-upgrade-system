@@ -1,4 +1,12 @@
 ---
+# DEPRECATED: This playbook is deprecated and will be removed in a future version.
+#
+# Please use main-upgrade-workflow.yml with tags instead:
+#   ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step1 \
+#     --extra-vars "target_hosts=mydevice max_concurrent=5"
+#
+# This provides the same functionality with automatic dependency resolution.
+#
 # Health Check Playbook
 # Standalone playbook version for direct execution
 

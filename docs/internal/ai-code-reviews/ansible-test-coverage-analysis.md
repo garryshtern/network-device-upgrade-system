@@ -15,12 +15,14 @@
 - Individual vendor test coverage via vendor-tests/
 
 ❌ **Untested Playbooks** (Critical Gap):
-- `compliance-audit.yml` - **NO TESTS**
-- `network-validation.yml` - **NO TESTS**
-- `config-backup.yml` - **NO TESTS**
-- `emergency-rollback.yml` - **NO TESTS**
-- `image-loading.yml` - **NO TESTS**
-- `image-installation.yml` - **NO TESTS**
+- `compliance-audit.yml` - **NO TESTS** (Active - separate operational task)
+- `network-validation.yml` - **NO TESTS** (DEPRECATED - use main-upgrade-workflow.yml --tags step5/step7)
+- `config-backup.yml` - **NO TESTS** (Active - useful for ad-hoc backups)
+- `emergency-rollback.yml` - **NO TESTS** (Active - critical safety mechanism)
+- `image-loading.yml` - **NO TESTS** (DEPRECATED - use main-upgrade-workflow.yml --tags step4)
+- `image-installation.yml` - **NO TESTS** (DEPRECATED - use main-upgrade-workflow.yml --tags step6)
+
+**Note:** Deprecated playbooks are maintained for backward compatibility but will be removed in a future version. All functionality is available through tag-based execution of main-upgrade-workflow.yml with automatic dependency resolution.
 
 ### Role Test Coverage Analysis
 

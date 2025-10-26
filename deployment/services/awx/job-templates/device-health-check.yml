@@ -1,9 +1,13 @@
 ---
 # AWX Job Template: Device Health Check
 # Pre-upgrade validation and baseline capture
+#
+# DEPRECATED: This job template uses health-check.yml which is deprecated.
+# Consider using main-upgrade-workflow.yml with --tags step1 instead.
+# This provides automatic dependency resolution and better integration.
 
-name: "Device Health Check"
-description: "Comprehensive device health validation with network state baseline capture"
+name: "Device Health Check (DEPRECATED)"
+description: "Comprehensive device health validation with network state baseline capture (DEPRECATED - use main-upgrade-workflow.yml --tags step1)"
 job_type: "run"
 inventory: "Network Devices"
 project: "Network Automation"

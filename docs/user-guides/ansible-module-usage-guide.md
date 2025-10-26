@@ -113,10 +113,11 @@ Use `nxos_install_os` for NX-OS image installation:
 **After:** `nxos_facts` with `gather_network_resources: [bgp_global, bgp_address_family]`
 **Result:** Cleaner code, structured data, reduced from ~70 to ~32 lines
 
-#### ✅ image-installation.yml
+#### ✅ image-installation.yml (DEPRECATED - use main-upgrade-workflow.yml --tags step6)
 **Before:** Manual ISSU checks, install commands, boot variable updates (127 lines)
 **After:** `nxos_install_os` module with automatic ISSU handling
 **Result:** Reduced to ~32 lines, better error handling
+**Note:** This playbook is deprecated. Use `main-upgrade-workflow.yml --tags step6` instead for tag-based execution with automatic dependency resolution.
 
 #### ✅ version-verification.yml
 **Before:** `nxos_command` with "show version" + JSON parsing
@@ -215,7 +216,7 @@ Why CLI: Filesystem operations (dir, delete, copy) aren't managed by resource mo
 
 **Files Using CLI for File Operations:**
 - `storage-assessment.yml` - Check disk space and cleanup (integrated)
-- `image-loading.yml` - Copy firmware files
+- `image-loading.yml` - Copy firmware files (DEPRECATED - use main-upgrade-workflow.yml --tags step4)
 
 #### 4. **ARP/MAC/Neighbor Tables**
 
@@ -301,7 +302,7 @@ Based on comprehensive codebase analysis, these files **legitimately require** `
 
 ### File System Operations
 - `storage-assessment.yml` - Check disk space and cleanup (integrated)
-- `image-loading.yml` - Copy firmware files
+- `image-loading.yml` - Copy firmware files (DEPRECATED - use main-upgrade-workflow.yml --tags step4)
 
 ### System Operations
 - `reboot.yml` - Device reload commands
@@ -445,10 +446,11 @@ Based on comprehensive codebase analysis, these files **legitimately require** `
 ## Refactoring Summary
 
 ### Session 1: Resource Module Migration
-- **Files Refactored:** bgp-validation.yml, image-installation.yml, version-verification.yml, interface-validation.yml
+- **Files Refactored:** bgp-validation.yml, image-installation.yml (DEPRECATED), version-verification.yml, interface-validation.yml
 - **Approach:** Replaced nxos_command with resource modules (bgp_global, nxos_install_os, ansible_net_version, interfaces)
 - **Lines Reduced:** ~300 lines → ~100 lines (67% reduction)
 - **Result:** Eliminated regex parsing, improved reliability
+- **Note:** image-installation.yml is now deprecated - use main-upgrade-workflow.yml --tags step6 instead
 
 ### Session 2: Facts Module Migration
 - **Files Analyzed:** 10 files with 49 nxos_command occurrences

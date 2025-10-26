@@ -46,7 +46,8 @@ Testing framework and quality assurance documentation:
 
 System architecture, design decisions, and requirements:
 
-- **[Workflow Architecture](architecture/workflow-architecture.md)** - Upgrade workflow design
+- **[Main Upgrade Workflow Architecture](architecture/main-upgrade-workflow.md)** - 7-step upgrade workflow with automatic dependency resolution
+- **[GitHub Actions Workflow Architecture](architecture/workflow-architecture.md)** - CI/CD pipeline design
 - **[Project Requirements](architecture/project-requirements.md)** - System requirements and specifications
 - **[Technical Debt](architecture/technical-debt.md)** - Known limitations and future improvements
 

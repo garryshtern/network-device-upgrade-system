@@ -318,6 +318,8 @@ ansible-content/roles/
 └── metamako-mos-upgrade/tasks/image-loading.yml      # SCP transfer
 ```
 
+**Note:** The standalone `ansible-content/playbooks/image-loading.yml` playbook is deprecated. Use `main-upgrade-workflow.yml --tags step4` instead for tag-based execution with automatic dependency resolution.
+
 ### Upgrade Implementation Locations
 ```
 ansible-content/roles/
@@ -327,6 +329,8 @@ ansible-content/roles/
 ├── opengear-upgrade/tasks/image-installation.yml     # CLI upgrade
 └── metamako-mos-upgrade/tasks/image-installation.yml # MOS upgrade
 ```
+
+**Note:** The standalone `ansible-content/playbooks/image-installation.yml` playbook is deprecated. Use `main-upgrade-workflow.yml --tags step6` instead for tag-based execution with automatic dependency resolution.
 
 ## Troubleshooting Guide
 

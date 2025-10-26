@@ -1,4 +1,16 @@
 ---
+# DEPRECATED: This playbook is deprecated and will be removed in a future version.
+#
+# Please use main-upgrade-workflow.yml with tags instead:
+#   For pre-upgrade validation:
+#     ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step5 \
+#       --extra-vars "target_hosts=mydevice max_concurrent=5"
+#   For post-upgrade validation:
+#     ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step7 \
+#       --extra-vars "target_hosts=mydevice max_concurrent=5"
+#
+# This provides the same functionality with automatic dependency resolution.
+#
 # Network Validation Playbook
 # Comprehensive network state validation and comparison
 # Validates BGP, interfaces, routing, multicast, and ARP states

@@ -69,6 +69,22 @@ Network device upgrade management system for 1000+ heterogeneous network devices
    - Maintain or improve overall system reliability
    - Document any test impacts or requirements
 
+## Deprecated Playbooks
+
+**IMPORTANT**: The following playbooks are deprecated and will be removed in a future version. Use `main-upgrade-workflow.yml` with tag-based execution instead:
+
+- `health-check.yml` → Use `main-upgrade-workflow.yml --tags step1`
+- `network-validation.yml` → Use `main-upgrade-workflow.yml --tags step5` (pre-upgrade) or `--tags step7` (post-upgrade)
+- `image-loading.yml` → Use `main-upgrade-workflow.yml --tags step4`
+- `image-installation.yml` → Use `main-upgrade-workflow.yml --tags step6`
+
+**Active Playbooks** (still supported as separate operational tools):
+- `compliance-audit.yml` - Separate operational task
+- `emergency-rollback.yml` - Critical safety mechanism
+- `config-backup.yml` - Useful for ad-hoc backups
+
+Tag-based execution provides automatic dependency resolution and ensures all prerequisites are met before running each step. See the "Tag-Based Workflow Execution" section for detailed examples.
+
 ## Project Structure
 
 - **`ansible-content/`**: Core Ansible playbooks, roles, and templates
@@ -292,19 +308,23 @@ ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.
 
 **Required extra_vars by playbook:**
 - `main-upgrade-workflow.yml`: target_hosts, target_firmware, maintenance_window, max_concurrent
-- `health-check.yml`: target_hosts
+- `health-check.yml`: target_hosts (DEPRECATED - use main-upgrade-workflow.yml --tags step1)
 - `config-backup.yml`: (none - can run without extra_vars)
 - `compliance-audit.yml`: (none - can run without extra_vars)
-- `image-installation.yml`: (none - can run without extra_vars)
-- `network-validation.yml`: (none - can run without extra_vars)
+- `image-installation.yml`: (none - can run without extra_vars) (DEPRECATED - use main-upgrade-workflow.yml --tags step6)
+- `network-validation.yml`: (none - can run without extra_vars) (DEPRECATED - use main-upgrade-workflow.yml --tags step5 or step7)
+- `image-loading.yml`: (DEPRECATED - use main-upgrade-workflow.yml --tags step4)
 
 **This requirement applies to:**
 - Manual syntax checks during development
 - Pre-commit validation scripts
 - CI/CD pipeline syntax validation
 - Check mode execution (`--check --diff`)
+- Tag-based workflow execution (see "Tag-Based Workflow Execution" section)
 
 **Rationale:** Providing extra_vars ensures syntax validation catches ALL errors, not just YAML structure issues. Without proper variables, syntax checks may pass but playbooks will fail at runtime.
+
+**Note:** When using tag-based workflow execution with `main-upgrade-workflow.yml`, the same extra_vars requirements apply. See the "Tag-Based Workflow Execution" section for detailed examples of running individual steps with proper variables.
 
 #### **Platform-Specific Task Organization (MANDATORY)**
 
@@ -471,6 +491,276 @@ Native service-based system:
 - SHA512 hash verification and signature validation
 - Real-time progress tracking via InfluxDB
 - Comprehensive network state validation
+
+## Tag-Based Workflow Execution
+
+The main upgrade workflow (`ansible-content/playbooks/main-upgrade-workflow.yml`) uses a tag-based execution model with automatic dependency resolution, allowing you to run individual upgrade steps or the entire workflow seamlessly.
+
+### Overview
+
+The workflow is divided into 7 sequential steps, each with automatic dependency resolution. When you run a specific step using tags, all prerequisite steps are automatically executed first. This ensures consistency and prevents execution of later steps without proper groundwork.
+
+### Workflow Steps
+
+The 7-step upgrade workflow:
+
+1. **STEP 1 - Connectivity Check** (`step1`, `connectivity`)
+   - Verifies SSH/NETCONF connectivity to target devices
+   - No dependencies - can run standalone
+   - Essential first step to validate device accessibility
+
+2. **STEP 2 - Version Check** (`step2`, `version_check`)
+   - Collects current firmware version information
+   - Automatically runs: STEP 1
+   - Validates current device state before upgrade
+
+3. **STEP 3 - Space Check** (`step3`, `space_check`)
+   - Verifies sufficient flash/disk space for firmware
+   - Automatically runs: STEPS 1-2
+   - Prevents upgrade failures due to insufficient storage
+
+4. **STEP 4 - Image Upload** (`step4`, `image_upload`)
+   - Uploads firmware image to devices
+   - Verifies SHA512 hash after upload (mandatory)
+   - Automatically runs: STEPS 1-3
+   - Requires `target_firmware` variable
+
+5. **STEP 5 - Config Backup & Pre-Validation** (`step5`, `config_backup`, `pre_validation`)
+   - Backs up running configuration
+   - Captures pre-upgrade network state baseline
+   - Automatically runs: STEPS 1-4
+   - Creates comparison baseline for post-upgrade validation
+
+6. **STEP 6 - Image Installation** (`step6`, `install`, `reboot`)
+   - Installs firmware and reboots devices
+   - Automatically runs: STEPS 1-5
+   - Requires `maintenance_window=true` for safety
+   - **CRITICAL**: This step causes service interruption
+
+7. **STEP 7 - Post-Upgrade Validation** (`step7`, `post_validation`)
+   - Validates post-upgrade network state
+   - Compares against STEP 5 baseline
+   - Automatically runs: STEPS 1-6
+   - Requires previous execution of STEP 5 to establish baseline
+
+### Tag-Based Execution Examples
+
+#### Bare-Metal Ansible Execution
+
+```bash
+# STEP 1: Run connectivity check only (no dependencies)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step1 \
+  -e target_hosts=nxos-switches \
+  -e max_concurrent=5
+
+# STEP 2: Run version check (auto-runs step1 first)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step2 \
+  -e target_hosts=nxos-switches \
+  -e max_concurrent=5
+
+# STEP 3: Run space check (auto-runs steps 1-2 first)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step3 \
+  -e target_hosts=nxos-switches \
+  -e max_concurrent=5
+
+# STEP 4: Upload firmware image (auto-runs steps 1-3 first)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step4 \
+  -e target_hosts=nxos-switches \
+  -e target_firmware=nxos.10.3.3.bin \
+  -e max_concurrent=5
+
+# STEP 5: Backup config and capture pre-upgrade baseline (auto-runs steps 1-4 first)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step5 \
+  -e target_hosts=nxos-switches \
+  -e target_firmware=nxos.10.3.3.bin \
+  -e max_concurrent=5
+
+# STEP 6: Install firmware and reboot (auto-runs steps 1-5 first)
+# CRITICAL: Requires maintenance_window=true for safety
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step6 \
+  -e target_hosts=nxos-switches \
+  -e target_firmware=nxos.10.3.3.bin \
+  -e max_concurrent=5 \
+  -e maintenance_window=true
+
+# STEP 7: Post-upgrade validation (auto-runs steps 1-6 first)
+# Requires STEP 5 baseline from previous run
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step7 \
+  -e target_hosts=nxos-switches \
+  -e target_firmware=nxos.10.3.3.bin \
+  -e max_concurrent=5 \
+  -e maintenance_window=true
+
+# Alternative: Run STEP 7 standalone (requires STEP 5 baseline exists)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step7 \
+  -e target_hosts=nxos-switches \
+  -e max_concurrent=5
+```
+
+#### Container-Based Execution
+
+All examples above work in container environments using Docker or Podman:
+
+```bash
+# Docker example - Run connectivity check
+docker run --rm \
+  -v $(pwd)/inventory:/inventory:ro \
+  -v $(pwd)/firmware:/firmware:ro \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest \
+  ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step1 \
+  -e target_hosts=nxos-switches \
+  -e max_concurrent=5
+
+# Podman example - Run full upgrade through installation
+podman run --rm \
+  -v $(pwd)/inventory:/inventory:ro \
+  -v $(pwd)/firmware:/firmware:ro \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest \
+  ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step6 \
+  -e target_hosts=nxos-switches \
+  -e target_firmware=nxos.10.3.3.bin \
+  -e max_concurrent=5 \
+  -e maintenance_window=true
+```
+
+### Available Tags Reference
+
+**Step Tags** (with automatic dependency resolution):
+- `step1` - Connectivity check
+- `step2` - Version check (includes step1)
+- `step3` - Space check (includes steps 1-2)
+- `step4` - Image upload (includes steps 1-3)
+- `step5` - Config backup & pre-validation (includes steps 1-4)
+- `step6` - Image installation & reboot (includes steps 1-5)
+- `step7` - Post-upgrade validation (includes steps 1-6)
+
+**Functional Tags** (alternative names for specific operations):
+- `connectivity` - Same as step1
+- `version_check` - Same as step2
+- `space_check` - Same as step3
+- `image_upload` - Same as step4
+- `config_backup` - Included in step5
+- `pre_validation` - Included in step5
+- `install` - Included in step6
+- `reboot` - Included in step6
+- `post_validation` - Same as step7
+
+### Automatic Dependency Resolution
+
+Each step includes tags for ALL prerequisite steps, ensuring proper execution order:
+
+- Running `--tags step1` executes only step 1
+- Running `--tags step2` executes steps 1-2
+- Running `--tags step3` executes steps 1-3
+- Running `--tags step4` executes steps 1-4
+- Running `--tags step5` executes steps 1-5
+- Running `--tags step6` executes steps 1-6
+- Running `--tags step7` executes steps 1-7 (full workflow)
+
+This design eliminates the need for:
+- Multiple playbook invocations
+- Manual dependency tracking
+- Complex scripting to run steps in order
+- Separate playbook files for each operation
+
+### Common Workflows
+
+**Pre-Upgrade Validation Only:**
+```bash
+# Run all pre-upgrade checks without installation
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step5 \
+  -e target_hosts=production-switches \
+  -e target_firmware=firmware.bin \
+  -e max_concurrent=10
+```
+
+**Installation Only (after manual validation):**
+```bash
+# Requires previous successful execution of steps 1-5
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step6 \
+  -e target_hosts=production-switches \
+  -e target_firmware=firmware.bin \
+  -e max_concurrent=10 \
+  -e maintenance_window=true
+```
+
+**Post-Upgrade Validation Only:**
+```bash
+# After devices have rebooted and stabilized
+# Requires STEP 5 baseline from previous run
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step7 \
+  -e target_hosts=production-switches \
+  -e max_concurrent=10
+```
+
+**Full Workflow Execution:**
+```bash
+# Run all steps (no --tags parameter)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  -e target_hosts=production-switches \
+  -e target_firmware=firmware.bin \
+  -e max_concurrent=10 \
+  -e maintenance_window=true
+```
+
+### Required Variables
+
+**Essential variables for all steps:**
+- `target_hosts` - Ansible inventory group or hostname
+- `max_concurrent` - Maximum concurrent device operations (default: 5)
+
+**Required for steps 4-7:**
+- `target_firmware` - Firmware filename (must exist in firmware directory)
+
+**Required for step 6 (installation):**
+- `maintenance_window=true` - Safety flag to prevent accidental reboots
+
+**Optional variables:**
+- `firmware_hash_algorithm` - Hash algorithm for verification (default: sha512)
+- `firmware_hash_file_extension` - Hash file extension (default: .sha512sum)
+- `skip_hash_verification` - Skip hash verification (NOT RECOMMENDED, default: false)
+
+### Benefits of Tag-Based Execution
+
+1. **Unified Playbook**: Single playbook for all upgrade operations
+2. **Automatic Dependencies**: No manual tracking of prerequisite steps
+3. **Flexible Execution**: Run any step or combination of steps
+4. **Safety**: Built-in validation prevents skipping critical steps
+5. **Container Compatible**: Works seamlessly with Docker/Podman
+6. **Simplified Workflow**: Eliminates need for multiple playbook files
+7. **Consistent Behavior**: Same playbook in development and production
+8. **Clear Progression**: Step numbers indicate execution order
+
+### Migration from Legacy Approach
+
+**Before (multiple playbook invocations):**
+```bash
+ansible-playbook health-check.yml -e target_hosts=switches
+ansible-playbook config-backup.yml -e target_hosts=switches
+ansible-playbook network-validation.yml -e target_hosts=switches
+ansible-playbook image-installation.yml -e target_hosts=switches -e target_firmware=fw.bin
+```
+
+**After (unified tag-based approach):**
+```bash
+ansible-playbook main-upgrade-workflow.yml --tags step5 \
+  -e target_hosts=switches -e target_firmware=fw.bin -e max_concurrent=5
+```
+
+The tag-based model provides the same functionality with improved consistency, automatic dependency management, and simplified execution.
 
 # important-instruction-reminders
 ## MANDATORY Code Quality and Documentation Standards
