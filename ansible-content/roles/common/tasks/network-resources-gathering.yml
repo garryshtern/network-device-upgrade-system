@@ -258,6 +258,17 @@
         - show_debug | bool
         - network_baseline is defined
 
+    - name: Create baseline directory
+      ansible.builtin.file:
+        path: "{{ baseline_base_path }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      when:
+        - network_baseline is defined
+        - validation_phase is defined
+        - validation_phase == 'pre_upgrade'
+
     - name: Save network baseline to filesystem (pre-upgrade only)
       ansible.builtin.copy:
         content: "{{ network_baseline | to_nice_json }}"
