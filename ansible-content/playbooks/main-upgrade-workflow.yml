@@ -50,7 +50,7 @@
 #
 # STEP DEPENDENCIES (AUTOMATICALLY RESOLVED):
 # Dependencies are maintained automatically via tag inheritance.
-# When you run a step, all prerequisite steps run automatically.
+# When you run a step, prerequisite steps run automatically.
 #
 # STEP 1: No prerequisites (can run standalone)
 #         Provides: Basic facts (ansible_net_version, current_firmware_image, etc.)
@@ -58,34 +58,42 @@
 #
 # STEP 2: Auto-includes: step1
 #         Provides: Verification that upgrade is needed and firmware file exists
-#         Auto-included by: step3, step4, step5, step6
+#         Auto-included by: step3, step4
+#         Optional for: step5, step6, step7
 #
 # STEP 3: Auto-includes: step1, step2
 #         Provides: Confirmation of sufficient storage space
-#         Auto-included by: step4, step5, step6
+#         Auto-included by: step4
+#         Optional for: step5, step6, step7
 #
 # STEP 4: Auto-includes: step1, step2, step3
 #         Provides: Firmware staged on device, config backup saved
-#         Auto-included by: step5, step6
+#         Auto-included by: None
+#         Optional for: step5, step6, step7
 #
-# STEP 5: Auto-includes: step1, step2, step3, step4
+# STEP 5: Auto-includes: step1 only
 #         Provides: network_baseline saved to filesystem, pre-validation results
-#         Auto-included by: step6
+#         Optional: Run step 4 separately before step 6 for config backup
+#         Auto-included by: None
 #
-# STEP 6: Auto-includes: step1, step2, step3, step4, step5
+# STEP 6: Auto-includes: step1 only
 #         Provides: Device rebooted with new firmware
-#         Auto-included by: None (final install step)
+#         Optional: Run step 5 before step 6 to establish baseline
+#         Auto-included by: None
 #
 # STEP 7: Auto-includes: step1 only
 #         Requires: STEP 5 baseline file from previous run (not auto-included)
 #         Provides: Post-upgrade validation, comparison with baseline
 #
 # COMMON USE CASES:
-# Full upgrade:        --tags step6 (auto-runs: step1→step2→step3→step4→step5→step6)
-# Pre-validation only: --tags step5 (auto-runs: step1→step2→step3→step4→step5)
-# Post-validation:     --tags step7 (auto-runs: step1→step7, requires prior step5 baseline)
-# Just upload image:   --tags step4 (auto-runs: step1→step2→step3→step4)
-# Just check version:  --tags step2 (auto-runs: step1→step2)
+# Full upgrade:              --tags step6 (auto-runs: step1→step2→step3→step4→step5→step6)
+# Safe upgrade (recommended): --tags step5 then --tags step4 then --tags step6 then --tags step7
+#   Gathers baseline, backs up config, upgrades, validates against baseline
+# Pre-validation only:       --tags step5 (auto-runs: step1 only, gathers baseline)
+# Post-validation:           --tags step7 (auto-runs: step1→step7, requires prior step5 baseline)
+# Just upload image:         --tags step4 (auto-runs: step1→step2→step3→step4)
+# Just check version:        --tags step2 (auto-runs: step1→step2)
+# Emergency upgrade:         --tags step6 (auto-runs: step1 only, direct upgrade)
 #
 # BENEFITS OF AUTO-DEPENDENCY:
 # - No need to remember prerequisite chains

@@ -1,13 +1,16 @@
 ---
 # STEP 5: Network Resources Gathering and Pre-Upgrade Validation
-# Network resources gathered AFTER image is confirmed staged (not before)
 # Comprehensive validation: BGP, interfaces, routing, etc.
 # MUST PASS or workflow STOPS
-# Dependencies: STEP 1, STEP 2, STEP 3, STEP 4 (automatically included)
+# Dependencies: STEP 1 only (connectivity to device)
+#
+# NOTE: Image staging (step 4) is NOT a prerequisite for validation.
+# Validation only needs network connectivity to gather current state.
+# If you want a config backup, run step 4 separately before step 6.
 
-- name: Include STEP 4 as prerequisite (includes STEP 1-3)
+- name: Include STEP 1 as prerequisite (connectivity to device)
   ansible.builtin.include_tasks:
-    file: step-4-image-upload.yml
+    file: step-1-connectivity.yml
 
 - name: Display STEP 5 entry
   ansible.builtin.debug:
