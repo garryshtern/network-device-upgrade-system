@@ -17,20 +17,48 @@
     mode: '0755'
   delegate_to: localhost
 
+- name: Create backup directory for this device
+  ansible.builtin.file:
+    path: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+
 - name: Platform-specific configuration backup
   block:
-    # For test purposes, we'll create a simple backup placeholder
-    # In production, this would include platform-specific backup tasks
-    - name: Create backup placeholder for testing
+    - name: Backup NX-OS running config
+      cisco.nxos.nxos_command:
+        commands:
+          - command: show running-config
+            output: text
+      register: nxos_running_config
+      when: platform == 'nxos'
+      changed_when: false
+
+    - name: Backup IOS-XE running config
+      cisco.ios.ios_command:
+        commands:
+          - command: show running-config
+            output: text
+      register: ios_running_config
+      when: platform == 'ios'
+      changed_when: false
+
+    - name: Save NX-OS config backup to file
       ansible.builtin.copy:
-        content: |
-          # Configuration backup placeholder for {{ platform }}
-          # Device: {{ inventory_hostname }}
-          # Timestamp: {{ backup_timestamp }}
-          # Platform: {{ platform }}
-        dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/config_backup.txt"
+        content: "{{ nxos_running_config.stdout[0] if nxos_running_config is defined and nxos_running_config.stdout | length > 0 else '# No config retrieved' }}"
+        dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
         mode: '0644'
       delegate_to: localhost
+      when: platform == 'nxos'
+
+    - name: Save IOS-XE config backup to file
+      ansible.builtin.copy:
+        content: "{{ ios_running_config.stdout[0] if ios_running_config is defined and ios_running_config.stdout | length > 0 else '# No config retrieved' }}"
+        dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
+        mode: '0644'
+      delegate_to: localhost
+      when: platform == 'ios'
 
 - name: Record backup completion
   ansible.builtin.include_role:

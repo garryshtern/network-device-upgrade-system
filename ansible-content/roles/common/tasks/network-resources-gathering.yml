@@ -218,6 +218,7 @@
       ansible.builtin.set_fact:
         network_baseline:
           timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          network_resources: "{{ nxos_network_resources.ansible_network_resources if nxos_network_resources.ansible_network_resources is defined else {} }}"
           arp_data: "{{ gathered_arp_data if gathered_arp_data is defined else {} }}"
           mac_data: "{{ gathered_mac_data if gathered_mac_data is defined else {} }}"
           rib_data: "{{ gathered_rib_data if gathered_rib_data is defined else {} }}"
