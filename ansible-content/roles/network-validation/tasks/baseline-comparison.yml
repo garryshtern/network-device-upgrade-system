@@ -40,6 +40,37 @@
       ansible.builtin.debug:
         msg: "Failed to load pre-upgrade baseline - comparison will be skipped"
 
+- name: Validate baseline data completeness before comparison
+  when:
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+    - baseline_comparison.baseline_available | bool
+    - network_baseline_pre is defined
+    - network_baseline_post is defined
+  ansible.builtin.assert:
+    that:
+      - network_baseline_pre.network_resources is defined
+      - network_baseline_pre.arp_data is defined
+      - network_baseline_pre.mac_data is defined
+      - network_baseline_pre.rib_data is defined
+      - network_baseline_pre.fib_data is defined
+      - network_baseline_pre.bfd_data is defined
+      - network_baseline_pre.pim_interface_data is defined
+      - network_baseline_pre.pim_neighbor_data is defined
+      - network_baseline_pre.igmp_interface_data is defined
+      - network_baseline_pre.mroute_data is defined
+      - network_baseline_post.network_resources is defined
+      - network_baseline_post.arp_data is defined
+      - network_baseline_post.mac_data is defined
+      - network_baseline_post.rib_data is defined
+      - network_baseline_post.fib_data is defined
+      - network_baseline_post.bfd_data is defined
+      - network_baseline_post.pim_interface_data is defined
+      - network_baseline_post.pim_neighbor_data is defined
+      - network_baseline_post.igmp_interface_data is defined
+      - network_baseline_post.mroute_data is defined
+    fail_msg: "Pre-upgrade or post-upgrade baseline missing required data sections. Cannot perform comparison."
+
 - name: Compare network baselines (post-upgrade only)
   when:
     - validation_phase is defined
