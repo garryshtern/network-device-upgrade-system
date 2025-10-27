@@ -210,6 +210,8 @@
               firmware_version: "{{ firmware_version }}"
               status: "success"
               reboot_required: "{{ reboot_required }}"
+          when:
+            - export_metrics | bool
 
         - name: Update device inventory
           ansible.builtin.include_role:
