@@ -33,6 +33,22 @@
 - name: NX-OS comprehensive network resources gathering
   when: platform == 'nxos'
   block:
+    - name: Initialize gathered data variables
+      ansible.builtin.set_fact:
+        gathered_arp_data: {}
+        gathered_mac_data: {}
+        gathered_rib_data: {}
+        gathered_fib_data: {}
+        gathered_bfd_data: {}
+        gathered_pim_interface_data: {}
+        gathered_pim_neighbor_data: {}
+        gathered_pim_rp_data: {}
+        gathered_anycast_rp_data: {}
+        gathered_igmp_interface_data: {}
+        gathered_igmp_groups_data: {}
+        gathered_mroute_summary_data: {}
+        gathered_mroute_data: {}
+
     - name: Gather comprehensive NX-OS network resources
       cisco.nxos.nxos_facts:
         gather_subset:
