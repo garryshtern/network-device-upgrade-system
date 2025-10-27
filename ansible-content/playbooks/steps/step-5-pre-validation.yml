@@ -1,0 +1,49 @@
+---
+# STEP 5: Network Resources Gathering and Pre-Upgrade Validation
+# Network resources gathered AFTER image is confirmed staged (not before)
+# Comprehensive validation: BGP, interfaces, routing, etc.
+# MUST PASS or workflow STOPS
+# Dependencies: STEP 1, STEP 2, STEP 3, STEP 4 (automatically included)
+
+- name: Include STEP 4 as prerequisite (includes STEP 1-3)
+  ansible.builtin.include_tasks:
+    file: step-4-image-upload.yml
+
+- name: Display STEP 5 entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "STEP 5: STARTING NETWORK VALIDATION"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "About to gather network resources..."
+      - "=========================================="
+
+- name: Gather comprehensive network resources for validation
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: network-resources-gathering
+  vars:
+    validation_phase: "pre_upgrade"
+
+- name: Display network resources gathering completion
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "NETWORK RESOURCES GATHERED - PROCEEDING TO VALIDATION"
+      - "=========================================="
+
+- name: Capture pre-upgrade network state
+  ansible.builtin.include_role:
+    name: network-validation
+  vars:
+    validation_phase: "pre_upgrade"
+    save_baseline: true
+
+- name: Verify all critical services are operational
+  ansible.builtin.assert:
+    that:
+      - network_validation_results is defined
+      - network_validation_results.overall_status == "healthy"
+    fail_msg: "Pre-upgrade validation failed. Network not in healthy state."

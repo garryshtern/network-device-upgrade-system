@@ -1,0 +1,49 @@
+---
+# STEP 7: Post-Upgrade Validation
+# Compare to pre-upgrade state
+# Failure triggers OPTIONAL rollback (does not stop workflow)
+# Dependencies: STEP 1 (for connectivity), assumes STEP 5 baseline exists from previous run
+# NOTE: STEP 5 baseline must exist from prior run, STEP 6 should have been run
+
+- name: Include STEP 1 as prerequisite (minimal dependency)
+  ansible.builtin.include_tasks:
+    file: step-1-connectivity.yml
+
+- name: Display STEP 7 entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "STEP 7: POST-UPGRADE VALIDATION"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "About to gather post-upgrade network resources..."
+      - "=========================================="
+
+- name: Gather comprehensive network resources for post-upgrade validation
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: network-resources-gathering
+  vars:
+    validation_phase: "post_upgrade"
+
+- name: Display network resources gathering completion
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "POST-UPGRADE RESOURCES GATHERED - PROCEEDING TO VALIDATION"
+      - "=========================================="
+
+- name: Capture post-upgrade network state
+  ansible.builtin.include_role:
+    name: network-validation
+  vars:
+    validation_phase: "post_upgrade"
+    compare_to_baseline: true
+
+- name: Compare pre/post upgrade states
+  ansible.builtin.assert:
+    that:
+      - network_validation_results is defined
+      - network_validation_results.comparison_status == "passed"
+    fail_msg: "Post-upgrade validation shows degradation from baseline."

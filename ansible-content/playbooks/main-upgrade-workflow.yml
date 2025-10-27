@@ -172,72 +172,9 @@
         - step1
         - connectivity
       block:
-        - name: Gather basic device facts (NX-OS)
-          cisco.nxos.nxos_facts:
-            gather_subset:
-              - hardware
-              - min
-          when: platform == 'nxos'
-
-        - name: Gather basic device facts (IOS-XE)
-          cisco.ios.ios_facts:
-            gather_subset:
-              - hardware
-              - min
-          when: platform == 'ios'
-
-        - name: Test basic connectivity (other platforms)
-          ansible.builtin.wait_for_connection:
-            timeout: "{{ connectivity_timeout }}"
-          when: platform not in ['nxos', 'ios']
-
-        - name: Verify facts gathered successfully (Cisco platforms)
-          ansible.builtin.assert:
-            that:
-              - ansible_net_version is defined
-              - ansible_net_hostname is defined
-              - ansible_net_model is defined
-              - ansible_net_image is defined
-            fail_msg: "Failed to gather basic device facts. Check connectivity and authentication."
-          when: platform in ['nxos', 'ios']
-
-        - name: Set current firmware from facts
-          ansible.builtin.set_fact:
-            current_firmware_version: "{{ ansible_net_version }}"
-            current_firmware_image: "{{ ansible_net_image }}"
-            current_firmware_image_filename: "{{ ansible_net_image | regex_replace('^.*/', '') }}"
-          when: platform in ['nxos', 'ios']
-
-        - name: Connectivity confirmed
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "CONNECTIVITY ESTABLISHED"
-              - "=========================================="
-              - "Device: {{ inventory_hostname }}"
-              - "Platform: {{ platform }}"
-              - "Hostname: {{ ansible_net_hostname }}"
-              - "Current Version: {{ current_firmware_version }}"
-              - "Current Image: {{ current_firmware_image }}"
-              - "Image Filename: {{ current_firmware_image_filename }}"
-              - "Model: {{ ansible_net_model }}"
-              - "Status: Connected successfully"
-              - "Note: Comprehensive facts will be gathered after image staging"
-              - "=========================================="
-          when: platform in ['nxos', 'ios']
-
-        - name: Connectivity confirmed (other platforms)
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "CONNECTIVITY ESTABLISHED"
-              - "=========================================="
-              - "Device: {{ inventory_hostname }}"
-              - "Platform: {{ platform }}"
-              - "Status: Connected successfully"
-              - "Note: Comprehensive facts will be gathered after image staging"
-              - "=========================================="
-          when: platform not in ['nxos', 'ios']
+        - name: Execute STEP 1 tasks
+          ansible.builtin.include_tasks:
+            file: steps/step-1-connectivity.yml
 
       rescue:
         - name: Connectivity check failed - STOP workflow
@@ -250,105 +187,14 @@
     # AUTO-DEPENDENCY: Requires step1
     - name: "STEP 2: Version Check and Image Verification"
       tags:
-        - step1  # Include step1 tag so it runs when step2 is called
         - step2
         - version_check
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Check current running version (non-Cisco platforms)
-          ansible.builtin.include_role:
-            name: image-validation
-            tasks_from: version-verification
-          when: platform not in ['nxos', 'ios']
-
-        - name: Compare current image to target firmware (Cisco platforms)
-          ansible.builtin.set_fact:
-            already_running_target_version: "{{ current_firmware_image_filename == target_firmware }}"
-          when: platform in ['nxos', 'ios']
-
-        - name: Compare current version to target firmware (non-Cisco platforms)
-          ansible.builtin.set_fact:
-            already_running_target_version: "{{ current_firmware_version == target_firmware }}"
-          when: platform not in ['nxos', 'ios']
-
-        - name: Report if already running target firmware (Cisco platforms)
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "ALREADY RUNNING TARGET FIRMWARE"
-              - "=========================================="
-              - "Device: {{ inventory_hostname }}"
-              - "Current Image: {{ current_firmware_image }}"
-              - "Image Filename: {{ current_firmware_image_filename }}"
-              - "Target Firmware: {{ target_firmware }}"
-              - "Status: NO UPGRADE NEEDED ({{ current_firmware_image_filename }} == {{ target_firmware }})"
-              - "Action: Skipping upgrade for this device"
-              - "=========================================="
-          when:
-            - already_running_target_version | bool
-            - platform in ['nxos', 'ios']
-
-        - name: Report if already running target firmware (non-Cisco platforms)
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "ALREADY RUNNING TARGET FIRMWARE"
-              - "=========================================="
-              - "Device: {{ inventory_hostname }}"
-              - "Current Version: {{ current_firmware_version }}"
-              - "Target Firmware: {{ target_firmware }}"
-              - "Status: NO UPGRADE NEEDED"
-              - "Action: Skipping upgrade for this device"
-              - "=========================================="
-          when:
-            - already_running_target_version | bool
-            - platform not in ['nxos', 'ios']
-
-        - name: End upgrade for this host if already running target firmware
-          ansible.builtin.meta: end_host
-          when: already_running_target_version | bool
-
-        - name: Report upgrade needed (Cisco platforms)
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "UPGRADE REQUIRED"
-              - "=========================================="
-              - "Device: {{ inventory_hostname }}"
-              - "Current Image: {{ current_firmware_image }}"
-              - "Image Filename: {{ current_firmware_image_filename }}"
-              - "Target Firmware: {{ target_firmware }}"
-              - "Status: PROCEEDING WITH UPGRADE ({{ current_firmware_image_filename }} != {{ target_firmware }})"
-              - "=========================================="
-          when:
-            - not already_running_target_version | bool
-            - platform in ['nxos', 'ios']
-
-        - name: Report upgrade needed (non-Cisco platforms)
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "UPGRADE REQUIRED"
-              - "=========================================="
-              - "Device: {{ inventory_hostname }}"
-              - "Current Version: {{ current_firmware_version }}"
-              - "Target Firmware: {{ target_firmware }}"
-              - "Status: PROCEEDING WITH UPGRADE"
-              - "=========================================="
-          when:
-            - not already_running_target_version | bool
-            - platform not in ['nxos', 'ios']
-
-        - name: Verify firmware image availability (local file check)
-          ansible.builtin.include_role:
-            name: image-validation
-            tasks_from: integrity-audit
-
-        - name: Verify firmware SHA512 hash (MANDATORY)
-          ansible.builtin.include_role:
-            name: image-validation
-            tasks_from: hash-verification
+        - name: Execute STEP 2 tasks (includes STEP 1)
+          ansible.builtin.include_tasks:
+            file: steps/step-2-version-check.yml
 
       rescue:
         - name: Version check or image verification failed - STOP workflow
@@ -362,28 +208,12 @@
     # AUTO-DEPENDENCY: Requires step1, step2
     - name: "STEP 3: Storage Space Validation"
       tags:
-        - step1  # Include prerequisites
-        - step2
         - step3
         - space_check
       block:
-        - name: Storage assessment with automatic cleanup if needed
-          ansible.builtin.include_role:
-            name: space-management
-            tasks_from: storage-assessment
-          vars:
-            minimum_free_space_gb: "{{ required_space_gb }}"
-
-        - name: Verify sufficient space available
-          ansible.builtin.assert:
-            that:
-              - storage_info is defined
-              - (storage_info.free_space_gb | float) >= (required_space_gb | float)
-            fail_msg:
-              - "Insufficient storage space."
-              - "Available: {{ storage_info.free_space_gb }}GB, Required: {{ required_space_gb }}GB"
-          when:
-            - not ansible_check_mode or inventory_hostname != 'localhost'
+        - name: Execute STEP 3 tasks (includes STEP 1-2)
+          ansible.builtin.include_tasks:
+            file: steps/step-3-space-check.yml
 
       rescue:
         - name: Storage validation failed - STOP workflow
@@ -396,24 +226,15 @@
     # AUTO-DEPENDENCY: Requires step1, step2, step3
     - name: "STEP 4: Image Upload and Config Backup"
       tags:
-        - step1  # Include all prerequisites
-        - step2
-        - step3
         - step4
         - image_upload
         - config_backup
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Ensure firmware image on device (check bootflash + upload if needed)
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: image-loading
-
-        - name: Backup current configuration (after confirming image is staged)
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: config-backup
+        - name: Execute STEP 4 tasks (includes STEP 1-3)
+          ansible.builtin.include_tasks:
+            file: steps/step-4-image-upload.yml
 
       rescue:
         - name: Image upload failed - STOP workflow
@@ -427,54 +248,15 @@
     # AUTO-DEPENDENCY: Requires step1, step4 (step2/step3 implied by step4)
     - name: "STEP 5: Network Resources Gathering and Pre-Upgrade Validation"
       tags:
-        - step1  # Include all prerequisites
-        - step2
-        - step3
-        - step4
         - step5
         - pre_validation
         - network_validation
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Display STEP 5 entry
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "STEP 5: STARTING NETWORK VALIDATION"
-              - "=========================================="
-              - "Device: {{ inventory_hostname }}"
-              - "Platform: {{ platform }}"
-              - "About to gather network resources..."
-              - "=========================================="
-
-        - name: Gather comprehensive network resources for validation
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: network-resources-gathering
-          vars:
-            validation_phase: "pre_upgrade"
-
-        - name: Display network resources gathering completion
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "NETWORK RESOURCES GATHERED - PROCEEDING TO VALIDATION"
-              - "=========================================="
-
-        - name: Capture pre-upgrade network state
-          ansible.builtin.include_role:
-            name: network-validation
-          vars:
-            validation_phase: "pre_upgrade"
-            save_baseline: true
-
-        - name: Verify all critical services are operational
-          ansible.builtin.assert:
-            that:
-              - network_validation_results is defined
-              - network_validation_results.overall_status == "healthy"
-            fail_msg: "Pre-upgrade validation failed. Network not in healthy state."
+        - name: Execute STEP 5 tasks (includes STEP 1-4)
+          ansible.builtin.include_tasks:
+            file: steps/step-5-pre-validation.yml
 
       rescue:
         - name: Pre-upgrade validation failed - STOP workflow
@@ -487,29 +269,15 @@
     # AUTO-DEPENDENCY: Requires step1, step4, step5 (step2/step3 implied by step4)
     - name: "STEP 6: Firmware Installation"
       tags:
-        - step1  # Include all prerequisites
-        - step2
-        - step3
-        - step4
-        - step5
         - step6
         - install
         - reboot
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Install firmware (platform-specific)
-          ansible.builtin.include_role:
-            name: "{{ platform_role_map[platform] }}"
-            tasks_from: image-installation
-          when:
-            - platform is defined
-            - platform in platform_role_map
-
-        - name: Wait for device to come back online
-          ansible.builtin.wait_for_connection:
-            timeout: "{{ connectivity_timeout }}"
-            delay: 30
+        - name: Execute STEP 6 tasks (includes STEP 1-5)
+          ansible.builtin.include_tasks:
+            file: steps/step-6-installation.yml
 
       rescue:
         - name: Installation failed - STOP workflow
@@ -523,51 +291,14 @@
     # NOTE: step5 baseline must exist from a prior run, step6 should have been run
     - name: "STEP 7: Post-Upgrade Validation"
       tags:
-        - step1  # Only requires step1 for connectivity (assumes step5/step6 already done)
         - step7
         - post_validation
-        - network_validation
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Display STEP 7 entry
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "STEP 7: POST-UPGRADE VALIDATION"
-              - "=========================================="
-              - "Device: {{ inventory_hostname }}"
-              - "Platform: {{ platform }}"
-              - "About to gather post-upgrade network resources..."
-              - "=========================================="
-
-        - name: Gather comprehensive network resources for post-upgrade validation
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: network-resources-gathering
-          vars:
-            validation_phase: "post_upgrade"
-
-        - name: Display network resources gathering completion
-          ansible.builtin.debug:
-            msg:
-              - "=========================================="
-              - "POST-UPGRADE RESOURCES GATHERED - PROCEEDING TO VALIDATION"
-              - "=========================================="
-
-        - name: Capture post-upgrade network state
-          ansible.builtin.include_role:
-            name: network-validation
-          vars:
-            validation_phase: "post_upgrade"
-            compare_to_baseline: true
-
-        - name: Compare pre/post upgrade states
-          ansible.builtin.assert:
-            that:
-              - network_validation_results is defined
-              - network_validation_results.comparison_status == "passed"
-            fail_msg: "Post-upgrade validation shows degradation from baseline."
+        - name: Execute STEP 7 tasks (includes STEP 1 only)
+          ansible.builtin.include_tasks:
+            file: steps/step-7-post-validation.yml
 
       rescue:
         - name: Post-validation failed - trigger optional rollback

@@ -1,0 +1,22 @@
+---
+# STEP 6: Firmware Installation
+# Platform-specific installation
+# MUST PASS or workflow STOPS
+# Dependencies: STEP 1, STEP 2, STEP 3, STEP 4, STEP 5 (automatically included)
+
+- name: Include STEP 5 as prerequisite (includes STEP 1-4)
+  ansible.builtin.include_tasks:
+    file: step-5-pre-validation.yml
+
+- name: Install firmware (platform-specific)
+  ansible.builtin.include_role:
+    name: "{{ platform_role_map[platform] }}"
+    tasks_from: image-installation
+  when:
+    - platform is defined
+    - platform in platform_role_map
+
+- name: Wait for device to come back online
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ connectivity_timeout }}"
+    delay: 30
