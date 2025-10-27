@@ -198,24 +198,18 @@
                 'current_step': 'completion'
               }) }}
 
-        - name: Build installation metrics data
-          ansible.builtin.set_fact:
-            installation_metric_data:
-              device_id: "{{ inventory_hostname }}"
-              platform: "{{ platform }}"
-              firmware_version: "{{ firmware_version }}"
-              status: "success"
-              reboot_required: "{{ reboot_required }}"
-          when:
-            - export_metrics | bool
-
         - name: Record installation metrics
           ansible.builtin.include_role:
             name: common
             tasks_from: metrics-export
           vars:
             metric_type: "installation_completion"
-            metric_data: "{{ installation_metric_data }}"
+            metric_data:
+              device_id: "{{ inventory_hostname }}"
+              platform: "{{ platform }}"
+              firmware_version: "{{ firmware_version }}"
+              status: "success"
+              reboot_required: "{{ reboot_required }}"
           when:
             - export_metrics | bool
 

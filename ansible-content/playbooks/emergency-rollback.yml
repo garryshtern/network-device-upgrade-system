@@ -322,9 +322,13 @@
             'post_rollback_validation' in rollback_state.steps_completed
           }}
 
-    - name: Build rollback metrics data
-      ansible.builtin.set_fact:
-        rollback_metric_data:
+    - name: Record rollback metrics
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: metrics-export
+      vars:
+        metric_type: "emergency_rollback"
+        metric_data:
           device_id: "{{ inventory_hostname }}"
           platform: "{{ platform }}"
           rollback_reason: "{{ rollback_state.rollback_reason }}"
@@ -332,16 +336,6 @@
           rollback_successful: "{{ rollback_successful }}"
           steps_completed: "{{ rollback_state.steps_completed | length }}"
           steps_failed: "{{ rollback_state.steps_failed | length }}"
-      when:
-        - export_metrics | bool
-
-    - name: Record rollback metrics
-      ansible.builtin.include_role:
-        name: common
-        tasks_from: metrics-export
-      vars:
-        metric_type: "emergency_rollback"
-        metric_data: "{{ rollback_metric_data }}"
       when:
         - export_metrics | bool
 

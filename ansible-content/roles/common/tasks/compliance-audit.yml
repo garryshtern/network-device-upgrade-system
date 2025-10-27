@@ -200,23 +200,17 @@
       - "Overall Status: {{ 'COMPLIANT' if compliance_percentage >= 90 else 'NON-COMPLIANT' }}"
       - "==============================="
 
-- name: Build compliance metrics data
-  ansible.builtin.set_fact:
-    compliance_metric_data:
-      device_id: "{{ inventory_hostname }}"
-      compliance_score: "{{ compliance_percentage }}"
-      platform: "{{ platform }}"
-      status: "success"
-      timestamp: "{{ compliance_results.audit_timestamp }}"
-  when:
-    - export_metrics | bool
-
 - name: Record compliance completion
   ansible.builtin.include_role:
     name: common
     tasks_from: metrics-export
   vars:
     metric_type: "compliance_audit"
-    metric_data: "{{ compliance_metric_data }}"
+    metric_data:
+      device_id: "{{ inventory_hostname }}"
+      compliance_score: "{{ compliance_percentage }}"
+      platform: "{{ platform }}"
+      status: "success"
+      timestamp: "{{ compliance_results.audit_timestamp }}"
   when:
     - export_metrics | bool
