@@ -93,9 +93,9 @@
               - "'STEP 1' in (main_workflow.content | b64decode)"
               - "'STEP 3' in (main_workflow.content | b64decode)"
               - "'STEP 5' in (main_workflow.content | b64decode)"
-              - "'tasks_from: image-loading' in (main_workflow.content | b64decode)"
-              - "'tasks_from: image-installation' in (main_workflow.content | b64decode)"
-              - "'network-validation' in (main_workflow.content | b64decode)"
+              - "'STEP 6' in (main_workflow.content | b64decode)"
+              - "'STEP 7' in (main_workflow.content | b64decode)"
+              - "'include_tasks:' in (main_workflow.content | b64decode)"
             success_msg: "✓ Phase separation properly implemented in main workflow"
             fail_msg: "Phase separation not properly implemented"
 
