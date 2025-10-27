@@ -4,6 +4,9 @@
 # MUST PASS or workflow STOPS
 # Dependencies: None (can run standalone)
 
+- name: Gather Ansible facts (required for timestamps and system info)
+  ansible.builtin.setup:
+
 - name: Gather basic device facts (NX-OS)
   cisco.nxos.nxos_facts:
     gather_subset:
