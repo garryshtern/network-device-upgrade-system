@@ -1,0 +1,396 @@
+---
+# Baseline Comparison Task
+# Compares pre-upgrade and post-upgrade network state baselines
+# Validates that critical network state hasn't changed after upgrade
+#
+# PREREQUISITES:
+# - network_baseline_pre: Pre-upgrade baseline from file (set by network-resources-gathering)
+# - network_baseline_post: Post-upgrade current state (set by network-resources-gathering)
+# - validation_phase: Must be 'post_upgrade' to run comparison
+
+- name: Initialize baseline comparison results
+  ansible.builtin.set_fact:
+    baseline_comparison:
+      baseline_available: false
+      comparison_performed: false
+      all_data_matches: true
+      sections_checked: []
+      sections_with_differences: []
+      detailed_results: {}
+
+- name: Load pre-upgrade baseline (post-upgrade validation only)
+  when:
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+  block:
+    - name: Check if baseline file exists
+      ansible.builtin.stat:
+        path: "{{ baseline_base_path }}/{{ inventory_hostname }}_network_baseline.json"
+      register: baseline_file
+      delegate_to: localhost
+
+    - name: Load pre-upgrade baseline
+      when: baseline_file.stat.exists
+      ansible.builtin.set_fact:
+        network_baseline_pre: "{{ lookup('file', baseline_base_path + '/' + inventory_hostname + '_network_baseline.json') | from_json }}"
+        baseline_comparison: "{{ baseline_comparison | combine({'baseline_available': true}) }}"
+
+  rescue:
+    - name: Handle baseline load failure
+      ansible.builtin.debug:
+        msg: "Failed to load pre-upgrade baseline - comparison will be skipped"
+
+- name: Compare network baselines (post-upgrade only)
+  when:
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+    - baseline_comparison.baseline_available | bool
+    - network_baseline_pre is defined
+    - network_baseline_post is defined
+  block:
+    # Compare Network Resources (BGP, Interfaces, VLANs, etc.)
+    - name: Compare network_resources
+      ansible.builtin.set_fact:
+        network_resources_match: "{{ network_baseline_pre.network_resources == network_baseline_post.network_resources }}"
+
+    - name: Check network_resources difference
+      when: not network_resources_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['network_resources'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'network_resources_match': false,
+                'network_resources_pre_keys': network_baseline_pre.network_resources | dict2items | map(attribute='key') | list | sort,
+                'network_resources_post_keys': network_baseline_post.network_resources | dict2items | map(attribute='key') | list | sort
+              })
+            })
+          }}
+
+    - name: Record network_resources as matching
+      when: network_resources_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['network_resources'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'network_resources_match': true
+              })
+            })
+          }}
+
+    # Compare ARP Data
+    - name: Compare arp_data
+      ansible.builtin.set_fact:
+        arp_data_match: "{{ network_baseline_pre.arp_data == network_baseline_post.arp_data }}"
+
+    - name: Check arp_data difference
+      when: not arp_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['arp_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'arp_data_match': false,
+                'arp_data_pre_entries': network_baseline_pre.arp_data | length,
+                'arp_data_post_entries': network_baseline_post.arp_data | length
+              })
+            })
+          }}
+
+    - name: Record arp_data as matching
+      when: arp_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['arp_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'arp_data_match': true,
+                'arp_data_entries': network_baseline_post.arp_data | length
+              })
+            })
+          }}
+
+    # Compare MAC Data
+    - name: Compare mac_data
+      ansible.builtin.set_fact:
+        mac_data_match: "{{ network_baseline_pre.mac_data == network_baseline_post.mac_data }}"
+
+    - name: Check mac_data difference
+      when: not mac_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['mac_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'mac_data_match': false,
+                'mac_data_pre_entries': network_baseline_pre.mac_data | length,
+                'mac_data_post_entries': network_baseline_post.mac_data | length
+              })
+            })
+          }}
+
+    - name: Record mac_data as matching
+      when: mac_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['mac_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'mac_data_match': true,
+                'mac_data_entries': network_baseline_post.mac_data | length
+              })
+            })
+          }}
+
+    # Compare RIB Data
+    - name: Compare rib_data
+      ansible.builtin.set_fact:
+        rib_data_match: "{{ network_baseline_pre.rib_data == network_baseline_post.rib_data }}"
+
+    - name: Check rib_data difference
+      when: not rib_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['rib_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'rib_data_match': false
+              })
+            })
+          }}
+
+    - name: Record rib_data as matching
+      when: rib_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['rib_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'rib_data_match': true
+              })
+            })
+          }}
+
+    # Compare FIB Data
+    - name: Compare fib_data
+      ansible.builtin.set_fact:
+        fib_data_match: "{{ network_baseline_pre.fib_data == network_baseline_post.fib_data }}"
+
+    - name: Check fib_data difference
+      when: not fib_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['fib_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'fib_data_match': false
+              })
+            })
+          }}
+
+    - name: Record fib_data as matching
+      when: fib_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['fib_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'fib_data_match': true
+              })
+            })
+          }}
+
+    # Compare BFD Data
+    - name: Compare bfd_data
+      ansible.builtin.set_fact:
+        bfd_data_match: "{{ network_baseline_pre.bfd_data == network_baseline_post.bfd_data }}"
+
+    - name: Check bfd_data difference
+      when: not bfd_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['bfd_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'bfd_data_match': false
+              })
+            })
+          }}
+
+    - name: Record bfd_data as matching
+      when: bfd_data_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['bfd_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'bfd_data_match': true
+              })
+            })
+          }}
+
+    # Compare PIM Data (interfaces, neighbors, RPs, Anycast RPs)
+    - name: Compare pim_interface_data
+      ansible.builtin.set_fact:
+        pim_interface_match: "{{ network_baseline_pre.pim_interface_data == network_baseline_post.pim_interface_data }}"
+
+    - name: Check pim_interface_data difference
+      when: not pim_interface_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['pim_interface_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'pim_interface_match': false
+              })
+            })
+          }}
+
+    - name: Record pim_interface_data as matching
+      when: pim_interface_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['pim_interface_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'pim_interface_match': true
+              })
+            })
+          }}
+
+    - name: Compare pim_neighbor_data
+      ansible.builtin.set_fact:
+        pim_neighbor_match: "{{ network_baseline_pre.pim_neighbor_data == network_baseline_post.pim_neighbor_data }}"
+
+    - name: Check pim_neighbor_data difference
+      when: not pim_neighbor_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['pim_neighbor_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'pim_neighbor_match': false
+              })
+            })
+          }}
+
+    - name: Record pim_neighbor_data as matching
+      when: pim_neighbor_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['pim_neighbor_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'pim_neighbor_match': true
+              })
+            })
+          }}
+
+    # Compare IGMP Data
+    - name: Compare igmp_interface_data
+      ansible.builtin.set_fact:
+        igmp_interface_match: "{{ network_baseline_pre.igmp_interface_data == network_baseline_post.igmp_interface_data }}"
+
+    - name: Check igmp_interface_data difference
+      when: not igmp_interface_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['igmp_interface_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'igmp_interface_match': false
+              })
+            })
+          }}
+
+    - name: Record igmp_interface_data as matching
+      when: igmp_interface_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['igmp_interface_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'igmp_interface_match': true
+              })
+            })
+          }}
+
+    # Compare Multicast Route Data
+    - name: Compare mroute_data
+      ansible.builtin.set_fact:
+        mroute_match: "{{ network_baseline_pre.mroute_data == network_baseline_post.mroute_data }}"
+
+    - name: Check mroute_data difference
+      when: not mroute_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'all_data_matches': false,
+              'sections_with_differences': baseline_comparison.sections_with_differences + ['mroute_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'mroute_match': false
+              })
+            })
+          }}
+
+    - name: Record mroute_data as matching
+      when: mroute_match
+      ansible.builtin.set_fact:
+        baseline_comparison: >-
+          {{
+            baseline_comparison | combine({
+              'sections_checked': baseline_comparison.sections_checked + ['mroute_data'],
+              'detailed_results': baseline_comparison.detailed_results | combine({
+                'mroute_match': true
+              })
+            })
+          }}
+
+    # Mark comparison as performed
+    - name: Mark comparison complete
+      ansible.builtin.set_fact:
+        baseline_comparison: "{{ baseline_comparison | combine({'comparison_performed': true}) }}"
+
+- name: Display baseline comparison results
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "BASELINE COMPARISON RESULTS"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Baseline Available: {{ baseline_comparison.baseline_available }}"
+      - "Comparison Performed: {{ baseline_comparison.comparison_performed }}"
+      - "All Data Matches: {{ baseline_comparison.all_data_matches }}"
+      - "Sections Checked: {{ baseline_comparison.sections_checked | length }}"
+      - "Sections with Differences: {{ baseline_comparison.sections_with_differences | join(', ') if baseline_comparison.sections_with_differences | length > 0 else 'None' }}"
+      - "=========================================="
+  when: show_debug | bool
