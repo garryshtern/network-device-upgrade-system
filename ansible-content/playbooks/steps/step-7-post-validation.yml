@@ -5,6 +5,30 @@
 # Dependencies: STEP 1 (for connectivity), assumes STEP 5 baseline exists from previous run
 # NOTE: STEP 5 baseline must exist from prior run, STEP 6 should have been run
 
+- name: CRITICAL: Verify baseline file exists (prerequisite for post-upgrade validation)
+  ansible.builtin.stat:
+    path: "{{ baseline_base_path }}/{{ inventory_hostname }}_network_baseline.json"
+  register: baseline_file
+  delegate_to: localhost
+
+- name: Fail if baseline missing (must run step 5 before step 6 and 7)
+  ansible.builtin.fail:
+    msg: |
+      CRITICAL: Pre-upgrade baseline file missing for post-upgrade validation.
+
+      Post-upgrade validation REQUIRES a baseline from step 5 (pre-upgrade gathering).
+
+      Baseline path: {{ baseline_base_path }}/{{ inventory_hostname }}_network_baseline.json
+      File exists: {{ baseline_file.stat.exists }}
+
+      You must run step 5 BEFORE step 6, then step 7 after upgrade.
+
+      Correct workflow sequence:
+      1. Run step 5: ansible-playbook main-upgrade-workflow.yml --tags step5 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5
+      2. Run step 6: ansible-playbook main-upgrade-workflow.yml --tags step6 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5 -e maintenance_window=true
+      3. Run step 7: ansible-playbook main-upgrade-workflow.yml --tags step7 -e target_hosts=mydevice -e max_concurrent=5
+  when: not baseline_file.stat.exists
+
 - name: Include STEP 1 as prerequisite (minimal dependency)
   ansible.builtin.include_tasks:
     file: step-1-connectivity.yml
