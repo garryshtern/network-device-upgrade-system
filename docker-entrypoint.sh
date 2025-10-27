@@ -130,6 +130,7 @@ ENVIRONMENT VARIABLES:
     ALLOW_DISRUPTIVE_EPLD    Allow disruptive EPLD upgrade (true/false)
     EPLD_UPGRADE_TIMEOUT     EPLD upgrade timeout in seconds (default: 7200)
     TARGET_EPLD_IMAGE        EPLD firmware filename (e.g., n9000-epld.10.1.2.img)
+    TARGET_EPLD_FIRMWARE     Alias for TARGET_EPLD_IMAGE (both accepted)
 
     # Multi-Step Upgrade (FortiOS)
     MULTI_STEP_UPGRADE_REQUIRED  Enable multi-step upgrade mode (true/false)
@@ -504,8 +505,10 @@ build_ansible_options() {
     if [[ -n "${EPLD_UPGRADE_TIMEOUT:-}" ]]; then
         extra_vars="$extra_vars epld_upgrade_timeout=${EPLD_UPGRADE_TIMEOUT}"
     fi
-    if [[ -n "${TARGET_EPLD_FIRMWARE:-}" ]]; then
-        extra_vars="$extra_vars target_epld_firmware=${TARGET_EPLD_FIRMWARE}"
+    # Accept both TARGET_EPLD_IMAGE and TARGET_EPLD_FIRMWARE (TARGET_EPLD_IMAGE takes precedence)
+    local target_epld_image="${TARGET_EPLD_IMAGE:-${TARGET_EPLD_FIRMWARE:-}}"
+    if [[ -n "$target_epld_image" ]]; then
+        extra_vars="$extra_vars target_epld_image=${target_epld_image}"
     fi
 
     # Multi-step upgrade (FortiOS - default: false in group_vars/fortios.yml)
