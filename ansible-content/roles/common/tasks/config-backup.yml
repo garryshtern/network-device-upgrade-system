@@ -5,7 +5,7 @@
 
 - name: Set backup variables
   ansible.builtin.set_fact:
-    backup_timestamp: "{{ ansible_date_time.iso8601 }}"
+    backup_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
     backup_type: "{{ backup_type }}"
     include_startup_config: "{{ include_startup_config  }}"
     include_running_config: true

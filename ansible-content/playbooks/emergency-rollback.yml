@@ -8,7 +8,7 @@
   gather_facts: false
   connection: network_cli
   vars:
-    rollback_timestamp: "{{ ansible_date_time.iso8601 }}"
+    rollback_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
     # NOTE: rollback_timeout, restore_config, restore_firmware, emergency_mode inherited from group_vars
   pre_tasks:
     - name: Initialize rollback tracking
