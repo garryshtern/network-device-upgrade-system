@@ -233,7 +233,6 @@
     - name: Store network baseline data (raw JSON for comparison)
       ansible.builtin.set_fact:
         network_baseline:
-          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
           platform: "{{ platform }}"
           device: "{{ inventory_hostname }}"
           network_resources: "{{ ansible_network_resources }}"
@@ -259,7 +258,6 @@
           - "=========================================="
           - "Device: {{ inventory_hostname }}"
           - "Platform: {{ platform }}"
-          - "Timestamp: {{ network_baseline.timestamp }}"
           - "Gathered Resources: {{ ansible_net_gather_network_resources | default([]) | join(', ') }}"
           - "Available Resources: {{ ansible_network_resources | default({}) | dict2items | map(attribute='key') | list | join(', ') }}"
           - "Baseline Data Stored:"
@@ -271,7 +269,7 @@
           - "  - PIM data: {{ 'Yes' if network_baseline.pim_interface_data | length > 0 else 'No' }}"
           - "  - IGMP data: {{ 'Yes' if network_baseline.igmp_interface_data | length > 0 else 'No' }}"
           - "  - Mroute data: {{ 'Yes' if network_baseline.mroute_data | length > 0 else 'No' }}"
-          - "Status: Ready for validation"
+          - "Status: Ready for validation and baseline comparison"
           - "=========================================="
       when:
         - show_debug | bool
