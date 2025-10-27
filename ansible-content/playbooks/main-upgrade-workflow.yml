@@ -333,13 +333,9 @@
             (upgrade_start_time | to_datetime('%Y-%m-%dT%H:%M:%SZ'))).total_seconds()
           }}
 
-    - name: Export final metrics
-      ansible.builtin.include_role:
-        name: common
-        tasks_from: metrics-export
-      vars:
-        metric_type: "upgrade_summary"
-        metric_data:
+    - name: Build final metrics data
+      ansible.builtin.set_fact:
+        final_metric_data:
           device_id: "{{ inventory_hostname }}"
           platform: "{{ platform }}"
           duration_seconds: "{{ upgrade_duration }}"
@@ -348,6 +344,16 @@
               'success' if ansible_failed_result is not defined
               else ('warning' if upgrade_completed_with_warnings is defined else 'failed')
             }}
+      when:
+        - export_metrics | bool
+
+    - name: Export final metrics
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: metrics-export
+      vars:
+        metric_type: "upgrade_summary"
+        metric_data: "{{ final_metric_data }}"
       when:
         - export_metrics | bool
 

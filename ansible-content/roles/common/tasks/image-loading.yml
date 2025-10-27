@@ -37,18 +37,24 @@
         - platform in platform_role_map
         - not (platform == 'fortios' and ansible_check_mode)
 
+- name: Build image loading metrics data
+  ansible.builtin.set_fact:
+    loading_metric_data:
+      device_id: "{{ inventory_hostname }}"
+      firmware_version: "{{ firmware_version }}"
+      platform: "{{ platform }}"
+      status: "success"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+  when:
+    - export_metrics | bool
+
 - name: Record image loading completion
   ansible.builtin.include_role:
     name: common
     tasks_from: metrics-export
   vars:
     metric_type: "image_loading"
-    metric_data:
-      device_id: "{{ inventory_hostname }}"
-      firmware_version: "{{ firmware_version }}"
-      platform: "{{ platform }}"
-      status: "success"
-      timestamp: "{{ ansible_date_time.iso8601 }}"
+    metric_data: "{{ loading_metric_data }}"
   when:
     - export_metrics | bool
 

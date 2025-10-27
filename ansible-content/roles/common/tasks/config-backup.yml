@@ -32,18 +32,24 @@
         mode: '0644'
       delegate_to: localhost
 
+- name: Build backup metrics data
+  ansible.builtin.set_fact:
+    backup_metric_data:
+      device_id: "{{ inventory_hostname }}"
+      backup_timestamp: "{{ backup_timestamp }}"
+      platform: "{{ platform }}"
+      backup_type: "{{ backup_type }}"
+      status: "success"
+  when:
+    - export_metrics | bool
+
 - name: Record backup completion
   ansible.builtin.include_role:
     name: common
     tasks_from: metrics-export
   vars:
     metric_type: "config_backup"
-    metric_data:
-      device_id: "{{ inventory_hostname }}"
-      backup_timestamp: "{{ backup_timestamp }}"
-      platform: "{{ platform }}"
-      backup_type: "{{ backup_type }}"
-      status: "success"
+    metric_data: "{{ backup_metric_data }}"
   when:
     - export_metrics | bool
 

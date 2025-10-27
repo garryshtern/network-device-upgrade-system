@@ -82,18 +82,24 @@
         name: image-validation
         tasks_from: hash-verification
 
+    - name: Build image loading metrics data
+      ansible.builtin.set_fact:
+        playbook_loading_metric_data:
+          device_id: "{{ inventory_hostname }}"
+          firmware_version: "{{ firmware_version }}"
+          platform: "{{ platform }}"
+          status: "success"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+      when:
+        - export_metrics | bool
+
     - name: Record image loading completion
       ansible.builtin.include_role:
         name: common
         tasks_from: metrics-export
       vars:
         metric_type: "image_loading"
-        metric_data:
-          device_id: "{{ inventory_hostname }}"
-          firmware_version: "{{ firmware_version }}"
-          platform: "{{ platform }}"
-          status: "success"
-          timestamp: "{{ ansible_date_time.iso8601 }}"
+        metric_data: "{{ playbook_loading_metric_data }}"
       when:
         - export_metrics | bool
 

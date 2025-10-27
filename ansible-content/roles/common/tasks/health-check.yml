@@ -115,18 +115,24 @@
       - "arp_baseline_{{ health_check_timestamp }}.json"
   delegate_to: localhost
 
+- name: Build health check metrics data
+  ansible.builtin.set_fact:
+    health_metric_data:
+      device_id: "{{ inventory_hostname }}"
+      platform: "{{ platform }}"
+      check_timestamp: "{{ health_check_timestamp }}"
+      status: "success"
+      baseline_captured: true
+  when:
+    - export_metrics | bool
+
 - name: Export health check metrics
   ansible.builtin.include_role:
     name: common
     tasks_from: metrics-export
   vars:
     metric_type: "health_check"
-    metric_data:
-      device_id: "{{ inventory_hostname }}"
-      platform: "{{ platform }}"
-      check_timestamp: "{{ health_check_timestamp }}"
-      status: "success"
-      baseline_captured: true
+    metric_data: "{{ health_metric_data }}"
   when:
     - export_metrics | bool
 

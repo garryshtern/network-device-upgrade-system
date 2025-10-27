@@ -56,13 +56,9 @@
           - "Status: {{ 'PASS' if space_check_passed else 'FAIL' }}"
           - "=========================="
 
-    - name: Record space check completion
-      ansible.builtin.include_role:
-        name: common
-        tasks_from: metrics-export
-      vars:
-        metric_type: "storage_check"
-        metric_data:
+    - name: Build space check metrics data
+      ansible.builtin.set_fact:
+        space_metric_data:
           device_id: "{{ inventory_hostname }}"
           platform: "{{ platform }}"
           required_space_gb: "{{ minimum_free_space_gb }}"
@@ -70,5 +66,15 @@
           total_space_gb: "{{ storage_info.total_space_gb }}"
           status: "{{ 'success' if space_check_passed else 'failed' }}"
           timestamp: "{{ ansible_date_time.iso8601 }}"
+      when:
+        - export_metrics | bool
+
+    - name: Record space check completion
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: metrics-export
+      vars:
+        metric_type: "storage_check"
+        metric_data: "{{ space_metric_data }}"
       when:
         - export_metrics | bool
