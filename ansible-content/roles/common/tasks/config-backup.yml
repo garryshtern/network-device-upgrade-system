@@ -44,6 +44,8 @@
       platform: "{{ platform }}"
       backup_type: "{{ backup_type }}"
       status: "success"
+  when:
+    - export_metrics | bool
 
 - name: Display backup results
   ansible.builtin.debug:

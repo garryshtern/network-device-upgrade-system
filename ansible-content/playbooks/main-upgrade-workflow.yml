@@ -348,6 +348,8 @@
               'success' if ansible_failed_result is not defined
               else ('warning' if upgrade_completed_with_warnings is defined else 'failed')
             }}
+      when:
+        - export_metrics | bool
 
     - name: Display upgrade summary
       ansible.builtin.debug:

@@ -212,3 +212,5 @@ x---
       platform: "{{ platform }}"
       status: "success"
       timestamp: "{{ compliance_results.audit_timestamp }}"
+  when:
+    - export_metrics | bool

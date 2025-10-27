@@ -127,6 +127,8 @@
       check_timestamp: "{{ health_check_timestamp }}"
       status: "success"
       baseline_captured: true
+  when:
+    - export_metrics | bool
 
 - name: Display health check results
   ansible.builtin.debug:

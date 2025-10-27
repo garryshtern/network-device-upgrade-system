@@ -64,3 +64,5 @@
           backup_type: "{{ backup_type }}"
           file_count: "{{ backup_files.files | length }}"
           backup_size_mb: "{{ (backup_files.files | map(attribute='size') | sum / 1024 / 1024) | round(2) }}"
+      when:
+        - export_metrics | bool

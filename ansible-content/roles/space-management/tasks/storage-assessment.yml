@@ -70,3 +70,5 @@
           total_space_gb: "{{ storage_info.total_space_gb }}"
           status: "{{ 'success' if space_check_passed else 'failed' }}"
           timestamp: "{{ ansible_date_time.iso8601 }}"
+      when:
+        - export_metrics | bool

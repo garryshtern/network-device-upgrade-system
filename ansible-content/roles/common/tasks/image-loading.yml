@@ -49,6 +49,8 @@
       platform: "{{ platform }}"
       status: "success"
       timestamp: "{{ ansible_date_time.iso8601 }}"
+  when:
+    - export_metrics | bool
 
 - name: Display loading results
   ansible.builtin.debug:
