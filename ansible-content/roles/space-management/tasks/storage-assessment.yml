@@ -69,6 +69,6 @@
           available_space_gb: "{{ storage_info.free_space_gb }}"
           total_space_gb: "{{ storage_info.total_space_gb }}"
           status: "{{ 'success' if space_check_passed else 'failed' }}"
-          timestamp: "{{ ansible_date_time.iso8601 }}"
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
       when:
         - export_metrics | bool

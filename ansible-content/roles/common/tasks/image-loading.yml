@@ -48,7 +48,7 @@
       firmware_version: "{{ firmware_version }}"
       platform: "{{ platform }}"
       status: "success"
-      timestamp: "{{ ansible_date_time.iso8601 }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when:
     - export_metrics | bool
 
