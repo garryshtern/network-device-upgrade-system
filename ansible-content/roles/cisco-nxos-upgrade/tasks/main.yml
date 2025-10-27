@@ -27,15 +27,14 @@
         match("^[0-9]+\\.[0-9]+\\([0-9]+\\)")
     fail_msg: "Invalid upgrade path or target version format"
 
-- name: Handle EPLD upgrade (if required)
-  ansible.builtin.include_tasks: epld-upgrade.yml
-  when:
-    - upgrade_epld
-    - target_epld_firmware is defined
-
-- name: Execute upgrade based on ISSU capability
+- name: Execute firmware upgrade based on ISSU capability
   ansible.builtin.include_tasks: "{{ upgrade_task_file }}"
   vars:
     upgrade_task_file: >-
       {{ 'issu-procedures.yml' if nxos_upgrade_state.issu_capable
          else 'image-installation.yml' }}
+  # NOTE: EPLD installation is now called from image-installation.yml
+  # after firmware installation completes. This ensures proper sequencing:
+  # 1. Firmware installed + rebooted
+  # 2. Device comes back online
+  # 3. EPLD installation executed (if enabled)

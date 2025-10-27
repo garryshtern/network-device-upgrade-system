@@ -95,9 +95,16 @@
           opengear: ""
       when: running_image_result.stdout[0] is defined
 
-    - name: Identify obsolete images for cleanup
+    - name: Build list of protected files (running image + target firmware + optional EPLD)
       ansible.builtin.set_fact:
-        cleanup_candidates: "{{ parsed_storage.images | difference([running_image_file]) | list }}"
+        protected_files:
+          - "{{ running_image_file }}"
+          - "{{ target_firmware if (target_firmware is defined and target_firmware) else 'NONE' }}"
+          - "{{ target_epld_firmware if (target_epld_firmware is defined and target_epld_firmware and enable_epld_upgrade | bool) else 'NONE' }}"
+
+    - name: Identify obsolete images for cleanup (excluding protected files)
+      ansible.builtin.set_fact:
+        cleanup_candidates: "{{ parsed_storage.images | difference(protected_files) | reject('equalto', 'NONE') | list }}"
 
     - name: Remove obsolete image files (platform-specific)
       block:

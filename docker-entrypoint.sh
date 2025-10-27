@@ -126,8 +126,11 @@ ENVIRONMENT VARIABLES:
     MAINTENANCE_WINDOW Set to 'true' for installation phase
 
     # EPLD Upgrade Configuration (Cisco NX-OS)
-    ENABLE_EPLD_UPGRADE      Enable EPLD upgrade (true/false)
-    ALLOW_DISRUPTIVE_EPLD    Allow disruptive EPLD upgrade (true/false)
+    ENABLE_EPLD_UPGRADE      Enable EPLD upgrade (true/false, default: false)
+    INSTALL_COMBINED_MODE    Install firmware + EPLD in single operation (true/false, default: false)
+                             Requires: ENABLE_EPLD_UPGRADE=true
+                             Note: If false, uses sequential mode (firmware first, then EPLD)
+    ALLOW_DISRUPTIVE_EPLD    Allow disruptive EPLD upgrade (true/false, default: false)
     EPLD_UPGRADE_TIMEOUT     EPLD upgrade timeout in seconds (default: 7200)
     TARGET_EPLD_IMAGE        EPLD firmware filename (e.g., n9000-epld.10.1.2.img)
     TARGET_EPLD_FIRMWARE     Alias for TARGET_EPLD_IMAGE (both accepted)
@@ -225,6 +228,29 @@ EXAMPLES:
       -e ANSIBLE_TAGS=step7 \\
       -e TARGET_HOSTS=cisco-switch-01 \\
       -e MAX_CONCURRENT=5 \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+    # Firmware + EPLD upgrade (Sequential mode - firmware first, then EPLD after reboot)
+    docker run --rm \\
+      -e ANSIBLE_TAGS=step6 \\
+      -e TARGET_FIRMWARE=nxos.10.2.3.bin \\
+      -e TARGET_EPLD_IMAGE=nxos-epld.10.2.3.img \\
+      -e ENABLE_EPLD_UPGRADE=true \\
+      -e TARGET_HOSTS=cisco-switch-01 \\
+      -e MAX_CONCURRENT=5 \\
+      -e MAINTENANCE_WINDOW=true \\
+      ghcr.io/garryshtern/network-device-upgrade-system:latest run
+
+    # Firmware + EPLD upgrade (Combined mode - both in single operation for faster upgrade)
+    docker run --rm \\
+      -e ANSIBLE_TAGS=step6 \\
+      -e TARGET_FIRMWARE=nxos.10.2.3.bin \\
+      -e TARGET_EPLD_IMAGE=nxos-epld.10.2.3.img \\
+      -e ENABLE_EPLD_UPGRADE=true \\
+      -e INSTALL_COMBINED_MODE=true \\
+      -e TARGET_HOSTS=cisco-switch-01 \\
+      -e MAX_CONCURRENT=5 \\
+      -e MAINTENANCE_WINDOW=true \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest run
 
     # SSH key authentication (recommended)
@@ -498,6 +524,9 @@ build_ansible_options() {
     # Only set if explicitly set to true
     if [[ "${ENABLE_EPLD_UPGRADE:-false}" == "true" ]]; then
         extra_vars="$extra_vars enable_epld_upgrade=true"
+    fi
+    if [[ "${INSTALL_COMBINED_MODE:-false}" == "true" ]]; then
+        extra_vars="$extra_vars install_combined_mode=true"
     fi
     if [[ "${ALLOW_DISRUPTIVE_EPLD:-false}" == "true" ]]; then
         extra_vars="$extra_vars allow_disruptive_epld=true"

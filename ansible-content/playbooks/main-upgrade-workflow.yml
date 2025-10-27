@@ -1,105 +1,30 @@
 ---
 # Network Device Upgrade Management System - Master Workflow
-# REDESIGNED: Proper workflow sequence with fail-fast validation
 #
-# Workflow Steps:
-# 1. Check connectivity (basic connection test only)
-# 2. Version check + verify image availability (local file check)
-# 3. Check space (cleanup if needed, then recheck) - AFTER knowing image size
-# 4. Ensure image staged (check bootflash, upload if needed) + config backup
-# 5. Comprehensive facts gathering + pre-upgrade validation (AFTER image staged)
-# 6. Install images and reboot
-# 7. Post-upgrade validation + compare (failure triggers optional rollback)
+# DOCUMENTATION: See docs/workflow-steps-guide.md for detailed step-by-step guide
 #
-# CRITICAL: Steps 1-6 must pass or workflow STOPS
-# Step 7 failure triggers optional rollback only
+# 7 Independent Steps (can be run individually or combined):
+#   Step 1: Connectivity check
+#   Step 2: Version check (verify firmware file exists)
+#   Step 3: Space check (verify disk space, auto-cleanup)
+#   Step 4: Upload firmware + backup config
+#   Step 5: Pre-upgrade validation (creates baseline)
+#   Step 6: Install firmware + reboot (requires maintenance_window=true)
+#   Step 7: Post-upgrade validation (compare to step 5 baseline)
 #
-# RUNNING INDIVIDUAL STAGES WITH AUTOMATIC DEPENDENCY RESOLUTION:
-# Each step automatically includes tags for its prerequisites, so dependencies
-# are maintained automatically when you specify a step.
+# Quick Examples:
+#   ansible-playbook main-upgrade-workflow.yml --tags step1 -e target_hosts=mydevice -e max_concurrent=5
+#   ansible-playbook main-upgrade-workflow.yml --tags step5 -e target_hosts=mydevice -e max_concurrent=5
+#   ansible-playbook main-upgrade-workflow.yml --tags step6 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5 -e maintenance_window=true
+#   ansible-playbook main-upgrade-workflow.yml --tags step7 -e target_hosts=mydevice -e max_concurrent=5
 #
-# Run full workflow (all steps):
-#   ansible-playbook main-upgrade-workflow.yml --extra-vars="target_hosts=mydevice target_firmware=nxos.10.2.3.bin maintenance_window=true max_concurrent=1"
+# Safe Workflow (Recommended):
+#   1. Run step 5: Establish baseline
+#   2. Run step 4: Upload firmware and backup config
+#   3. Run step 6: Install firmware (during maintenance window)
+#   4. Run step 7: Validate against baseline
 #
-# Run individual steps (prerequisites run automatically):
-#   --tags step1              # Connectivity check only
-#   --tags step2              # Version check + step1 (auto)
-#   --tags step3              # Space check + step1,step2 (auto)
-#   --tags step4              # Image upload + step1,step2,step3 (auto)
-#   --tags step5              # Pre-validation + step1,step2,step3,step4 (auto)
-#   --tags step6              # Install + step1,step2,step3,step4,step5 (auto)
-#   --tags step7              # Post-validation + step1 (auto, assumes step5/step6 done previously)
-#
-# Examples with automatic dependencies:
-#   --tags step6              # Runs: step1 → step2 → step3 → step4 → step5 → step6
-#   --tags step5              # Runs: step1 → step2 → step3 → step4 → step5
-#   --tags step3              # Runs: step1 → step2 → step3
-#   --tags step7              # Runs: step1 → step7 (requires prior step5 baseline)
-#
-# Function-specific tags (still include dependencies):
-#   --tags connectivity       # step1 only
-#   --tags version_check      # step1 + step2
-#   --tags space_check        # step1 + step2 + step3
-#   --tags image_upload       # step1 + step2 + step3 + step4
-#   --tags config_backup      # step1 + step2 + step3 + step4
-#   --tags pre_validation     # step1 + step2 + step3 + step4 + step5
-#   --tags install            # step1 + step2 + step3 + step4 + step5 + step6
-#   --tags reboot             # step1 + step2 + step3 + step4 + step5 + step6
-#   --tags post_validation    # step1 + step7
-#   --tags network_validation # step1 + step2 + step3 + step4 + step5 + step7
-#
-# STEP DEPENDENCIES (AUTOMATICALLY RESOLVED):
-# Dependencies are maintained automatically via tag inheritance.
-# When you run a step, prerequisite steps run automatically.
-#
-# STEP 1: No prerequisites (can run standalone)
-#         Provides: Basic facts (ansible_net_version, current_firmware_image, etc.)
-#         Auto-included by: All other steps
-#
-# STEP 2: Auto-includes: step1
-#         Provides: Verification that upgrade is needed and firmware file exists
-#         Auto-included by: step3, step4
-#         Optional for: step5, step6, step7
-#
-# STEP 3: Auto-includes: step1, step2
-#         Provides: Confirmation of sufficient storage space
-#         Auto-included by: step4
-#         Optional for: step5, step6, step7
-#
-# STEP 4: Auto-includes: step1, step2, step3
-#         Provides: Firmware staged on device, config backup saved
-#         Auto-included by: None
-#         Optional for: step5, step6, step7
-#
-# STEP 5: Auto-includes: step1 only
-#         Provides: network_baseline saved to filesystem, pre-validation results
-#         Optional: Run step 4 separately before step 6 for config backup
-#         Auto-included by: None
-#
-# STEP 6: Auto-includes: step1 only
-#         Provides: Device rebooted with new firmware
-#         Optional: Run step 5 before step 6 to establish baseline
-#         Auto-included by: None
-#
-# STEP 7: Auto-includes: step1 only
-#         Requires: STEP 5 baseline file from previous run (not auto-included)
-#         Provides: Post-upgrade validation, comparison with baseline
-#
-# COMMON USE CASES:
-# Full upgrade:              --tags step6 (auto-runs: step1→step2→step3→step4→step5→step6)
-# Safe upgrade (recommended): --tags step5 then --tags step4 then --tags step6 then --tags step7
-#   Gathers baseline, backs up config, upgrades, validates against baseline
-# Pre-validation only:       --tags step5 (auto-runs: step1 only, gathers baseline)
-# Post-validation:           --tags step7 (auto-runs: step1→step7, requires prior step5 baseline)
-# Just upload image:         --tags step4 (auto-runs: step1→step2→step3→step4)
-# Just check version:        --tags step2 (auto-runs: step1→step2)
-# Emergency upgrade:         --tags step6 (auto-runs: step1 only, direct upgrade)
-#
-# BENEFITS OF AUTO-DEPENDENCY:
-# - No need to remember prerequisite chains
-# - Safe to run any step - dependencies always satisfied
-# - Cleaner command line (just specify what you want)
-# - Impossible to skip required prerequisites by accident
+# See docs/workflow-steps-guide.md for complete documentation
 
 - name: Network Device Upgrade - Master Workflow
   hosts: "{{ target_hosts }}"

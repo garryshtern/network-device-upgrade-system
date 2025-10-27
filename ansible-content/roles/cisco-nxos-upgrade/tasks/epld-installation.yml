@@ -1,0 +1,201 @@
+---
+# NX-OS EPLD Installation Tasks
+# Installs optional EPLD firmware after main firmware installation
+# Only runs if enable_epld_upgrade=true and target_epld_firmware is provided
+# Prerequisites: EPLD firmware must be staged on device (from epld-loading.yml)
+
+- name: Display EPLD installation entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "NX-OS EPLD INSTALLATION"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "EPLD Enabled: {{ enable_epld_upgrade | bool }}"
+      - "EPLD File: {{ target_epld_firmware if (enable_epld_upgrade | bool and target_epld_firmware) else 'N/A' }}"
+      - "=========================================="
+  when: enable_epld_upgrade | bool
+
+- name: EPLD upgrade not enabled - skipping installation
+  ansible.builtin.debug:
+    msg: "EPLD upgrade disabled (enable_epld_upgrade=false) - skipping EPLD installation"
+  when: not (enable_epld_upgrade | bool)
+
+- name: EPLD installation block (if enabled)
+  when:
+    - enable_epld_upgrade | bool
+    - target_epld_firmware is defined
+    - target_epld_firmware | length > 0
+  block:
+    - name: Pre-EPLD installation validation
+      block:
+        - name: Check current EPLD versions
+          cisco.nxos.nxos_command:
+            commands:
+              - show version epld
+          register: current_epld_versions
+
+        - name: Parse EPLD information
+          ansible.builtin.set_fact:
+            epld_modules: >-
+              {{ current_epld_versions.stdout[0] |
+                regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)',
+                  multiline=True) }}
+
+        - name: Display current EPLD status
+          ansible.builtin.debug:
+            msg:
+              - "Current EPLD Versions:"
+              - "{{ epld_modules }}"
+          when: epld_modules | length > 0
+
+        - name: Check EPLD upgrade requirements
+          cisco.nxos.nxos_command:
+            commands:
+              - show install all impact epld {{ target_epld_firmware }}
+          register: epld_impact_check
+          failed_when: false
+
+    - name: EPLD compatibility validation
+      block:
+        - name: Verify system compatibility for EPLD upgrade
+          cisco.nxos.nxos_command:
+            commands:
+              - show module
+              - show system resources
+          register: system_compatibility
+
+        - name: Check for dual supervisor setup
+          ansible.builtin.set_fact:
+            has_dual_sup_for_epld: >-
+              {{ 'Supervisor' in system_compatibility.stdout[0] and
+                system_compatibility.stdout[0].count('Supervisor') >= 2 }}
+
+        - name: Validate EPLD upgrade feasibility
+          ansible.builtin.assert:
+            that:
+              - has_dual_sup_for_epld or allow_disruptive_epld
+            fail_msg:
+              - "EPLD upgrade requires dual supervisors or explicit approval for disruptive upgrade"
+              - "Set allow_disruptive_epld=true to force disruptive EPLD upgrade"
+
+    - name: Verify EPLD image is staged on device
+      ansible.builtin.assert:
+        that:
+          - target_epld_firmware in storage_info.images_found
+        fail_msg:
+          - "EPLD firmware not found on device: {{ target_epld_firmware }}"
+          - "Ensure EPLD was uploaded successfully in image-loading phase"
+      when:
+        - storage_info is defined
+        - storage_info.images_found is defined
+
+    - name: EPLD upgrade execution
+      block:
+        - name: Display EPLD upgrade starting
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "EXECUTING EPLD UPGRADE"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "EPLD File: {{ target_epld_firmware }}"
+              - "Impact: {{ 'Non-disruptive (dual supervisors)' if has_dual_sup_for_epld else 'Disruptive (single supervisor)' }}"
+              - "Modules to upgrade: {{ epld_modules | length }}"
+              - "=========================================="
+
+        - name: Get list of modules to upgrade
+          ansible.builtin.set_fact:
+            epld_modules_to_upgrade: "{{ epld_modules | map(attribute='0') | list }}"
+
+        - name: Execute EPLD upgrade on all modules
+          cisco.nxos.nxos_command:
+            commands:
+              - "install all epld {{ target_epld_firmware }} module {{ item }}"
+          register: epld_upgrade_result
+          loop: "{{ epld_modules_to_upgrade }}"
+          when:
+            - epld_modules_to_upgrade is defined
+            - epld_modules_to_upgrade | length > 0
+
+        - name: Monitor EPLD upgrade progress
+          cisco.nxos.nxos_command:
+            commands:
+              - show install all status
+          register: epld_upgrade_status
+          until: >-
+            'Success' in epld_upgrade_status.stdout[0] or
+            'Failed' in epld_upgrade_status.stdout[0]
+          retries: 60
+          delay: 30
+          when: epld_upgrade_result is defined
+
+        - name: Validate EPLD upgrade completion
+          ansible.builtin.assert:
+            that:
+              - "'Success' in epld_upgrade_status.stdout[0]"
+            fail_msg:
+              - "EPLD upgrade failed!"
+              - "Status: {{ epld_upgrade_status.stdout[0] }}"
+          when: epld_upgrade_status is defined
+
+    - name: Post-EPLD installation validation
+      block:
+        - name: Check updated EPLD versions
+          cisco.nxos.nxos_command:
+            commands:
+              - show version epld
+          register: updated_epld_versions
+
+        - name: Parse updated EPLD information
+          ansible.builtin.set_fact:
+            updated_epld_modules: >-
+              {{ updated_epld_versions.stdout[0] |
+                regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)',
+                  multiline=True) }}
+
+        - name: Check system stability after EPLD upgrade
+          cisco.nxos.nxos_command:
+            commands:
+              - show system resources
+              - show module
+              - show logging last 20
+          register: post_epld_stability
+
+        - name: Document EPLD upgrade completion
+          ansible.builtin.set_fact:
+            epld_installation_results:
+              target_epld: "{{ target_epld_firmware }}"
+              modules_upgraded: "{{ epld_modules_to_upgrade | default([]) | length }}"
+              upgrade_method: "{{ 'Non-disruptive' if has_dual_sup_for_epld else 'Disruptive' }}"
+              success: "{{ epld_upgrade_status is defined and 'Success' in epld_upgrade_status.stdout[0] }}"
+              current_versions: "{{ epld_modules | default([]) }}"
+              updated_versions: "{{ updated_epld_modules | default([]) }}"
+              system_stable: "{{ post_epld_stability is defined }}"
+              completion_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+    - name: Display EPLD installation results
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "EPLD INSTALLATION RESULTS"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "EPLD File: {{ epld_installation_results.target_epld }}"
+          - "Modules Upgraded: {{ epld_installation_results.modules_upgraded }}"
+          - "Upgrade Method: {{ epld_installation_results.upgrade_method }}"
+          - "Success: {{ epld_installation_results.success }}"
+          - "System Stable: {{ epld_installation_results.system_stable }}"
+          - "Completion Time: {{ epld_installation_results.completion_timestamp }}"
+          - "=========================================="
+      when: epld_installation_results is defined
+
+    - name: Optional EPLD image cleanup
+      cisco.nxos.nxos_command:
+        commands:
+          - "delete bootflash:{{ target_epld_firmware }}"
+      register: cleanup_result
+      failed_when: false
+      when:
+        - cleanup_epld_images is defined
+        - cleanup_epld_images | bool

@@ -257,8 +257,9 @@ Defined in: `ansible-content/inventory/group_vars/cisco_nxos.yml`
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `enable_epld_upgrade` | bool | `false` | Enable EPLD (Electronic Programmable Logic Device) upgrade |
+| `install_combined_mode` | bool | `false` | Install firmware + EPLD in single operation (faster). If `false`, uses sequential mode (firmware first, then EPLD). Requires `enable_epld_upgrade=true` |
 | `epld_upgrade_timeout` | int | `7200` | EPLD upgrade timeout (seconds) |
-| `allow_disruptive_epld` | bool | `false` | Allow disruptive EPLD upgrades |
+| `allow_disruptive_epld` | bool | `false` | Allow disruptive EPLD upgrades (on devices without dual supervisors) |
 | `target_epld_firmware` | string | `""` | **REQUIRED** EPLD firmware filename (e.g., `n9000-epld.10.3.1.img`) - must be explicitly provided when `enable_epld_upgrade=true` |
 
 ### NX-OS Specific Timeouts
@@ -1157,6 +1158,7 @@ issu_timeout: 3600
 
 # EPLD Settings
 enable_epld_upgrade: true
+install_combined_mode: false  # Set to 'true' for faster firmware+EPLD upgrade in single operation
 allow_disruptive_epld: false
 # Note: target_epld_firmware (e.g., n9000-epld.10.3.1.img) passed via --extra-vars
 

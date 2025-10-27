@@ -9,20 +9,31 @@
   ansible.builtin.include_tasks:
     file: step-2-version-check.yml
 
+- name: Calculate total required space (firmware + optional EPLD)
+  ansible.builtin.set_fact:
+    total_required_space_gb: >-
+      {{
+        (firmware_size_gb | float) +
+        (epld_size_gb | float if (enable_epld_upgrade | bool and epld_size_gb is defined) else 0)
+      }}
+
 - name: Storage assessment with automatic cleanup if needed
   ansible.builtin.include_role:
     name: space-management
     tasks_from: storage-assessment
   vars:
-    minimum_free_space_gb: "{{ required_space_gb }}"
+    minimum_free_space_gb: "{{ total_required_space_gb }}"
 
-- name: Verify sufficient space available
+- name: Verify sufficient space available for firmware and optional EPLD
   ansible.builtin.assert:
     that:
       - storage_info is defined
-      - (storage_info.free_space_gb | float) >= (required_space_gb | float)
+      - (storage_info.free_space_gb | float) >= (total_required_space_gb | float)
     fail_msg:
       - "Insufficient storage space."
-      - "Available: {{ storage_info.free_space_gb }}GB, Required: {{ required_space_gb }}GB"
+      - "Available: {{ storage_info.free_space_gb }}GB"
+      - "Required for firmware: {{ firmware_size_gb }}GB"
+      - "Required for EPLD: {{ (epld_size_gb | float if (enable_epld_upgrade | bool and epld_size_gb is defined) else 0) }}GB"
+      - "Total Required: {{ total_required_space_gb }}GB"
   when:
     - not ansible_check_mode or inventory_hostname != 'localhost'

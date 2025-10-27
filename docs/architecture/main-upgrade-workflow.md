@@ -34,16 +34,24 @@ The workflow implements **automatic dependency resolution** through tag inherita
 
 #### How It Works
 
-When you specify a step to run (e.g., `--tags step5`), Ansible executes **all tasks** that match that tag. Since each step includes tags for its prerequisites, those prerequisites run automatically.
+When you specify a step to run (e.g., `--tags step5`), Ansible executes **all tasks** that match that tag. Each step includes tags for its required prerequisites only, ensuring dependencies are automatically satisfied.
 
-**Example**: Running `--tags step5` executes tasks tagged with:
-- `step1` (basic connectivity)
-- `step2` (version check)
-- `step3` (space check)
-- `step4` (image upload)
-- `step5` (pre-validation)
+**Example 1**: Running `--tags step4` executes tasks tagged with:
+- `step1` (basic connectivity) - REQUIRED
+- `step2` (version check) - REQUIRED
+- `step3` (space check) - REQUIRED
+- `step4` (image upload) - THE ACTUAL STEP
+This ensures prerequisites are satisfied before the primary operation.
 
-This ensures STEP 5 cannot run without its dependencies being satisfied first.
+**Example 2**: Running `--tags step5` executes tasks tagged with:
+- `step1` (basic connectivity) - REQUIRED only
+- `step5` (pre-validation) - THE ACTUAL STEP
+Note: Steps 2-4 are NOT auto-included. They can be run separately before step 5 if desired.
+
+**Example 3**: Running `--tags step6` executes tasks tagged with:
+- `step1` (basic connectivity) - REQUIRED only
+- `step6` (firmware installation) - THE ACTUAL STEP
+Note: Steps 2-5 are NOT auto-included. Pre-validation (step 5) is optional but recommended.
 
 ### Dependency Chain
 
@@ -64,16 +72,19 @@ STEP 4: Image Upload and Config Backup
 └─ Tags: [step1, step2, step3, step4, image_upload, config_backup]
 
 STEP 5: Pre-Upgrade Validation
-├─ Requires: STEP 1, STEP 2, STEP 3, STEP 4
-└─ Tags: [step1, step2, step3, step4, step5, pre_validation, network_validation]
+├─ Requires: STEP 1 only
+└─ Tags: [step1, step5, pre_validation, network_validation]
+└─ NOTE: Optional steps 2-4 can run separately if needed
 
 STEP 6: Firmware Installation
-├─ Requires: STEP 1, STEP 2, STEP 3, STEP 4, STEP 5
-└─ Tags: [step1, step2, step3, step4, step5, step6, install, reboot]
+├─ Requires: STEP 1 only
+└─ Tags: [step1, step6, install, reboot]
+└─ NOTE: Optional pre-validation (step 5) recommended but not required
 
 STEP 7: Post-Upgrade Validation
-├─ Requires: STEP 1 (assumes STEP 5/6 completed previously)
+├─ Requires: STEP 1 + baseline file from prior STEP 5 run
 └─ Tags: [step1, step7, post_validation, network_validation]
+└─ NOTE: Baseline file (from STEP 5) is mandatory prerequisite
 ```
 
 ### Visual Dependency Flow
@@ -90,62 +101,63 @@ STEP 7: Post-Upgrade Validation
   │    Check        │  ← Tags: [step1, connectivity]
   └────────┬────────┘
            │
-           │ Required by all other steps
+           │ Required by ALL other steps
            │
-           ├──────────────────────────────────────────────────────┐
-           │                                                      │
-           ▼                                                      │
-  ┌─────────────────┐                                            │
-  │    STEP 2       │  ← Auto-includes: STEP 1                   │
-  │ Version Check & │  ← Tags: [step1, step2, version_check]     │
-  │ Image Verify    │                                            │
-  └────────┬────────┘                                            │
-           │                                                      │
-           │ Required by: STEP 3, 4, 5, 6                        │
-           │                                                      │
-           ▼                                                      │
-  ┌─────────────────┐                                            │
-  │    STEP 3       │  ← Auto-includes: STEP 1, 2                │
-  │ Storage Space   │  ← Tags: [step1, step2, step3,             │
-  │   Validation    │     space_check]                           │
-  └────────┬────────┘                                            │
-           │                                                      │
-           │ Required by: STEP 4, 5, 6                           │
-           │                                                      │
-           ▼                                                      │
-  ┌─────────────────┐                                            │
-  │    STEP 4       │  ← Auto-includes: STEP 1, 2, 3             │
-  │  Image Upload & │  ← Tags: [step1, step2, step3, step4,      │
-  │  Config Backup  │     image_upload, config_backup]           │
-  └────────┬────────┘                                            │
-           │                                                      │
-           │ Required by: STEP 5, 6                              │
-           │                                                      │
-           ▼                                                      │
-  ┌─────────────────┐                                            │
-  │    STEP 5       │  ← Auto-includes: STEP 1, 2, 3, 4          │
-  │  Pre-Upgrade    │  ← Tags: [step1, step2, step3, step4,      │
-  │   Validation    │     step5, pre_validation,                 │
-  └────────┬────────┘     network_validation]                    │
-           │              SAVES BASELINE TO FILESYSTEM           │
-           │              (/tmp/network_baseline_*.json)         │
-           │                                                      │
-           │ Required by: STEP 6                                 │
-           │                                                      │
-           ▼                                                      │
-  ┌─────────────────┐                                            │
-  │    STEP 6       │  ← Auto-includes: STEP 1, 2, 3, 4, 5       │
-  │    Firmware     │  ← Tags: [step1, step2, step3, step4,      │
-  │  Installation   │     step5, step6, install, reboot]         │
-  └─────────────────┘                                            │
-                                                                 │
-                                                                 │
-  ┌─────────────────┐                                            │
-  │    STEP 7       │  ← Auto-includes: STEP 1 only ─────────────┘
-  │  Post-Upgrade   │  ← LOADS BASELINE FROM FILESYSTEM
-  │   Validation    │  ← (from previous STEP 5 run)
-  └─────────────────┘  ← Tags: [step1, step7, post_validation,
-                          network_validation]
+           ├─────────────┬──────────────┬──────────────┬──────────────┐
+           │             │              │              │              │
+           ▼             ▼              ▼              ▼              ▼
+  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+  │    STEP 2    │ │    STEP 5    │ │    STEP 6    │ │    STEP 7    │ │ Alternative │
+  │Version Check │ │ Pre-Upgrade  │ │   Firmware   │ │Post-Upgrade  │ │    PATH     │
+  │  & Verify    │ │  Validation  │ │Installation │ │ Validation   │ │  (STEP 2→4) │
+  └──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────────────┘ └──────┬───────┘
+         │                │                │                                  │
+         │ Required by:   │ Auto-includes: │ Auto-includes: STEP 1 only       │
+         │ STEPS 3,4      │ STEP 1 only    │                                  │
+         │                │ (optional      │ Tags: [step1, step6,             │
+         │                │ pre-checks:    │  install, reboot]               │
+         │                │ 2-4)           │                                  │
+         │                │ Tags: [step1,  │ OPTIONAL: Pre-validation         │
+         │                │ step5,         │ (STEP 5) recommended            │
+         │                │ pre_validation │ SAVES BASELINE TO               │
+         │                │ network_valid] │ FILESYSTEM                      │
+         │                │ SAVES BASELINE │ (/tmp/network_baseline_*.json)  │
+         │                │ TO FILESYSTEM  │                                  │
+         │                │ (/tmp/network_ │ Tags: [step1, step7,            │
+         │                │ baseline_*.jso │ post_validation,                │
+         │                │ n)             │ network_validation]             │
+         │                │                │                                  │
+         │                └────────┬───────┘                                  │
+         │                         │                                          │
+         │ (STEP 5 and STEP 6 both only require STEP 1 - they are           │
+         │  INDEPENDENT and do NOT depend on each other)                    │
+         │                                                                    │
+         ▼                                                                    │
+  ┌──────────────┐                                                           │
+  │    STEP 3    │                                                           │
+  │Storage Space │                                                           │
+  │ Validation   │                                                           │
+  └──────┬───────┘                                                           │
+         │                                                                    │
+         │ Required by: STEPS 4                                              │
+         │                                                                    │
+         ▼                                                                    │
+  ┌──────────────┐                                                           │
+  │    STEP 4    │                                                           │
+  │Image Upload  │                                                           │
+  │&Config Backup│                                                           │
+  └──────────────┘                                                           │
+         │                                                                    │
+         │ (STEP 4 completes - ready for STEP 5 or STEP 6)                   │
+         └────────────────────────────────────────────────────────────────────┘
+                       (Flow ends here - user chooses next step)
+
+Key Changes:
+• STEP 5 (Pre-Validation) only requires STEP 1 - can run independently
+• STEP 6 (Installation) only requires STEP 1 - can run independently
+• Steps 2-4 are a linear chain for image preparation (optional for steps 5-6)
+• STEP 5 and STEP 6 are NOT dependent on each other
+• STEP 7 requires STEP 1 + baseline file from a prior STEP 5 run
 
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                      EXECUTION EXAMPLES                                  │
@@ -155,31 +167,70 @@ Run: --tags step1        Executes: [STEP 1]
 Run: --tags step2        Executes: [STEP 1 → STEP 2]
 Run: --tags step3        Executes: [STEP 1 → STEP 2 → STEP 3]
 Run: --tags step4        Executes: [STEP 1 → STEP 2 → STEP 3 → STEP 4]
-Run: --tags step5        Executes: [STEP 1 → STEP 2 → STEP 3 → STEP 4 → STEP 5]
-Run: --tags step6        Executes: [STEP 1 → STEP 2 → STEP 3 → STEP 4 → STEP 5 → STEP 6]
-Run: --tags step7        Executes: [STEP 1 → STEP 7]  (requires prior STEP 5)
-Run: (no tags)           Executes: [STEP 1 → ... → STEP 7]  (full workflow)
+Run: --tags step5        Executes: [STEP 1 → STEP 5]  (independent validation)
+Run: --tags step6        Executes: [STEP 1 → STEP 6]  (independent installation)
+Run: --tags step7        Executes: [STEP 1 → STEP 7]  (requires prior STEP 5 baseline)
+Run: (no tags)           Executes: [STEP 1 → STEP 2 → STEP 3 → STEP 4 → STEP 5 → STEP 6 → STEP 7]
 
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                      BASELINE PERSISTENCE                                │
 └──────────────────────────────────────────────────────────────────────────┘
 
-  DAY 1: Full Upgrade                    DAY 2: Post-Validation
-  ───────────────────                    ──────────────────────
+  SCENARIO 1: Safe Full Upgrade with Pre-Validation
+  ──────────────────────────────────────────────────
 
-  --tags step6                           --tags step7
-       │                                      │
-       ├─ STEP 1-4 execute                   ├─ STEP 1 executes
-       │                                      │
-       ├─ STEP 5 executes                    ├─ STEP 7 executes
-       │  └─ Saves baseline ─────────────────┼─ Loads baseline
-       │     to filesystem                    │  from filesystem
-       │                                      │
-       └─ STEP 6 executes                    └─ Compares current
-          (installs firmware)                    state to baseline
+  --tags step5                           --tags step6
+  (Day 1: Validation)                    (Day 1: Upgrade)
+       │                                       │
+       ├─ STEP 1 executes                      ├─ STEP 1 executes
+       │                                       │
+       ├─ STEP 5 executes                      ├─ STEP 6 executes
+       │  └─ Saves baseline ─────────────────→ (baseline exists)
+       │     to filesystem                     │
+       │                                       └─ INSTALLS FIRMWARE
+       │                                         REBOOTS DEVICE
+       │
+       └─ Ready for upgrade
 
-  Result: Device upgraded                Result: Network validated
-          Baseline saved                        against Day 1 baseline
+  Then later:
+  --tags step7                           (Day 1 or later)
+       │                                       │
+       ├─ STEP 1 executes
+       │
+       ├─ STEP 7 executes
+       │  └─ Loads baseline ─────────────────→ (from earlier)
+       │     from filesystem
+       │
+       └─ Compares current state to baseline
+
+  SCENARIO 2: Emergency Upgrade (No Pre-Validation)
+  ──────────────────────────────────────────────────
+
+  --tags step6                           (Day 1: Direct upgrade)
+       │
+       ├─ STEP 1 executes
+       │
+       ├─ STEP 6 executes
+       │  └─ INSTALLS FIRMWARE
+       │     REBOOTS DEVICE
+       │
+       └─ Upgrade complete
+
+  NOTE: No baseline saved (step 5 not run)
+        If step 7 is run later, it will fail (baseline not found)
+
+  SCENARIO 3: Post-Validation Only (Baseline Already Exists)
+  ────────────────────────────────────────────────────────────
+
+  Day 2: --tags step7                   (Assumes prior STEP 5 run)
+       │
+       ├─ STEP 1 executes
+       │
+       ├─ STEP 7 executes
+       │  └─ Loads baseline from filesystem
+       │     (saved by STEP 5 from earlier run)
+       │
+       └─ Compares current state to baseline
 ```
 
 ### Valid Execution Patterns
@@ -190,17 +241,40 @@ Run: (no tags)           Executes: [STEP 1 → ... → STEP 7]  (full workflow)
 ansible-playbook main-upgrade-workflow.yml \
   --extra-vars="target_hosts=mydevice target_firmware=nxos.10.2.3.bin maintenance_window=true max_concurrent=1"
 
-# Equivalent: explicitly specify step6 (all prerequisites run automatically)
+# Equivalent: explicitly specify step6 (all prerequisites run automatically through step 5)
 --tags step6
 # Executes: step1 → step2 → step3 → step4 → step5 → step6
+# Note: Steps 2-4 are part of full workflow chain, step 5 still included
 ```
 
-#### Pre-Validation Only
+#### Pre-Validation Only (Recommended)
 ```bash
-# Prepare for upgrade without installing
+# Establish baseline before upgrade without staging image
 --tags step5
-# Executes: step1 → step2 → step3 → step4 → step5
-# Result: Image staged, baseline saved, ready for installation
+# Executes: step1 → step5
+# Result: Baseline saved to filesystem, ready for later upgrade
+# Note: Does NOT run image staging (steps 2-4) - use separate command if needed
+# Next step: Either run --tags step6 to install, or prepare separately then run --tags step6
+```
+
+#### Pre-Validation with Image Staging
+```bash
+# Full preparation: Image staged + baseline saved (recommended safe workflow)
+# Step 1: Run steps 1-4 to prepare image
+ansible-playbook main-upgrade-workflow.yml --tags step4 \
+  --extra-vars="target_hosts=mydevice target_firmware=nxos.10.2.3.bin max_concurrent=1"
+# Executes: step1 → step2 → step3 → step4
+
+# Step 2: Run step 5 to capture baseline
+ansible-playbook main-upgrade-workflow.yml --tags step5 \
+  --extra-vars="target_hosts=mydevice max_concurrent=1"
+# Executes: step1 → step5
+# Result: Image on device, baseline saved
+
+# Step 3: Run step 6 to install (during maintenance window)
+ansible-playbook main-upgrade-workflow.yml --tags step6 \
+  --extra-vars="target_hosts=mydevice target_firmware=nxos.10.2.3.bin maintenance_window=true max_concurrent=1"
+# Executes: step1 → step6
 ```
 
 #### Post-Validation Only
@@ -209,6 +283,7 @@ ansible-playbook main-upgrade-workflow.yml \
 --tags step7
 # Executes: step1 → step7
 # Requires: STEP 5 baseline file from previous run
+# Use case: Validate network health hours/days after upgrade
 ```
 
 #### Image Upload Only
@@ -217,6 +292,17 @@ ansible-playbook main-upgrade-workflow.yml \
 --tags step4
 # Executes: step1 → step2 → step3 → step4
 # Result: Image on device, config backed up
+# Next step: Run --tags step5 and --tags step6 separately as needed
+```
+
+#### Emergency Upgrade (No Pre-Validation)
+```bash
+# Direct upgrade without baseline (use only if image already staged and baseline not needed)
+--tags step6
+# Executes: step1 → step6
+# Result: Firmware installed, device rebooted
+# Warning: No baseline saved - STEP 7 will fail if run later (baseline required)
+# Use case: Emergency upgrades when devices already prepared
 ```
 
 #### Version Check Only
@@ -245,12 +331,18 @@ Additional tags allow running specific functions (still include dependencies):
 --tags space_check        # step1 + step2 + step3
 --tags image_upload       # step1 + step2 + step3 + step4
 --tags config_backup      # step1 + step2 + step3 + step4
---tags pre_validation     # step1 + step2 + step3 + step4 + step5
---tags install            # step1 + step2 + step3 + step4 + step5 + step6
---tags reboot             # step1 + step2 + step3 + step4 + step5 + step6
---tags post_validation    # step1 + step7
---tags network_validation # step1 + step2 + step3 + step4 + step5 + step7
+--tags pre_validation     # step1 + step5 (does NOT include steps 2-4)
+--tags install            # step1 + step6 (does NOT include steps 2-5)
+--tags reboot             # step1 + step6 (same as install - device reboots)
+--tags post_validation    # step1 + step7 (requires prior STEP 5 baseline)
+--tags network_validation # step1 + step5 or step1 + step7 (depending on phase)
 ```
+
+**Key Notes:**
+- `pre_validation` now executes `[step1 → step5]` without staging image (changed behavior)
+- `install` now executes `[step1 → step6]` without pre-checks or staging (changed behavior)
+- Use explicit `--tags step4` if you need to stage image before these operations
+- Or combine multiple commands: `--tags step4` followed by `--tags step5` followed by `--tags step6`
 
 ### Special Case: STEP 7 Independence
 
@@ -429,6 +521,14 @@ These patterns **will NOT work** as expected:
 
 **Purpose**: Capture comprehensive network state baseline and validate health
 
+**Dependencies**: STEP 1 only
+**Tags**: `[step1, step5, pre_validation, network_validation]`
+
+**Key Change**: STEP 5 only requires STEP 1 (basic connectivity). Image staging (STEPS 2-4) is OPTIONAL.
+- Run STEP 5 independently to capture baseline before staging image
+- Or run STEPS 2-4 first, then STEP 5, then STEP 6 for full preparation
+- This allows flexible workflows: validate network first, then prepare image
+
 **Tasks**:
 - Call `common/network-resources-gathering`:
   - NX-OS: Gathers all network resources (BGP, interfaces, VLANs, routing, etc.)
@@ -443,10 +543,17 @@ These patterns **will NOT work** as expected:
 **Exit Condition**: FAIL → Workflow STOPS
 **Rationale**: Do not proceed with unhealthy network
 
-**Why After Image Staging**:
-- Image is confirmed safe and available
-- Comprehensive gathering is expensive (time/resources)
-- Only gather facts once we know upgrade will proceed
+**Baseline File**:
+- Saved to `/tmp/network_baseline_{{ inventory_hostname }}.json`
+- Contains complete network state snapshot (10 data sections)
+- REQUIRED for STEP 7 (post-upgrade validation)
+- Persists across playbook runs
+
+**Recommended Pre-Upgrade Workflow**:
+1. Run `--tags step5` to validate network and capture baseline
+2. Run `--tags step4` to stage image (if not already staged)
+3. Run `--tags step6` to install firmware (during maintenance window)
+4. Run `--tags step7` to validate against baseline
 
 **Network Resources Gathered** (NX-OS):
 - Configuration resources: interfaces, l2_interfaces, l3_interfaces, vlans, lag_interfaces, lacp_interfaces, bfd_interfaces, bgp_global, bgp_address_family, bgp_neighbor_address_family, route_maps, prefix_lists, static_routes, lldp_global, lldp_interfaces, ntp_global, snmp_server, logging_global, hostname
@@ -458,6 +565,16 @@ These patterns **will NOT work** as expected:
 
 **Purpose**: Install firmware and reboot device
 
+**Dependencies**: STEP 1 only
+**Tags**: `[step1, step6, install, reboot]`
+**Safety Flag**: REQUIRED: `maintenance_window=true`
+
+**Key Change**: STEP 6 only requires STEP 1 (basic connectivity). Pre-validation (STEP 5) is OPTIONAL.
+- Run STEP 6 independently to install firmware
+- Pre-validation (STEP 5) is RECOMMENDED but not enforced for safety
+- This allows emergency upgrades when devices are already prepared
+- However: If you want to validate afterward, STEP 5 baseline MUST exist from prior run
+
 **Tasks**:
 - Call platform-specific role (e.g., `cisco-nxos-upgrade/image-installation`)
 - Platform determines installation method:
@@ -468,6 +585,38 @@ These patterns **will NOT work** as expected:
 
 **Exit Condition**: FAIL → Workflow STOPS
 **Rationale**: Critical step - installation or connectivity failure requires investigation
+
+**Safety Requirements**:
+- **Requires**: `maintenance_window=true` flag (prevents accidental reboots)
+- **Image**: Must exist on device (from STEP 4 or manually staged)
+- **Baseline**: Optional but needed for STEP 7 validation afterward
+
+**Recommended Upgrade Workflows**:
+
+Option 1: Safe with baseline
+```bash
+# 1. Validate and capture baseline
+--tags step5
+# 2. Stage image if not already there
+--tags step4
+# 3. Install firmware
+--tags step6 -e maintenance_window=true
+# 4. Validate against baseline
+--tags step7
+```
+
+Option 2: Full workflow (all steps)
+```bash
+# Runs all steps automatically: step1 → step2 → step3 → step4 → step5 → step6 → step7
+(no tags needed) -e maintenance_window=true
+```
+
+Option 3: Emergency upgrade (no prep)
+```bash
+# Direct install when image already staged (NOT recommended for production)
+--tags step6 -e maintenance_window=true
+# Warning: No baseline saved - cannot validate afterward with STEP 7
+```
 
 **Platform-Specific Behavior**:
 - NX-OS: Checks ISSU capability, may include EPLD upgrade

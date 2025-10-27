@@ -78,7 +78,11 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
 ### Platform-Specific Upgrade Features
 - `ENABLE_EPLD_UPGRADE` - Enable EPLD firmware upgrades (Cisco NX-OS only, default: false)
   - Only set when explicitly 'true'
-- `ALLOW_DISRUPTIVE_EPLD` - Allow disruptive EPLD upgrades (Cisco NX-OS only, default: false)
+- `INSTALL_COMBINED_MODE` - Install firmware + EPLD in single operation for faster upgrade (Cisco NX-OS only, default: false)
+  - Requires: `ENABLE_EPLD_UPGRADE=true`
+  - If false, uses sequential mode (firmware first, then EPLD after reboot)
+  - Only set when explicitly 'true'
+- `ALLOW_DISRUPTIVE_EPLD` - Allow disruptive EPLD upgrades without dual supervisors (Cisco NX-OS only, default: false)
   - Only set when explicitly 'true'
 - `MULTI_STEP_UPGRADE_REQUIRED` - Enable multi-step upgrade mode (FortiOS only, default: false)
   - Required for major version jumps (e.g., 6.x to 7.x)

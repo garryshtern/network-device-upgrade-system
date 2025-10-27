@@ -50,3 +50,21 @@
 - name: Installation completion notification
   ansible.builtin.debug:
     msg: "NX-OS firmware installation phase completed successfully"
+
+# ============================================================================
+# OPTIONAL EPLD INSTALLATION - AFTER FIRMWARE INSTALL AND REBOOT
+# ============================================================================
+
+- name: EPLD installation block (if enabled)
+  when:
+    - enable_epld_upgrade | bool
+  block:
+    - name: Combined firmware + EPLD installation (both in single operation)
+      ansible.builtin.include_tasks:
+        file: epld-installation-combined.yml
+      when: install_combined_mode | bool
+
+    - name: Sequential EPLD installation (after firmware reboot)
+      ansible.builtin.include_tasks:
+        file: epld-installation.yml
+      when: not (install_combined_mode | bool)

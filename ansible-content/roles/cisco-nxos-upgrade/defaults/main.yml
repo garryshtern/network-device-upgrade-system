@@ -97,7 +97,8 @@ nxos_upgrade_state: "{{ common_upgrade_state | combine({'issu_capable': false, '
 
 # EPLD Upgrade Settings
 enable_epld_upgrade: false  # Enable EPLD firmware upgrades
-allow_disruptive_epld: false  # Allow disruptive EPLD upgrades
+install_combined_mode: false  # Install firmware + EPLD in single operation (requires enable_epld_upgrade=true)
+allow_disruptive_epld: false  # Allow disruptive EPLD upgrades (without dual supervisors)
 cleanup_epld_images: false  # Cleanup EPLD images after upgrade
 epld_modules_to_upgrade: ['all']  # Modules to upgrade (default all)
 epld_firmware_filename: ""  # EPLD firmware filename

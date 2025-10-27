@@ -5,13 +5,13 @@
 # Dependencies: STEP 1 (for connectivity), assumes STEP 5 baseline exists from previous run
 # NOTE: STEP 5 baseline must exist from prior run, STEP 6 should have been run
 
-- name: CRITICAL: Verify baseline file exists (prerequisite for post-upgrade validation)
+- name: "CRITICAL: Verify baseline file exists (prerequisite for post-upgrade validation)"
   ansible.builtin.stat:
     path: "{{ baseline_base_path }}/{{ inventory_hostname }}_network_baseline.json"
   register: baseline_file
   delegate_to: localhost
 
-- name: Fail if baseline missing (must run step 5 before step 6 and 7)
+- name: "Fail if baseline missing (must run step 5 before step 6 and 7)"
   ansible.builtin.fail:
     msg: |
       CRITICAL: Pre-upgrade baseline file missing for post-upgrade validation.

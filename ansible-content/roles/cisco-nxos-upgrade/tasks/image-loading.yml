@@ -40,17 +40,26 @@
 # STEP 3 ran "dir bootflash:" and stored image list in storage_info.images_found
 # Reuse that data instead of running another dir command
 
-- name: Check if target firmware already exists on device
+- name: Check if target firmware and EPLD already exist on device
   ansible.builtin.set_fact:
     target_firmware_exists: "{{ target_firmware in storage_info.images_found }}"
+    target_epld_exists: "{{ target_epld_firmware in storage_info.images_found if (enable_epld_upgrade | bool and target_epld_firmware is defined) else false }}"
   when:
     - storage_info is defined
     - storage_info.images_found is defined
 
-- name: Set firmware does not exist if storage_info not available
+- name: Set files do not exist if storage_info not available
   ansible.builtin.set_fact:
     target_firmware_exists: false
+    target_epld_exists: false
   when: storage_info is not defined or storage_info.images_found is not defined
+
+- name: Display upload status for firmware and EPLD
+  ansible.builtin.debug:
+    msg:
+      - "Firmware status: {{ 'Already staged' if target_firmware_exists else 'Needs upload' }}"
+      - "EPLD enabled: {{ enable_epld_upgrade | bool }}"
+      - "EPLD status: {{ 'Already staged' if target_epld_exists else ('Needs upload' if (enable_epld_upgrade | bool) else 'Not enabled') }}"
 
 - name: Firmware already staged - skip upload
   when: target_firmware_exists
@@ -216,3 +225,11 @@
           - "File Size: {{ (nxos_image_loading_results.file_size_bytes | int / 1024 / 1024) | round(2) }}MB"
           - "Transfer Method: SCP (server-initiated)"
           - "SHA512 Verified: {{ nxos_image_loading_results.hash_verified }}"
+
+# ============================================================================
+# OPTIONAL EPLD FIRMWARE UPLOAD - DELEGATED TO SEPARATE TASK FILE
+# ============================================================================
+
+- name: Load and upload EPLD firmware (optional)
+  ansible.builtin.include_tasks:
+    file: epld-loading.yml

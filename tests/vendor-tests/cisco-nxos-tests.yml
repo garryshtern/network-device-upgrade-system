@@ -130,19 +130,55 @@
 
     - name: Test NX-OS EPLD upgrade capability
       block:
-        - name: Check for EPLD handling in tasks
+        - name: Check for EPLD handling in image-installation tasks
           slurp:
-            src: "{{ role_path }}/tasks/main.yml"
-          register: main_tasks_content
+            src: "{{ role_path }}/tasks/image-installation.yml"
+          register: image_installation_content
           when: nxos_role_check.stat.exists
 
         - name: Validate EPLD upgrade logic exists
           assert:
             that:
-              - "'epld' in main_tasks_content.content | b64decode"
-            fail_msg: "EPLD upgrade handling missing from main tasks"
+              - "'epld' in image_installation_content.content | b64decode"
+            fail_msg: "EPLD upgrade handling missing from image-installation tasks"
             success_msg: "✓ EPLD upgrade capability confirmed"
-          when: main_tasks_content is defined
+          when: image_installation_content is defined
+
+        - name: Check for EPLD installation task file
+          stat:
+            path: "{{ role_path }}/tasks/epld-installation.yml"
+          register: epld_installation_check
+
+        - name: Validate EPLD installation task file exists
+          assert:
+            that:
+              - epld_installation_check.stat.exists
+            fail_msg: "EPLD installation task file missing: epld-installation.yml"
+            success_msg: "✓ EPLD installation task file found"
+
+        - name: Check for combined EPLD installation task file
+          stat:
+            path: "{{ role_path }}/tasks/epld-installation-combined.yml"
+          register: epld_combined_check
+
+        - name: Validate combined EPLD installation task file exists
+          assert:
+            that:
+              - epld_combined_check.stat.exists
+            fail_msg: "Combined EPLD installation task file missing: epld-installation-combined.yml"
+            success_msg: "✓ Combined EPLD installation task file found"
+
+        - name: Check for EPLD loading task file
+          stat:
+            path: "{{ role_path }}/tasks/epld-loading.yml"
+          register: epld_loading_check
+
+        - name: Validate EPLD loading task file exists
+          assert:
+            that:
+              - epld_loading_check.stat.exists
+            fail_msg: "EPLD loading task file missing: epld-loading.yml"
+            success_msg: "✓ EPLD loading task file found"
 
     - name: Test NX-OS ISSU procedures
       block:
