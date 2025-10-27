@@ -4,7 +4,8 @@
 
 - name: Skip metrics export if no data
   ansible.builtin.meta: end_host
-  when: metric_data | length == 0
+  when:
+    - metric_data is not defined or metric_data | length == 0
 
 - name: InfluxDB metrics export
   when:
