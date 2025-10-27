@@ -220,7 +220,7 @@
           timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
           platform: "{{ platform }}"
           device: "{{ inventory_hostname }}"
-          network_resources: "{{ nxos_network_resources.ansible_network_resources }}"
+          network_resources: "{{ ansible_network_resources }}"
           arp_data: "{{ gathered_arp_data }}"
           mac_data: "{{ gathered_mac_data }}"
           rib_data: "{{ gathered_rib_data }}"
