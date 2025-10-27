@@ -10,11 +10,11 @@
     test_results: []
 
   tasks:
-    - name: Find all Ansible playbooks
+    - name: Find all Ansible playbooks (excluding step task files)
       find:
         paths: "{{ ansible_content_dir }}/playbooks"
         patterns: "*.yml,*.yaml"
-        recurse: true
+        recurse: false
       register: playbook_files
 
     - name: Find all Ansible roles
@@ -31,6 +31,13 @@
         recurse: true
       register: inventory_files
 
+    - name: Find all step task files
+      find:
+        paths: "{{ ansible_content_dir }}/playbooks/steps"
+        patterns: "*.yml,*.yaml"
+        recurse: true
+      register: step_files
+
     - name: Test playbook syntax
       ansible.builtin.shell: |
         ansible-playbook --syntax-check {{ item.path }} \
@@ -44,6 +51,14 @@
       register: playbook_syntax_results
       loop: "{{ playbook_files.files }}"
       failed_when: playbook_syntax_results.rc != 0
+      changed_when: false
+
+    - name: Test YAML syntax for step task files
+      ansible.builtin.shell: |
+        python -c "import yaml; yaml.safe_load(open('{{ item.path }}'))"
+      register: step_yaml_syntax_results
+      loop: "{{ step_files.files }}"
+      failed_when: step_yaml_syntax_results.rc != 0
       changed_when: false
 
     - name: Test YAML syntax for all files
@@ -109,12 +124,14 @@
           ================================
 
           Playbook Files Tested: {{ playbook_files.files | length }}
+          Step Task Files Tested: {{ step_files.files | length }}
           Role Files Tested: {{ role_files.files | length }}
           Inventory Files Tested: {{ inventory_files.files | length }}
           Template Files Tested: {{ template_files.files | length | default(0) }}
 
           Syntax Errors:
           - Playbook Syntax: {{ playbook_syntax_results.results | selectattr('rc', 'ne', 0) | list | length }} failures
+          - Step Task YAML Syntax: {{ step_yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length }} failures
           - YAML Syntax: {{ yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length }} failures
           - Template Syntax: {{ template_validation.results | selectattr('rc', 'ne', 0) | list | length if template_validation.results is defined else 0 }} failures
 
@@ -124,11 +141,12 @@
 
           Anti-pattern Check: Completed for {{ antipattern_check.results | length }} files
 
-          Overall Status: {{ 'PASS' if (playbook_syntax_results.results | selectattr('rc', 'ne', 0) | list | length == 0 and yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length == 0) else 'ISSUES FOUND' }}
+          Overall Status: {{ 'PASS' if (playbook_syntax_results.results | selectattr('rc', 'ne', 0) | list | length == 0 and step_yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length == 0 and yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length == 0) else 'ISSUES FOUND' }}
 
     - name: Fail if critical syntax errors found
       fail:
         msg: "Critical syntax errors found. Check the test output above."
       when: >
         (playbook_syntax_results.results | selectattr('rc', 'ne', 0) | list | length > 0) or
+        (step_yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length > 0) or
         (yaml_syntax_results.results | selectattr('rc', 'ne', 0) | list | length > 0)
