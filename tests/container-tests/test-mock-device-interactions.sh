@@ -217,29 +217,6 @@ test_opengear_devices() {
         -e UPGRADE_PHASE="validation"
 }
 
-# Test Metamako mock device interactions
-    log "=== Testing Metamako MOS Mock Device Interactions ==="
-
-    # Test basic MOS connection
-
-    # Test MOS firmware upgrade
-        -e TARGET_FIRMWARE="mos-0.39.9.iso" \
-        -e UPGRADE_PHASE="loading"
-
-    # Test application installation
-        -e ENABLE_APPLICATION_INSTALLATION="true" \
-        -e METAWATCH_PACKAGE="metawatch-3.2.0-1967.x86_64.rpm" \
-        -e METAMUX_PACKAGE="metamux-2.2.3-1849.x86_64.rpm"
-
-    # Test low-latency validation
-        -e UPGRADE_PHASE="validation"
-
-    # Test complete system upgrade
-        -e TARGET_FIRMWARE="mos-0.39.9.iso" \
-        -e UPGRADE_PHASE="full" \
-        -e MAINTENANCE_WINDOW="true"
-}
-
 # Test cross-platform scenarios
 test_cross_platform_scenarios() {
     log "=== Testing Cross-Platform Mock Device Scenarios ==="

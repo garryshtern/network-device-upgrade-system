@@ -19,7 +19,6 @@ exclude_paths:
   - ansible-content/roles/fortios-upgrade/tasks/  # Complex FortiOS configuration
   - ansible-content/roles/opengear-upgrade/tasks/  # Complex device management
   - ansible-content/roles/image-validation/tasks/  # Complex image validation
-  - ansible-content/roles/metamako-mos-upgrade/tasks/  # Complex MOS upgrade logic
   - ansible-content/roles/network-validation/tasks/  # Complex network validation
   - ansible-content/roles/space-management/tasks/  # Complex space assessment
 

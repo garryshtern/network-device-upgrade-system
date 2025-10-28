@@ -140,7 +140,6 @@ class MockDeviceEngine:
             'cisco_iosxe': CiscoIOSXEBehavior,
             'fortios': FortiOSBehavior,
             'opengear': OpengearBehavior,
-            : MetamakoMOSBehavior
         }
 
         # Normalize platform name using aliases
@@ -901,39 +900,6 @@ class OpengearBehavior(DeviceBehavior):
             result = self.device.start_upgrade(self.device.config.target_version)
             return {"status": "success", "output": "Firmware upgrade started", "data": result}
         return {"status": "error", "message": "Upgrade in progress"}
-
-
-class MetamakoMOSBehavior(DeviceBehavior):
-    """Metamako MOS behavior simulation"""
-    
-    def _build_command_map(self) -> Dict[str, Callable]:
-        return {
-            "mdk-version": self._mdk_version,
-            "upgrade *": self._upgrade_mos,
-            "application status": self._application_status
-        }
-    
-    def _mdk_version(self, **kwargs) -> Dict[str, Any]:
-        return {
-            "status": "success",
-            "output": f"MOS Version: {self.device.config.firmware_version}\nDevice: {self.device.config.model}"
-        }
-    
-    def handle_upgrade_phase(self, phase: UpgradePhase):
-        # Handle MetaWatch/MetaMux application management
-        if phase == UpgradePhase.POST_VALIDATION:
-            # Simulate application installation
-            if self.device.config.custom_behaviors.get('manage_applications'):
-                time.sleep(15)  # App installation time
-    
-    def _upgrade_mos(self, command: str = "", **kwargs) -> Dict[str, Any]:
-        return {"status": "success", "output": "MOS upgrade initiated"}
-    
-    def _application_status(self, **kwargs) -> Dict[str, Any]:
-        return {
-            "status": "success", 
-            "output": "MetaWatch: running\nMetaMux: stopped"
-        }
 
 
 # Device Manager for orchestrating multiple mock devices

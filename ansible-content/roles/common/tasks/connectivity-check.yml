@@ -28,18 +28,16 @@
             (platform == 'nxos') | ternary('ansible.netcommon.network_cli',
             (platform == 'ios') | ternary('ansible.netcommon.network_cli',
             (platform == 'fortios') | ternary('httpapi',
-            (platform == ) | ternary('ansible.netcommon.network_cli',
             (platform == 'opengear') | ternary('ssh',
-            ansible_connection | default('ansible.netcommon.network_cli')))))))
+            ansible_connection | default('ansible.netcommon.network_cli'))))))
           }}
         ansible_network_os: >-
           {{
             (platform == 'nxos') | ternary('cisco.nxos.nxos',
             (platform == 'ios') | ternary('cisco.ios.ios',
             (platform == 'fortios') | ternary('fortinet.fortios.fortios',
-            (platform == ) | ternary(,
             (platform == 'opengear') | ternary('opengear',
-            ansible_network_os | default(omit))))))
+            ansible_network_os | default(omit)))))
           }}
         ansible_user: >-
           {{
@@ -154,27 +152,6 @@
             - platform == 'fortios'
             - fortios_version_output is defined
             - fortios_version_output is succeeded
-
-        - name: Get Metamako version
-          ansible.netcommon.cli_command:
-            command: show system info
-          register: mos_version_output
-          changed_when: false
-          when: platform == 
-
-        - name: Parse and store Metamako version
-          ansible.builtin.set_fact:
-            device_version_info:
-              raw_output: "{{ mos_version_output.stdout }}"
-              platform: "{{ platform }}"
-              timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ mos_version_output.stdout | regex_search('Version:\\s+([0-9.]+)', '\\1') | first }}"
-            current_firmware_version: "{{ mos_version_output.stdout | regex_search('Version:\\s+([0-9.]+)', '\\1') | first }}"
-          when:
-            - platform == 
-            - mos_version_output is defined
-            - mos_version_output.stdout is defined
-            - mos_version_output is succeeded
 
         - name: Get Opengear version
           ansible.builtin.raw: config -g config.version

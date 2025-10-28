@@ -6,7 +6,7 @@
     expected_firmware_version: >
       "{{ target_firmware |
         regex_replace(
-        '.*[-_]([0-9]+[0-9\\.\\-a-zA-Z]*)\\.(bin|nxos|spa|pkg|out|mos|tar\\.gz|dgz)$',
+        '.*[-_]([0-9]+[0-9\\.\\-a-zA-Z]*)\\.(bin|nxos|spa|pkg|out|dgz)$',
         '\\1') }}"
 
 # Note: For Cisco platforms, facts are already gathered in STEP 1 of main workflow
@@ -24,12 +24,6 @@
   changed_when: false
   when: platform == 'opengear'
 
-- name: Get current firmware version (Metamako MOS)
-  ansible.builtin.raw: "cat /etc/mos-release 2>/dev/null || echo 'Unknown'"
-  register: mos_version_output
-  changed_when: false
-  when: platform == 
-
 - name: Extract actual version from device output
   ansible.builtin.set_fact:
     actual_firmware_version: |-
@@ -42,10 +36,6 @@
       {%- elif platform == 'opengear' -%}
         {{ opengear_version_output.stdout |
         regex_search('([0-9\\.]+)', '\\1') | first }}
-      {%- elif platform ==  -%}
-        {{ mos_version_output.stdout |
-        regex_search('VERSION=([0-9\\.]+)', '\\1') |
-        first }}
       {%- else -%}
         unknown
       {%- endif -%}
