@@ -23,7 +23,7 @@
     - name: "Validate platform type"
       assert:
         that:
-          - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
+          - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']
         fail_msg: "Invalid platform type: {{ platform_type }}"
       when: error_test.error_type != 'invalid_platform'
 

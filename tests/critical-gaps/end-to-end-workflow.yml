@@ -129,7 +129,6 @@
             "total_phases_tested": {{ workflow_result.results | map(attribute='stdout') | map('from_json') | map(attribute='phases_completed') | sum }}
           }
 
-
     - name: Display end-to-end workflow test results
       ansible.builtin.debug:
         msg: |

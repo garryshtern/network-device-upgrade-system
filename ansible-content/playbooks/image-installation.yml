@@ -97,9 +97,8 @@
 
         - name: Install firmware - Metamako MOS
           ansible.builtin.include_role:
-            name: metamako-mos-upgrade
             tasks_from: image-installation
-          when: platform == 'metamako_mos'
+          when: platform == 
 
         - name: Install firmware - Opengear
           ansible.builtin.include_role:

@@ -122,7 +122,6 @@
       block:
         - name: Load Metamako MOS image loading task
           ansible.builtin.slurp:
-            src: "{{ playbook_dir }}/../../ansible-content/roles/metamako-mos-upgrade/tasks/image-loading.yml"
           register: metamako_content
 
         - name: Parse Metamako tasks

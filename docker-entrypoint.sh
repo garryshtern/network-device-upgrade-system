@@ -443,7 +443,6 @@ build_ansible_options() {
     fi
 
     if [[ -n "${METAMAKO_SSH_KEY_INTERNAL:-}" ]]; then
-        extra_vars="$extra_vars vault_metamako_ssh_key=${METAMAKO_SSH_KEY_INTERNAL}"
     fi
 
     # Authentication: API Tokens
@@ -485,10 +484,8 @@ build_ansible_options() {
     fi
 
     if [[ -n "${METAMAKO_USERNAME:-}" ]]; then
-        extra_vars="$extra_vars vault_metamako_username=${METAMAKO_USERNAME}"
     fi
     if [[ -n "${METAMAKO_PASSWORD:-}" ]]; then
-        extra_vars="$extra_vars vault_metamako_password=${METAMAKO_PASSWORD}"
     fi
 
     # Image server authentication

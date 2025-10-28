@@ -15,7 +15,6 @@ ansible_user: >-
     (platform == 'ios' and vault_cisco_iosxe_username is defined) | ternary(vault_cisco_iosxe_username, '') or
     (platform == 'fortios' and vault_fortios_username is defined) | ternary(vault_fortios_username, '') or
     (platform == 'opengear' and vault_opengear_username is defined) | ternary(vault_opengear_username, '') or
-    (platform == 'metamako_mos' and vault_metamako_username is defined) | ternary(vault_metamako_username, '') or
     'admin'
   }}
 
@@ -25,7 +24,6 @@ ansible_password: >-
     (platform == 'ios' and vault_cisco_iosxe_password is defined) | ternary(vault_cisco_iosxe_password, omit) or
     (platform == 'fortios' and vault_fortios_password is defined) | ternary(vault_fortios_password, omit) or
     (platform == 'opengear' and vault_opengear_password is defined) | ternary(vault_opengear_password, omit) or
-    (platform == 'metamako_mos' and vault_metamako_password is defined) | ternary(vault_metamako_password, omit) or
     omit
   }}
 
@@ -34,7 +32,6 @@ ansible_ssh_private_key_file: >-
     (platform == 'nxos' and vault_cisco_nxos_ssh_key is defined) | ternary(vault_cisco_nxos_ssh_key, omit) or
     (platform == 'ios' and vault_cisco_iosxe_ssh_key is defined) | ternary(vault_cisco_iosxe_ssh_key, omit) or
     (platform == 'opengear' and vault_opengear_ssh_key is defined) | ternary(vault_opengear_ssh_key, omit) or
-    (platform == 'metamako_mos' and vault_metamako_ssh_key is defined) | ternary(vault_metamako_ssh_key, omit) or
     omit
   }}
 
@@ -158,6 +155,4 @@ platform_role_map:
   nxos: "cisco-nxos-upgrade"
   ios: "cisco-iosxe-upgrade"
   fortios: "fortios-upgrade"
-  metamako_mos: "metamako-mos-upgrade"
-  metamako: "metamako-mos-upgrade"
   opengear: "opengear-upgrade"

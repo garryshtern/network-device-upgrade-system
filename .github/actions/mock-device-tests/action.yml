@@ -41,7 +41,7 @@ runs:
                 'cisco_iosxe': 'show version',
                 'fortios': 'get system status',
                 'opengear': 'config -g config.system.version',
-                'metamako_mos': 'mdk-version'
+                : 'mdk-version'
             }
 
             for platform in platform_commands.keys():
@@ -68,7 +68,7 @@ runs:
                 elif platform == 'opengear':
                     resp = device.process_command('config -g config.system.model')
                     assert resp['status'] == 'success', f'{platform} get model failed'
-                elif platform == 'metamako_mos':
+                elif platform == :
                     resp = device.process_command('application status')
                     assert resp['status'] == 'success', f'{platform} application status failed'
 
@@ -81,7 +81,7 @@ runs:
             """Test upgrade state tracking and file operations across all platforms"""
             print("🚀 Testing upgrade state and file operations...")
             manager = MockDeviceManager()
-            platforms = ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
+            platforms = ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']
 
             for platform in platforms:
                 print(f"  Testing upgrade workflow for {platform}...")
@@ -139,7 +139,7 @@ runs:
             """Test error condition handling and recovery across all platforms"""
             print("💥 Testing error scenarios and recovery mechanisms...")
             manager = MockDeviceManager()
-            platforms = ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
+            platforms = ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']
 
             for platform in platforms:
                 print(f"  Testing error handling for {platform}...")
@@ -181,7 +181,7 @@ runs:
             """Test concurrent device operations across all platforms"""
             print("⚡ Testing concurrent device operations...")
             manager = MockDeviceManager()
-            platforms = ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
+            platforms = ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']
 
             # Platform-specific commands for concurrent testing
             platform_commands = {
@@ -189,7 +189,7 @@ runs:
                 'cisco_iosxe': 'show version',
                 'fortios': 'get system status',
                 'opengear': 'config -g config.system.version',
-                'metamako_mos': 'mdk-version'
+                : 'mdk-version'
             }
 
             devices = []
@@ -225,7 +225,7 @@ runs:
             """Test device state persistence and configuration across all platforms"""
             print("💾 Testing device state persistence and configuration...")
             manager = MockDeviceManager()
-            platforms = ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
+            platforms = ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']
 
             # Platform-specific test firmware versions
             test_versions = {
@@ -233,7 +233,7 @@ runs:
                 'cisco_iosxe': '17.12.01',
                 'fortios': '7.4.2',
                 'opengear': '4.2.1',
-                'metamako_mos': '2.4.3'
+                : '2.4.3'
             }
 
             for platform in platforms:

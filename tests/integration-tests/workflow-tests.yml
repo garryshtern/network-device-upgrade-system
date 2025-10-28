@@ -17,7 +17,6 @@
         - "console-server-01"
       fortios:
         - "firewall-01"
-      metamako:
         - "metamako-01"
     test_results: {}
     # Vault variables for group variable loading
@@ -30,8 +29,6 @@
     vault_cisco_nxos_username: "test_user"
     vault_fortios_password: "test_password"
     vault_fortios_username: "test_user"
-    vault_metamako_password: "test_password"
-    vault_metamako_username: "test_user"
 # No image server credentials needed - using server-initiated PUSH only
     vault_snmp_community: "test_community"
 
@@ -73,7 +70,6 @@
 
     - name: Test vendor role inclusion in workflows
       ansible.builtin.shell: |
-        grep -l "cisco-nxos-upgrade\|cisco-iosxe-upgrade\|opengear-upgrade\|fortios-upgrade\|metamako-mos-upgrade" {{ ansible_content_dir }}/playbooks/*.yml
       register: vendor_role_usage
       changed_when: false
 

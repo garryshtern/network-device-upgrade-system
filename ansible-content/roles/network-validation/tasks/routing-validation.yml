@@ -34,7 +34,6 @@
       when:
         - show_debug | bool
 
-
 - name: Store routing baseline (NX-OS)
   when:
     - platform == 'nxos'

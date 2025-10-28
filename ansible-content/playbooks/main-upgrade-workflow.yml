@@ -60,7 +60,7 @@
       when:
         - ansible_check_mode is defined
         - ansible_check_mode
-        - ansible_network_os | is_platform('metamako')
+        - ansible_network_os | is_platform()
 
     - name: Validate required variables
       ansible.builtin.assert:

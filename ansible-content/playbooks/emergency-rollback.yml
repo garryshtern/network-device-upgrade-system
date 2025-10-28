@@ -114,12 +114,11 @@
 
         - name: Rollback Metamako MOS firmware
           ansible.builtin.include_role:
-            name: metamako-mos-upgrade
             tasks_from: rollback
           vars:
             rollback_type: "firmware"
           when:
-            - platform == 'metamako_mos'
+            - platform == 
             - restore_firmware
 
         - name: Rollback Opengear firmware

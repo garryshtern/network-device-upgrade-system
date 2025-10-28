@@ -127,7 +127,7 @@
                         'cisco_iosxe': {'ssh_key': '/tmp/mock-iosxe-key', 'api_token': None},
                         'fortios': {'ssh_key': None, 'api_token': 'mock-api-token-fortios-12345'},
                         'opengear': {'ssh_key': '/tmp/mock-opengear-key', 'api_token': 'mock-api-token-opengear-67890'},
-                        'metamako_mos': {'ssh_key': '/tmp/mock-metamako-key', 'api_token': None}
+                        : {'ssh_key': '/tmp/mock-metamako-key', 'api_token': None}
                     }
 
                     results = []
@@ -142,7 +142,7 @@
                                 response = device.process_command('get system status')
                             elif platform == 'opengear':
                                 response = device.process_command('config -g config.system.version')
-                            elif platform == 'metamako_mos':
+                            elif platform == :
                                 response = device.process_command('mdk-version')
                             else:
                                 response = device.process_command('show version')

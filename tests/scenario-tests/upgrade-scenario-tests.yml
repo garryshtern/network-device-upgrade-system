@@ -173,7 +173,6 @@
               cisco_iosxe: 40
               opengear: 30  # Slower due to architecture detection
               fortios: 35   # HA coordination overhead
-              metamako: 20  # Ultra-low latency requirements
 
         - name: Validate Batch Size Optimization
           assert:

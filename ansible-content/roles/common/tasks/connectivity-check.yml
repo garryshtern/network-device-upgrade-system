@@ -28,7 +28,7 @@
             (platform == 'nxos') | ternary('ansible.netcommon.network_cli',
             (platform == 'ios') | ternary('ansible.netcommon.network_cli',
             (platform == 'fortios') | ternary('httpapi',
-            (platform == 'metamako_mos') | ternary('ansible.netcommon.network_cli',
+            (platform == ) | ternary('ansible.netcommon.network_cli',
             (platform == 'opengear') | ternary('ssh',
             ansible_connection | default('ansible.netcommon.network_cli')))))))
           }}
@@ -37,7 +37,7 @@
             (platform == 'nxos') | ternary('cisco.nxos.nxos',
             (platform == 'ios') | ternary('cisco.ios.ios',
             (platform == 'fortios') | ternary('fortinet.fortios.fortios',
-            (platform == 'metamako_mos') | ternary('metamako_mos',
+            (platform == ) | ternary(,
             (platform == 'opengear') | ternary('opengear',
             ansible_network_os | default(omit))))))
           }}
@@ -46,7 +46,6 @@
             (platform == 'nxos') | ternary(vault_cisco_nxos_username,
             (platform == 'ios') | ternary(vault_cisco_iosxe_username,
             (platform == 'fortios') | ternary(vault_fortios_username,
-            (platform == 'metamako_mos') | ternary(vault_metamako_username,
             (platform == 'opengear') | ternary(vault_opengear_username,
             ansible_user | default('admin'))))))
           }}
@@ -55,7 +54,6 @@
             (platform == 'nxos') | ternary(vault_cisco_nxos_password | default(omit),
             (platform == 'ios') | ternary(vault_cisco_iosxe_password | default(omit),
             (platform == 'fortios') | ternary(vault_fortios_password | default(omit),
-            (platform == 'metamako_mos') | ternary(vault_metamako_password | default(omit),
             (platform == 'opengear') | ternary(vault_opengear_password | default(omit),
             omit)))))
           }}
@@ -63,7 +61,6 @@
           {{
             (platform == 'nxos') | ternary(vault_cisco_nxos_ssh_key | default(omit),
             (platform == 'ios') | ternary(vault_cisco_iosxe_ssh_key | default(omit),
-            (platform == 'metamako_mos') | ternary(vault_metamako_ssh_key | default(omit),
             (platform == 'opengear') | ternary(vault_opengear_ssh_key | default(omit),
             omit))))
           }}
@@ -163,7 +160,7 @@
             command: show system info
           register: mos_version_output
           changed_when: false
-          when: platform == 'metamako_mos'
+          when: platform == 
 
         - name: Parse and store Metamako version
           ansible.builtin.set_fact:
@@ -174,7 +171,7 @@
               version: "{{ mos_version_output.stdout | regex_search('Version:\\s+([0-9.]+)', '\\1') | first }}"
             current_firmware_version: "{{ mos_version_output.stdout | regex_search('Version:\\s+([0-9.]+)', '\\1') | first }}"
           when:
-            - platform == 'metamako_mos'
+            - platform == 
             - mos_version_output is defined
             - mos_version_output.stdout is defined
             - mos_version_output is succeeded

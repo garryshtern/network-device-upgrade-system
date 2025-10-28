@@ -165,7 +165,7 @@ Welcome to FortiOS
 Opengear Gateway
 {device_id}:~ # """,
             
-            'metamako_mos': f"""
+            : f"""
 Metamako MOS
 {device_id}:~$ """
         }
@@ -297,7 +297,7 @@ Available commands:
             'cisco_iosxe': f"{device_id}>",
             'fortios': f"{device_id} # ",
             'opengear': f"{device_id}:~ # ",
-            'metamako_mos': f"{device_id}:~$ "
+            : f"{device_id}:~$ "
         }
         
         prompt = prompts.get(platform, f"{device_id}$ ")
@@ -514,7 +514,7 @@ def create_test_environment():
         },
         {
             'device_id': 'metamako-mc48',
-            'platform_type': 'metamako_mos',
+            'platform_type': ,
             'model': 'MetaConnect-48',
             'firmware_version': '0.39.1',
             'target_version': '0.39.11', 

@@ -132,7 +132,7 @@ class MockDeviceEngine:
             'cisco_iosxe': 'cisco_iosxe',
             'fortios': 'fortios',
             'opengear': 'opengear',
-            'metamako_mos': 'metamako_mos'
+            : 
         }
 
         behavior_map = {
@@ -140,7 +140,7 @@ class MockDeviceEngine:
             'cisco_iosxe': CiscoIOSXEBehavior,
             'fortios': FortiOSBehavior,
             'opengear': OpengearBehavior,
-            'metamako_mos': MetamakoMOSBehavior
+            : MetamakoMOSBehavior
         }
 
         # Normalize platform name using aliases
@@ -1250,7 +1250,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Mock Network Device Engine')
     parser.add_argument('--test-platform', default='cisco_nxos',
                         choices=['cisco_nxos', 'cisco_iosxe', 'nxos', 'ios', 'iosxe',
-                                'fortios', 'opengear', 'metamako_mos'],
+                                'fortios', 'opengear'],
                         help='Platform to test (supports both standardized and legacy names)')
     parser.add_argument('--interactive', action='store_true',
                         help='Run interactive test mode')

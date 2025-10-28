@@ -36,7 +36,6 @@
       expected_features:
         - "HA cluster coordination"
         - "VDOM handling"
-    metamako:
       platform: "metamako"
       expected_features:
         - "Ultra-low latency procedures"
@@ -146,7 +145,6 @@
       block:
         - name: Check Metamako upgrade role main tasks
           ansible.builtin.stat:
-            path: "{{ playbook_dir }}/../../ansible-content/roles/metamako-mos-upgrade/tasks/main.yml"
           register: metamako_main_tasks
 
         - name: Validate Metamako main tasks exist

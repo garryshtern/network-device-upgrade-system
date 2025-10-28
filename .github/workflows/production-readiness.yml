@@ -75,7 +75,7 @@ jobs:
           
           # Test each platform briefly
           manager = MockDeviceManager()
-          for platform in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']:
+          for platform in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']:
             device_id = manager.create_device(platform, f'validation-{platform}')
             device = manager.devices[device_id]
             response = device.process_command('show version')
@@ -236,7 +236,7 @@ jobs:
           
           # Test device creation and basic operations
           devices_tested = 0
-          for platform in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']:
+          for platform in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']:
             print(f'Testing {platform}...')
             device_id = manager.create_device(platform, f'prod-test-{platform}')
             device = manager.devices[device_id]

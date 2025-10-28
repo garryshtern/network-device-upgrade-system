@@ -56,12 +56,10 @@
             tasks_from: image-loading
           when: platform == 'ios'
 
-        # Metamako MOS Image Loading
         - name: Load Metamako MOS image
           ansible.builtin.include_role:
-            name: metamako-mos-upgrade
             tasks_from: image-loading
-          when: platform == 'metamako_mos'
+          when: platform == 
 
         # Opengear Image Loading
         - name: Load Opengear image

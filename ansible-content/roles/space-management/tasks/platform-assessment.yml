@@ -63,7 +63,7 @@
             command: "show version | grep Image"
           register: running_image_result
           changed_when: false
-          when: platform == 'metamako_mos'
+          when: platform == 
 
         - name: Skip running image detection for FortiOS and Opengear
           ansible.builtin.set_fact:
@@ -90,7 +90,7 @@
         running_image_parsers:
           nxos: "{{ running_image_result.stdout[0] | regex_search('bootflash:///(.+\\.(bin|img))', '\\1') | first }}"
           ios: "{{ running_image_result.stdout[0] | regex_search('System image file is \"bootflash:/(.+\\.bin)\"', '\\1') | first }}"
-          metamako_mos: "{{ running_image_result.stdout | regex_search('Image:\\s+(.+\\.(iso|swix))', '\\1') | first }}"
+           "{{ running_image_result.stdout | regex_search('Image:\\s+(.+\\.(iso|swix))', '\\1') | first }}"
           fortios: ""
           opengear: ""
       when: running_image_result.stdout[0] is defined
@@ -139,7 +139,7 @@
             command: "rm /data/{{ item }}"
           loop: "{{ cleanup_candidates }}"
           when:
-            - platform == 'metamako_mos'
+            - platform == 
             - preserve_current_image
             - item != running_image_file
             - cleanup_candidates | length > 0

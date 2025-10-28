@@ -157,16 +157,14 @@
                 }}/iosxe_compliance_{{ audit_timestamp }}.json"
           when: platform == 'ios'
 
-        # Metamako MOS Compliance
         - name: Metamako MOS compliance validation
           ansible.builtin.include_role:
-            name: metamako-mos-upgrade
             tasks_from: compliance-audit
           vars:
             audit_output: >
               "{{ audit_results_path }}/{{ inventory_hostname
                 }}/mos_compliance_{{ audit_timestamp }}.json"
-          when: platform == 'metamako_mos'
+          when: platform == 
 
         # Opengear Compliance
         - name: Opengear compliance validation
@@ -251,7 +249,6 @@
         total_checks_run: "{{ total_checks }}"
       delegate_to: localhost
       when: generate_report | bool
-
 
     - name: Record compliance metrics to InfluxDB
       ansible.builtin.uri:

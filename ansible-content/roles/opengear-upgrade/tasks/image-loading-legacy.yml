@@ -258,7 +258,6 @@
           - CLI Result:
             {{ config_backup_result.stdout }}
 
-
 - name: Log image loading completion
   ansible.builtin.debug:
     msg: |-

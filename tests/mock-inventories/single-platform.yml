@@ -17,32 +17,3 @@ all:
       vars:
         ansible_user: test_user
         ansible_password: test_password
-
-    # Alternative: Metamako MOS for application management testing
-    metamako_mos:
-      hosts:
-        test-metamako-01:
-          ansible_host: localhost
-          ansible_connection: local
-          ansible_network_os: metamako_mos
-          firmware_version: "0.39.1"
-          target_version: "0.39.11"
-          device_model: "MetaConnect-48"
-          latency_critical: true
-          metawatch_enabled: true
-          metamux_enabled: false
-          metawatch_version: "4.2.0"
-          metamux_version: null
-          metawatch_telemetry_enabled: true  # Telemetry is built into MetaWatch
-          latency_threshold_ns: 100
-          # MetaWatch 4.2.0 management testing - POST MOS upgrade
-          manage_applications: true
-          application_action: "install"
-          application_name: "metawatch"
-          application_source: "https://firmware.metamako.com/metawatch/metawatch-4.2.0.tar.gz"
-          application_filename: "metawatch-4.2.0.tar.gz"
-          applications_to_enable: ["metawatch"]
-          applications_to_disable: ["metamux"]  # Ensure only one active
-      vars:
-        ansible_user: test_user
-        ansible_password: test_password

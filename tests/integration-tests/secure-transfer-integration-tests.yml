@@ -88,13 +88,12 @@
       block:
         - name: Import Metamako image loading tasks (check mode)
           ansible.builtin.include_tasks:
-            file: "{{ playbook_dir }}/../../ansible-content/roles/metamako-mos-upgrade/tasks/image-loading.yml"
-          when: "'metamako' in group_names"
+          when: " in group_names"
 
         - name: Validate Metamako transfer method
           ansible.builtin.debug:
             msg: "✅ Metamako MOS secure transfer validation passed"
-          when: "'metamako' in group_names"
+          when: " in group_names"
 
       rescue:
         - name: Handle Metamako test errors gracefully

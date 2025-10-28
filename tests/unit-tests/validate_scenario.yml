@@ -14,7 +14,7 @@
       assert:
         that:
           - platform_type is defined
-          - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
+          - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']
         fail_msg: "Invalid or missing platform_type: {{ platform_type | default('undefined') }}"
 
     - name: Validate firmware versions

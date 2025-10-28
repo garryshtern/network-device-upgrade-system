@@ -36,7 +36,7 @@
       images: "{{ storage_output.stdout | regex_findall('\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+\\s+(.+\\.(?:iso|swix))') }}"
       total_bytes: "{{ storage_output.stdout | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
       free_bytes: "{{ storage_output.stdout | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
-  when: platform == 'metamako_mos'
+  when: platform == 
 
 - name: Parse Opengear storage information
   ansible.builtin.set_fact:

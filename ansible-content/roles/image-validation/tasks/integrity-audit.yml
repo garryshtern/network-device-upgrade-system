@@ -49,7 +49,7 @@
            firmware_filename_for_validation.endswith('.SPA.bin'))) or
         (platform == 'fortios' and
           firmware_filename_for_validation.endswith('.out')) or
-        (platform == 'metamako_mos' and
+        (platform ==  and
           (firmware_filename_for_validation.endswith('.iso') or
            firmware_filename_for_validation.endswith('.swix'))) or
         (platform == 'opengear' and

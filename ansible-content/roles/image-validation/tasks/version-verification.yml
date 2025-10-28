@@ -28,7 +28,7 @@
   ansible.builtin.raw: "cat /etc/mos-release 2>/dev/null || echo 'Unknown'"
   register: mos_version_output
   changed_when: false
-  when: platform == 'metamako_mos'
+  when: platform == 
 
 - name: Extract actual version from device output
   ansible.builtin.set_fact:
@@ -42,7 +42,7 @@
       {%- elif platform == 'opengear' -%}
         {{ opengear_version_output.stdout |
         regex_search('([0-9\\.]+)', '\\1') | first }}
-      {%- elif platform == 'metamako_mos' -%}
+      {%- elif platform ==  -%}
         {{ mos_version_output.stdout |
         regex_search('VERSION=([0-9\\.]+)', '\\1') |
         first }}

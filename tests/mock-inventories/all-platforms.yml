@@ -230,7 +230,6 @@ all:
           -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
           -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 
-    metamako:
       hosts:
         metamako-mc48-metawatch:
           ansible_host: 127.0.0.11
@@ -322,9 +321,7 @@ all:
       vars:
         ansible_user: admin
         # SSH key authentication (preferred)
-        ansible_ssh_private_key_file: "{{ vault_metamako_ssh_key | default('/tmp/mock-metamako-key') }}"
         # Password authentication (fallback)
-        ansible_password: "{{ vault_metamako_password | default('mock_password') }}"
         ansible_ssh_common_args: >
           -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
           -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password

@@ -19,7 +19,7 @@ mock_storage_output:
       - "v7.2.4 build 1396"
     rc: 0
     
-  metamako_mos:
+  
     stdout: "1048576000    Jan 01 12:00  test-image.iso\n\n10737418240 bytes total (5368709120 bytes free)"
     rc: 0
     
