@@ -140,17 +140,6 @@
             success_msg: "✓ FortiOS main tasks exist"
             fail_msg: "Missing FortiOS main tasks"
 
-    - name: Metamako MOS Upgrade Role Tests
-      block:
-        - name: Check Metamako upgrade role main tasks
-          ansible.builtin.stat:
-
-        - name: Validate Metamako main tasks exist
-          ansible.builtin.assert:
-            that:
-            success_msg: "✓ Metamako main tasks exist"
-            fail_msg: "Missing Metamako main tasks"
-
     - name: Opengear Upgrade Role Tests
       block:
         - name: Check Opengear upgrade role main tasks

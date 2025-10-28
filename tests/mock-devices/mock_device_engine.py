@@ -132,7 +132,6 @@ class MockDeviceEngine:
             'cisco_iosxe': 'cisco_iosxe',
             'fortios': 'fortios',
             'opengear': 'opengear',
-            : 
         }
 
         behavior_map = {
