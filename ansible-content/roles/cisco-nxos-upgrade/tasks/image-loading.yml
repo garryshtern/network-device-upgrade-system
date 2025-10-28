@@ -154,34 +154,6 @@
 - name: Post-upload verification
   when: not target_firmware_exists
   block:
-    - name: Re-query device storage to verify upload
-      ansible.builtin.include_role:
-        name: space-management
-        tasks_from: platform-assessment
-
-    - name: Verify firmware file exists on device after upload
-      ansible.builtin.assert:
-        that:
-          - target_firmware in storage_info.images_found
-        fail_msg:
-          - "Firmware file not found on device after upload"
-          - "Expected file: {{ target_firmware }}"
-          - "Files found: {{ storage_info.images_found }}"
-
-    - name: Extract uploaded firmware file size from parsed storage
-      ansible.builtin.set_fact:
-        uploaded_firmware_size: "{{ parsed_storage.files | selectattr('1', 'equalto', target_firmware) | map(attribute='0') | first | int }}"
-
-    - name: Validate uploaded file size matches source
-      ansible.builtin.assert:
-        that:
-          - uploaded_firmware_size == firmware_file_info.size_bytes
-        fail_msg:
-          - "Uploaded file size mismatch!"
-          - "Expected (source): {{ firmware_file_info.size_bytes }} bytes"
-          - "Actual (device): {{ uploaded_firmware_size }} bytes"
-          - "File: {{ target_firmware }}"
-
     - name: Calculate SHA512 hash of firmware file on device
       cisco.nxos.nxos_command:
         commands:
@@ -209,7 +181,7 @@
       ansible.builtin.set_fact:
         nxos_image_loading_results:
           firmware_file: "{{ target_firmware }}"
-          file_size_bytes: "{{ uploaded_firmware_size }}"
+          file_size_bytes: "{{ firmware_file_info.size_bytes }}"
           source_sha512: "{{ calculated_hash }}"
           device_sha512: "{{ device_firmware_hash }}"
           hash_verified: true
@@ -234,13 +206,3 @@
 - name: Load and upload EPLD firmware (optional)
   ansible.builtin.include_tasks:
     file: epld-loading.yml
-
-# ============================================================================
-# FINAL STORAGE VERIFICATION (AFTER BOTH FIRMWARE AND EPLD IF ENABLED)
-# ============================================================================
-
-- name: Final storage query after all uploads
-  ansible.builtin.include_role:
-    name: space-management
-    tasks_from: platform-assessment
-  when: enable_epld_upgrade | bool

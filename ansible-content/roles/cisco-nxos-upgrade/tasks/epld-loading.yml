@@ -127,19 +127,6 @@
               - "Actual status: {{ nxos_epld_file_copy_result.transfer_status }}"
               - "Full result: {{ nxos_epld_file_copy_result | to_nice_json }}"
 
-        - name: Verify EPLD file exists on device after upload
-          ansible.builtin.assert:
-            that:
-              - target_epld_firmware in storage_info.images_found
-            fail_msg:
-              - "EPLD file not found on device after upload"
-              - "Expected file: {{ target_epld_firmware }}"
-              - "Files found: {{ storage_info.images_found }}"
-
-        - name: Extract uploaded EPLD file size from parsed storage
-          ansible.builtin.set_fact:
-            uploaded_epld_size: "{{ parsed_storage.files | selectattr('1', 'equalto', target_epld_firmware) | map(attribute='0') | first | int }}"
-
         - name: Calculate SHA512 hash of EPLD file on device
           cisco.nxos.nxos_command:
             commands:
@@ -167,7 +154,7 @@
           ansible.builtin.set_fact:
             nxos_epld_loading_results:
               epld_file: "{{ target_epld_firmware }}"
-              file_size_bytes: "{{ uploaded_epld_size }}"
+              file_size_bytes: "{{ epld_file_info.size_bytes }}"
               source_sha512: "{{ epld_calculated_hash }}"
               device_sha512: "{{ device_epld_hash }}"
               hash_verified: true
