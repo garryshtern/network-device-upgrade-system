@@ -157,15 +157,6 @@
                 }}/iosxe_compliance_{{ audit_timestamp }}.json"
           when: platform == 'ios'
 
-        - name: Metamako MOS compliance validation
-          ansible.builtin.include_role:
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/mos_compliance_{{ audit_timestamp }}.json"
-          when: platform == 
-
         # Opengear Compliance
         - name: Opengear compliance validation
           ansible.builtin.include_role:

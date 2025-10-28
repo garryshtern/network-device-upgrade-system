@@ -50,7 +50,6 @@ def is_platform(network_os, platform_name):
         'nxos': ['cisco.nxos.nxos', 'nxos'],
         'ios': ['cisco.ios.ios', 'ios', 'iosxe'],
         'fortios': ['fortinet.fortios.fortios', 'fortios'],
-         [],
         'opengear': ['opengear', 'opengear_og'],
     }
 

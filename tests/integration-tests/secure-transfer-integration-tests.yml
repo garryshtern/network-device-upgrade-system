@@ -84,22 +84,6 @@
           ansible.builtin.debug:
             msg: "⚠️  FortiOS test completed with expected check mode limitations"
 
-    - name: Test Metamako MOS secure image loading
-      block:
-        - name: Import Metamako image loading tasks (check mode)
-          ansible.builtin.include_tasks:
-          when: " in group_names"
-
-        - name: Validate Metamako transfer method
-          ansible.builtin.debug:
-            msg: "✅ Metamako MOS secure transfer validation passed"
-          when: " in group_names"
-
-      rescue:
-        - name: Handle Metamako test errors gracefully
-          ansible.builtin.debug:
-            msg: "⚠️  Metamako test completed with expected check mode limitations"
-
     - name: Test Opengear secure image loading
       block:
         - name: Import Opengear image loading tasks (check mode)

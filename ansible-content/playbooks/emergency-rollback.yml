@@ -112,15 +112,6 @@
             - platform == 'ios'
             - restore_firmware
 
-        - name: Rollback Metamako MOS firmware
-          ansible.builtin.include_role:
-            tasks_from: rollback
-          vars:
-            rollback_type: "firmware"
-          when:
-            - platform == 
-            - restore_firmware
-
         - name: Rollback Opengear firmware
           ansible.builtin.include_role:
             name: opengear-upgrade

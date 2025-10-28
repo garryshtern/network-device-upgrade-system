@@ -69,6 +69,7 @@
 
     - name: Test vendor role inclusion in workflows
       ansible.builtin.shell: |
+        grep -l "cisco-nxos-upgrade\|cisco-iosxe-upgrade\|opengear-upgrade\|fortios-upgrade" {{ ansible_content_dir }}/playbooks/*.yml
       register: vendor_role_usage
       changed_when: false
 

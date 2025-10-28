@@ -58,13 +58,6 @@
           changed_when: false
           when: platform == 'ios'
 
-        - name: Get Metamako running image
-          ansible.netcommon.cli_command:
-            command: "show version | grep Image"
-          register: running_image_result
-          changed_when: false
-          when: platform == 
-
         - name: Skip running image detection for FortiOS and Opengear
           ansible.builtin.set_fact:
             running_image_result:
@@ -90,7 +83,6 @@
         running_image_parsers:
           nxos: "{{ running_image_result.stdout[0] | regex_search('bootflash:///(.+\\.(bin|img))', '\\1') | first }}"
           ios: "{{ running_image_result.stdout[0] | regex_search('System image file is \"bootflash:/(.+\\.bin)\"', '\\1') | first }}"
-           "{{ running_image_result.stdout | regex_search('Image:\\s+(.+\\.(iso|swix))', '\\1') | first }}"
           fortios: ""
           opengear: ""
       when: running_image_result.stdout[0] is defined
@@ -128,18 +120,6 @@
           loop: "{{ cleanup_candidates }}"
           when:
             - platform == 'ios'
-            - preserve_current_image
-            - item != running_image_file
-            - cleanup_candidates | length > 0
-          register: cleanup_result
-          failed_when: false
-
-        - name: Remove Metamako obsolete images
-          ansible.netcommon.cli_command:
-            command: "rm /data/{{ item }}"
-          loop: "{{ cleanup_candidates }}"
-          when:
-            - platform == 
             - preserve_current_image
             - item != running_image_file
             - cleanup_candidates | length > 0

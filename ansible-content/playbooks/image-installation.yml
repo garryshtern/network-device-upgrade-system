@@ -95,11 +95,6 @@
             tasks_from: image-installation
           when: platform == 'ios'
 
-        - name: Install firmware - Metamako MOS
-          ansible.builtin.include_role:
-            tasks_from: image-installation
-          when: platform == 
-
         - name: Install firmware - Opengear
           ansible.builtin.include_role:
             name: opengear-upgrade

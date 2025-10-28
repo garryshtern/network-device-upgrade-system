@@ -15,6 +15,7 @@
       enterprise_scale:
         device_count: 1000
         concurrent_upgrades: 50
+        platforms: ["cisco_nxos", "cisco_iosxe", "fortios", "opengear"]
         expected_duration_minutes: 120
         success_rate_threshold: 99.5
 
