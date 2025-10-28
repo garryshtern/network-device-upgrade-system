@@ -32,14 +32,6 @@
           - "{{ firmware_source_path }}/{{ firmware_version }}"
       when: not firmware_file.stat.exists
 
-    - name: Check device storage capacity
-      ansible.builtin.include_role:
-        name: space-management
-        tasks_from: storage-assessment
-      vars:
-        validate_space: true
-        minimum_free_space_gb: "{{ firmware_size_gb }}"
-
     - name: Platform-specific image loading
       block:
         # Cisco NX-OS Image Loading
