@@ -52,9 +52,19 @@ run_test_suite() {
 
 # Function to run syntax checks
 run_syntax_checks() {
-    echo -e "${YELLOW}Running Ansible syntax checks...${NC}"
+    echo -e "${YELLOW}Running syntax checks...${NC}"
     local failed=0
-    
+
+    # Check docker-entrypoint.sh bash syntax
+    if bash -n "$PROJECT_ROOT/docker-entrypoint.sh" >/dev/null 2>&1; then
+        echo -e "${GREEN}✓ docker-entrypoint.sh${NC}"
+    else
+        echo -e "${RED}✗ docker-entrypoint.sh${NC}"
+        failed=$((failed + 1))
+    fi
+
+    echo -e "${YELLOW}Running Ansible syntax checks...${NC}"
+
     # Check all playbooks with required runtime variables
     for playbook in "$ANSIBLE_CONTENT_DIR/playbooks"/*.yml; do
         if [ -f "$playbook" ]; then

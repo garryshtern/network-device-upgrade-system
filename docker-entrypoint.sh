@@ -149,7 +149,6 @@ ENVIRONMENT VARIABLES:
     CISCO_NXOS_SSH_KEY          SSH private key for Cisco NX-OS devices
     CISCO_IOSXE_SSH_KEY         SSH private key for Cisco IOS-XE devices
     OPENGEAR_SSH_KEY            SSH private key for Opengear devices
-    METAMAKO_SSH_KEY            SSH private key for Metamako devices
 
     # API Token Authentication (API-based platforms)
     FORTIOS_API_TOKEN           API token for FortiOS devices
@@ -160,14 +159,12 @@ ENVIRONMENT VARIABLES:
     CISCO_IOSXE_PASSWORD        Password for Cisco IOS-XE devices
     FORTIOS_PASSWORD            Password for FortiOS devices
     OPENGEAR_PASSWORD           Password for Opengear devices
-    METAMAKO_PASSWORD           Password for Metamako devices
 
     # Username Configuration
     CISCO_NXOS_USERNAME         Username for Cisco NX-OS devices
     CISCO_IOSXE_USERNAME        Username for Cisco IOS-XE devices
     FORTIOS_USERNAME            Username for FortiOS devices
     OPENGEAR_USERNAME           Username for Opengear devices
-    METAMAKO_USERNAME           Username for Metamako devices
 
     # Additional Configuration
     IMAGE_SERVER_USERNAME       Username for firmware image server
@@ -329,7 +326,7 @@ PODMAN COMPATIBILITY (RHEL8/9):
 
 AUTHENTICATION PRIORITY ORDER:
     1. SSH Keys (Preferred for SSH-based platforms)
-       - Cisco NX-OS, IOS-XE, Metamako MOS, Opengear SSH
+       - Cisco NX-OS, IOS-XE, Opengear SSH
     2. API Tokens (Preferred for API-based platforms)
        - FortiOS API, Opengear REST API
     3. Username/Password (Fallback when keys/tokens unavailable)
@@ -339,7 +336,6 @@ PLATFORM SUPPORT:
     ✓ Cisco IOS-XE (SSH + SSH Key authentication)
     ✓ FortiOS (HTTPS API + API Token authentication)
     ✓ Opengear (SSH + REST API + SSH Key/API Token authentication)
-    ✓ Metamako MOS (SSH + SSH Key authentication)
 
 UPGRADE PHASES:
     - full: Complete upgrade workflow (default)
@@ -408,8 +404,6 @@ setup_ssh_keys() {
     if [[ -n "${OPENGEAR_SSH_KEY:-}" ]] && [[ -f "$keys_dir/opengear_key" ]]; then
         export OPENGEAR_SSH_KEY_INTERNAL="$keys_dir/opengear_key"
     fi
-
-    fi
 }
 
 # Build authentication and configuration options
@@ -437,9 +431,6 @@ build_ansible_options() {
 
     if [[ -n "${OPENGEAR_SSH_KEY_INTERNAL:-}" ]]; then
         extra_vars="$extra_vars vault_opengear_ssh_key=${OPENGEAR_SSH_KEY_INTERNAL}"
-    fi
-
-    if [[ -n "${METAMAKO_SSH_KEY_INTERNAL:-}" ]]; then
     fi
 
     # Authentication: API Tokens
@@ -478,11 +469,6 @@ build_ansible_options() {
     fi
     if [[ -n "${OPENGEAR_PASSWORD:-}" ]]; then
         extra_vars="$extra_vars vault_opengear_password=${OPENGEAR_PASSWORD}"
-    fi
-
-    if [[ -n "${METAMAKO_USERNAME:-}" ]]; then
-    fi
-    if [[ -n "${METAMAKO_PASSWORD:-}" ]]; then
     fi
 
     # Image server authentication

@@ -54,14 +54,6 @@
           epoch: "{{ lookup('pipe', 'date +%s') }}"
       when: ansible_date_time is not defined
 
-    - name: Override connection for Metamako in check mode
-      ansible.builtin.set_fact:
-        ansible_connection: local
-      when:
-        - ansible_check_mode is defined
-        - ansible_check_mode
-        - ansible_network_os | is_platform()
-
     - name: Validate required variables
       ansible.builtin.assert:
         that:
