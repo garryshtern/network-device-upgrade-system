@@ -323,7 +323,7 @@ curl -H "Authorization: Token $NETBOX_TOKEN" \
 
 ```bash
 # Create firmware storage directory
-mkdir -p $HOME/network-upgrade/firmware/{cisco,arista,fortinet,metamako,opengear}
+mkdir -p $HOME/network-upgrade/firmware/{cisco,fortinet,metamako,opengear}
 
 # Create Opengear subdirectories for different models
 mkdir -p $HOME/network-upgrade/firmware/opengear/{legacy,modern}
