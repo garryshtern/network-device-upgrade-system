@@ -234,3 +234,13 @@
 - name: Load and upload EPLD firmware (optional)
   ansible.builtin.include_tasks:
     file: epld-loading.yml
+
+# ============================================================================
+# FINAL STORAGE VERIFICATION (AFTER BOTH FIRMWARE AND EPLD IF ENABLED)
+# ============================================================================
+
+- name: Final storage query after all uploads
+  ansible.builtin.include_role:
+    name: space-management
+    tasks_from: platform-assessment
+  when: enable_epld_upgrade | bool
