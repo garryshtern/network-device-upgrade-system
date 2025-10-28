@@ -122,26 +122,19 @@
       block:
         - name: Load Metamako MOS image loading task
           ansible.builtin.slurp:
-          register: metamako_content
 
         - name: Parse Metamako tasks
           ansible.builtin.set_fact:
-            metamako_tasks_content: "{{ metamako_content.content | b64decode }}"
 
         - name: Validate SCP/SFTP server-initiated transfers
           ansible.builtin.assert:
             that:
-              - "'scp' in metamako_tasks_content | lower"
-              - "'sftp' in metamako_tasks_content | lower"
-              - "'delegate_to: localhost' in metamako_tasks_content"
-              - "'server-initiated PUSH' in metamako_tasks_content"
             success_msg: "✅ Metamako MOS uses server-initiated SCP/SFTP transfers"
             fail_msg: "❌ Metamako MOS does not implement server-initiated transfers"
 
         - name: Check SSH key authentication support
           ansible.builtin.assert:
             that:
-              - "'ansible_ssh_private_key_file' in metamako_tasks_content"
             success_msg: "✅ Metamako MOS supports SSH key authentication"
             fail_msg: "⚠️  Metamako MOS should support SSH key authentication"
 

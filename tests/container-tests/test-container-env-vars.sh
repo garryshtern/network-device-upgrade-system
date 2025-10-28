@@ -51,8 +51,6 @@ test_ssh_key_authentication() {
 
     # Test Metamako SSH key
     run_container_test "Metamako SSH key" "success" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
-        -e TARGET_HOSTS="metamako-switch-01"
 
     # Test multiple SSH keys
     run_container_test "Multiple SSH keys" "success" \
@@ -195,7 +193,6 @@ test_comprehensive_scenario() {
         -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")" \
         -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key" \
         -e OPENGEAR_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/opengear-token")" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
         -e TARGET_HOSTS="all" \
         -e TARGET_FIRMWARE="auto-detect" \
         -e UPGRADE_PHASE="validation" \

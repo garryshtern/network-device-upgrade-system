@@ -81,8 +81,6 @@ test_ssh_keys() {
         bash docker-entrypoint.sh syntax-check
 
     # Test Metamako SSH key processing
-    export METAMAKO_SSH_KEY="/opt/keys/metamako-key"
-    export TARGET_HOSTS="metamako-switch-01"
     export INVENTORY_FILE="$SCRIPT_DIR/mockups/inventory/production.yml"
     run_test "Metamako SSH key variable processing" \
         bash docker-entrypoint.sh syntax-check
@@ -198,7 +196,6 @@ test_firmware_versions() {
 
     # Test Metamako MOS firmware processing
     export TARGET_FIRMWARE="mos-0.39.9.iso"
-    export TARGET_HOSTS="metamako-switch-01"
     export INVENTORY_FILE="$SCRIPT_DIR/mockups/inventory/production.yml"
     run_test "Metamako MOS firmware version processing" \
         bash docker-entrypoint.sh syntax-check
@@ -341,7 +338,6 @@ test_complex_scenarios() {
                  export CISCO_IOSXE_PASSWORD="cisco123" && \
                  export FORTIOS_API_TOKEN="fortios-token-12345" && \
                  export OPENGEAR_SSH_KEY="/opt/keys/opengear-key" && \
-                 export METAMAKO_SSH_KEY="/opt/keys/metamako-key" && \
                  export TARGET_HOSTS="all" && \
                  export TARGET_FIRMWARE="auto-detect" && \
                  export UPGRADE_PHASE="validation" && \
@@ -353,9 +349,7 @@ test_complex_scenarios() {
 
     # Test HFT scenario (Metamako + Cisco)
     run_test "HFT scenario (Metamako + Cisco)" \
-        bash -c 'export METAMAKO_SSH_KEY="/opt/keys/metamako-key" && \
                  export CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key" && \
-                 export TARGET_HOSTS="metamako-switch-01,cisco-switch-01" && \
                  export MAINTENANCE_WINDOW="true" && \
                  export UPGRADE_PHASE="validation" && \
                  export INVENTORY_FILE="tests/container-tests/mockups/inventory/production.yml" && \

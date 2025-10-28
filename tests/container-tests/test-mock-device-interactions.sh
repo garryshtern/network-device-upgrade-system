@@ -82,8 +82,6 @@ run_mock_device_test() {
             docker_cmd+=(-e OPENGEAR_SSH_KEY="/opt/keys/opengear-key")
             docker_cmd+=(-e OPENGEAR_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/opengear-token")")
             ;;
-        "metamako")
-            docker_cmd+=(-e METAMAKO_SSH_KEY="/opt/keys/metamako-key")
             ;;
     esac
 
@@ -220,29 +218,23 @@ test_opengear_devices() {
 }
 
 # Test Metamako mock device interactions
-test_metamako_devices() {
     log "=== Testing Metamako MOS Mock Device Interactions ==="
 
     # Test basic MOS connection
-    run_mock_device_test "Basic Metamako connection" "metamako" "metamako-switch-01" "success"
 
     # Test MOS firmware upgrade
-    run_mock_device_test "Metamako MOS upgrade" "metamako" "metamako-switch-01" "success" \
         -e TARGET_FIRMWARE="mos-0.39.9.iso" \
         -e UPGRADE_PHASE="loading"
 
     # Test application installation
-    run_mock_device_test "Metamako application install" "metamako" "metamako-switch-01" "success" \
         -e ENABLE_APPLICATION_INSTALLATION="true" \
         -e METAWATCH_PACKAGE="metawatch-3.2.0-1967.x86_64.rpm" \
         -e METAMUX_PACKAGE="metamux-2.2.3-1849.x86_64.rpm"
 
     # Test low-latency validation
-    run_mock_device_test "Metamako latency validation" "metamako" "metamako-switch-01,metamako-switch-02" "success" \
         -e UPGRADE_PHASE="validation"
 
     # Test complete system upgrade
-    run_mock_device_test "Metamako complete upgrade" "metamako" "metamako-switch-01" "success" \
         -e TARGET_FIRMWARE="mos-0.39.9.iso" \
         -e UPGRADE_PHASE="full" \
         -e MAINTENANCE_WINDOW="true"
@@ -265,7 +257,6 @@ test_cross_platform_scenarios() {
         -e CISCO_IOSXE_SSH_KEY="/opt/keys/cisco-iosxe-key" \
         -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")" \
         -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
         -e UPGRADE_PHASE="validation"
 
     # Test network segmentation scenario
@@ -275,8 +266,6 @@ test_cross_platform_scenarios() {
         -e UPGRADE_PHASE="loading"
 
     # Test high-frequency trading scenario (Metamako + Cisco)
-    run_mock_device_test "HFT scenario" "metamako" "metamako-switch-01,cisco-switch-01" "success" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
         -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key" \
         -e UPGRADE_PHASE="validation" \
         -e MAINTENANCE_WINDOW="true"
@@ -320,7 +309,6 @@ main() {
     test_cisco_iosxe_devices
     test_fortios_devices
     test_opengear_devices
-    test_metamako_devices
 
     # Cross-platform scenarios
     test_cross_platform_scenarios

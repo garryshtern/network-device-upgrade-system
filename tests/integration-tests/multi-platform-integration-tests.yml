@@ -25,7 +25,6 @@
           - "cisco-iosxe"
           - "opengear"
           - "fortios"
-          - "metamako-mos"
       architecture_detection_test:
         name: "Architecture Detection"
         description: "Test automatic platform and architecture detection"

@@ -41,7 +41,6 @@ setup_ssh_keys_as_root() {
     copy_ssh_key_as_root "${CISCO_NXOS_SSH_KEY:-}" "$keys_dir/cisco_nxos_key"
     copy_ssh_key_as_root "${CISCO_IOSXE_SSH_KEY:-}" "$keys_dir/cisco_iosxe_key"
     copy_ssh_key_as_root "${OPENGEAR_SSH_KEY:-}" "$keys_dir/opengear_key"
-    copy_ssh_key_as_root "${METAMAKO_SSH_KEY:-}" "$keys_dir/metamako_key"
 
     log "SSH keys copied and permissions set for ansible user"
 }
@@ -410,8 +409,6 @@ setup_ssh_keys() {
         export OPENGEAR_SSH_KEY_INTERNAL="$keys_dir/opengear_key"
     fi
 
-    if [[ -n "${METAMAKO_SSH_KEY:-}" ]] && [[ -f "$keys_dir/metamako_key" ]]; then
-        export METAMAKO_SSH_KEY_INTERNAL="$keys_dir/metamako_key"
     fi
 }
 

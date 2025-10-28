@@ -17,7 +17,6 @@
         - "console-server-01"
       fortios:
         - "firewall-01"
-        - "metamako-01"
     test_results: {}
     # Vault variables for group variable loading
     vault_opengear_password: "test_password"

@@ -45,9 +45,7 @@
         should_pass: true
 
       - name: "Metamako MOS SSH Key Authentication (Preferred)"
-        platform: "metamako_mos"
         auth_config:
-          ansible_ssh_private_key_file: "/path/to/metamako-key"
           ansible_password: "fallback-password"
           ansible_ssh_common_args: "-o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password"
         expected_auth_method: "ssh_key"
@@ -94,7 +92,6 @@
             - "/path/to/nxos-key"
             - "/path/to/iosxe-key"
             - "/path/to/opengear-key"
-            - "/path/to/metamako-key"
           when: item != ""
 
     - name: Validate API token format (simulation)
@@ -126,7 +123,6 @@
           loop:
             - "cisco_nxos"
             - "cisco_iosxe"
-            - "metamako_mos"
             - "opengear"
 
         - name: Check API platforms have token variables defined

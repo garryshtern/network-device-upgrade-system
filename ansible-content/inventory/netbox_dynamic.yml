@@ -30,7 +30,6 @@ query_filters:
       - cisco-iosxe
       - fortios
       - opengear
-      - metamako-mos
 
 # Device composition - how inventory variables are built
 compose:

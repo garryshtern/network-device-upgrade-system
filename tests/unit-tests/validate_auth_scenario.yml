@@ -106,7 +106,6 @@
               - "test_auth_config.ansible_ssh_private_key_file is defined or test_expected_method == 'password_fallback'"
             fail_msg: "Metamako MOS should prefer SSH key authentication (unless password fallback)"
           when:
-            - test_platform == "metamako_mos"
             - scenario.should_pass
 
         - name: Check Opengear has dual authentication

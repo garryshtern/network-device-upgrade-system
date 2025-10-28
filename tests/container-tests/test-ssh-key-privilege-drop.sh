@@ -155,7 +155,6 @@ test_entrypoint_integration() {
 
     # Test the updated setup_ssh_keys function (checks for copied key references)
     run_test "setup_ssh_keys updated for copied keys" \
-        bash -c "grep -A10 'setup_ssh_keys()' docker-entrypoint.sh | grep -q 'cisco_nxos_key\|cisco_iosxe_key\|opengear_key\|metamako_key'"
 }
 
 # Main execution

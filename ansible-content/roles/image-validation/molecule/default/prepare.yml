@@ -136,7 +136,6 @@
             cisco.com=trusted
             fortinet.com=trusted
             opengear.com=trusted
-            metamako.com=trusted
 
         - path: /tmp/security-test/tools/hash-validator
           mode: '0755'

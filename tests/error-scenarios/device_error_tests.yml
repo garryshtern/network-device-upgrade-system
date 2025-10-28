@@ -12,7 +12,6 @@
       - cisco_iosxe
       - fortios
       - opengear
-      - metamako_mos
     device_error_scenarios:
       storage_errors:
         - name: "Insufficient Disk Space"

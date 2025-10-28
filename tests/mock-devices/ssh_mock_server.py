@@ -513,7 +513,6 @@ def create_test_environment():
             }
         },
         {
-            'device_id': 'metamako-mc48',
             'platform_type': ,
             'model': 'MetaConnect-48',
             'firmware_version': '0.39.1',

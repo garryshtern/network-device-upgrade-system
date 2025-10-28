@@ -30,7 +30,6 @@
     - name: Get Metamako storage information
       ansible.netcommon.cli_command:
         command: "dir /data"
-      register: metamako_result
       changed_when: false
       when: platform == 
 
@@ -47,7 +46,6 @@
             nxos_result if (platform == 'nxos' and nxos_result is defined and not nxos_result.skipped | default(false)) else
             ios_result if (platform == 'ios' and ios_result is defined and not ios_result.skipped | default(false)) else
             fortios_result if (platform == 'fortios' and fortios_result is defined and not fortios_result.skipped | default(false)) else
-            metamako_result if (platform ==  and metamako_result is defined and not metamako_result.skipped | default(false)) else
             opengear_result if (platform == 'opengear' and opengear_result is defined and not opengear_result.skipped | default(false)) else
             {}
           }}

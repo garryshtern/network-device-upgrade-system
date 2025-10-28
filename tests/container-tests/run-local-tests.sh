@@ -171,7 +171,6 @@ test_mock_inventory() {
         if grep -q "cisco-switch-01" "$inventory_file" && \
            grep -q "fortinet-firewall-01" "$inventory_file" && \
            grep -q "opengear-console-01" "$inventory_file" && \
-           grep -q "metamako-switch-01" "$inventory_file"; then
             success "Mock inventory structure test passed"
         else
             error "Mock inventory missing expected hosts"

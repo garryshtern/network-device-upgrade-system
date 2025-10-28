@@ -132,7 +132,6 @@ setup_firmware_files() {
     mkdir -p "$MOCKUP_DIR/firmware/cisco.ios"
     mkdir -p "$MOCKUP_DIR/firmware/fortios"
     mkdir -p "$MOCKUP_DIR/firmware/opengear"
-    mkdir -p "$MOCKUP_DIR/firmware/metamako"
     mkdir -p "$MOCKUP_DIR/backups"
 
     # Create mock firmware files (small empty files for testing)
@@ -142,7 +141,6 @@ setup_firmware_files() {
     echo "mock-opengear-firmware" > "$MOCKUP_DIR/firmware/opengear/cm71xx-5.2.4.flash"
     echo "mock-opengear-firmware-22.1.3-im" > "$MOCKUP_DIR/firmware/opengear/im72xx-22.1.3.flash"
     echo "mock-opengear-firmware-22.1.3-ops" > "$MOCKUP_DIR/firmware/opengear/operations_manager-22.1.3-production-signed.raucb"
-    echo "mock-metamako-firmware" > "$MOCKUP_DIR/firmware/metamako/mos-0.39.9.iso"
 
     # Set permissions for container access
     chmod -R 644 "$MOCKUP_DIR/firmware" 2>/dev/null || true
@@ -231,8 +229,6 @@ test_platform_authentication() {
 
     # Test Metamako SSH authentication
     run_comprehensive_container_test "Metamako SSH auth" "success" "syntax-check" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
-        -e TARGET_HOSTS="metamako-switch-01"
 }
 
 # Test upgrade phases and workflows
@@ -359,7 +355,6 @@ test_comprehensive_scenarios() {
         -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")" \
         -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key" \
         -e OPENGEAR_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/opengear-token")" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
         -e TARGET_HOSTS="all" \
         -e UPGRADE_PHASE="validation"
 

@@ -36,7 +36,6 @@
       expected_features:
         - "HA cluster coordination"
         - "VDOM handling"
-      platform: "metamako"
       expected_features:
         - "Ultra-low latency procedures"
         - "Custom CLI handling"
@@ -145,12 +144,10 @@
       block:
         - name: Check Metamako upgrade role main tasks
           ansible.builtin.stat:
-          register: metamako_main_tasks
 
         - name: Validate Metamako main tasks exist
           ansible.builtin.assert:
             that:
-              - metamako_main_tasks.stat.exists
             success_msg: "✓ Metamako main tasks exist"
             fail_msg: "Missing Metamako main tasks"
 

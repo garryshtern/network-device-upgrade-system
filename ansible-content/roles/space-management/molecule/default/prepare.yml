@@ -36,7 +36,6 @@
         - /tmp/storage-test/fortinet/disk
         - /tmp/storage-test/fortinet/ramdisk
         - /tmp/storage-test/opengear/cf-card
-        - /tmp/storage-test/metamako/storage
 
         # Common directories
         - /tmp/storage-test/images/current
@@ -269,7 +268,6 @@
           "cisco.ios.ios": "flash"
           "fortinet.fortios.fortios": "disk"
           "opengear": "cf-card"
-          "metamako": "storage"
 
     - name: Validate storage test environment
       ansible.builtin.debug:

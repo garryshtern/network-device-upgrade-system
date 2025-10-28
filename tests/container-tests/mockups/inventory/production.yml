@@ -89,18 +89,15 @@ all:
         opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
 
       hosts:
-        metamako-switch-01:
           ansible_host: 192.168.1.501
           device_model: MetaConnect48
           current_firmware: "1.60.17"
           target_firmware: "1.62.2"
-        metamako-switch-02:
           ansible_host: 192.168.1.502
           device_model: MetaConnect24
           current_firmware: "1.60.17"
           target_firmware: "1.62.2"
       vars:
-        ansible_network_os: metamako.mos
         ansible_connection: local
 
   vars:

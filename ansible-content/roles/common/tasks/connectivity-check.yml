@@ -272,7 +272,6 @@
         - cisco_nxos (for Cisco NX-OS devices)
         - cisco_iosxe (for Cisco IOS-XE devices)
         - fortios (for Fortinet FortiGate devices)
-        - metamako_mos (for Metamako devices)
         - opengear (for Opengear devices)
 
       Alternatively, define 'platform' variable in host_vars for this host.
