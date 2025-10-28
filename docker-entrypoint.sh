@@ -126,14 +126,17 @@ ENVIRONMENT VARIABLES:
     MAINTENANCE_WINDOW Set to 'true' for installation phase
 
     # EPLD Upgrade Configuration (Cisco NX-OS)
-    ENABLE_EPLD_UPGRADE      Enable EPLD upgrade (true/false, default: false)
+    ENABLE_EPLD_UPGRADE      Enable/disable EPLD upgrade (true/false/auto)
+                             - true: Enable EPLD upgrade
+                             - false: Explicitly disable EPLD upgrade (overrides TARGET_EPLD_FIRMWARE)
+                             - auto/not set: Auto-enable if TARGET_EPLD_FIRMWARE provided (default)
+    TARGET_EPLD_FIRMWARE     EPLD firmware filename (e.g., n9000-epld.10.1.2.img)
+                             If provided, auto-enables EPLD upgrade (unless ENABLE_EPLD_UPGRADE=false)
     INSTALL_COMBINED_MODE    Install firmware + EPLD in single operation (true/false, default: false)
-                             Requires: ENABLE_EPLD_UPGRADE=true
+                             Requires: ENABLE_EPLD_UPGRADE=true or TARGET_EPLD_FIRMWARE provided
                              Note: If false, uses sequential mode (firmware first, then EPLD)
     ALLOW_DISRUPTIVE_EPLD    Allow disruptive EPLD upgrade (true/false, default: false)
     EPLD_UPGRADE_TIMEOUT     EPLD upgrade timeout in seconds (default: 7200)
-    TARGET_EPLD_FIRMWARE     EPLD firmware filename (e.g., n9000-epld.10.1.2.img)
-                             Required if ENABLE_EPLD_UPGRADE=true
 
     # Multi-Step Upgrade (FortiOS)
     MULTI_STEP_UPGRADE_REQUIRED  Enable multi-step upgrade mode (true/false)
@@ -521,22 +524,43 @@ build_ansible_options() {
     fi
 
     # EPLD upgrade configuration (default: false in group_vars)
-    # Only set if explicitly set to true
-    if [[ "${ENABLE_EPLD_UPGRADE:-false}" == "true" ]]; then
+    # Auto-enable EPLD upgrade if TARGET_EPLD_FIRMWARE is provided (unless explicitly disabled)
+    local epld_enabled="false"
+
+    # Check if ENABLE_EPLD_UPGRADE is explicitly set to false (opt-out)
+    if [[ "${ENABLE_EPLD_UPGRADE:-}" == "false" ]]; then
+        # User explicitly disabled EPLD, respect that choice
+        epld_enabled="false"
+    elif [[ -n "${TARGET_EPLD_FIRMWARE:-}" ]]; then
+        # TARGET_EPLD_FIRMWARE is provided, auto-enable EPLD upgrade
+        epld_enabled="true"
+        log "Auto-enabling EPLD upgrade: TARGET_EPLD_FIRMWARE=${TARGET_EPLD_FIRMWARE}"
+    elif [[ "${ENABLE_EPLD_UPGRADE:-false}" == "true" ]]; then
+        # ENABLE_EPLD_UPGRADE explicitly set to true
+        epld_enabled="true"
+    fi
+
+    # Set enable_epld_upgrade if enabled
+    if [[ "$epld_enabled" == "true" ]]; then
         extra_vars="$extra_vars enable_epld_upgrade=true"
     fi
-    if [[ "${INSTALL_COMBINED_MODE:-false}" == "true" ]]; then
-        extra_vars="$extra_vars install_combined_mode=true"
-    fi
-    if [[ "${ALLOW_DISRUPTIVE_EPLD:-false}" == "true" ]]; then
-        extra_vars="$extra_vars allow_disruptive_epld=true"
-    fi
-    if [[ -n "${EPLD_UPGRADE_TIMEOUT:-}" ]]; then
-        extra_vars="$extra_vars epld_upgrade_timeout=${EPLD_UPGRADE_TIMEOUT}"
-    fi
+
     # EPLD firmware filename (required if enable_epld_upgrade=true)
     if [[ -n "${TARGET_EPLD_FIRMWARE:-}" ]]; then
         extra_vars="$extra_vars target_epld_firmware=${TARGET_EPLD_FIRMWARE}"
+    fi
+
+    # Additional EPLD options (only processed if EPLD is enabled)
+    if [[ "$epld_enabled" == "true" ]]; then
+        if [[ "${INSTALL_COMBINED_MODE:-false}" == "true" ]]; then
+            extra_vars="$extra_vars install_combined_mode=true"
+        fi
+        if [[ "${ALLOW_DISRUPTIVE_EPLD:-false}" == "true" ]]; then
+            extra_vars="$extra_vars allow_disruptive_epld=true"
+        fi
+        if [[ -n "${EPLD_UPGRADE_TIMEOUT:-}" ]]; then
+            extra_vars="$extra_vars epld_upgrade_timeout=${EPLD_UPGRADE_TIMEOUT}"
+        fi
     fi
 
     # Multi-step upgrade (FortiOS - default: false in group_vars/fortios.yml)
