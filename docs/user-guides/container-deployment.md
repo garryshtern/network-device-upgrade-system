@@ -76,13 +76,19 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
   - Leave unset to run full workflow
 
 ### Platform-Specific Upgrade Features
-- `ENABLE_EPLD_UPGRADE` - Enable EPLD firmware upgrades (Cisco NX-OS only, default: false)
-  - Only set when explicitly 'true'
+- `TARGET_EPLD_FIRMWARE` - EPLD firmware filename (Cisco NX-OS only)
+  - If provided, **automatically enables EPLD upgrade** (unless `ENABLE_EPLD_UPGRADE=false`)
+  - Example: `n9000-epld.10.1.2.img`
+- `ENABLE_EPLD_UPGRADE` - Enable/disable EPLD firmware upgrades (Cisco NX-OS only, default: auto)
+  - Set to `true` to explicitly enable EPLD upgrade
+  - Set to `false` to **disable EPLD upgrade** (overrides `TARGET_EPLD_FIRMWARE`)
+  - Leave unset to auto-enable if `TARGET_EPLD_FIRMWARE` is provided (recommended)
 - `INSTALL_COMBINED_MODE` - Install firmware + EPLD in single operation for faster upgrade (Cisco NX-OS only, default: false)
-  - Requires: `ENABLE_EPLD_UPGRADE=true`
+  - Only effective when EPLD upgrade is enabled
   - If false, uses sequential mode (firmware first, then EPLD after reboot)
   - Only set when explicitly 'true'
 - `ALLOW_DISRUPTIVE_EPLD` - Allow disruptive EPLD upgrades without dual supervisors (Cisco NX-OS only, default: false)
+  - Only effective when EPLD upgrade is enabled
   - Only set when explicitly 'true'
 - `MULTI_STEP_UPGRADE_REQUIRED` - Enable multi-step upgrade mode (FortiOS only, default: false)
   - Required for major version jumps (e.g., 6.x to 7.x)
@@ -140,7 +146,7 @@ docker run --rm \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
 
-### Cisco NX-OS with EPLD Upgrade
+### Cisco NX-OS with EPLD Upgrade (Auto-Enabled)
 ```bash
 docker run --rm \
   -v /opt/inventory:/opt/inventory:ro \
@@ -150,12 +156,13 @@ docker run --rm \
   -e MAX_CONCURRENT=5 \
   -e TARGET_HOSTS=nexus-switches \
   -e TARGET_FIRMWARE=nxos64-cs.10.4.5.M.bin \
+  -e TARGET_EPLD_FIRMWARE=n9000-epld.10.1.2.img \
   -e MAINTENANCE_WINDOW=true \
   -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \
-  -e ENABLE_EPLD_UPGRADE=true \
   -e ALLOW_DISRUPTIVE_EPLD=true \
   ghcr.io/garryshtern/network-device-upgrade-system:latest run
 ```
+**Note:** EPLD upgrade is automatically enabled because `TARGET_EPLD_FIRMWARE` is provided. No need to set `ENABLE_EPLD_UPGRADE=true`.
 
 ### Podman with SELinux (RHEL8/9)
 ```bash
