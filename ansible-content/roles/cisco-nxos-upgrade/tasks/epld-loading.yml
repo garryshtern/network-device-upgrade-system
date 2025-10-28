@@ -127,9 +127,10 @@
               - "Actual status: {{ nxos_epld_file_copy_result.transfer_status }}"
               - "Full result: {{ nxos_epld_file_copy_result | to_nice_json }}"
 
-        - name: Re-assess storage after EPLD upload
+        - name: Re-query device storage to verify EPLD upload
           ansible.builtin.include_role:
             name: space-management
+            tasks_from: platform-assessment
 
         - name: Verify EPLD file exists on device after upload
           ansible.builtin.assert:
