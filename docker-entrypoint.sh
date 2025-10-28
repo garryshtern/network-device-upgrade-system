@@ -534,10 +534,13 @@ build_ansible_options() {
     if [[ -n "${EPLD_UPGRADE_TIMEOUT:-}" ]]; then
         extra_vars="$extra_vars epld_upgrade_timeout=${EPLD_UPGRADE_TIMEOUT}"
     fi
-    # Accept both TARGET_EPLD_IMAGE and TARGET_EPLD_FIRMWARE (TARGET_EPLD_IMAGE takes precedence)
-    local target_epld_image="${TARGET_EPLD_IMAGE:-${TARGET_EPLD_FIRMWARE:-}}"
-    if [[ -n "$target_epld_image" ]]; then
-        extra_vars="$extra_vars target_epld_image=${target_epld_image}"
+    # EPLD firmware filename (required if enable_epld_upgrade=true)
+    if [[ -n "${TARGET_EPLD_FIRMWARE:-}" ]]; then
+        extra_vars="$extra_vars target_epld_firmware=${TARGET_EPLD_FIRMWARE}"
+    fi
+    # Support legacy TARGET_EPLD_IMAGE environment variable (maps to target_epld_firmware)
+    if [[ -n "${TARGET_EPLD_IMAGE:-}" ]]; then
+        extra_vars="$extra_vars target_epld_firmware=${TARGET_EPLD_IMAGE}"
     fi
 
     # Multi-step upgrade (FortiOS - default: false in group_vars/fortios.yml)
@@ -637,6 +640,41 @@ setup_inventory() {
     fi
 }
 
+# Map UPGRADE_PHASE to Ansible tags for step-based workflow execution
+map_phase_to_tags() {
+    local phase="${1:-}"
+
+    case "$phase" in
+        full)
+            # Run all steps (no tags = full workflow)
+            echo ""
+            ;;
+        loading)
+            # Step 4: Image upload
+            echo "step4"
+            ;;
+        installation)
+            # Step 6: Image installation and reboot
+            echo "step6"
+            ;;
+        validation)
+            # Step 7: Post-upgrade validation
+            echo "step7"
+            ;;
+        rollback)
+            # Emergency rollback - use separate playbook or error recovery
+            echo "rollback"
+            ;;
+        *)
+            # If phase not recognized, don't apply tags (run full workflow)
+            if [[ -n "$phase" ]]; then
+                warn "Unknown UPGRADE_PHASE: $phase (ignoring, running full workflow)"
+            fi
+            echo ""
+            ;;
+    esac
+}
+
 # Common function to execute ansible-playbook with shared logic
 execute_ansible_playbook() {
     local mode="$1"  # "syntax-check", "dry-run", or "run"
@@ -691,6 +729,15 @@ execute_ansible_playbook() {
 
     log "Extra variables: $extra_vars"
 
+    # Map UPGRADE_PHASE to tags for step-based execution
+    local ansible_tags=""
+    if [[ -n "${UPGRADE_PHASE:-}" ]]; then
+        ansible_tags=$(map_phase_to_tags "${UPGRADE_PHASE}")
+        if [[ -n "$ansible_tags" ]]; then
+            log "UPGRADE_PHASE=${UPGRADE_PHASE} mapped to tags: ${ansible_tags}"
+        fi
+    fi
+
     # Debug: Show key authentication variables
     if [[ "$extra_vars" =~ vault_cisco_nxos_username=([^[:space:]]+) ]]; then
         log "DEBUG: CISCO_NXOS_USERNAME is set to: ${BASH_REMATCH[1]}"
@@ -707,6 +754,7 @@ execute_ansible_playbook() {
                 --syntax-check \
                 -i "$ansible_inventory" \
                 ${ansible_opts} \
+                ${ansible_tags:+--tags "$ansible_tags"} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
             success "Syntax check completed successfully"
@@ -716,6 +764,7 @@ execute_ansible_playbook() {
                 --check --diff \
                 -i "$ansible_inventory" \
                 ${ansible_opts} \
+                ${ansible_tags:+--tags "$ansible_tags"} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
             success "Dry run completed successfully"
@@ -724,6 +773,7 @@ execute_ansible_playbook() {
             ansible-playbook \
                 -i "$ansible_inventory" \
                 ${ansible_opts} \
+                ${ansible_tags:+--tags "$ansible_tags"} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
             success "Playbook execution completed"
