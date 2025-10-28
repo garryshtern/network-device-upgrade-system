@@ -154,9 +154,10 @@
 - name: Post-upload verification
   when: not target_firmware_exists
   block:
-    - name: Re-assess storage after firmware upload
+    - name: Re-query device storage to verify upload
       ansible.builtin.include_role:
         name: space-management
+        tasks_from: platform-assessment
 
     - name: Verify firmware file exists on device after upload
       ansible.builtin.assert:
