@@ -132,8 +132,8 @@ ENVIRONMENT VARIABLES:
                              Note: If false, uses sequential mode (firmware first, then EPLD)
     ALLOW_DISRUPTIVE_EPLD    Allow disruptive EPLD upgrade (true/false, default: false)
     EPLD_UPGRADE_TIMEOUT     EPLD upgrade timeout in seconds (default: 7200)
-    TARGET_EPLD_IMAGE        EPLD firmware filename (e.g., n9000-epld.10.1.2.img)
-    TARGET_EPLD_FIRMWARE     Alias for TARGET_EPLD_IMAGE (both accepted)
+    TARGET_EPLD_FIRMWARE     EPLD firmware filename (e.g., n9000-epld.10.1.2.img)
+                             Required if ENABLE_EPLD_UPGRADE=true
 
     # Multi-Step Upgrade (FortiOS)
     MULTI_STEP_UPGRADE_REQUIRED  Enable multi-step upgrade mode (true/false)
@@ -234,7 +234,7 @@ EXAMPLES:
     docker run --rm \\
       -e ANSIBLE_TAGS=step6 \\
       -e TARGET_FIRMWARE=nxos.10.2.3.bin \\
-      -e TARGET_EPLD_IMAGE=nxos-epld.10.2.3.img \\
+      -e TARGET_EPLD_FIRMWARE=nxos-epld.10.2.3.img \\
       -e ENABLE_EPLD_UPGRADE=true \\
       -e TARGET_HOSTS=cisco-switch-01 \\
       -e MAX_CONCURRENT=5 \\
@@ -245,7 +245,7 @@ EXAMPLES:
     docker run --rm \\
       -e ANSIBLE_TAGS=step6 \\
       -e TARGET_FIRMWARE=nxos.10.2.3.bin \\
-      -e TARGET_EPLD_IMAGE=nxos-epld.10.2.3.img \\
+      -e TARGET_EPLD_FIRMWARE=nxos-epld.10.2.3.img \\
       -e ENABLE_EPLD_UPGRADE=true \\
       -e INSTALL_COMBINED_MODE=true \\
       -e TARGET_HOSTS=cisco-switch-01 \\
@@ -537,10 +537,6 @@ build_ansible_options() {
     # EPLD firmware filename (required if enable_epld_upgrade=true)
     if [[ -n "${TARGET_EPLD_FIRMWARE:-}" ]]; then
         extra_vars="$extra_vars target_epld_firmware=${TARGET_EPLD_FIRMWARE}"
-    fi
-    # Support legacy TARGET_EPLD_IMAGE environment variable (maps to target_epld_firmware)
-    if [[ -n "${TARGET_EPLD_IMAGE:-}" ]]; then
-        extra_vars="$extra_vars target_epld_firmware=${TARGET_EPLD_IMAGE}"
     fi
 
     # Multi-step upgrade (FortiOS - default: false in group_vars/fortios.yml)

@@ -127,7 +127,7 @@ test_upgrade_configuration() {
         -e ENABLE_EPLD_UPGRADE="true" \
         -e ALLOW_DISRUPTIVE_EPLD="false" \
         -e EPLD_UPGRADE_TIMEOUT="7200" \
-        -e TARGET_EPLD_IMAGE="n9000-epld.9.3.12.M.img"
+        -e TARGET_EPLD_FIRMWARE="n9000-epld.9.3.12.M.img"
 
     # Test FortiOS multi-step upgrade
     run_container_test "FortiOS multi-step upgrade" "success" \

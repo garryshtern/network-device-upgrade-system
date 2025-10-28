@@ -132,7 +132,7 @@ test_cisco_nxos_devices() {
     # Test EPLD upgrade simulation
     run_mock_device_test "NX-OS EPLD upgrade" "cisco_nxos" "cisco-switch-01" "success" \
         -e ENABLE_EPLD_UPGRADE="true" \
-        -e TARGET_EPLD_IMAGE="n9000-epld.9.3.16.M.img" \
+        -e TARGET_EPLD_FIRMWARE="n9000-epld.9.3.16.M.img" \
         -e UPGRADE_PHASE="validation"
 
     # Test multiple NX-OS devices
