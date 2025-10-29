@@ -9,16 +9,12 @@
 - name: Parse storage information
   ansible.builtin.include_tasks: parse-storage-output.yml
 
-- name: Display parsed storage information
+- name: Display parsed images (debug only)
   ansible.builtin.debug:
-    msg:
-      - "=== Storage Information ==="
-      - "Platform: {{ platform }}"
-      - "Device: {{ inventory_hostname }}"
-      - "Files Found: {{ parsed_storage.images | length }}"
-      - "Image Files: {{ parsed_storage.images | join(', ') if parsed_storage.images | length > 0 else 'None' }}"
-      - "=========================="
-  when: parsed_storage is defined
+    msg: "Parsed images: {{ parsed_storage.images | join(', ') if parsed_storage.images | length > 0 else 'None' }}"
+  when:
+    - show_debug | bool
+    - parsed_storage is defined
 
 - name: Calculate initial storage metrics
   ansible.builtin.set_fact:
