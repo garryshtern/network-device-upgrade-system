@@ -117,9 +117,9 @@ docker run --rm -v $(pwd)/inventory:/inventory \
 - `network-validation.yml` → Use `--tags step5` (pre-upgrade) or `--tags step7` (post-upgrade)
 - `image-loading.yml` → Use `--tags step4` instead
 - `image-installation.yml` → Use `--tags step6` instead
+- `emergency-rollback.yml` → Use `--tags step8` instead
 
 **Standalone Operational Playbooks** (still separate):
-- `emergency-rollback.yml` - Emergency rollback procedures
 - `compliance-audit.yml` - Security and compliance auditing
 - `config-backup.yml` - Configuration backup operations
 
@@ -328,13 +328,13 @@ The system uses **`main-upgrade-workflow.yml`** as the single entry point for al
 | Tag | Step Name | Description | Dependencies | Safe During Business Hours |
 |-----|-----------|-------------|--------------|---------------------------|
 | `step1` | Health Check | Initial connectivity validation | None | ✅ Yes |
-| `step2` | Hash Verification | SHA512 firmware integrity check | None | ✅ Yes |
-| `step3` | Pre-Upgrade Backup | Configuration backup before changes | step1 | ✅ Yes |
-| `step4` | Image Loading | Transfer firmware to device (PHASE 1) | step1, step2 | ✅ Yes |
-| `step5` | Pre-Upgrade Validation | Network state baseline capture | step1 | ✅ Yes |
-| `step6` | Image Installation | Install firmware and reboot (PHASE 2) | step4 | ⚠️ Maintenance Window |
-| `step7` | Post-Upgrade Validation | Network state verification | step6 | ⚠️ Maintenance Window |
-| `step8` | Metric Publishing | Send results to InfluxDB | step7 | ⚠️ Maintenance Window |
+| `step2` | Hash Verification | SHA512 firmware integrity check | step1 (direct); steps 1-2 (via tags) | ✅ Yes |
+| `step3` | Pre-Upgrade Backup | Configuration backup before changes | step1 (direct); steps 1-3 (via tags) | ✅ Yes |
+| `step4` | Image Loading | Transfer firmware to device (PHASE 1) | step1 (direct); steps 1-4 (via tags) | ✅ Yes |
+| `step5` | Pre-Upgrade Validation | Network state baseline capture | step1 (direct); steps 1-5 (via tags) | ✅ Yes |
+| `step6` | Image Installation | Install firmware and reboot (PHASE 2) | step1 (direct); steps 1-6 (via tags) | ⚠️ Maintenance Window |
+| `step7` | Post-Upgrade Validation | Network state verification | step1 (direct); steps 1-7 (via tags) | ⚠️ Maintenance Window |
+| `step8` | Emergency Rollback | Restore previous firmware and config | step1 (direct); triggered by step7 or manual | ⚠️ Maintenance Window |
 
 ### Execution Examples
 
@@ -393,13 +393,19 @@ ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
 
 ### Automatic Dependency Resolution
 
-The workflow automatically handles dependencies between steps:
-- **STEP 4** (Image Loading) requires **STEP 2** (Hash Verification) to pass first
-- **STEP 6** (Image Installation) requires **STEP 4** (Image Loading) to complete
-- **STEP 7** (Post-Validation) requires **STEP 6** (Installation) to finish
-- **STEP 8** (Metrics) requires **STEP 7** (Validation) to complete
+**New Dependency Model**: Each step file depends directly only on STEP 1 (connectivity). The main workflow orchestrates additional dependencies through tag-based execution:
 
-**Example**: Running `--tags step6` will automatically verify that step4 (image loading) was completed successfully.
+- **Direct Dependencies**: All steps 2-8 include only STEP 1 (connectivity check)
+- **Orchestrated Dependencies**: Main workflow ensures proper execution order via tags
+- **STEP 2** Version check runs after STEP 1 (orchestrated by tags)
+- **STEP 3** Backup runs after STEPS 1-2 (orchestrated by tags)
+- **STEP 4** Image loading runs after STEPS 1-3 (orchestrated by tags)
+- **STEP 5** Pre-validation runs after STEPS 1-4 (orchestrated by tags)
+- **STEP 6** Installation runs after STEPS 1-5 (orchestrated by tags)
+- **STEP 7** Post-validation runs after STEPS 1-6 (orchestrated by tags)
+- **STEP 8** Emergency rollback can run independently (STEP 1 only) or triggered by STEP 7
+
+**Example**: Running `--tags step6` ensures the main workflow executes steps 1-6 in order, even though step-6-installation.yml only includes step-1-connectivity.yml directly.
 
 ### Playbook Migration Guide
 
@@ -412,6 +418,7 @@ For users migrating from legacy individual playbooks:
 | `network-validation.yml` (post) | `main-upgrade-workflow.yml --tags step7` |
 | `image-loading.yml` | `main-upgrade-workflow.yml --tags step4` |
 | `image-installation.yml` | `main-upgrade-workflow.yml --tags step6` |
+| `emergency-rollback.yml` | `main-upgrade-workflow.yml --tags step8` |
 
 **Note**: Legacy playbooks are deprecated and will be removed in a future release. Migrate to tag-based execution.
 

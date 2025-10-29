@@ -2,21 +2,22 @@
 
 ## Quick Overview
 
-The upgrade workflow has **7 independent steps** that can be run in any combination. Each step automatically includes only the dependencies it needs.
+The upgrade workflow has **8 independent steps** with a streamlined dependency model. Each step depends directly only on STEP 1 (connectivity), while the main workflow orchestrates additional dependencies through tag-based execution.
 
 ```
-Step 1: Connectivity ✓
-Step 2: Version Check (optional)
-Step 3: Space Check (optional)
-Step 4: Upload Image + Backup Config (optional)
-Step 5: Pre-Upgrade Validation (optional, creates baseline)
-Step 6: Install Firmware + Reboot (the actual upgrade)
-Step 7: Post-Upgrade Validation (requires step 5 baseline)
+Step 1: Connectivity ✓ (no dependencies)
+Step 2: Version Check (depends on step1 directly; steps 1-2 via tags)
+Step 3: Space Check (depends on step1 directly; steps 1-3 via tags)
+Step 4: Upload Image + Backup Config (depends on step1 directly; steps 1-4 via tags)
+Step 5: Pre-Upgrade Validation (depends on step1 directly; steps 1-5 via tags, creates baseline)
+Step 6: Install Firmware + Reboot (depends on step1 directly; steps 1-6 via tags)
+Step 7: Post-Upgrade Validation (depends on step1 directly; steps 1-7 via tags, requires step 5 baseline)
+Step 8: Emergency Rollback (depends on step1 directly; triggered by step7 or manual)
 ```
 
 ---
 
-## The 7 Steps Explained
+## The 8 Steps Explained
 
 ### Step 1: Connectivity Check
 **What it does:** Verifies SSH/NETCONF connection to devices
@@ -28,7 +29,7 @@ Step 7: Post-Upgrade Validation (requires step 5 baseline)
 
 ### Step 2: Version Check
 **What it does:** Checks current firmware version and verifies firmware file exists
-**Dependencies:** Step 1 (auto-included)
+**Dependencies:** Step 1 (directly); Steps 1-2 (orchestrated by main workflow tags)
 **Command:** `ansible-playbook main-upgrade-workflow.yml --tags step2 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5`
 **When to use:** Before upgrading, to verify you have the right firmware file
 
@@ -36,7 +37,7 @@ Step 7: Post-Upgrade Validation (requires step 5 baseline)
 
 ### Step 3: Space Check
 **What it does:** Verifies sufficient disk space (auto-cleans old images if needed)
-**Dependencies:** Steps 1-2 (auto-included)
+**Dependencies:** Step 1 (directly); Steps 1-3 (orchestrated by main workflow tags)
 **Command:** `ansible-playbook main-upgrade-workflow.yml --tags step3 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5`
 **When to use:** To ensure devices have room for new firmware before uploading
 
@@ -46,7 +47,7 @@ Step 7: Post-Upgrade Validation (requires step 5 baseline)
 **What it does:**
 - Stages firmware image on device
 - Backs up running configuration
-**Dependencies:** Steps 1-3 (auto-included)
+**Dependencies:** Step 1 (directly); Steps 1-4 (orchestrated by main workflow tags)
 **Command:** `ansible-playbook main-upgrade-workflow.yml --tags step4 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5`
 **When to use:** To prepare devices before the actual upgrade (recommended for safety)
 
@@ -57,7 +58,7 @@ Step 7: Post-Upgrade Validation (requires step 5 baseline)
 - Gathers comprehensive network state (BGP, interfaces, routes, etc.)
 - Validates network is healthy
 - **Saves baseline file for later comparison**
-**Dependencies:** Step 1 only (auto-included)
+**Dependencies:** Step 1 (directly); Steps 1-5 (orchestrated by main workflow tags)
 **Command:** `ansible-playbook main-upgrade-workflow.yml --tags step5 -e target_hosts=mydevice -e max_concurrent=5`
 **When to use:** **ALWAYS run this before step 6 if you want to validate after upgrade**
 **Note:** Creates baseline file needed for step 7
@@ -68,7 +69,7 @@ Step 7: Post-Upgrade Validation (requires step 5 baseline)
 **What it does:**
 - Installs new firmware
 - Reboots device
-**Dependencies:** Step 1 only (auto-included)
+**Dependencies:** Step 1 (directly); Steps 1-6 (orchestrated by main workflow tags)
 **Command:** `ansible-playbook main-upgrade-workflow.yml --tags step6 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5 -e maintenance_window=true`
 **⚠️ Safety flag:** Requires `maintenance_window=true` (prevents accidental reboots)
 **When to use:** The actual firmware upgrade step
@@ -80,10 +81,22 @@ Step 7: Post-Upgrade Validation (requires step 5 baseline)
 - Gathers network state after upgrade
 - **Compares to step 5 baseline**
 - Detects any unexpected network changes
-**Dependencies:** Step 1 only (auto-included)
+**Dependencies:** Step 1 (directly); Steps 1-7 (orchestrated by main workflow tags)
 **Command:** `ansible-playbook main-upgrade-workflow.yml --tags step7 -e target_hosts=mydevice -e max_concurrent=5`
 **⚠️ Critical requirement:** Baseline file from step 5 must exist
 **When to use:** After step 6, to validate upgrade didn't break anything
+
+---
+
+### Step 8: Emergency Rollback
+**What it does:**
+- Restores device to previous firmware
+- Restores previous configuration
+- Provides automatic recovery from failed upgrades
+**Dependencies:** Step 1 (directly); Triggered by Step 7 rescue block or manual invocation
+**Command:** `ansible-playbook main-upgrade-workflow.yml --tags step8 -e target_hosts=mydevice -e max_concurrent=5`
+**⚠️ Safety note:** Can cause service interruption during rollback
+**When to use:** Automatically triggered by step 7 validation failures, or manually for emergency recovery
 
 ---
 
@@ -163,15 +176,18 @@ ansible-playbook main-upgrade-workflow.yml --tags step6 \
 
 ## Step Dependencies at a Glance
 
-| Step | What it needs | What it provides |
-|------|---------------|------------------|
-| **Step 1** | Nothing | Device connectivity |
-| **Step 2** | Step 1 | Current version confirmation |
-| **Step 3** | Steps 1-2 | Space confirmation |
-| **Step 4** | Steps 1-3 | Firmware staged, config backup |
-| **Step 5** | Step 1 | Network baseline saved |
-| **Step 6** | Step 1 | Firmware installed, reboot done |
-| **Step 7** | Step 1 + baseline file from step 5 | Validation results |
+**New Dependency Model**: Each step depends directly only on STEP 1. Additional dependencies are managed by the main workflow through tag-based execution.
+
+| Step | Direct Dependency | Orchestrated Dependencies (via tags) | What it provides |
+|------|-------------------|-------------------------------------|------------------|
+| **Step 1** | None | None | Device connectivity |
+| **Step 2** | Step 1 only | Steps 1-2 (main workflow) | Current version confirmation |
+| **Step 3** | Step 1 only | Steps 1-3 (main workflow) | Space confirmation |
+| **Step 4** | Step 1 only | Steps 1-4 (main workflow) | Firmware staged, config backup |
+| **Step 5** | Step 1 only | Steps 1-5 (main workflow) | Network baseline saved |
+| **Step 6** | Step 1 only | Steps 1-6 (main workflow) | Firmware installed, reboot done |
+| **Step 7** | Step 1 only | Steps 1-7 (main workflow) | Validation results, comparison |
+| **Step 8** | Step 1 only | Triggered by Step 7 or manual | Emergency recovery completed |
 
 ---
 
@@ -181,12 +197,14 @@ ansible-playbook main-upgrade-workflow.yml --tags step6 \
 - **Run step 5 before step 6** if you want post-upgrade validation
 - **Use `maintenance_window=true`** when running step 6 (prevents accidents)
 - **Run step 7 after step 6** to verify the upgrade worked
-- Run steps in any order you want (except step 7 needs step 5 baseline)
+- **Let main workflow manage dependencies** via tags (don't worry about nested includes)
+- Run steps in any order you want (main workflow ensures proper execution)
 
 ### ❌ DON'T:
 - Run step 7 without first running step 5 (baseline won't exist)
 - Run step 6 without `maintenance_window=true` flag
 - Assume devices are ready without running step 5
+- Manually manage step dependencies (let the main workflow handle it)
 
 ---
 

@@ -69,10 +69,11 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
 
 ### Workflow Step Control
 - `ANSIBLE_TAGS` - Run individual workflow steps with automatic dependency resolution
-  - Single step: `step1`, `step5`, `step6`, etc.
+  - Single step: `step1`, `step5`, `step6`, `step8`, etc.
   - Multiple steps: `step1,step5` (comma-separated)
-  - Supported tags: `step1-step7`, `connectivity`, `version_check`, `space_check`, `image_upload`, `config_backup`, `pre_validation`, `install`, `reboot`, `post_validation`
-  - Automatic dependency resolution: Running `step6` automatically executes `step1-step5` first
+  - Supported tags: `step1-step8`, `connectivity`, `version_check`, `space_check`, `image_upload`, `config_backup`, `pre_validation`, `install`, `reboot`, `post_validation`, `emergency_rollback`
+  - New dependency model: Each step depends directly on step1 only; main workflow orchestrates full dependencies via tags
+  - Example: Running `step6` ensures main workflow executes steps 1-6 in order
   - Leave unset to run full workflow
 
 ### Platform-Specific Upgrade Features

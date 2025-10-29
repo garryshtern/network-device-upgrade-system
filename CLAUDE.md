@@ -77,10 +77,10 @@ Network device upgrade management system for 1000+ heterogeneous network devices
 - `network-validation.yml` → Use `main-upgrade-workflow.yml --tags step5` (pre-upgrade) or `--tags step7` (post-upgrade)
 - `image-loading.yml` → Use `main-upgrade-workflow.yml --tags step4`
 - `image-installation.yml` → Use `main-upgrade-workflow.yml --tags step6`
+- `emergency-rollback.yml` → Use `main-upgrade-workflow.yml --tags step8`
 
 **Active Playbooks** (still supported as separate operational tools):
 - `compliance-audit.yml` - Separate operational task
-- `emergency-rollback.yml` - Critical safety mechanism
 - `config-backup.yml` - Useful for ad-hoc backups
 
 Tag-based execution provides automatic dependency resolution and ensures all prerequisites are met before running each step. See the "Tag-Based Workflow Execution" section for detailed examples.
@@ -498,50 +498,56 @@ The main upgrade workflow (`ansible-content/playbooks/main-upgrade-workflow.yml`
 
 ### Overview
 
-The workflow is divided into 7 sequential steps, each with automatic dependency resolution. When you run a specific step using tags, all prerequisite steps are automatically executed first. This ensures consistency and prevents execution of later steps without proper groundwork.
+The workflow is divided into 8 sequential steps, with a streamlined dependency model. Each step depends directly on STEP 1 (connectivity), while additional dependencies are managed automatically through tag-based execution in the main workflow. This design provides maximum flexibility while maintaining safety.
 
 ### Workflow Steps
 
-The 7-step upgrade workflow:
+The 8-step upgrade workflow:
 
 1. **STEP 1 - Connectivity Check** (`step1`, `connectivity`)
    - Verifies SSH/NETCONF connectivity to target devices
-   - No dependencies - can run standalone
+   - Dependencies: None (can run standalone)
    - Essential first step to validate device accessibility
 
 2. **STEP 2 - Version Check** (`step2`, `version_check`)
    - Collects current firmware version information
-   - Automatically runs: STEP 1
+   - Dependencies: STEP 1 (directly); STEP 2 requires version data from STEP 1 (via tags in main workflow)
    - Validates current device state before upgrade
 
 3. **STEP 3 - Space Check** (`step3`, `space_check`)
    - Verifies sufficient flash/disk space for firmware
-   - Automatically runs: STEPS 1-2
+   - Dependencies: STEP 1 (directly); STEPS 2-3 (via tags in main workflow)
    - Prevents upgrade failures due to insufficient storage
 
 4. **STEP 4 - Image Upload** (`step4`, `image_upload`)
    - Uploads firmware image to devices
    - Verifies SHA512 hash after upload (mandatory)
-   - Automatically runs: STEPS 1-3
+   - Dependencies: STEP 1 (directly); STEPS 2-4 (via tags in main workflow)
    - Requires `target_firmware` variable
 
 5. **STEP 5 - Config Backup & Pre-Validation** (`step5`, `config_backup`, `pre_validation`)
    - Backs up running configuration
    - Captures pre-upgrade network state baseline
-   - Automatically runs: STEPS 1-4
+   - Dependencies: STEP 1 (directly); STEPS 2-5 (via tags in main workflow)
    - Creates comparison baseline for post-upgrade validation
 
 6. **STEP 6 - Image Installation** (`step6`, `install`, `reboot`)
    - Installs firmware and reboots devices
-   - Automatically runs: STEPS 1-5
+   - Dependencies: STEP 1 (directly); STEPS 2-6 (via tags in main workflow)
    - Requires `maintenance_window=true` for safety
    - **CRITICAL**: This step causes service interruption
 
 7. **STEP 7 - Post-Upgrade Validation** (`step7`, `post_validation`)
    - Validates post-upgrade network state
    - Compares against STEP 5 baseline
-   - Automatically runs: STEPS 1-6
+   - Dependencies: STEP 1 (directly); STEPS 2-7 (via tags in main workflow)
    - Requires previous execution of STEP 5 to establish baseline
+
+8. **STEP 8 - Emergency Rollback** (`step8`, `emergency_rollback`)
+   - Restores device to previous firmware and configuration
+   - Triggered when STEP 7 validation fails or manually invoked
+   - Dependencies: STEP 1 (directly); rollback triggers from STEP 7 rescue block
+   - Provides automatic recovery from failed upgrades
 
 ### Tag-Based Execution Examples
 
@@ -603,6 +609,12 @@ ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
   --tags step7 \
   -e target_hosts=nxos-switches \
   -e max_concurrent=5
+
+# STEP 8: Emergency rollback (manual invocation or triggered by STEP 7 failure)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step8 \
+  -e target_hosts=nxos-switches \
+  -e max_concurrent=5
 ```
 
 #### Container-Based Execution
@@ -635,14 +647,15 @@ podman run --rm \
 
 ### Available Tags Reference
 
-**Step Tags** (with automatic dependency resolution):
-- `step1` - Connectivity check
-- `step2` - Version check (includes step1)
-- `step3` - Space check (includes steps 1-2)
-- `step4` - Image upload (includes steps 1-3)
-- `step5` - Config backup & pre-validation (includes steps 1-4)
-- `step6` - Image installation & reboot (includes steps 1-5)
-- `step7` - Post-upgrade validation (includes steps 1-6)
+**Step Tags** (with automatic dependency resolution via main workflow):
+- `step1` - Connectivity check (no dependencies)
+- `step2` - Version check (depends on step1 directly; steps 1-2 via tags)
+- `step3` - Space check (depends on step1 directly; steps 1-3 via tags)
+- `step4` - Image upload (depends on step1 directly; steps 1-4 via tags)
+- `step5` - Config backup & pre-validation (depends on step1 directly; steps 1-5 via tags)
+- `step6` - Image installation & reboot (depends on step1 directly; steps 1-6 via tags)
+- `step7` - Post-upgrade validation (depends on step1 directly; steps 1-7 via tags)
+- `step8` - Emergency rollback (depends on step1 directly; triggered by step7 or manual)
 
 **Functional Tags** (alternative names for specific operations):
 - `connectivity` - Same as step1
@@ -654,23 +667,31 @@ podman run --rm \
 - `install` - Included in step6
 - `reboot` - Included in step6
 - `post_validation` - Same as step7
+- `emergency_rollback` - Same as step8
 
 ### Automatic Dependency Resolution
 
-Each step includes tags for ALL prerequisite steps, ensuring proper execution order:
+**New Dependency Model**: Each step file depends directly only on STEP 1 (connectivity). The main workflow orchestrates additional dependencies through tag-based execution:
 
 - Running `--tags step1` executes only step 1
-- Running `--tags step2` executes steps 1-2
-- Running `--tags step3` executes steps 1-3
-- Running `--tags step4` executes steps 1-4
-- Running `--tags step5` executes steps 1-5
-- Running `--tags step6` executes steps 1-6
-- Running `--tags step7` executes steps 1-7 (full workflow)
+- Running `--tags step2` executes steps 1-2 (main workflow ensures step1 runs first)
+- Running `--tags step3` executes steps 1-3 (main workflow ensures steps 1-2 run first)
+- Running `--tags step4` executes steps 1-4 (main workflow ensures steps 1-3 run first)
+- Running `--tags step5` executes steps 1-5 (main workflow ensures steps 1-4 run first)
+- Running `--tags step6` executes steps 1-6 (main workflow ensures steps 1-5 run first)
+- Running `--tags step7` executes steps 1-7 (main workflow ensures steps 1-6 run first)
+- Running `--tags step8` executes steps 1+8 (emergency rollback with connectivity check)
+
+**Key Benefits of This Model**:
+- **Simplified Step Files**: Each step only includes STEP 1 directly
+- **Flexible Execution**: Steps can be run individually or in combination
+- **Automatic Orchestration**: Main workflow manages execution order via tags
+- **Clear Dependencies**: Direct dependency (STEP 1) vs. orchestrated dependencies (via tags)
 
 This design eliminates the need for:
+- Complex nested task inclusions in step files
 - Multiple playbook invocations
 - Manual dependency tracking
-- Complex scripting to run steps in order
 - Separate playbook files for each operation
 
 ### Common Workflows

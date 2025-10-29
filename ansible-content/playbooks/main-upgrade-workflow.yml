@@ -3,7 +3,7 @@
 #
 # DOCUMENTATION: See docs/workflow-steps-guide.md for detailed step-by-step guide
 #
-# 7 Independent Steps (can be run individually or combined):
+# 8 Independent Steps (can be run individually or combined):
 #   Step 1: Connectivity check
 #   Step 2: Version check (verify firmware file exists)
 #   Step 3: Space check (verify disk space, auto-cleanup)
@@ -11,12 +11,14 @@
 #   Step 5: Pre-upgrade validation (creates baseline)
 #   Step 6: Install firmware + reboot (requires maintenance_window=true)
 #   Step 7: Post-upgrade validation (compare to step 5 baseline)
+#   Step 8: Emergency rollback (restore previous firmware/config)
 #
 # Quick Examples:
 #   ansible-playbook main-upgrade-workflow.yml --tags step1 -e target_hosts=mydevice -e max_concurrent=5
 #   ansible-playbook main-upgrade-workflow.yml --tags step5 -e target_hosts=mydevice -e max_concurrent=5
 #   ansible-playbook main-upgrade-workflow.yml --tags step6 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5 -e maintenance_window=true
 #   ansible-playbook main-upgrade-workflow.yml --tags step7 -e target_hosts=mydevice -e max_concurrent=5
+#   ansible-playbook main-upgrade-workflow.yml --tags step8 -e target_hosts=mydevice -e max_concurrent=5
 #
 # Safe Workflow (Recommended):
 #   1. Run step 5: Establish baseline
@@ -211,7 +213,7 @@
 
     # STEP 7: Post-Checks and Comparison
     # Compare to pre-upgrade state
-    # Failure triggers OPTIONAL rollback (does not stop workflow)
+    # Failure does NOT trigger automatic rollback (use STEP 8 for rollback)
     # AUTO-DEPENDENCY: Requires step1 (step5 baseline from previous run, step6 upgrade done)
     # NOTE: step5 baseline must exist from a prior run, step6 should have been run
     - name: "STEP 7: Post-Upgrade Validation"
@@ -226,24 +228,39 @@
             file: steps/step-7-post-validation.yml
 
       rescue:
-        - name: Post-validation failed - trigger optional rollback
+        - name: Post-validation failed - rollback available via STEP 8
           block:
-            - name: Execute rollback procedure
-              ansible.builtin.include_role:
-                name: common
-                tasks_from: emergency-rollback
-              when: rollback_on_failure | bool
-
             - name: Log post-validation failure
               ansible.builtin.debug:
                 msg:
                   - "WARNING: Post-upgrade validation failed."
-                  - "Rollback {{ 'executed' if rollback_on_failure else 'skipped (disabled)' }}."
+                  - "To rollback, run: --tags step8 or --tags rollback"
 
           always:
             - name: Mark upgrade with validation warnings
               ansible.builtin.set_fact:
                 upgrade_completed_with_warnings: true
+
+    # STEP 8: Emergency Rollback
+    # Restores device to previous firmware and configuration
+    # Triggered only when explicitly invoked via --tags step8 or --tags rollback
+    # AUTO-DEPENDENCY: Requires step1
+    # NOTE: Can be run standalone or after STEP 7 failure
+    - name: "STEP 8: Emergency Rollback"
+      tags:
+        - step8
+        - rollback
+      when:
+        - not ansible_check_mode or inventory_hostname != 'localhost'
+      block:
+        - name: Execute STEP 8 tasks (includes STEP 1)
+          ansible.builtin.include_tasks:
+            file: steps/step-8-emergency-rollback.yml
+
+      rescue:
+        - name: Emergency rollback failed - STOP workflow
+          ansible.builtin.fail:
+            msg: "STEP 8 FAILED: Emergency rollback failed. Manual intervention required."
 
   post_tasks:
     - name: Set upgrade completion timestamp

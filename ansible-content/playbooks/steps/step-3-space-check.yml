@@ -3,11 +3,7 @@
 # Only runs cleanup if insufficient space detected
 # Runs AFTER image verification so we know the image size
 # MUST PASS or workflow STOPS
-# Dependencies: STEP 1, STEP 2 (automatically included)
-
-- name: Include STEP 2 as prerequisite (includes STEP 1)
-  ansible.builtin.include_tasks:
-    file: step-2-version-check.yml
+# Dependencies: STEP 1 (managed by main workflow tags)
 
 - name: Calculate total required space (firmware + optional EPLD)
   ansible.builtin.set_fact:

@@ -2,11 +2,7 @@
 # STEP 2: Version Check and Image Verification
 # Check if upgrade needed and verify local image file exists
 # MUST PASS or workflow STOPS
-# Dependencies: STEP 1 (automatically included)
-
-- name: Include STEP 1 as prerequisite
-  ansible.builtin.include_tasks:
-    file: step-1-connectivity.yml
+# Dependencies: STEP 1 (managed by main workflow tags)
 
 - name: Check current running version (non-Cisco platforms)
   ansible.builtin.include_role:
