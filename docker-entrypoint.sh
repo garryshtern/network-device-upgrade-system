@@ -119,7 +119,6 @@ ENVIRONMENT VARIABLES:
     # Upgrade Configuration
     TARGET_HOSTS       Hosts to target (default: all)
     TARGET_FIRMWARE    Firmware version to install
-    UPGRADE_PHASE      Phase: full, loading, installation, validation, rollback
     MAX_CONCURRENT     REQUIRED: Number of devices to upgrade in parallel (e.g., 5)
                        Note: Must be provided - 'serial' processed before group_vars
     MAINTENANCE_WINDOW Set to 'true' for installation phase
@@ -194,7 +193,7 @@ EXAMPLES:
     # Execute actual upgrade (production)
     docker run --rm \\
       -e TARGET_FIRMWARE=9.3.12 -e TARGET_HOSTS=cisco-switch-01 \\
-      -e MAX_CONCURRENT=5 -e UPGRADE_PHASE=loading -e MAINTENANCE_WINDOW=false \\
+      -e MAX_CONCURRENT=5 -e MAINTENANCE_WINDOW=true \\
       ghcr.io/garryshtern/network-device-upgrade-system:latest run
 
     # Run individual workflow steps (with automatic dependency resolution)
@@ -285,7 +284,7 @@ EXAMPLES:
       -e TARGET_HOSTS=cisco-datacenter-switches \\
       -e TARGET_FIRMWARE=9.3.12 \\
       -e MAX_CONCURRENT=5 \\
-      -e UPGRADE_PHASE=loading \\
+      -e ANSIBLE_TAGS=step4 \\
       -e CISCO_NXOS_SSH_KEY=/keys/cisco-nxos-key \\
       -e CISCO_IOSXE_SSH_KEY=/keys/cisco-iosxe-key \\
       -e FORTIOS_API_TOKEN="\$(cat /opt/secrets/fortios-api-token)" \\
@@ -487,7 +486,6 @@ build_ansible_options() {
     # Core upgrade variables
     [[ -n "${TARGET_HOSTS:-}" ]] && extra_vars="$extra_vars target_hosts=${TARGET_HOSTS}"
     [[ -n "${TARGET_FIRMWARE:-}" ]] && extra_vars="$extra_vars target_firmware=${TARGET_FIRMWARE}"
-    [[ -n "${UPGRADE_PHASE:-}" ]] && extra_vars="$extra_vars upgrade_phase=${UPGRADE_PHASE}"
 
     # Serial execution limit (REQUIRED - processed before group_vars)
     [[ -n "${MAX_CONCURRENT:-}" ]] && extra_vars="$extra_vars max_concurrent=${MAX_CONCURRENT}"
@@ -640,41 +638,6 @@ setup_inventory() {
     fi
 }
 
-# Map UPGRADE_PHASE to Ansible tags for step-based workflow execution
-map_phase_to_tags() {
-    local phase="${1:-}"
-
-    case "$phase" in
-        full)
-            # Run all steps (no tags = full workflow)
-            echo ""
-            ;;
-        loading)
-            # Step 4: Image upload
-            echo "step4"
-            ;;
-        installation)
-            # Step 6: Image installation and reboot
-            echo "step6"
-            ;;
-        validation)
-            # Step 7: Post-upgrade validation
-            echo "step7"
-            ;;
-        rollback)
-            # Emergency rollback - use separate playbook or error recovery
-            echo "rollback"
-            ;;
-        *)
-            # If phase not recognized, don't apply tags (run full workflow)
-            if [[ -n "$phase" ]]; then
-                warn "Unknown UPGRADE_PHASE: $phase (ignoring, running full workflow)"
-            fi
-            echo ""
-            ;;
-    esac
-}
-
 # Common function to execute ansible-playbook with shared logic
 execute_ansible_playbook() {
     local mode="$1"  # "syntax-check", "dry-run", or "run"
@@ -729,13 +692,12 @@ execute_ansible_playbook() {
 
     log "Extra variables: $extra_vars"
 
-    # Map UPGRADE_PHASE to tags for step-based execution
-    local ansible_tags=""
-    if [[ -n "${UPGRADE_PHASE:-}" ]]; then
-        ansible_tags=$(map_phase_to_tags "${UPGRADE_PHASE}")
-        if [[ -n "$ansible_tags" ]]; then
-            log "UPGRADE_PHASE=${UPGRADE_PHASE} mapped to tags: ${ansible_tags}"
-        fi
+    # Handle Ansible tags for step-based workflow execution
+    # Use ANSIBLE_TAGS environment variable to specify which steps to run (step1, step2, ..., step7)
+    # If no tags specified, all steps will be executed
+    local ansible_tags="${ANSIBLE_TAGS:-}"
+    if [[ -n "$ansible_tags" ]]; then
+        log "Ansible tags specified: ${ansible_tags}"
     fi
 
     # Debug: Show key authentication variables
