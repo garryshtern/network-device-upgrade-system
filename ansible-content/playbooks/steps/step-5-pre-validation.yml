@@ -1,27 +1,30 @@
 ---
-# STEP 5: Network Resources Gathering and Pre-Upgrade Validation
+# STEP 5: Config Backup and Pre-Upgrade Validation
+# 1. Backup current running configuration
+# 2. Gather network resources and validate connectivity/state
 # Comprehensive validation: BGP, interfaces, routing, etc.
 # MUST PASS or workflow STOPS
-# Dependencies: STEP 1 only (connectivity to device)
-#
-# NOTE: Image staging (step 4) is NOT a prerequisite for validation.
-# Validation only needs network connectivity to gather current state.
-# If you want a config backup, run step 4 separately before step 6.
+# Dependencies: STEP 1, STEP 4 (image must be uploaded first)
 
-- name: Include STEP 1 as prerequisite (connectivity to device)
+- name: Include STEP 4 as prerequisite (image must be uploaded)
   ansible.builtin.include_tasks:
-    file: step-1-connectivity.yml
+    file: step-4-image-upload.yml
 
 - name: Display STEP 5 entry
   ansible.builtin.debug:
     msg:
       - "=========================================="
-      - "STEP 5: STARTING NETWORK VALIDATION"
+      - "STEP 5: CONFIG BACKUP AND PRE-UPGRADE VALIDATION"
       - "=========================================="
       - "Device: {{ inventory_hostname }}"
       - "Platform: {{ platform }}"
-      - "About to gather network resources..."
+      - "Backing up configuration and gathering baseline..."
       - "=========================================="
+
+- name: Backup current configuration before upgrade
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: config-backup
 
 - name: Gather comprehensive network resources for validation
   ansible.builtin.include_role:

@@ -1,5 +1,5 @@
 ---
-# STEP 4: Image Upload and Config Backup
+# STEP 4: Image Upload
 # Server-initiated PUSH only (no device-initiated pulls)
 # MUST PASS or workflow STOPS
 # Dependencies: STEP 1, STEP 2, STEP 3 (automatically included)
@@ -12,8 +12,3 @@
   ansible.builtin.include_role:
     name: common
     tasks_from: image-loading
-
-- name: Backup current configuration (after confirming image is staged)
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: config-backup
