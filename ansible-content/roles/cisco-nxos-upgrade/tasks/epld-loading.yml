@@ -154,7 +154,7 @@
           ansible.builtin.set_fact:
             nxos_epld_loading_results:
               epld_file: "{{ target_epld_firmware }}"
-              file_size_bytes: "{{ epld_file_info.size_bytes }}"
+              file_size_bytes: "{{ epld_file_info.size_bytes if (epld_file_info is defined and epld_file_info.size_bytes is defined) else 0 }}"
               source_sha512: "{{ epld_calculated_hash }}"
               device_sha512: "{{ device_epld_hash }}"
               hash_verified: true
