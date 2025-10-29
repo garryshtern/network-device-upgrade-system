@@ -10,19 +10,11 @@
       - "NX-OS EPLD LOADING"
       - "=========================================="
       - "Device: {{ inventory_hostname }}"
-      - "EPLD Enabled: {{ enable_epld_upgrade | bool }}"
-      - "EPLD File: {{ target_epld_firmware if (enable_epld_upgrade | bool and target_epld_firmware) else 'N/A' }}"
+      - "EPLD File: {{ target_epld_firmware }}"
       - "=========================================="
-  when: enable_epld_upgrade | bool
 
-- name: EPLD upgrade not enabled - skipping
-  ansible.builtin.debug:
-    msg: "EPLD upgrade disabled (enable_epld_upgrade=false) - skipping EPLD upload"
-  when: not (enable_epld_upgrade | bool)
-
-- name: EPLD loading block (if enabled)
+- name: EPLD loading block
   when:
-    - enable_epld_upgrade | bool
     - target_epld_firmware is defined
     - target_epld_firmware | length > 0
   block:

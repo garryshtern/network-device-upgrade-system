@@ -206,3 +206,4 @@
 - name: Load and upload EPLD firmware (optional)
   ansible.builtin.include_tasks:
     file: epld-loading.yml
+  when: enable_epld_upgrade | bool
