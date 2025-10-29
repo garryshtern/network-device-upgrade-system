@@ -94,9 +94,17 @@
     # STEP 1: Basic Connectivity Check
     # Gather basic facts to verify connectivity and get device info
     # MUST PASS or workflow STOPS
+    # AUTO-DEPENDENCY: Required by all steps (step1-8)
     - name: "STEP 1: Basic Connectivity Check"
       tags:
         - step1
+        - step2
+        - step3
+        - step4
+        - step5
+        - step6
+        - step7
+        - step8
         - connectivity
       block:
         - name: Execute STEP 1 tasks
@@ -111,12 +119,18 @@
     # STEP 2: Version Check and Image Verification
     # Check if upgrade needed and verify local image file exists
     # MUST PASS or workflow STOPS
-    # AUTO-DEPENDENCY: Requires step1
+    # AUTO-DEPENDENCY: Requires step1; provides calculated_hash for STEP 4
     - name: "STEP 2: Version Check and Image Verification"
       tags:
-        - step1
         - step2
+        - step3
+        - step4
+        - step5
+        - step6
+        - step7
+        - step8
         - version_check
+        - image_check
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
@@ -133,11 +147,15 @@
     # Only runs cleanup if insufficient space detected
     # Runs AFTER image verification so we know the image size
     # MUST PASS or workflow STOPS
-    # AUTO-DEPENDENCY: Requires step1
+    # AUTO-DEPENDENCY: Requires step1, step2; provides storage_info for STEP 5
+    # NOTE: STEP 4 does NOT require STEP 3 (skipped for --tags step4)
     - name: "STEP 3: Storage Space Validation"
       tags:
-        - step1
         - step3
+        - step5
+        - step6
+        - step7
+        - step8
         - space_check
       block:
         - name: Execute STEP 3 tasks
@@ -152,10 +170,10 @@
     # STEP 4: Upload Images and Config Backup
     # Server-initiated PUSH only (no device-initiated pulls)
     # MUST PASS or workflow STOPS
-    # AUTO-DEPENDENCY: Requires step1
+    # AUTO-DEPENDENCY: Requires step1, step2 (for calculated_hash); NOT step3
+    # NOTE: Does NOT require STEP 3 (space check optional before upload)
     - name: "STEP 4: Image Upload and Config Backup"
       tags:
-        - step1
         - step4
         - image_upload
       when:
@@ -174,10 +192,9 @@
     # Network resources gathered AFTER image is confirmed staged (not before)
     # Comprehensive validation: BGP, interfaces, routing, etc.
     # MUST PASS or workflow STOPS
-    # AUTO-DEPENDENCY: Requires step1
+    # AUTO-DEPENDENCY: Requires step1, step2, step3, step4; creates baseline file for STEP 7
     - name: "STEP 5: Network Resources Gathering and Pre-Upgrade Validation"
       tags:
-        - step1
         - step5
         - pre_check
         - config_backup
@@ -196,10 +213,9 @@
     # STEP 6: Install Images and Reboot
     # Platform-specific installation
     # MUST PASS or workflow STOPS
-    # AUTO-DEPENDENCY: Requires step1
+    # AUTO-DEPENDENCY: Requires step1, step2, step3, step4, step5
     - name: "STEP 6: Firmware Installation"
       tags:
-        - step1
         - step6
         - install
       when:
@@ -217,11 +233,11 @@
     # STEP 7: Post-Checks and Comparison
     # Compare to pre-upgrade state
     # Failure does NOT trigger automatic rollback (use STEP 8 for rollback)
-    # AUTO-DEPENDENCY: Requires step1 (step5 baseline from previous run, step6 upgrade done)
-    # NOTE: step5 baseline must exist from a prior run, step6 should have been run
+    # AUTO-DEPENDENCY: Requires step1 ONLY (step5 baseline from previous run, step6 upgrade done)
+    # NOTE: step5 baseline MUST exist from a prior execution; step6 MUST have completed before running step7
+    # WARNING: Running step7 without prior step5 execution will FAIL with missing baseline file
     - name: "STEP 7: Post-Upgrade Validation"
       tags:
-        - step1
         - step7
         - post_check
       when:
@@ -248,11 +264,10 @@
     # STEP 8: Emergency Rollback
     # Restores device to previous firmware and configuration
     # Triggered only when explicitly invoked via --tags step8 or --tags rollback
-    # AUTO-DEPENDENCY: Requires step1
-    # NOTE: Can be run standalone or after STEP 7 failure
+    # AUTO-DEPENDENCY: Requires step1 ONLY
+    # NOTE: Can be run standalone or after STEP 7 failure; backed-up config from STEP 4 used
     - name: "STEP 8: Emergency Rollback"
       tags:
-        - step1
         - step8
         - rollback
       when:
