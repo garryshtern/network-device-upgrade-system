@@ -84,13 +84,6 @@
               - "Status: STARTING UPLOAD..."
               - "=========================================="
 
-        - name: Enable SCP server on NX-OS device (if not already enabled)
-          cisco.nxos.nxos_config:
-            lines:
-              - feature scp-server
-          register: scp_enable_result
-          failed_when: false  # May already be enabled
-
         - name: Push EPLD image from server to device via SCP
           cisco.nxos.nxos_file_copy:
             file_system: "bootflash:"
