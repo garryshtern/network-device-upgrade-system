@@ -114,6 +114,7 @@
     # AUTO-DEPENDENCY: Requires step1
     - name: "STEP 2: Version Check and Image Verification"
       tags:
+        - step1
         - step2
         - version_check
       when:
@@ -132,13 +133,14 @@
     # Only runs cleanup if insufficient space detected
     # Runs AFTER image verification so we know the image size
     # MUST PASS or workflow STOPS
-    # AUTO-DEPENDENCY: Requires step1, step2
+    # AUTO-DEPENDENCY: Requires step1
     - name: "STEP 3: Storage Space Validation"
       tags:
+        - step1
         - step3
         - space_check
       block:
-        - name: Execute STEP 3 tasks (includes STEP 1-2)
+        - name: Execute STEP 3 tasks
           ansible.builtin.include_tasks:
             file: steps/step-3-space-check.yml
 
@@ -150,16 +152,16 @@
     # STEP 4: Upload Images and Config Backup
     # Server-initiated PUSH only (no device-initiated pulls)
     # MUST PASS or workflow STOPS
-    # AUTO-DEPENDENCY: Requires step1, step2, step3
+    # AUTO-DEPENDENCY: Requires step1
     - name: "STEP 4: Image Upload and Config Backup"
       tags:
+        - step1
         - step4
         - image_upload
-        - config_backup
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Execute STEP 4 tasks (includes STEP 1-3)
+        - name: Execute STEP 4 tasks
           ansible.builtin.include_tasks:
             file: steps/step-4-image-upload.yml
 
@@ -172,16 +174,17 @@
     # Network resources gathered AFTER image is confirmed staged (not before)
     # Comprehensive validation: BGP, interfaces, routing, etc.
     # MUST PASS or workflow STOPS
-    # AUTO-DEPENDENCY: Requires step1, step4 (step2/step3 implied by step4)
+    # AUTO-DEPENDENCY: Requires step1
     - name: "STEP 5: Network Resources Gathering and Pre-Upgrade Validation"
       tags:
+        - step1
         - step5
-        - pre_validation
-        - network_validation
+        - pre_check
+        - config_backup
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Execute STEP 5 tasks (includes STEP 1-4)
+        - name: Execute STEP 5 tasks
           ansible.builtin.include_tasks:
             file: steps/step-5-pre-validation.yml
 
@@ -193,16 +196,16 @@
     # STEP 6: Install Images and Reboot
     # Platform-specific installation
     # MUST PASS or workflow STOPS
-    # AUTO-DEPENDENCY: Requires step1, step4, step5 (step2/step3 implied by step4)
+    # AUTO-DEPENDENCY: Requires step1
     - name: "STEP 6: Firmware Installation"
       tags:
+        - step1
         - step6
         - install
-        - reboot
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Execute STEP 6 tasks (includes STEP 1-5)
+        - name: Execute STEP 6 tasks
           ansible.builtin.include_tasks:
             file: steps/step-6-installation.yml
 
@@ -218,12 +221,13 @@
     # NOTE: step5 baseline must exist from a prior run, step6 should have been run
     - name: "STEP 7: Post-Upgrade Validation"
       tags:
+        - step1
         - step7
-        - post_validation
+        - post_check
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Execute STEP 7 tasks (includes STEP 1 only)
+        - name: Execute STEP 7 tasks
           ansible.builtin.include_tasks:
             file: steps/step-7-post-validation.yml
 
@@ -248,12 +252,13 @@
     # NOTE: Can be run standalone or after STEP 7 failure
     - name: "STEP 8: Emergency Rollback"
       tags:
+        - step1
         - step8
         - rollback
       when:
         - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
-        - name: Execute STEP 8 tasks (includes STEP 1)
+        - name: Execute STEP 8 tasks
           ansible.builtin.include_tasks:
             file: steps/step-8-emergency-rollback.yml
 
