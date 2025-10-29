@@ -49,8 +49,8 @@ target_firmware: ""  # Must be set at runtime
 platform_firmware: {}  # Platform-specific firmware mappings
 
 # Phase control
-phase_1_timeout: 3600  # Image loading phase (1 hour)
-phase_2_timeout: 1800  # Installation phase (30 minutes)
+image_loading_timeout: 3600  # Timeout for firmware image upload (1 hour)
+installation_timeout: 1800  # Timeout for firmware installation/reboot (30 minutes)
 
 # File transfer settings (async operations)
 file_transfer_timeout: 3600  # Maximum time for file transfers (1 hour)
