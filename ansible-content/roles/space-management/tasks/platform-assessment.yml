@@ -6,24 +6,19 @@
 - name: Get initial storage information from device
   ansible.builtin.include_tasks: get-storage-output.yml
 
-- name: Debug actual device storage output
-  ansible.builtin.debug:
-    msg:
-      - "=== Storage Output Debug ==="
-      - "Platform: {{ platform }}"
-      - "Inventory hostname: {{ inventory_hostname }}"
-      - "Check mode: {{ ansible_check_mode }}"
-      - "storage_output type: {{ storage_output | type_debug }}"
-      - "storage_output keys: {{ storage_output.keys() | list }}"
-      - "storage_output.stdout exists: {{ storage_output.stdout is defined }}"
-      - "storage_output.stdout_lines exists: {{ storage_output.stdout_lines is defined }}"
-      - "FULL storage_output dump: {{ storage_output | to_nice_json }}"
-  when:
-    - show_debug | bool
-    - storage_output is defined
-
 - name: Parse storage information
   ansible.builtin.include_tasks: parse-storage-output.yml
+
+- name: Display parsed storage information
+  ansible.builtin.debug:
+    msg:
+      - "=== Storage Information ==="
+      - "Platform: {{ platform }}"
+      - "Device: {{ inventory_hostname }}"
+      - "Files Found: {{ parsed_storage.images | length }}"
+      - "Image Files: {{ parsed_storage.images | join(', ') if parsed_storage.images | length > 0 else 'None' }}"
+      - "=========================="
+  when: parsed_storage is defined
 
 - name: Calculate initial storage metrics
   ansible.builtin.set_fact:
@@ -41,6 +36,9 @@
   when: cleanup_needed
   block:
     - name: Get current running image (platform-specific)
+      when:
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
       block:
         - name: Get NX-OS running image
           cisco.nxos.nxos_command:
@@ -64,9 +62,6 @@
               stdout:
                 - "N/A"
           when: platform in ['fortios', 'opengear']
-      when:
-        - not ansible_check_mode
-        - inventory_hostname != 'localhost'
 
     - name: Simulate running image for check mode or localhost
       ansible.builtin.set_fact:
@@ -99,6 +94,9 @@
         cleanup_candidates: "{{ parsed_storage.images | difference(protected_files) | reject('equalto', 'NONE') | list }}"
 
     - name: Remove obsolete image files (platform-specific)
+      when:
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
       block:
         - name: Remove NX-OS obsolete images
           cisco.nxos.nxos_command:
@@ -125,9 +123,6 @@
             - cleanup_candidates | length > 0
           register: cleanup_result
           failed_when: false
-      when:
-        - not ansible_check_mode
-        - inventory_hostname != 'localhost'
 
     - name: Log cleanup actions
       ansible.builtin.debug:
