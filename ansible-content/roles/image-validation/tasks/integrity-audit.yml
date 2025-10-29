@@ -60,6 +60,16 @@
       See docs/firmware-naming-standards.md for MANDATORY naming requirements
     success_msg: "Firmware file extension validation passed for {{ platform }}: {{ firmware_filename_for_validation }}"
 
+- name: Check if EPLD image file exists (if EPLD upgrade enabled)
+  ansible.builtin.stat:
+    path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
+  register: epld_file_stat
+  delegate_to: localhost
+  when:
+    - enable_epld_upgrade | bool
+    - target_epld_firmware is defined
+    - not ansible_check_mode
+
 - name: Set integrity check result
   ansible.builtin.set_fact:
     image_integrity_passed: true
@@ -69,3 +79,9 @@
       size_mb: "{{ ((firmware_file_stat.stat.size / 1024 / 1024) | round(2)) if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 0 }}"
       modified_time: "{{ firmware_file_stat.stat.mtime if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 'unknown' }}"
       checksum: "{{ firmware_file_stat.stat.checksum if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 'unknown' }}"
+    epld_file_info:
+      path: "{{ firmware_base_path }}/{{ target_epld_firmware if (enable_epld_upgrade | bool and target_epld_firmware is defined) else '' }}"
+      size_bytes: "{{ epld_file_stat.stat.size if (enable_epld_upgrade | bool and epld_file_stat is defined and epld_file_stat.stat is defined) else 0 }}"
+      size_mb: "{{ ((epld_file_stat.stat.size / 1024 / 1024) | round(2)) if (enable_epld_upgrade | bool and epld_file_stat is defined and epld_file_stat.stat is defined) else 0 }}"
+      modified_time: "{{ epld_file_stat.stat.mtime if (enable_epld_upgrade | bool and epld_file_stat is defined and epld_file_stat.stat is defined) else 'unknown' }}"
+      checksum: "{{ epld_file_stat.stat.checksum if (enable_epld_upgrade | bool and epld_file_stat is defined and epld_file_stat.stat is defined) else 'unknown' }}"
