@@ -12,9 +12,7 @@
 - name: Display parsed images (debug only)
   ansible.builtin.debug:
     msg: "Parsed images: {{ parsed_storage.images | join(', ') if parsed_storage.images | length > 0 else 'None' }}"
-  when:
-    - show_debug | bool
-    - parsed_storage is defined
+  when: show_debug | bool
 
 - name: Calculate initial storage metrics
   ansible.builtin.set_fact:
