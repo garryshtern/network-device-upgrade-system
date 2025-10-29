@@ -30,7 +30,7 @@
   ansible.builtin.debug:
     msg:
       - "Device: {{ inventory_hostname }}"
-      - "Model: {{ ansible_net_model }}"
+      - "Model: {{ ansible_net_model | default('unknown') }}"
       - "Firmware File: {{ firmware_filename }}"
       - "Full Path: {{ local_firmware_path }}"
       - "EPLD Enabled: {{ enable_epld_upgrade }}"
