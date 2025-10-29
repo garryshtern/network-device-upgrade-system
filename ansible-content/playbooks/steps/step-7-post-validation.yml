@@ -62,6 +62,37 @@
     validation_phase: "post_upgrade"
     compare_to_baseline: true
 
+- name: Save post-check validation results to file
+  ansible.builtin.copy:
+    content: "{{ network_validation_results | to_nice_json }}"
+    dest: "{{ baseline_base_path }}/{{ inventory_hostname }}_post_check_validation.json"
+  delegate_to: localhost
+  changed_when: false
+
+- name: Display post-upgrade validation deltas and differences
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "POST-UPGRADE VALIDATION RESULTS"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Timestamp: {{ network_validation_results.timestamp | default('N/A') }}"
+      - ""
+      - "Overall Status: {{ network_validation_results.overall_status }}"
+      - "Comparison Status: {{ network_validation_results.comparison_status }}"
+      - ""
+      - "Detailed Deltas:"
+      - "  Interface Status: {{ network_validation_results.interface_status | default('N/A') }}"
+      - "  Routing Status: {{ network_validation_results.routing_status | default('N/A') }}"
+      - "  ARP Status: {{ network_validation_results.arp_status | default('N/A') }}"
+      - "  BGP Status: {{ network_validation_results.bgp_status | default('N/A') }}"
+      - "  BFD Status: {{ network_validation_results.bfd_status | default('N/A') }}"
+      - ""
+      - "{{ network_validation_results.baseline_comparison_detail | default('No detailed comparison available') }}"
+      - ""
+      - "Post-check validation file: {{ baseline_base_path }}/{{ inventory_hostname }}_post_check_validation.json"
+      - "=========================================="
+
 - name: Compare pre/post upgrade states
   ansible.builtin.assert:
     that:
