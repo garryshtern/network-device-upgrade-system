@@ -8,22 +8,23 @@
     firmware_filename: "{{ target_firmware }}"
     local_firmware_path: "{{ firmware_base_path }}/{{ target_firmware }}"
 
-- name: Validate EPLD firmware filename provided (if EPLD upgrade enabled)
-  ansible.builtin.assert:
-    that:
-      - target_epld_firmware is defined
-      - target_epld_firmware | length > 0
-    fail_msg:
-      - "EPLD upgrade enabled but target_epld_firmware not provided"
-      - "You must explicitly specify the EPLD firmware filename"
-      - "Example: target_epld_firmware=n9000-epld.10.3.1.img"
+- name: EPLD setup block (if EPLD upgrade enabled)
   when: enable_epld_upgrade | bool
+  block:
+    - name: Validate EPLD firmware filename provided
+      ansible.builtin.assert:
+        that:
+          - target_epld_firmware is defined
+          - target_epld_firmware | length > 0
+        fail_msg:
+          - "EPLD upgrade enabled but target_epld_firmware not provided"
+          - "You must explicitly specify the EPLD firmware filename"
+          - "Example: target_epld_firmware=n9000-epld.10.3.1.img"
 
-- name: Set EPLD firmware paths (if EPLD upgrade enabled)
-  ansible.builtin.set_fact:
-    epld_firmware_filename: "{{ target_epld_firmware }}"
-    local_epld_path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
-  when: enable_epld_upgrade | bool
+    - name: Set EPLD firmware paths
+      ansible.builtin.set_fact:
+        epld_firmware_filename: "{{ target_epld_firmware }}"
+        local_epld_path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
 
 - name: Display firmware selection
   ansible.builtin.debug:
@@ -40,19 +41,30 @@
 # STEP 3 ran "dir bootflash:" and stored image list in storage_info.images_found
 # Reuse that data instead of running another dir command
 
+- name: Initialize file existence checks (default to not found)
+  ansible.builtin.set_fact:
+    target_firmware_exists: false
+    target_epld_exists_check: false
+
 - name: Check if target firmware and EPLD already exist on device
   ansible.builtin.set_fact:
     target_firmware_exists: "{{ target_firmware in storage_info.images_found }}"
-    target_epld_exists: "{{ target_epld_firmware in storage_info.images_found if (enable_epld_upgrade | bool and target_epld_firmware is defined) else false }}"
+    target_epld_exists_check: "{{ target_epld_firmware in storage_info.images_found if target_epld_firmware is defined else false }}"
   when:
     - storage_info is defined
     - storage_info.images_found is defined
 
-- name: Set files do not exist if storage_info not available
+- name: Set EPLD existence variable based on enable_epld_upgrade
+  when: enable_epld_upgrade | bool
+  block:
+    - name: Set EPLD exists flag when EPLD is enabled
+      ansible.builtin.set_fact:
+        target_epld_exists: "{{ target_epld_exists_check }}"
+
+- name: Set EPLD does not exist when EPLD is disabled
   ansible.builtin.set_fact:
-    target_firmware_exists: false
     target_epld_exists: false
-  when: storage_info is not defined or storage_info.images_found is not defined
+  when: not (enable_epld_upgrade | bool)
 
 - name: Display upload status for firmware and EPLD
   ansible.builtin.debug:
