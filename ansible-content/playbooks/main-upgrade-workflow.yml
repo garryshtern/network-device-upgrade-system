@@ -125,10 +125,6 @@
         - step2
         - step3
         - step4
-        - step5
-        - step6
-        - step7
-        - step8
         - version_check
         - image_check
       when:
@@ -152,10 +148,6 @@
     - name: "STEP 3: Storage Space Validation"
       tags:
         - step3
-        - step5
-        - step6
-        - step7
-        - step8
         - space_check
       block:
         - name: Execute STEP 3 tasks
