@@ -73,15 +73,24 @@ baseline_comparison_excluded_fields:
     - up_time
     - last_state_change
     - state_change_count
+    - remote_disc
+    - local_disc
+    - holddown
   pim_interface_data:
     - uptime
     - hello_interval_running
+    - hello-sent
+    - hello-rcvd
   pim_neighbor_data:
     - uptime
     - expires
   igmp_interface_data:
     - uptime
     - last_reporter
+    - next-query
+    - V2QueriesSent
+    - V2ReportReceived
+    - V2LeaveReceived
   igmp_groups_data:
     - uptime
     - expires
@@ -91,3 +100,6 @@ baseline_comparison_excluded_fields:
     - expires
     - packet_count
     - last_packet_received
+    - uptime_detailed
+    - oif-uptime
+    - oif-uptime-detailed
