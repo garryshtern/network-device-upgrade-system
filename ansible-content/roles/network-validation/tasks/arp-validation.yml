@@ -77,3 +77,81 @@
           total_arp_entries: 0
           platform: "ios"
           raw_output: "{{ ios_arp_info.stdout }}"
+
+# Compare ARP and MAC data against pre-upgrade baseline (post-upgrade only)
+- name: Compare ARP and MAC data (post-upgrade validation)
+  when:
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+    - network_baseline_pre is defined
+    - network_baseline_post is defined
+    - network_baseline_pre.arp_data is defined
+    - network_baseline_post.arp_data is defined
+  block:
+    # ARP Data Comparison
+    - name: Normalize ARP pre-upgrade data for comparison
+      ansible.builtin.include_tasks: normalize-baseline-data.yml
+      vars:
+        data_to_normalize: "{{ network_baseline_pre.arp_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.arp_data }}"
+
+    - name: Store normalized ARP pre data
+      ansible.builtin.set_fact:
+        arp_pre_normalized: "{{ normalized_data }}"
+
+    - name: Normalize ARP post-upgrade data for comparison
+      ansible.builtin.include_tasks: normalize-baseline-data.yml
+      vars:
+        data_to_normalize: "{{ network_baseline_post.arp_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.arp_data }}"
+
+    - name: Calculate ARP deltas (added/removed)
+      ansible.builtin.set_fact:
+        arp_post_normalized: "{{ normalized_data }}"
+        arp_added: "{{ normalized_data | difference(arp_pre_normalized) }}"
+        arp_removed: "{{ arp_pre_normalized | difference(normalized_data) }}"
+
+    - name: Report ARP comparison results
+      ansible.builtin.debug:
+        msg:
+          - "=== ARP Data Comparison ==="
+          - "Pre-upgrade entries: {{ network_baseline_pre.arp_data | length }}"
+          - "Post-upgrade entries: {{ network_baseline_post.arp_data | length }}"
+          - "Match: {{ arp_pre_normalized == arp_post_normalized }}"
+          - "Added entries: {{ arp_added | length }}"
+          - "Removed entries: {{ arp_removed | length }}"
+      when: show_debug | bool
+
+    # MAC Data Comparison
+    - name: Normalize MAC pre-upgrade data for comparison
+      ansible.builtin.include_tasks: normalize-baseline-data.yml
+      vars:
+        data_to_normalize: "{{ network_baseline_pre.mac_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.mac_data }}"
+
+    - name: Store normalized MAC pre data
+      ansible.builtin.set_fact:
+        mac_pre_normalized: "{{ normalized_data }}"
+
+    - name: Normalize MAC post-upgrade data for comparison
+      ansible.builtin.include_tasks: normalize-baseline-data.yml
+      vars:
+        data_to_normalize: "{{ network_baseline_post.mac_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.mac_data }}"
+
+    - name: Calculate MAC deltas (added/removed)
+      ansible.builtin.set_fact:
+        mac_post_normalized: "{{ normalized_data }}"
+        mac_added: "{{ normalized_data | difference(mac_pre_normalized) }}"
+        mac_removed: "{{ mac_pre_normalized | difference(normalized_data) }}"
+
+    - name: Report MAC comparison results
+      ansible.builtin.debug:
+        msg:
+          - "=== MAC Data Comparison ==="
+          - "Pre-upgrade entries: {{ network_baseline_pre.mac_data | length }}"
+          - "Post-upgrade entries: {{ network_baseline_post.mac_data | length }}"
+          - "Match: {{ mac_pre_normalized == mac_post_normalized }}"
+          - "Added entries: {{ mac_added | length }}"
+          - "Removed entries: {{ mac_removed | length }}"
+      when: show_debug | bool
