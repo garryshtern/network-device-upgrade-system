@@ -18,7 +18,7 @@
   block:
     # ARP Data Deltas
     - name: Calculate ARP deltas (if mismatched)
-      when: arp_data in baseline_comparison.sections_with_differences
+      when: "'arp_data' in baseline_comparison.sections_with_differences"
       vars:
         arp_added_items: "{{ network_baseline_post.arp_data | difference(network_baseline_pre.arp_data) }}"
         arp_removed_items: "{{ network_baseline_pre.arp_data | difference(network_baseline_post.arp_data) }}"
@@ -27,7 +27,7 @@
 
     # MAC Data Deltas
     - name: Calculate MAC deltas (if mismatched)
-      when: mac_data in baseline_comparison.sections_with_differences
+      when: "'mac_data' in baseline_comparison.sections_with_differences"
       vars:
         mac_added_items: "{{ network_baseline_post.mac_data | difference(network_baseline_pre.mac_data) }}"
         mac_removed_items: "{{ network_baseline_pre.mac_data | difference(network_baseline_post.mac_data) }}"
@@ -36,7 +36,7 @@
 
     # RIB Data Deltas
     - name: Calculate RIB deltas (if mismatched)
-      when: rib_data in baseline_comparison.sections_with_differences
+      when: "'rib_data' in baseline_comparison.sections_with_differences"
       vars:
         rib_added_items: "{{ network_baseline_post.rib_data | difference(network_baseline_pre.rib_data) }}"
         rib_removed_items: "{{ network_baseline_pre.rib_data | difference(network_baseline_post.rib_data) }}"
@@ -45,7 +45,7 @@
 
     # FIB Data Deltas
     - name: Calculate FIB deltas (if mismatched)
-      when: fib_data in baseline_comparison.sections_with_differences
+      when: "'fib_data' in baseline_comparison.sections_with_differences"
       vars:
         fib_added_items: "{{ network_baseline_post.fib_data | difference(network_baseline_pre.fib_data) }}"
         fib_removed_items: "{{ network_baseline_pre.fib_data | difference(network_baseline_post.fib_data) }}"
@@ -56,7 +56,7 @@
     - name: Calculate BFD deltas (if mismatched)
       when:
         - bfd_enabled | bool
-        - 'bfd_data in baseline_comparison.sections_with_differences'
+        - "'bfd_data' in baseline_comparison.sections_with_differences"
       vars:
         bfd_added_items: "{{ network_baseline_post.bfd_data | difference(network_baseline_pre.bfd_data) }}"
         bfd_removed_items: "{{ network_baseline_pre.bfd_data | difference(network_baseline_post.bfd_data) }}"
@@ -67,7 +67,7 @@
     - name: Calculate PIM interface deltas (if mismatched)
       when:
         - multicast_enabled | bool
-        - 'pim_interface_data in baseline_comparison.sections_with_differences'
+        - "'pim_interface_data' in baseline_comparison.sections_with_differences"
       vars:
         pim_int_added_items: "{{ network_baseline_post.pim_interface_data | difference(network_baseline_pre.pim_interface_data) }}"
         pim_int_removed_items: "{{ network_baseline_pre.pim_interface_data | difference(network_baseline_post.pim_interface_data) }}"
@@ -78,7 +78,7 @@
     - name: Calculate PIM neighbor deltas (if mismatched)
       when:
         - multicast_enabled | bool
-        - 'pim_neighbor_data in baseline_comparison.sections_with_differences'
+        - "'pim_neighbor_data' in baseline_comparison.sections_with_differences"
       vars:
         pim_nbr_added_items: "{{ network_baseline_post.pim_neighbor_data | difference(network_baseline_pre.pim_neighbor_data) }}"
         pim_nbr_removed_items: "{{ network_baseline_pre.pim_neighbor_data | difference(network_baseline_post.pim_neighbor_data) }}"
@@ -89,7 +89,7 @@
     - name: Calculate IGMP interface deltas (if mismatched)
       when:
         - multicast_enabled | bool
-        - 'igmp_interface_data in baseline_comparison.sections_with_differences'
+        - "'igmp_interface_data' in baseline_comparison.sections_with_differences"
       vars:
         igmp_int_added_items: "{{ network_baseline_post.igmp_interface_data | difference(network_baseline_pre.igmp_interface_data) }}"
         igmp_int_removed_items: "{{ network_baseline_pre.igmp_interface_data | difference(network_baseline_post.igmp_interface_data) }}"
@@ -100,7 +100,7 @@
     - name: Calculate IGMP groups deltas (if mismatched)
       when:
         - multicast_enabled | bool
-        - 'igmp_groups_data in baseline_comparison.sections_with_differences'
+        - "'igmp_groups_data' in baseline_comparison.sections_with_differences"
       vars:
         igmp_grp_added_items: "{{ network_baseline_post.igmp_groups_data | difference(network_baseline_pre.igmp_groups_data) }}"
         igmp_grp_removed_items: "{{ network_baseline_pre.igmp_groups_data | difference(network_baseline_post.igmp_groups_data) }}"
@@ -111,7 +111,7 @@
     - name: Calculate Mroute deltas (if mismatched)
       when:
         - multicast_enabled | bool
-        - 'mroute_data in baseline_comparison.sections_with_differences'
+        - "'mroute_data' in baseline_comparison.sections_with_differences"
       vars:
         mroute_added_items: "{{ network_baseline_post.mroute_data | difference(network_baseline_pre.mroute_data) }}"
         mroute_removed_items: "{{ network_baseline_pre.mroute_data | difference(network_baseline_post.mroute_data) }}"
