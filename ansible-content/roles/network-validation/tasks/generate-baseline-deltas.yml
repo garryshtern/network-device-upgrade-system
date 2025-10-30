@@ -18,7 +18,7 @@
   block:
     # ARP Data Deltas
     - name: Calculate ARP deltas (if mismatched)
-      when: 'arp_data in baseline_comparison.sections_with_differences'
+      when: arp_data in baseline_comparison.sections_with_differences
       vars:
         arp_added_items: "{{ network_baseline_post.arp_data | difference(network_baseline_pre.arp_data) }}"
         arp_removed_items: "{{ network_baseline_pre.arp_data | difference(network_baseline_post.arp_data) }}"
@@ -27,7 +27,7 @@
 
     # MAC Data Deltas
     - name: Calculate MAC deltas (if mismatched)
-      when: 'mac_data in baseline_comparison.sections_with_differences'
+      when: mac_data in baseline_comparison.sections_with_differences
       vars:
         mac_added_items: "{{ network_baseline_post.mac_data | difference(network_baseline_pre.mac_data) }}"
         mac_removed_items: "{{ network_baseline_pre.mac_data | difference(network_baseline_post.mac_data) }}"
@@ -36,7 +36,7 @@
 
     # RIB Data Deltas
     - name: Calculate RIB deltas (if mismatched)
-      when: 'rib_data in baseline_comparison.sections_with_differences'
+      when: rib_data in baseline_comparison.sections_with_differences
       vars:
         rib_added_items: "{{ network_baseline_post.rib_data | difference(network_baseline_pre.rib_data) }}"
         rib_removed_items: "{{ network_baseline_pre.rib_data | difference(network_baseline_post.rib_data) }}"
@@ -45,7 +45,7 @@
 
     # FIB Data Deltas
     - name: Calculate FIB deltas (if mismatched)
-      when: 'fib_data in baseline_comparison.sections_with_differences'
+      when: fib_data in baseline_comparison.sections_with_differences
       vars:
         fib_added_items: "{{ network_baseline_post.fib_data | difference(network_baseline_pre.fib_data) }}"
         fib_removed_items: "{{ network_baseline_pre.fib_data | difference(network_baseline_post.fib_data) }}"
