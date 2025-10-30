@@ -19,74 +19,104 @@
     # ARP Data Deltas
     - name: Calculate ARP deltas (if mismatched)
       when: 'arp_data in baseline_comparison.sections_with_differences'
+      vars:
+        arp_added: "{{ (network_baseline_post.arp_data | difference(network_baseline_pre.arp_data)) | length }}"
+        arp_removed: "{{ (network_baseline_pre.arp_data | difference(network_baseline_post.arp_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'arp_data': {'pre_entries': network_baseline_pre.arp_data | length, 'post_entries': network_baseline_post.arp_data | length, 'added': (network_baseline_post.arp_data | difference(network_baseline_pre.arp_data)) | length, 'removed': (network_baseline_pre.arp_data | difference(network_baseline_post.arp_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'arp_data': {'pre_entries': network_baseline_pre.arp_data | length, 'post_entries': network_baseline_post.arp_data | length, 'added': arp_added, 'removed': arp_removed}}) }}"
 
     # MAC Data Deltas
     - name: Calculate MAC deltas (if mismatched)
       when: 'mac_data in baseline_comparison.sections_with_differences'
+      vars:
+        mac_added: "{{ (network_baseline_post.mac_data | difference(network_baseline_pre.mac_data)) | length }}"
+        mac_removed: "{{ (network_baseline_pre.mac_data | difference(network_baseline_post.mac_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'mac_data': {'pre_entries': network_baseline_pre.mac_data | length, 'post_entries': network_baseline_post.mac_data | length, 'added': (network_baseline_post.mac_data | difference(network_baseline_pre.mac_data)) | length, 'removed': (network_baseline_pre.mac_data | difference(network_baseline_post.mac_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'mac_data': {'pre_entries': network_baseline_pre.mac_data | length, 'post_entries': network_baseline_post.mac_data | length, 'added': mac_added, 'removed': mac_removed}}) }}"
 
     # RIB Data Deltas
     - name: Calculate RIB deltas (if mismatched)
       when: 'rib_data in baseline_comparison.sections_with_differences'
+      vars:
+        rib_added: "{{ (network_baseline_post.rib_data | difference(network_baseline_pre.rib_data)) | length }}"
+        rib_removed: "{{ (network_baseline_pre.rib_data | difference(network_baseline_post.rib_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'rib_data': {'pre_entries': network_baseline_pre.rib_data | length, 'post_entries': network_baseline_post.rib_data | length, 'added': (network_baseline_post.rib_data | difference(network_baseline_pre.rib_data)) | length, 'removed': (network_baseline_pre.rib_data | difference(network_baseline_post.rib_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'rib_data': {'pre_entries': network_baseline_pre.rib_data | length, 'post_entries': network_baseline_post.rib_data | length, 'added': rib_added, 'removed': rib_removed}}) }}"
 
     # FIB Data Deltas
     - name: Calculate FIB deltas (if mismatched)
       when: 'fib_data in baseline_comparison.sections_with_differences'
+      vars:
+        fib_added: "{{ (network_baseline_post.fib_data | difference(network_baseline_pre.fib_data)) | length }}"
+        fib_removed: "{{ (network_baseline_pre.fib_data | difference(network_baseline_post.fib_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'fib_data': {'pre_entries': network_baseline_pre.fib_data | length, 'post_entries': network_baseline_post.fib_data | length, 'added': (network_baseline_post.fib_data | difference(network_baseline_pre.fib_data)) | length, 'removed': (network_baseline_pre.fib_data | difference(network_baseline_post.fib_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'fib_data': {'pre_entries': network_baseline_pre.fib_data | length, 'post_entries': network_baseline_post.fib_data | length, 'added': fib_added, 'removed': fib_removed}}) }}"
 
     # BFD Data Deltas (only if BFD enabled)
     - name: Calculate BFD deltas (if mismatched)
       when:
         - bfd_enabled | bool
         - 'bfd_data in baseline_comparison.sections_with_differences'
+      vars:
+        bfd_added: "{{ (network_baseline_post.bfd_data | difference(network_baseline_pre.bfd_data)) | length }}"
+        bfd_removed: "{{ (network_baseline_pre.bfd_data | difference(network_baseline_post.bfd_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'bfd_data': {'pre_entries': network_baseline_pre.bfd_data | length, 'post_entries': network_baseline_post.bfd_data | length, 'added': (network_baseline_post.bfd_data | difference(network_baseline_pre.bfd_data)) | length, 'removed': (network_baseline_pre.bfd_data | difference(network_baseline_post.bfd_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'bfd_data': {'pre_entries': network_baseline_pre.bfd_data | length, 'post_entries': network_baseline_post.bfd_data | length, 'added': bfd_added, 'removed': bfd_removed}}) }}"
 
     # PIM Interface Data Deltas (only if multicast enabled)
     - name: Calculate PIM interface deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'pim_interface_data in baseline_comparison.sections_with_differences'
+      vars:
+        pim_int_added: "{{ (network_baseline_post.pim_interface_data | difference(network_baseline_pre.pim_interface_data)) | length }}"
+        pim_int_removed: "{{ (network_baseline_pre.pim_interface_data | difference(network_baseline_post.pim_interface_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'pim_interface_data': {'pre_entries': network_baseline_pre.pim_interface_data | length, 'post_entries': network_baseline_post.pim_interface_data | length, 'added': (network_baseline_post.pim_interface_data | difference(network_baseline_pre.pim_interface_data)) | length, 'removed': (network_baseline_pre.pim_interface_data | difference(network_baseline_post.pim_interface_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'pim_interface_data': {'pre_entries': network_baseline_pre.pim_interface_data | length, 'post_entries': network_baseline_post.pim_interface_data | length, 'added': pim_int_added, 'removed': pim_int_removed}}) }}"
 
     # PIM Neighbor Data Deltas (only if multicast enabled)
     - name: Calculate PIM neighbor deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'pim_neighbor_data in baseline_comparison.sections_with_differences'
+      vars:
+        pim_nbr_added: "{{ (network_baseline_post.pim_neighbor_data | difference(network_baseline_pre.pim_neighbor_data)) | length }}"
+        pim_nbr_removed: "{{ (network_baseline_pre.pim_neighbor_data | difference(network_baseline_post.pim_neighbor_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'pim_neighbor_data': {'pre_entries': network_baseline_pre.pim_neighbor_data | length, 'post_entries': network_baseline_post.pim_neighbor_data | length, 'added': (network_baseline_post.pim_neighbor_data | difference(network_baseline_pre.pim_neighbor_data)) | length, 'removed': (network_baseline_pre.pim_neighbor_data | difference(network_baseline_post.pim_neighbor_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'pim_neighbor_data': {'pre_entries': network_baseline_pre.pim_neighbor_data | length, 'post_entries': network_baseline_post.pim_neighbor_data | length, 'added': pim_nbr_added, 'removed': pim_nbr_removed}}) }}"
 
     # IGMP Interface Data Deltas (only if multicast enabled)
     - name: Calculate IGMP interface deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'igmp_interface_data in baseline_comparison.sections_with_differences'
+      vars:
+        igmp_int_added: "{{ (network_baseline_post.igmp_interface_data | difference(network_baseline_pre.igmp_interface_data)) | length }}"
+        igmp_int_removed: "{{ (network_baseline_pre.igmp_interface_data | difference(network_baseline_post.igmp_interface_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'igmp_interface_data': {'pre_entries': network_baseline_pre.igmp_interface_data | length, 'post_entries': network_baseline_post.igmp_interface_data | length, 'added': (network_baseline_post.igmp_interface_data | difference(network_baseline_pre.igmp_interface_data)) | length, 'removed': (network_baseline_pre.igmp_interface_data | difference(network_baseline_post.igmp_interface_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'igmp_interface_data': {'pre_entries': network_baseline_pre.igmp_interface_data | length, 'post_entries': network_baseline_post.igmp_interface_data | length, 'added': igmp_int_added, 'removed': igmp_int_removed}}) }}"
 
     # IGMP Groups Data Deltas (only if multicast enabled)
     - name: Calculate IGMP groups deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'igmp_groups_data in baseline_comparison.sections_with_differences'
+      vars:
+        igmp_grp_added: "{{ (network_baseline_post.igmp_groups_data | difference(network_baseline_pre.igmp_groups_data)) | length }}"
+        igmp_grp_removed: "{{ (network_baseline_pre.igmp_groups_data | difference(network_baseline_post.igmp_groups_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'igmp_groups_data': {'pre_entries': network_baseline_pre.igmp_groups_data | length, 'post_entries': network_baseline_post.igmp_groups_data | length, 'added': (network_baseline_post.igmp_groups_data | difference(network_baseline_pre.igmp_groups_data)) | length, 'removed': (network_baseline_pre.igmp_groups_data | difference(network_baseline_post.igmp_groups_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'igmp_groups_data': {'pre_entries': network_baseline_pre.igmp_groups_data | length, 'post_entries': network_baseline_post.igmp_groups_data | length, 'added': igmp_grp_added, 'removed': igmp_grp_removed}}) }}"
 
     # Multicast Route Data Deltas (only if multicast enabled)
     - name: Calculate Mroute deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'mroute_data in baseline_comparison.sections_with_differences'
+      vars:
+        mroute_added: "{{ (network_baseline_post.mroute_data | difference(network_baseline_pre.mroute_data)) | length }}"
+        mroute_removed: "{{ (network_baseline_pre.mroute_data | difference(network_baseline_post.mroute_data)) | length }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'mroute_data': {'pre_entries': network_baseline_pre.mroute_data | length, 'post_entries': network_baseline_post.mroute_data | length, 'added': (network_baseline_post.mroute_data | difference(network_baseline_pre.mroute_data)) | length, 'removed': (network_baseline_pre.mroute_data | difference(network_baseline_post.mroute_data)) | length}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'mroute_data': {'pre_entries': network_baseline_pre.mroute_data | length, 'post_entries': network_baseline_post.mroute_data | length, 'added': mroute_added, 'removed': mroute_removed}}) }}"
 
   when:
     - baseline_comparison.sections_with_differences is defined
