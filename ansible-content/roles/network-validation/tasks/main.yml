@@ -57,12 +57,6 @@
       ansible.builtin.include_tasks: bfd-validation.yml
       when: bfd_enabled | bool
 
-    - name: Run baseline comparison (post-upgrade only)
-      ansible.builtin.include_tasks: baseline-comparison.yml
-      when:
-        - validation_phase is defined
-        - validation_phase == 'post_upgrade'
-
 - name: Aggregate validation results (check mode)
   ansible.builtin.set_fact:
     network_validation_results:

@@ -119,7 +119,11 @@
           - "Post-upgrade entries: {{ network_baseline_post.arp_data | length }}"
           - "Match: {{ arp_pre_normalized == arp_post_normalized }}"
           - "Added entries: {{ arp_added | length }}"
+          - "{{ '' if arp_added | length == 0 else 'Added ARP entries:' }}"
+          - "{{ arp_added | to_nice_json if arp_added | length > 0 else '' }}"
           - "Removed entries: {{ arp_removed | length }}"
+          - "{{ '' if arp_removed | length == 0 else 'Removed ARP entries:' }}"
+          - "{{ arp_removed | to_nice_json if arp_removed | length > 0 else '' }}"
       when: show_debug | bool
 
     # MAC Data Comparison
@@ -153,5 +157,9 @@
           - "Post-upgrade entries: {{ network_baseline_post.mac_data | length }}"
           - "Match: {{ mac_pre_normalized == mac_post_normalized }}"
           - "Added entries: {{ mac_added | length }}"
+          - "{{ '' if mac_added | length == 0 else 'Added MAC entries:' }}"
+          - "{{ mac_added | to_nice_json if mac_added | length > 0 else '' }}"
           - "Removed entries: {{ mac_removed | length }}"
+          - "{{ '' if mac_removed | length == 0 else 'Removed MAC entries:' }}"
+          - "{{ mac_removed | to_nice_json if mac_removed | length > 0 else '' }}"
       when: show_debug | bool
