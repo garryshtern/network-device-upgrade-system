@@ -1,0 +1,33 @@
+---
+# Normalize baseline data by removing time-sensitive fields
+# This task filters out fields that change between measurements (age, uptime, timestamps)
+# enabling meaningful comparison of actual network structure changes
+#
+# Input variables:
+#   - data_to_normalize: The data structure to filter (dict or list)
+#   - fields_to_exclude: List of field names to remove at top level
+#
+# Output variables:
+#   - normalized_data: The filtered data structure with excluded fields removed
+
+- name: Normalize baseline data - remove time-sensitive fields
+  block:
+    - name: Initialize normalized data (handles dict)
+      when: data_to_normalize is mapping
+      ansible.builtin.set_fact:
+        normalized_data: "{{ data_to_normalize | dict2items | rejectattr('key', 'in', fields_to_exclude) | list | items2dict }}"
+
+    - name: Initialize normalized data (handles list)
+      when:
+        - data_to_normalize is iterable
+        - data_to_normalize is not mapping
+        - data_to_normalize is not string
+      ansible.builtin.set_fact:
+        normalized_data: "{{ data_to_normalize }}"
+
+    - name: Initialize normalized data (handles primitives)
+      when:
+        - data_to_normalize is not mapping
+        - data_to_normalize is not iterable or data_to_normalize is string
+      ansible.builtin.set_fact:
+        normalized_data: "{{ data_to_normalize }}"

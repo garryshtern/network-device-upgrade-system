@@ -53,3 +53,39 @@ routing_summary:
 
 # Metrics control
 send_metrics: true
+
+# Baseline comparison - fields to exclude from equality checks
+# These fields are time-sensitive and will change between pre/post measurements
+baseline_comparison_excluded_fields:
+  arp_data:
+    - age
+  mac_data:
+    - age
+  rib_data:
+    - uptime
+    - time
+  fib_data:
+    - uptime
+    - time
+  bfd_data:
+    - up_time
+    - last_state_change
+    - state_change_count
+  pim_interface_data:
+    - uptime
+    - hello_interval_running
+  pim_neighbor_data:
+    - uptime
+    - expires
+  igmp_interface_data:
+    - uptime
+    - last_reporter
+  igmp_groups_data:
+    - uptime
+    - expires
+    - last_reporter
+  mroute_data:
+    - uptime
+    - expires
+    - packet_count
+    - last_packet_received

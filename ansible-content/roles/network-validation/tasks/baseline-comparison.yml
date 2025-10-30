@@ -3,9 +3,12 @@
 # Compares pre-upgrade and post-upgrade network state baselines
 # Validates that critical network state hasn't changed after upgrade
 #
+# NOTE: Input baselines are already normalized (time-sensitive fields removed)
+# by network-resources-gathering.yml before storage, enabling meaningful comparison
+#
 # PREREQUISITES:
-# - network_baseline_pre: Pre-upgrade baseline from file (set by network-resources-gathering)
-# - network_baseline_post: Post-upgrade current state (set by network-resources-gathering)
+# - network_baseline_pre: Pre-upgrade baseline from file (already normalized, set by network-resources-gathering)
+# - network_baseline_post: Post-upgrade current state (already normalized, set by network-resources-gathering)
 # - validation_phase: Must be 'post_upgrade' to run comparison
 
 - name: Initialize baseline comparison results
@@ -247,13 +250,16 @@
             })
           }}
 
-    # Compare BFD Data
+    # Compare BFD Data (only if BFD is enabled)
     - name: Compare bfd_data
+      when: bfd_enabled | bool
       ansible.builtin.set_fact:
         bfd_data_match: "{{ network_baseline_pre.bfd_data == network_baseline_post.bfd_data }}"
 
     - name: Check bfd_data difference
-      when: not bfd_data_match
+      when:
+        - bfd_enabled | bool
+        - not bfd_data_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -267,7 +273,9 @@
           }}
 
     - name: Record bfd_data as matching
-      when: bfd_data_match
+      when:
+        - bfd_enabled | bool
+        - bfd_data_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -279,13 +287,16 @@
             })
           }}
 
-    # Compare PIM Data (interfaces, neighbors, RPs, Anycast RPs)
+    # Compare PIM Data (interfaces, neighbors, RPs, Anycast RPs) - only if multicast is enabled
     - name: Compare pim_interface_data
+      when: multicast_enabled | bool
       ansible.builtin.set_fact:
         pim_interface_match: "{{ network_baseline_pre.pim_interface_data == network_baseline_post.pim_interface_data }}"
 
     - name: Check pim_interface_data difference
-      when: not pim_interface_match
+      when:
+        - multicast_enabled | bool
+        - not pim_interface_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -299,7 +310,9 @@
           }}
 
     - name: Record pim_interface_data as matching
-      when: pim_interface_match
+      when:
+        - multicast_enabled | bool
+        - pim_interface_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -312,11 +325,14 @@
           }}
 
     - name: Compare pim_neighbor_data
+      when: multicast_enabled | bool
       ansible.builtin.set_fact:
         pim_neighbor_match: "{{ network_baseline_pre.pim_neighbor_data == network_baseline_post.pim_neighbor_data }}"
 
     - name: Check pim_neighbor_data difference
-      when: not pim_neighbor_match
+      when:
+        - multicast_enabled | bool
+        - not pim_neighbor_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -330,7 +346,9 @@
           }}
 
     - name: Record pim_neighbor_data as matching
-      when: pim_neighbor_match
+      when:
+        - multicast_enabled | bool
+        - pim_neighbor_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -342,13 +360,16 @@
             })
           }}
 
-    # Compare IGMP Data
+    # Compare IGMP Data (only if multicast is enabled)
     - name: Compare igmp_interface_data
+      when: multicast_enabled | bool
       ansible.builtin.set_fact:
         igmp_interface_match: "{{ network_baseline_pre.igmp_interface_data == network_baseline_post.igmp_interface_data }}"
 
     - name: Check igmp_interface_data difference
-      when: not igmp_interface_match
+      when:
+        - multicast_enabled | bool
+        - not igmp_interface_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -362,7 +383,9 @@
           }}
 
     - name: Record igmp_interface_data as matching
-      when: igmp_interface_match
+      when:
+        - multicast_enabled | bool
+        - igmp_interface_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -374,13 +397,16 @@
             })
           }}
 
-    # Compare Multicast Route Data
+    # Compare Multicast Route Data (only if multicast is enabled)
     - name: Compare mroute_data
+      when: multicast_enabled | bool
       ansible.builtin.set_fact:
         mroute_match: "{{ network_baseline_pre.mroute_data == network_baseline_post.mroute_data }}"
 
     - name: Check mroute_data difference
-      when: not mroute_match
+      when:
+        - multicast_enabled | bool
+        - not mroute_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -394,7 +420,9 @@
           }}
 
     - name: Record mroute_data as matching
-      when: mroute_match
+      when:
+        - multicast_enabled | bool
+        - mroute_match
       ansible.builtin.set_fact:
         baseline_comparison: >-
           {{
@@ -410,6 +438,13 @@
     - name: Mark comparison complete
       ansible.builtin.set_fact:
         baseline_comparison: "{{ baseline_comparison | combine({'comparison_performed': true}) }}"
+
+    # Generate detailed deltas if there are differences
+    - name: Generate detailed baseline deltas for failures
+      ansible.builtin.include_tasks: generate-baseline-deltas.yml
+      when:
+        - baseline_comparison.sections_with_differences is defined
+        - baseline_comparison.sections_with_differences | length > 0
 
 - name: Display baseline comparison results
   ansible.builtin.debug:
