@@ -17,22 +17,11 @@
       ansible.builtin.set_fact:
         normalized_data: "{{ data_to_normalize | dict2items | rejectattr('key', 'in', fields_to_exclude) | list | items2dict }}"
 
-    - name: Initialize normalized data (handles list of dicts)
+    - name: Initialize normalized data (handles list)
       when:
         - data_to_normalize is iterable
         - data_to_normalize is not mapping
         - data_to_normalize is not string
-        - data_to_normalize | length > 0
-        - data_to_normalize[0] is mapping
-      ansible.builtin.set_fact:
-        normalized_data: "{{ data_to_normalize | map('dict2items') | map('rejectattr', 'key', 'in', fields_to_exclude) | map('list') | map('items2dict') | list }}"
-
-    - name: Initialize normalized data (handles list of primitives)
-      when:
-        - data_to_normalize is iterable
-        - data_to_normalize is not mapping
-        - data_to_normalize is not string
-        - data_to_normalize | length == 0 or data_to_normalize[0] is not mapping
       ansible.builtin.set_fact:
         normalized_data: "{{ data_to_normalize }}"
 
