@@ -56,9 +56,11 @@ send_metrics: true
 
 # Baseline comparison - fields to exclude from equality checks
 # These fields are time-sensitive and will change between pre/post measurements
+# Field names are based on actual Cisco NX-OS JSON output from show commands
 baseline_comparison_excluded_fields:
   arp_data:
     - age
+    - time_stamp
   mac_data:
     - age
   rib_data:

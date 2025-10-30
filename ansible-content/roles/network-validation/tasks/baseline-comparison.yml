@@ -460,3 +460,20 @@
       - "Sections with Differences: {{ baseline_comparison.sections_with_differences | join(', ') if baseline_comparison.sections_with_differences | length > 0 else 'None' }}"
       - "=========================================="
   when: show_debug | bool
+
+- name: Display detailed baseline deltas when differences found
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "BASELINE DELTA DETAILS FOR: {{ item | upper }}"
+      - "=========================================="
+      - "Pre-Upgrade Entries: {{ baseline_deltas[item].pre_entries }}"
+      - "Post-Upgrade Entries: {{ baseline_deltas[item].post_entries }}"
+      - "Change Count: {{ (baseline_deltas[item].added | length) + (baseline_deltas[item].removed | length) }}"
+      - ""
+      - "{{ baseline_deltas[item] | to_nice_yaml }}"
+  loop: "{{ baseline_comparison.sections_with_differences }}"
+  when:
+    - show_debug | bool
+    - baseline_deltas is defined
+    - baseline_comparison.sections_with_differences | length > 0
