@@ -20,124 +20,64 @@
     - name: Calculate ARP deltas (if mismatched)
       when: 'arp_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'arp_data': {
-            'pre_count': network_baseline_pre.arp_data | length,
-            'post_count': network_baseline_post.arp_data | length,
-            'delta_count': (network_baseline_post.arp_data | length) - (network_baseline_pre.arp_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'arp_data': {'pre_count': network_baseline_pre.arp_data | length, 'post_count': network_baseline_post.arp_data | length, 'delta_count': (network_baseline_post.arp_data | length) - (network_baseline_pre.arp_data | length)}}) }}"
 
     - name: Calculate MAC deltas (if mismatched)
       when: 'mac_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'mac_data': {
-            'pre_count': network_baseline_pre.mac_data | length,
-            'post_count': network_baseline_post.mac_data | length,
-            'delta_count': (network_baseline_post.mac_data | length) - (network_baseline_pre.mac_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'mac_data': {'pre_count': network_baseline_pre.mac_data | length, 'post_count': network_baseline_post.mac_data | length, 'delta_count': (network_baseline_post.mac_data | length) - (network_baseline_pre.mac_data | length)}}) }}"
 
     - name: Calculate RIB deltas (if mismatched)
       when: 'rib_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'rib_data': {
-            'pre_count': network_baseline_pre.rib_data | length,
-            'post_count': network_baseline_post.rib_data | length,
-            'delta_count': (network_baseline_post.rib_data | length) - (network_baseline_pre.rib_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'rib_data': {'pre_count': network_baseline_pre.rib_data | length, 'post_count': network_baseline_post.rib_data | length, 'delta_count': (network_baseline_post.rib_data | length) - (network_baseline_pre.rib_data | length)}}) }}"
 
     - name: Calculate FIB deltas (if mismatched)
       when: 'fib_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'fib_data': {
-            'pre_count': network_baseline_pre.fib_data | length,
-            'post_count': network_baseline_post.fib_data | length,
-            'delta_count': (network_baseline_post.fib_data | length) - (network_baseline_pre.fib_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'fib_data': {'pre_count': network_baseline_pre.fib_data | length, 'post_count': network_baseline_post.fib_data | length, 'delta_count': (network_baseline_post.fib_data | length) - (network_baseline_pre.fib_data | length)}}) }}"
 
     - name: Calculate BFD deltas (if mismatched)
       when:
         - bfd_enabled | bool
         - 'bfd_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'bfd_data': {
-            'pre_count': network_baseline_pre.bfd_data | length,
-            'post_count': network_baseline_post.bfd_data | length,
-            'delta_count': (network_baseline_post.bfd_data | length) - (network_baseline_pre.bfd_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'bfd_data': {'pre_count': network_baseline_pre.bfd_data | length, 'post_count': network_baseline_post.bfd_data | length, 'delta_count': (network_baseline_post.bfd_data | length) - (network_baseline_pre.bfd_data | length)}}) }}"
 
     - name: Calculate PIM interface deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'pim_interface_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'pim_interface_data': {
-            'pre_count': network_baseline_pre.pim_interface_data | length,
-            'post_count': network_baseline_post.pim_interface_data | length,
-            'delta_count': (network_baseline_post.pim_interface_data | length) - (network_baseline_pre.pim_interface_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'pim_interface_data': {'pre_count': network_baseline_pre.pim_interface_data | length, 'post_count': network_baseline_post.pim_interface_data | length, 'delta_count': (network_baseline_post.pim_interface_data | length) - (network_baseline_pre.pim_interface_data | length)}}) }}"
 
     - name: Calculate PIM neighbor deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'pim_neighbor_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'pim_neighbor_data': {
-            'pre_count': network_baseline_pre.pim_neighbor_data | length,
-            'post_count': network_baseline_post.pim_neighbor_data | length,
-            'delta_count': (network_baseline_post.pim_neighbor_data | length) - (network_baseline_pre.pim_neighbor_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'pim_neighbor_data': {'pre_count': network_baseline_pre.pim_neighbor_data | length, 'post_count': network_baseline_post.pim_neighbor_data | length, 'delta_count': (network_baseline_post.pim_neighbor_data | length) - (network_baseline_pre.pim_neighbor_data | length)}}) }}"
 
     - name: Calculate IGMP interface deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'igmp_interface_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'igmp_interface_data': {
-            'pre_count': network_baseline_pre.igmp_interface_data | length,
-            'post_count': network_baseline_post.igmp_interface_data | length,
-            'delta_count': (network_baseline_post.igmp_interface_data | length) - (network_baseline_pre.igmp_interface_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'igmp_interface_data': {'pre_count': network_baseline_pre.igmp_interface_data | length, 'post_count': network_baseline_post.igmp_interface_data | length, 'delta_count': (network_baseline_post.igmp_interface_data | length) - (network_baseline_pre.igmp_interface_data | length)}}) }}"
 
     - name: Calculate IGMP groups deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'igmp_groups_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'igmp_groups_data': {
-            'pre_count': network_baseline_pre.igmp_groups_data | length,
-            'post_count': network_baseline_post.igmp_groups_data | length,
-            'delta_count': (network_baseline_post.igmp_groups_data | length) - (network_baseline_pre.igmp_groups_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'igmp_groups_data': {'pre_count': network_baseline_pre.igmp_groups_data | length, 'post_count': network_baseline_post.igmp_groups_data | length, 'delta_count': (network_baseline_post.igmp_groups_data | length) - (network_baseline_pre.igmp_groups_data | length)}}) }}"
 
     - name: Calculate Mroute deltas (if mismatched)
       when:
         - multicast_enabled | bool
         - 'mroute_data in baseline_comparison.sections_with_differences'
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({
-          'mroute_data': {
-            'pre_count': network_baseline_pre.mroute_data | length,
-            'post_count': network_baseline_post.mroute_data | length,
-            'delta_count': (network_baseline_post.mroute_data | length) - (network_baseline_pre.mroute_data | length)
-          }
-        }) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'mroute_data': {'pre_count': network_baseline_pre.mroute_data | length, 'post_count': network_baseline_post.mroute_data | length, 'delta_count': (network_baseline_post.mroute_data | length) - (network_baseline_pre.mroute_data | length)}}) }}"
 
   when:
     - baseline_comparison.sections_with_differences is defined
