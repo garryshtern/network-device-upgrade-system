@@ -182,14 +182,17 @@ This issue is resolved in Ansible 11.0.0+. Update to required version:
 pip uninstall ansible ansible-core ansible-base -y
 pip install ansible==11.0.0
 
-# Install latest collection versions (as of September 11, 2025)
+# Install latest collection versions (as of October 30, 2025)
 ansible-galaxy collection install \
   cisco.nxos:11.0.0 \
-  cisco.ios:11.0.0 \
+  cisco.ios:11.1.1 \
   fortinet.fortios:2.4.0 \
   ansible.netcommon:8.1.0 \
-  community.general:11.3.0 \
+  community.general:11.4.0 \
   ansible.utils:6.0.0 \
+  community.crypto:3.0.5 \
+  ansible.posix:1.6.2 \
+  netbox.netbox:3.21.0 \
   --force --upgrade --ignore-certs
 ```
 
