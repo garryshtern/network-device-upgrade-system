@@ -48,8 +48,17 @@
             arp_removed_items: "{{ arp_pre_normalized | difference(normalized_data) }}"
 
         - name: Record ARP deltas
-          ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'arp_data': {'pre_entries': network_baseline_pre.arp_data | length, 'post_entries': network_baseline_post.arp_data | length, 'change_count': arp_added_items | length + arp_removed_items | length, 'added': arp_added_items, 'removed': arp_removed_items}}) }}"
+          set_fact:
+            arp_delta_record:
+              pre_entries: "{{ network_baseline_pre.arp_data | length }}"
+              post_entries: "{{ network_baseline_post.arp_data | length }}"
+              change_count: "{{ arp_added_items | length + arp_removed_items | length }}"
+              added: "{{ arp_added_items }}"
+              removed: "{{ arp_removed_items }}"
+
+        - name: Update baseline_deltas with ARP results
+          set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'arp_data': arp_delta_record}) }}"
 
     # MAC Data Deltas
     - name: Calculate MAC deltas (if mismatched)
@@ -79,7 +88,16 @@
 
         - name: Record MAC deltas
           ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'mac_data': {'pre_entries': network_baseline_pre.mac_data | length, 'post_entries': network_baseline_post.mac_data | length, 'change_count': mac_added_items | length + mac_removed_items | length, 'added': mac_added_items, 'removed': mac_removed_items}}) }}"
+            mac_delta_record:
+              pre_entries: "{{ network_baseline_pre.mac_data | length }}"
+              post_entries: "{{ network_baseline_post.mac_data | length }}"
+              change_count: "{{ mac_added_items | length + mac_removed_items | length }}"
+              added: "{{ mac_added_items }}"
+              removed: "{{ mac_removed_items }}"
+
+        - name: Update baseline_deltas with MAC results
+          ansible.builtin.set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'mac_data': mac_delta_record}) }}"
 
     # RIB Data Deltas
     - name: Calculate RIB deltas (if mismatched)
@@ -109,7 +127,16 @@
 
         - name: Record RIB deltas
           ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'rib_data': {'pre_entries': network_baseline_pre.rib_data | length, 'post_entries': network_baseline_post.rib_data | length, 'change_count': rib_added_items | length + rib_removed_items | length, 'added': rib_added_items, 'removed': rib_removed_items}}) }}"
+            rib_delta_record:
+              pre_entries: "{{ network_baseline_pre.rib_data | length }}"
+              post_entries: "{{ network_baseline_post.rib_data | length }}"
+              change_count: "{{ rib_added_items | length + rib_removed_items | length }}"
+              added: "{{ rib_added_items }}"
+              removed: "{{ rib_removed_items }}"
+
+        - name: Update baseline_deltas with RIB results
+          ansible.builtin.set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'rib_data': rib_delta_record}) }}"
 
     # FIB Data Deltas
     - name: Calculate FIB deltas (if mismatched)
@@ -139,7 +166,16 @@
 
         - name: Record FIB deltas
           ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'fib_data': {'pre_entries': network_baseline_pre.fib_data | length, 'post_entries': network_baseline_post.fib_data | length, 'change_count': fib_added_items | length + fib_removed_items | length, 'added': fib_added_items, 'removed': fib_removed_items}}) }}"
+            fib_delta_record:
+              pre_entries: "{{ network_baseline_pre.fib_data | length }}"
+              post_entries: "{{ network_baseline_post.fib_data | length }}"
+              change_count: "{{ fib_added_items | length + fib_removed_items | length }}"
+              added: "{{ fib_added_items }}"
+              removed: "{{ fib_removed_items }}"
+
+        - name: Update baseline_deltas with FIB results
+          ansible.builtin.set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'fib_data': fib_delta_record}) }}"
 
     # BFD Data Deltas (only if BFD enabled)
     - name: Calculate BFD deltas (if mismatched)
@@ -171,7 +207,16 @@
 
         - name: Record BFD deltas
           ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'bfd_data': {'pre_entries': network_baseline_pre.bfd_data | length, 'post_entries': network_baseline_post.bfd_data | length, 'change_count': bfd_added_items | length + bfd_removed_items | length, 'added': bfd_added_items, 'removed': bfd_removed_items}}) }}"
+            bfd_delta_record:
+              pre_entries: "{{ network_baseline_pre.bfd_data | length }}"
+              post_entries: "{{ network_baseline_post.bfd_data | length }}"
+              change_count: "{{ bfd_added_items | length + bfd_removed_items | length }}"
+              added: "{{ bfd_added_items }}"
+              removed: "{{ bfd_removed_items }}"
+
+        - name: Update baseline_deltas with BFD results
+          ansible.builtin.set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'bfd_data': bfd_delta_record}) }}"
 
     # PIM Interface Data Deltas (only if multicast enabled)
     - name: Calculate PIM interface deltas (if mismatched)
@@ -203,7 +248,16 @@
 
         - name: Record PIM interface deltas
           ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'pim_interface_data': {'pre_entries': network_baseline_pre.pim_interface_data | length, 'post_entries': network_baseline_post.pim_interface_data | length, 'change_count': pim_int_added_items | length + pim_int_removed_items | length, 'added': pim_int_added_items, 'removed': pim_int_removed_items}}) }}"
+            pim_int_delta_record:
+              pre_entries: "{{ network_baseline_pre.pim_interface_data | length }}"
+              post_entries: "{{ network_baseline_post.pim_interface_data | length }}"
+              change_count: "{{ pim_int_added_items | length + pim_int_removed_items | length }}"
+              added: "{{ pim_int_added_items }}"
+              removed: "{{ pim_int_removed_items }}"
+
+        - name: Update baseline_deltas with PIM interface results
+          ansible.builtin.set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'pim_interface_data': pim_int_delta_record}) }}"
 
     # PIM Neighbor Data Deltas (only if multicast enabled)
     - name: Calculate PIM neighbor deltas (if mismatched)
@@ -235,7 +289,16 @@
 
         - name: Record PIM neighbor deltas
           ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'pim_neighbor_data': {'pre_entries': network_baseline_pre.pim_neighbor_data | length, 'post_entries': network_baseline_post.pim_neighbor_data | length, 'change_count': pim_nbr_added_items | length + pim_nbr_removed_items | length, 'added': pim_nbr_added_items, 'removed': pim_nbr_removed_items}}) }}"
+            pim_nbr_delta_record:
+              pre_entries: "{{ network_baseline_pre.pim_neighbor_data | length }}"
+              post_entries: "{{ network_baseline_post.pim_neighbor_data | length }}"
+              change_count: "{{ pim_nbr_added_items | length + pim_nbr_removed_items | length }}"
+              added: "{{ pim_nbr_added_items }}"
+              removed: "{{ pim_nbr_removed_items }}"
+
+        - name: Update baseline_deltas with PIM neighbor results
+          ansible.builtin.set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'pim_neighbor_data': pim_nbr_delta_record}) }}"
 
     # IGMP Interface Data Deltas (only if multicast enabled)
     - name: Calculate IGMP interface deltas (if mismatched)
@@ -267,7 +330,16 @@
 
         - name: Record IGMP interface deltas
           ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'igmp_interface_data': {'pre_entries': network_baseline_pre.igmp_interface_data | length, 'post_entries': network_baseline_post.igmp_interface_data | length, 'change_count': igmp_int_added_items | length + igmp_int_removed_items | length, 'added': igmp_int_added_items, 'removed': igmp_int_removed_items}}) }}"
+            igmp_int_delta_record:
+              pre_entries: "{{ network_baseline_pre.igmp_interface_data | length }}"
+              post_entries: "{{ network_baseline_post.igmp_interface_data | length }}"
+              change_count: "{{ igmp_int_added_items | length + igmp_int_removed_items | length }}"
+              added: "{{ igmp_int_added_items }}"
+              removed: "{{ igmp_int_removed_items }}"
+
+        - name: Update baseline_deltas with IGMP interface results
+          ansible.builtin.set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'igmp_interface_data': igmp_int_delta_record}) }}"
 
     # IGMP Groups Data Deltas (only if multicast enabled)
     - name: Calculate IGMP groups deltas (if mismatched)
@@ -299,7 +371,16 @@
 
         - name: Record IGMP groups deltas
           ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'igmp_groups_data': {'pre_entries': network_baseline_pre.igmp_groups_data | length, 'post_entries': network_baseline_post.igmp_groups_data | length, 'change_count': igmp_grp_added_items | length + igmp_grp_removed_items | length, 'added': igmp_grp_added_items, 'removed': igmp_grp_removed_items}}) }}"
+            igmp_grp_delta_record:
+              pre_entries: "{{ network_baseline_pre.igmp_groups_data | length }}"
+              post_entries: "{{ network_baseline_post.igmp_groups_data | length }}"
+              change_count: "{{ igmp_grp_added_items | length + igmp_grp_removed_items | length }}"
+              added: "{{ igmp_grp_added_items }}"
+              removed: "{{ igmp_grp_removed_items }}"
+
+        - name: Update baseline_deltas with IGMP groups results
+          ansible.builtin.set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'igmp_groups_data': igmp_grp_delta_record}) }}"
 
     # Multicast Route Data Deltas (only if multicast enabled)
     - name: Calculate Mroute deltas (if mismatched)
@@ -331,7 +412,16 @@
 
         - name: Record Mroute deltas
           ansible.builtin.set_fact:
-            baseline_deltas: "{{ baseline_deltas | combine({'mroute_data': {'pre_entries': network_baseline_pre.mroute_data | length, 'post_entries': network_baseline_post.mroute_data | length, 'change_count': mroute_added_items | length + mroute_removed_items | length, 'added': mroute_added_items, 'removed': mroute_removed_items}}) }}"
+            mroute_delta_record:
+              pre_entries: "{{ network_baseline_pre.mroute_data | length }}"
+              post_entries: "{{ network_baseline_post.mroute_data | length }}"
+              change_count: "{{ mroute_added_items | length + mroute_removed_items | length }}"
+              added: "{{ mroute_added_items }}"
+              removed: "{{ mroute_removed_items }}"
+
+        - name: Update baseline_deltas with Mroute results
+          ansible.builtin.set_fact:
+            baseline_deltas: "{{ baseline_deltas | combine({'mroute_data': mroute_delta_record}) }}"
 
   when:
     - baseline_comparison.sections_with_differences is defined
