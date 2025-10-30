@@ -4,7 +4,7 @@
 # enabling meaningful comparison of actual network structure changes
 #
 # Input variables:
-#   - data_to_normalize: The data structure to filter (dict or list)
+#   - data_to_normalize: The data structure to filter (dict, list of dicts, or primitive)
 #   - fields_to_exclude: List of field names to remove at top level
 #
 # Output variables:
@@ -12,20 +12,31 @@
 
 - name: Normalize baseline data - remove time-sensitive fields
   block:
-    - name: Initialize normalized data (handles dict)
+    - name: Normalize single dict
       when: data_to_normalize is mapping
       ansible.builtin.set_fact:
         normalized_data: "{{ data_to_normalize | dict2items | rejectattr('key', 'in', fields_to_exclude) | list | items2dict }}"
 
-    - name: Initialize normalized data (handles list)
+    - name: Normalize list of dicts
       when:
         - data_to_normalize is iterable
         - data_to_normalize is not mapping
         - data_to_normalize is not string
+        - data_to_normalize | length > 0
+        - data_to_normalize[0] is mapping
+      ansible.builtin.set_fact:
+        normalized_data: "{{ data_to_normalize | map('dict2items') | map('rejectattr', 'key', 'in', fields_to_exclude) | map('list', 'items2dict') | list }}"
+
+    - name: Handle empty lists or non-dict iterables
+      when:
+        - data_to_normalize is iterable
+        - data_to_normalize is not mapping
+        - data_to_normalize is not string
+        - (data_to_normalize | length == 0 or data_to_normalize[0] is not mapping)
       ansible.builtin.set_fact:
         normalized_data: "{{ data_to_normalize }}"
 
-    - name: Initialize normalized data (handles primitives)
+    - name: Handle primitives
       when:
         - data_to_normalize is not mapping
         - data_to_normalize is not iterable or data_to_normalize is string
