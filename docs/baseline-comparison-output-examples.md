@@ -4,6 +4,22 @@
 
 This document shows example output from the baseline comparison functionality when comparing pre-upgrade and post-upgrade network state.
 
+## Technical Note: Delta Generation
+
+The baseline comparison system uses a two-phase approach:
+
+1. **Comparison Phase**: Detects differences between pre-upgrade and post-upgrade baselines by excluding time-sensitive fields (age, uptime, timestamps, etc.) from the equality check. Only structural network changes are flagged.
+
+2. **Delta Generation Phase**: When differences are detected, the system calculates what changed. To ensure accuracy, delta calculation MUST also exclude time-sensitive fields before using the `difference()` filter. This prevents false positives where two structurally identical entries would appear as different just because their time fields changed.
+
+**Critical Implementation Detail**: Each data type (arp_data, mac_data, rib_data, etc.) is normalized BEFORE applying difference() by:
+- Converting each dict entry to dict2items
+- Using rejectattr to filter out excluded fields
+- Converting back to items2dict
+- Then applying the difference() filter on the normalized data
+
+This ensures delta lists contain only structural changes, matching the detection phase.
+
 ## Summary Output
 
 When baseline comparison completes, it displays a summary:

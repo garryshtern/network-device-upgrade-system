@@ -3,12 +3,17 @@
 # Shows exactly what changed between pre and post upgrade states
 #
 # Input variables:
-#   - network_baseline_pre: Pre-upgrade baseline data (already normalized)
-#   - network_baseline_post: Post-upgrade baseline data (already normalized)
+#   - network_baseline_pre: Pre-upgrade baseline data
+#   - network_baseline_post: Post-upgrade baseline data
 #   - baseline_comparison: Comparison results with sections_with_differences
+#   - baseline_comparison_excluded_fields: Fields to exclude from delta calculations
 #
 # Output variables:
 #   - baseline_deltas: Detailed delta information with added/removed items per data type
+#
+# NOTE: Time-sensitive fields MUST be excluded before calculating deltas using difference()
+#       The difference() filter compares entire dict entries, so if time fields differ,
+#       no matches will be found even for structurally identical entries.
 
 - name: Initialize baseline deltas
   ansible.builtin.set_fact:
@@ -16,41 +21,56 @@
 
 - name: Generate deltas for mismatched sections
   block:
+    # Helper filter: Normalize a list of dicts by removing time-sensitive fields
+    # This ensures difference() comparison is based on structural content only
+
     # ARP Data Deltas
     - name: Calculate ARP deltas (if mismatched)
       when: "'arp_data' in baseline_comparison.sections_with_differences"
       vars:
-        arp_added_items: "{{ network_baseline_post.arp_data | difference(network_baseline_pre.arp_data) }}"
-        arp_removed_items: "{{ network_baseline_pre.arp_data | difference(network_baseline_post.arp_data) }}"
+        # Normalize by removing time-sensitive fields (age, time_stamp)
+        arp_pre_normalized: "{{ network_baseline_pre.arp_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.arp_data) | map('list', 'items2dict') | list }}"
+        arp_post_normalized: "{{ network_baseline_post.arp_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.arp_data) | map('list', 'items2dict') | list }}"
+        arp_added_items: "{{ arp_post_normalized | difference(arp_pre_normalized) }}"
+        arp_removed_items: "{{ arp_pre_normalized | difference(arp_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'arp_data': {'pre_entries': network_baseline_pre.arp_data | length, 'post_entries': network_baseline_post.arp_data | length, 'added': arp_added_items, 'removed': arp_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'arp_data': {'pre_entries': network_baseline_pre.arp_data | length, 'post_entries': network_baseline_post.arp_data | length, 'change_count': arp_added_items | length + arp_removed_items | length, 'added': arp_added_items, 'removed': arp_removed_items}}) }}"
 
     # MAC Data Deltas
     - name: Calculate MAC deltas (if mismatched)
       when: "'mac_data' in baseline_comparison.sections_with_differences"
       vars:
-        mac_added_items: "{{ network_baseline_post.mac_data | difference(network_baseline_pre.mac_data) }}"
-        mac_removed_items: "{{ network_baseline_pre.mac_data | difference(network_baseline_post.mac_data) }}"
+        # Normalize by removing time-sensitive fields (age)
+        mac_pre_normalized: "{{ network_baseline_pre.mac_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.mac_data) | map('list', 'items2dict') | list }}"
+        mac_post_normalized: "{{ network_baseline_post.mac_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.mac_data) | map('list', 'items2dict') | list }}"
+        mac_added_items: "{{ mac_post_normalized | difference(mac_pre_normalized) }}"
+        mac_removed_items: "{{ mac_pre_normalized | difference(mac_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'mac_data': {'pre_entries': network_baseline_pre.mac_data | length, 'post_entries': network_baseline_post.mac_data | length, 'added': mac_added_items, 'removed': mac_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'mac_data': {'pre_entries': network_baseline_pre.mac_data | length, 'post_entries': network_baseline_post.mac_data | length, 'change_count': mac_added_items | length + mac_removed_items | length, 'added': mac_added_items, 'removed': mac_removed_items}}) }}"
 
     # RIB Data Deltas
     - name: Calculate RIB deltas (if mismatched)
       when: "'rib_data' in baseline_comparison.sections_with_differences"
       vars:
-        rib_added_items: "{{ network_baseline_post.rib_data | difference(network_baseline_pre.rib_data) }}"
-        rib_removed_items: "{{ network_baseline_pre.rib_data | difference(network_baseline_post.rib_data) }}"
+        # Normalize by removing time-sensitive fields (uptime, time)
+        rib_pre_normalized: "{{ network_baseline_pre.rib_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.rib_data) | map('list', 'items2dict') | list }}"
+        rib_post_normalized: "{{ network_baseline_post.rib_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.rib_data) | map('list', 'items2dict') | list }}"
+        rib_added_items: "{{ rib_post_normalized | difference(rib_pre_normalized) }}"
+        rib_removed_items: "{{ rib_pre_normalized | difference(rib_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'rib_data': {'pre_entries': network_baseline_pre.rib_data | length, 'post_entries': network_baseline_post.rib_data | length, 'added': rib_added_items, 'removed': rib_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'rib_data': {'pre_entries': network_baseline_pre.rib_data | length, 'post_entries': network_baseline_post.rib_data | length, 'change_count': rib_added_items | length + rib_removed_items | length, 'added': rib_added_items, 'removed': rib_removed_items}}) }}"
 
     # FIB Data Deltas
     - name: Calculate FIB deltas (if mismatched)
       when: "'fib_data' in baseline_comparison.sections_with_differences"
       vars:
-        fib_added_items: "{{ network_baseline_post.fib_data | difference(network_baseline_pre.fib_data) }}"
-        fib_removed_items: "{{ network_baseline_pre.fib_data | difference(network_baseline_post.fib_data) }}"
+        # Normalize by removing time-sensitive fields (uptime, time)
+        fib_pre_normalized: "{{ network_baseline_pre.fib_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.fib_data) | map('list', 'items2dict') | list }}"
+        fib_post_normalized: "{{ network_baseline_post.fib_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.fib_data) | map('list', 'items2dict') | list }}"
+        fib_added_items: "{{ fib_post_normalized | difference(fib_pre_normalized) }}"
+        fib_removed_items: "{{ fib_pre_normalized | difference(fib_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'fib_data': {'pre_entries': network_baseline_pre.fib_data | length, 'post_entries': network_baseline_post.fib_data | length, 'added': fib_added_items, 'removed': fib_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'fib_data': {'pre_entries': network_baseline_pre.fib_data | length, 'post_entries': network_baseline_post.fib_data | length, 'change_count': fib_added_items | length + fib_removed_items | length, 'added': fib_added_items, 'removed': fib_removed_items}}) }}"
 
     # BFD Data Deltas (only if BFD enabled)
     - name: Calculate BFD deltas (if mismatched)
@@ -58,10 +78,13 @@
         - bfd_enabled | bool
         - "'bfd_data' in baseline_comparison.sections_with_differences"
       vars:
-        bfd_added_items: "{{ network_baseline_post.bfd_data | difference(network_baseline_pre.bfd_data) }}"
-        bfd_removed_items: "{{ network_baseline_pre.bfd_data | difference(network_baseline_post.bfd_data) }}"
+        # Normalize by removing time-sensitive fields (up_time, last_state_change, state_change_count, remote_disc, local_disc, holddown)
+        bfd_pre_normalized: "{{ network_baseline_pre.bfd_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.bfd_data) | map('list', 'items2dict') | list }}"
+        bfd_post_normalized: "{{ network_baseline_post.bfd_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.bfd_data) | map('list', 'items2dict') | list }}"
+        bfd_added_items: "{{ bfd_post_normalized | difference(bfd_pre_normalized) }}"
+        bfd_removed_items: "{{ bfd_pre_normalized | difference(bfd_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'bfd_data': {'pre_entries': network_baseline_pre.bfd_data | length, 'post_entries': network_baseline_post.bfd_data | length, 'added': bfd_added_items, 'removed': bfd_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'bfd_data': {'pre_entries': network_baseline_pre.bfd_data | length, 'post_entries': network_baseline_post.bfd_data | length, 'change_count': bfd_added_items | length + bfd_removed_items | length, 'added': bfd_added_items, 'removed': bfd_removed_items}}) }}"
 
     # PIM Interface Data Deltas (only if multicast enabled)
     - name: Calculate PIM interface deltas (if mismatched)
@@ -69,10 +92,13 @@
         - multicast_enabled | bool
         - "'pim_interface_data' in baseline_comparison.sections_with_differences"
       vars:
-        pim_int_added_items: "{{ network_baseline_post.pim_interface_data | difference(network_baseline_pre.pim_interface_data) }}"
-        pim_int_removed_items: "{{ network_baseline_pre.pim_interface_data | difference(network_baseline_post.pim_interface_data) }}"
+        # Normalize by removing time-sensitive fields (uptime, hello_interval_running, hello-sent, hello-rcvd)
+        pim_int_pre_normalized: "{{ network_baseline_pre.pim_interface_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.pim_interface_data) | map('list', 'items2dict') | list }}"
+        pim_int_post_normalized: "{{ network_baseline_post.pim_interface_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.pim_interface_data) | map('list', 'items2dict') | list }}"
+        pim_int_added_items: "{{ pim_int_post_normalized | difference(pim_int_pre_normalized) }}"
+        pim_int_removed_items: "{{ pim_int_pre_normalized | difference(pim_int_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'pim_interface_data': {'pre_entries': network_baseline_pre.pim_interface_data | length, 'post_entries': network_baseline_post.pim_interface_data | length, 'added': pim_int_added_items, 'removed': pim_int_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'pim_interface_data': {'pre_entries': network_baseline_pre.pim_interface_data | length, 'post_entries': network_baseline_post.pim_interface_data | length, 'change_count': pim_int_added_items | length + pim_int_removed_items | length, 'added': pim_int_added_items, 'removed': pim_int_removed_items}}) }}"
 
     # PIM Neighbor Data Deltas (only if multicast enabled)
     - name: Calculate PIM neighbor deltas (if mismatched)
@@ -80,10 +106,13 @@
         - multicast_enabled | bool
         - "'pim_neighbor_data' in baseline_comparison.sections_with_differences"
       vars:
-        pim_nbr_added_items: "{{ network_baseline_post.pim_neighbor_data | difference(network_baseline_pre.pim_neighbor_data) }}"
-        pim_nbr_removed_items: "{{ network_baseline_pre.pim_neighbor_data | difference(network_baseline_post.pim_neighbor_data) }}"
+        # Normalize by removing time-sensitive fields (uptime, expires)
+        pim_nbr_pre_normalized: "{{ network_baseline_pre.pim_neighbor_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.pim_neighbor_data) | map('list', 'items2dict') | list }}"
+        pim_nbr_post_normalized: "{{ network_baseline_post.pim_neighbor_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.pim_neighbor_data) | map('list', 'items2dict') | list }}"
+        pim_nbr_added_items: "{{ pim_nbr_post_normalized | difference(pim_nbr_pre_normalized) }}"
+        pim_nbr_removed_items: "{{ pim_nbr_pre_normalized | difference(pim_nbr_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'pim_neighbor_data': {'pre_entries': network_baseline_pre.pim_neighbor_data | length, 'post_entries': network_baseline_post.pim_neighbor_data | length, 'added': pim_nbr_added_items, 'removed': pim_nbr_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'pim_neighbor_data': {'pre_entries': network_baseline_pre.pim_neighbor_data | length, 'post_entries': network_baseline_post.pim_neighbor_data | length, 'change_count': pim_nbr_added_items | length + pim_nbr_removed_items | length, 'added': pim_nbr_added_items, 'removed': pim_nbr_removed_items}}) }}"
 
     # IGMP Interface Data Deltas (only if multicast enabled)
     - name: Calculate IGMP interface deltas (if mismatched)
@@ -91,10 +120,13 @@
         - multicast_enabled | bool
         - "'igmp_interface_data' in baseline_comparison.sections_with_differences"
       vars:
-        igmp_int_added_items: "{{ network_baseline_post.igmp_interface_data | difference(network_baseline_pre.igmp_interface_data) }}"
-        igmp_int_removed_items: "{{ network_baseline_pre.igmp_interface_data | difference(network_baseline_post.igmp_interface_data) }}"
+        # Normalize by removing time-sensitive fields (uptime, last_reporter, next-query, V2QueriesSent, V2ReportReceived, V2LeaveReceived)
+        igmp_int_pre_normalized: "{{ network_baseline_pre.igmp_interface_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.igmp_interface_data) | map('list', 'items2dict') | list }}"
+        igmp_int_post_normalized: "{{ network_baseline_post.igmp_interface_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.igmp_interface_data) | map('list', 'items2dict') | list }}"
+        igmp_int_added_items: "{{ igmp_int_post_normalized | difference(igmp_int_pre_normalized) }}"
+        igmp_int_removed_items: "{{ igmp_int_pre_normalized | difference(igmp_int_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'igmp_interface_data': {'pre_entries': network_baseline_pre.igmp_interface_data | length, 'post_entries': network_baseline_post.igmp_interface_data | length, 'added': igmp_int_added_items, 'removed': igmp_int_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'igmp_interface_data': {'pre_entries': network_baseline_pre.igmp_interface_data | length, 'post_entries': network_baseline_post.igmp_interface_data | length, 'change_count': igmp_int_added_items | length + igmp_int_removed_items | length, 'added': igmp_int_added_items, 'removed': igmp_int_removed_items}}) }}"
 
     # IGMP Groups Data Deltas (only if multicast enabled)
     - name: Calculate IGMP groups deltas (if mismatched)
@@ -102,10 +134,13 @@
         - multicast_enabled | bool
         - "'igmp_groups_data' in baseline_comparison.sections_with_differences"
       vars:
-        igmp_grp_added_items: "{{ network_baseline_post.igmp_groups_data | difference(network_baseline_pre.igmp_groups_data) }}"
-        igmp_grp_removed_items: "{{ network_baseline_pre.igmp_groups_data | difference(network_baseline_post.igmp_groups_data) }}"
+        # Normalize by removing time-sensitive fields (uptime, expires, last_reporter)
+        igmp_grp_pre_normalized: "{{ network_baseline_pre.igmp_groups_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.igmp_groups_data) | map('list', 'items2dict') | list }}"
+        igmp_grp_post_normalized: "{{ network_baseline_post.igmp_groups_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.igmp_groups_data) | map('list', 'items2dict') | list }}"
+        igmp_grp_added_items: "{{ igmp_grp_post_normalized | difference(igmp_grp_pre_normalized) }}"
+        igmp_grp_removed_items: "{{ igmp_grp_pre_normalized | difference(igmp_grp_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'igmp_groups_data': {'pre_entries': network_baseline_pre.igmp_groups_data | length, 'post_entries': network_baseline_post.igmp_groups_data | length, 'added': igmp_grp_added_items, 'removed': igmp_grp_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'igmp_groups_data': {'pre_entries': network_baseline_pre.igmp_groups_data | length, 'post_entries': network_baseline_post.igmp_groups_data | length, 'change_count': igmp_grp_added_items | length + igmp_grp_removed_items | length, 'added': igmp_grp_added_items, 'removed': igmp_grp_removed_items}}) }}"
 
     # Multicast Route Data Deltas (only if multicast enabled)
     - name: Calculate Mroute deltas (if mismatched)
@@ -113,10 +148,13 @@
         - multicast_enabled | bool
         - "'mroute_data' in baseline_comparison.sections_with_differences"
       vars:
-        mroute_added_items: "{{ network_baseline_post.mroute_data | difference(network_baseline_pre.mroute_data) }}"
-        mroute_removed_items: "{{ network_baseline_pre.mroute_data | difference(network_baseline_post.mroute_data) }}"
+        # Normalize by removing time-sensitive fields (uptime, expires, packet_count, last_packet_received, uptime_detailed, oif-uptime, oif-uptime-detailed)
+        mroute_pre_normalized: "{{ network_baseline_pre.mroute_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.mroute_data) | map('list', 'items2dict') | list }}"
+        mroute_post_normalized: "{{ network_baseline_post.mroute_data | map('dict2items') | map('rejectattr', 'key', 'in', baseline_comparison_excluded_fields.mroute_data) | map('list', 'items2dict') | list }}"
+        mroute_added_items: "{{ mroute_post_normalized | difference(mroute_pre_normalized) }}"
+        mroute_removed_items: "{{ mroute_pre_normalized | difference(mroute_post_normalized) }}"
       ansible.builtin.set_fact:
-        baseline_deltas: "{{ baseline_deltas | combine({'mroute_data': {'pre_entries': network_baseline_pre.mroute_data | length, 'post_entries': network_baseline_post.mroute_data | length, 'added': mroute_added_items, 'removed': mroute_removed_items}}) }}"
+        baseline_deltas: "{{ baseline_deltas | combine({'mroute_data': {'pre_entries': network_baseline_pre.mroute_data | length, 'post_entries': network_baseline_post.mroute_data | length, 'change_count': mroute_added_items | length + mroute_removed_items | length, 'added': mroute_added_items, 'removed': mroute_removed_items}}) }}"
 
   when:
     - baseline_comparison.sections_with_differences is defined
