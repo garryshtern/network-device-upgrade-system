@@ -110,6 +110,7 @@
         arp_post_normalized: "{{ normalized_data }}"
         arp_added: "{{ normalized_data | difference(arp_pre_normalized) }}"
         arp_removed: "{{ arp_pre_normalized | difference(normalized_data) }}"
+        arp_comparison_match: "{{ normalized_data == arp_pre_normalized }}"
 
     - name: Report ARP comparison results
       ansible.builtin.debug:
@@ -117,7 +118,7 @@
           - "=== ARP Data Comparison ==="
           - "Pre-upgrade entries: {{ network_baseline_pre.arp_data | length }}"
           - "Post-upgrade entries: {{ network_baseline_post.arp_data | length }}"
-          - "Match: {{ arp_pre_normalized == arp_post_normalized }}"
+          - "Match: {{ arp_comparison_match }}"
           - "Added entries: {{ arp_added | length }}"
           - "{{ '' if arp_added | length == 0 else 'Added ARP entries:' }}"
           - "{{ arp_added | to_nice_json if arp_added | length > 0 else '' }}"
@@ -148,6 +149,7 @@
         mac_post_normalized: "{{ normalized_data }}"
         mac_added: "{{ normalized_data | difference(mac_pre_normalized) }}"
         mac_removed: "{{ mac_pre_normalized | difference(normalized_data) }}"
+        mac_comparison_match: "{{ normalized_data == mac_pre_normalized }}"
 
     - name: Report MAC comparison results
       ansible.builtin.debug:
@@ -155,7 +157,7 @@
           - "=== MAC Data Comparison ==="
           - "Pre-upgrade entries: {{ network_baseline_pre.mac_data | length }}"
           - "Post-upgrade entries: {{ network_baseline_post.mac_data | length }}"
-          - "Match: {{ mac_pre_normalized == mac_post_normalized }}"
+          - "Match: {{ mac_comparison_match }}"
           - "Added entries: {{ mac_added | length }}"
           - "{{ '' if mac_added | length == 0 else 'Added MAC entries:' }}"
           - "{{ mac_added | to_nice_json if mac_added | length > 0 else '' }}"
@@ -163,3 +165,7 @@
           - "{{ '' if mac_removed | length == 0 else 'Removed MAC entries:' }}"
           - "{{ mac_removed | to_nice_json if mac_removed | length > 0 else '' }}"
       when: show_debug | bool
+
+    - name: Store ARP/MAC comparison status
+      ansible.builtin.set_fact:
+        arp_mac_comparison_status: "{{ 'PASS' if arp_comparison_match and mac_comparison_match else 'FAIL' }}"
