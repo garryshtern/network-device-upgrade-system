@@ -57,30 +57,50 @@
       ansible.builtin.include_tasks: bfd-validation.yml
       when: bfd_enabled | bool
 
-- name: Aggregate validation results
+# DATA COLLECTION VALIDATION RESULTS
+# Aggregates status of baseline data collection for each validation type
+- name: Aggregate data collection validation results
   ansible.builtin.set_fact:
-    network_validation_results:
+    validation_collection_results:
       interface_status: "{{ 'PASS' if interface_baseline.up_interfaces | int > 0 else 'FAIL' }}"
       routing_status: "{{ 'PASS' if routing_baseline.rib_data_available or routing_baseline.fib_data_available else 'FAIL' }}"
       arp_status: "{{ 'PASS' if arp_baseline.arp_data_available or arp_baseline.mac_data_available else 'FAIL' }}"
       bgp_status: "{{ 'PASS' if bgp_enabled and bgp_validation.bgp_configured and bgp_validation.peers_established | int > 0 else 'SKIP' if not bgp_enabled else 'FAIL' }}"
       bfd_status: "{{ 'PASS' if bfd_enabled and bfd_baseline.bfd_configured and bfd_baseline.bfd_data_available else 'SKIP' if not bfd_enabled else 'FAIL' }}"
       multicast_status: "{{ 'PASS' if multicast_enabled and (pim_interface_baseline.configured if pim_interface_baseline is defined else false) else 'SKIP' if not multicast_enabled else 'FAIL' }}"
-      comparison_status: "{{ arp_mac_comparison_status if validation_phase is defined and validation_phase == 'post_upgrade' and arp_mac_comparison_status is defined else 'NOT_RUN' }}"
       overall_status: "{{ 'PASS' if (interface_baseline.up_interfaces | int > 0) and (routing_baseline.rib_data_available or routing_baseline.fib_data_available) else 'FAIL' }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when: not ansible_check_mode
 
-- name: Aggregate validation results (check mode)
+- name: Aggregate data collection validation results (check mode)
   ansible.builtin.set_fact:
-    network_validation_results:
+    validation_collection_results:
       interface_status: "SKIP"
       routing_status: "SKIP"
       arp_status: "SKIP"
       bgp_status: "SKIP"
       bfd_status: "SKIP"
       multicast_status: "SKIP"
-      comparison_status: "SKIP"
       overall_status: "SKIP"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when: ansible_check_mode
+
+# POST-UPGRADE COMPARISON VALIDATION RESULTS
+# Aggregates comparison status between pre/post upgrade baselines
+- name: Aggregate comparison validation results (post-upgrade only)
+  ansible.builtin.set_fact:
+    validation_comparison_results:
+      arp_mac_status: "{{ arp_mac_comparison_status if arp_mac_comparison_status is defined else 'NOT_RUN' }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+  when:
+    - not ansible_check_mode
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+
+- name: Aggregate comparison validation results (not post-upgrade or check mode)
+  ansible.builtin.set_fact:
+    validation_comparison_results:
+      arp_mac_status: "NOT_RUN"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+  when:
+    - ansible_check_mode or (validation_phase is not defined or validation_phase != 'post_upgrade')
