@@ -10,13 +10,6 @@
     include_startup_config: "{{ include_startup_config  }}"
     include_running_config: true
 
-- name: Create backup directory structure
-  ansible.builtin.file:
-    path: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}"
-    state: directory
-    mode: '0755'
-  delegate_to: localhost
-
 - name: Create backup directory for this device
   ansible.builtin.file:
     path: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}"

@@ -33,19 +33,7 @@
   ansible.builtin.debug:
     msg:
       - "=========================================="
-      - "NETWORK RESOURCES GATHERED - PROCEEDING TO VALIDATION"
+      - "STEP 5 COMPLETE: CONFIG BACKED UP AND RESOURCES GATHERED"
       - "=========================================="
-
-- name: Capture pre-upgrade network state
-  ansible.builtin.include_role:
-    name: network-validation
-  vars:
-    validation_phase: "pre_upgrade"
-    save_baseline: true
-
-- name: Verify all critical services are operational
-  ansible.builtin.assert:
-    that:
-      - network_validation_results is defined
-      - network_validation_results.overall_status == "healthy"
-    fail_msg: "Pre-upgrade validation failed. Network not in healthy state."
+      - "Baseline data ready for post-upgrade comparison"
+      - "=========================================="

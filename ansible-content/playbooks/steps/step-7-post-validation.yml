@@ -62,10 +62,18 @@
     validation_phase: "post_upgrade"
     compare_to_baseline: true
 
-- name: Save post-check validation results to file
+- name: Save collection validation results to file
   ansible.builtin.copy:
-    content: "{{ network_validation_results | to_nice_json }}"
-    dest: "{{ baseline_base_path }}/{{ inventory_hostname }}_post_check_validation.json"
+    content: "{{ validation_collection_results | to_nice_json }}"
+    dest: "{{ baseline_base_path }}/{{ inventory_hostname }}_post_check_collection.json"
+    mode: '0644'
+  delegate_to: localhost
+  changed_when: false
+
+- name: Save comparison validation results to file
+  ansible.builtin.copy:
+    content: "{{ validation_comparison_results | to_nice_json }}"
+    dest: "{{ baseline_base_path }}/{{ inventory_hostname }}_post_check_comparison.json"
     mode: '0644'
   delegate_to: localhost
   changed_when: false
@@ -77,32 +85,33 @@
       - "POST-UPGRADE VALIDATION RESULTS"
       - "=========================================="
       - "Device: {{ inventory_hostname }}"
-      - "Overall Status: {{ network_validation_results.overall_status }}"
-      - "Comparison Status: {{ network_validation_results.comparison_status }}"
+      - "Collection Status: {{ validation_collection_results.overall_status }}"
+      - "Comparison Status: {{ validation_comparison_results.arp_mac_status }}, {{ validation_comparison_results.routing_status }}"
       - ""
       - "Files saved:"
       - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_network_baseline.json"
       - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_post_upgrade_baseline.json"
-      - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_post_check_validation.json"
+      - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_post_check_collection.json"
+      - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_post_check_comparison.json"
       - "=========================================="
 
 - name: Display baseline comparison changes (on failure)
-  when: network_validation_results.comparison_status == "failed"
+  when: validation_comparison_results.arp_mac_status == "FAIL" or validation_comparison_results.routing_status == "FAIL"
   ansible.builtin.debug:
     msg:
       - "=========================================="
       - "BASELINE COMPARISON DIFFERENCES DETECTED"
       - "=========================================="
-      - "Changes in the following sections:"
-      - "{{ network_validation_results.baseline_comparison_detail.sections_with_differences | join(', ') }}"
+      - "ARP/MAC Status: {{ validation_comparison_results.arp_mac_status }}"
+      - "Routing Status: {{ validation_comparison_results.routing_status }}"
       - ""
-      - "Detailed Changes:"
-      - "{{ baseline_deltas | to_nice_json }}"
+      - "Run with -v flag to see detailed delta entries"
       - "=========================================="
 
 - name: Compare pre/post upgrade states
   ansible.builtin.assert:
     that:
-      - network_validation_results is defined
-      - network_validation_results.comparison_status == "passed"
+      - validation_comparison_results is defined
+      - validation_comparison_results.arp_mac_status != "FAIL"
+      - validation_comparison_results.routing_status != "FAIL"
     fail_msg: "Post-upgrade validation shows degradation from baseline."

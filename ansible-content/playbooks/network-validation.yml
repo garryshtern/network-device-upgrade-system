@@ -47,22 +47,21 @@
           - "Device: {{ inventory_hostname }}"
           - "Platform: {{ platform }}"
           - "Timestamp: {{ validation_timestamp }}"
-          - "Overall Status: {{ network_validation_results.overall_status }}"
-          - "BGP Status: {{ network_validation_results.bgp_status }}"
-          - "Interface Status: {{ network_validation_results.interface_status }}"
-          - "Routing Status: {{ network_validation_results.routing_status }}"
-          - "ARP Status: {{ network_validation_results.arp_status }}"
-          - "BFD Status: {{ network_validation_results.bfd_status }}"
-          - "Comparison Status: {{ network_validation_results.comparison_status }}"
+          - "Overall Status: {{ validation_collection_results.overall_status }}"
+          - "BGP Status: {{ validation_collection_results.bgp_status }}"
+          - "Interface Status: {{ validation_collection_results.interface_status }}"
+          - "Routing Status: {{ validation_collection_results.routing_status }}"
+          - "ARP Status: {{ validation_collection_results.arp_status }}"
+          - "BFD Status: {{ validation_collection_results.bfd_status }}"
           - "=========================================="
-      when: network_validation_results is defined
+      when: validation_collection_results is defined
 
     # Fail if validation shows unhealthy state
     - name: Verify network validation passed
       ansible.builtin.assert:
         that:
-          - network_validation_results is defined
-          - network_validation_results.overall_status == "healthy"
-        fail_msg: "Network validation failed - overall status is {{ network_validation_results.overall_status | default('unknown') }}"
+          - validation_collection_results is defined
+          - validation_collection_results.overall_status == "PASS"
+        fail_msg: "Network validation failed - overall status is {{ validation_collection_results.overall_status | default('unknown') }}"
         success_msg: "Network validation passed - all services healthy"
       when: validation_type == 'post_upgrade'
