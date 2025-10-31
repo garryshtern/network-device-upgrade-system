@@ -230,179 +230,24 @@
       loop_control:
         label: "{{ item.mapping.keys() | list | first }}"
 
-    - name: Normalize baseline data by removing time-sensitive fields
-      block:
-        - name: Initialize normalized data variables
-          ansible.builtin.set_fact:
-            normalized_arp_data: {}
-            normalized_mac_data: {}
-            normalized_rib_data: {}
-            normalized_fib_data: {}
-            normalized_bfd_data: {}
-            normalized_pim_interface_data: {}
-            normalized_pim_neighbor_data: {}
-            normalized_igmp_interface_data: {}
-            normalized_igmp_groups_data: {}
-            normalized_mroute_data: {}
-
-        - name: Normalize ARP data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_arp_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.arp_data | default([]) }}"
-            data_type: "ARP"
-          register: normalized_arp_result
-
-        - name: Store normalized ARP data
-          ansible.builtin.set_fact:
-            normalized_arp_data: "{{ normalized_data }}"
-          when: normalized_arp_result is not skipped
-
-        - name: Normalize MAC data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_mac_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.mac_data | default([]) }}"
-            data_type: "MAC"
-          register: normalized_mac_result
-
-        - name: Store normalized MAC data
-          ansible.builtin.set_fact:
-            normalized_mac_data: "{{ normalized_data }}"
-          when: normalized_mac_result is not skipped
-
-        - name: Normalize RIB data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_rib_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.rib_data | default([]) }}"
-            data_type: "RIB"
-          register: normalized_rib_result
-
-        - name: Store normalized RIB data
-          ansible.builtin.set_fact:
-            normalized_rib_data: "{{ normalized_data }}"
-          when: normalized_rib_result is not skipped
-
-        - name: Normalize FIB data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_fib_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.fib_data | default([]) }}"
-            data_type: "FIB"
-          register: normalized_fib_result
-
-        - name: Store normalized FIB data
-          ansible.builtin.set_fact:
-            normalized_fib_data: "{{ normalized_data }}"
-          when: normalized_fib_result is not skipped
-
-        - name: Normalize BFD data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_bfd_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.bfd_data | default([]) }}"
-            data_type: "BFD"
-          register: normalized_bfd_result
-
-        - name: Store normalized BFD data
-          ansible.builtin.set_fact:
-            normalized_bfd_data: "{{ normalized_data }}"
-          when: normalized_bfd_result is not skipped
-
-        - name: Normalize PIM interface data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_pim_interface_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.pim_interface_data | default([]) }}"
-            data_type: "PIM Interface"
-          register: normalized_pim_interface_result
-
-        - name: Store normalized PIM interface data
-          ansible.builtin.set_fact:
-            normalized_pim_interface_data: "{{ normalized_data }}"
-          when: normalized_pim_interface_result is not skipped
-
-        - name: Normalize PIM neighbor data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_pim_neighbor_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.pim_neighbor_data | default([]) }}"
-            data_type: "PIM Neighbor"
-          register: normalized_pim_neighbor_result
-
-        - name: Store normalized PIM neighbor data
-          ansible.builtin.set_fact:
-            normalized_pim_neighbor_data: "{{ normalized_data }}"
-          when: normalized_pim_neighbor_result is not skipped
-
-        - name: Normalize IGMP interface data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_igmp_interface_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.igmp_interface_data | default([]) }}"
-            data_type: "IGMP Interface"
-          register: normalized_igmp_interface_result
-
-        - name: Store normalized IGMP interface data
-          ansible.builtin.set_fact:
-            normalized_igmp_interface_data: "{{ normalized_data }}"
-          when: normalized_igmp_interface_result is not skipped
-
-        - name: Normalize IGMP groups data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_igmp_groups_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.igmp_groups_data | default([]) }}"
-            data_type: "IGMP Groups"
-          register: normalized_igmp_groups_result
-
-        - name: Store normalized IGMP groups data
-          ansible.builtin.set_fact:
-            normalized_igmp_groups_data: "{{ normalized_data }}"
-          when: normalized_igmp_groups_result is not skipped
-
-        - name: Normalize Mroute data
-          ansible.builtin.include_tasks:
-            file: "{{ role_path }}/../network-validation/tasks/normalize-baseline-data.yml"
-          vars:
-            data_to_normalize: "{{ gathered_mroute_data }}"
-            fields_to_exclude: "{{ baseline_comparison_excluded_fields.mroute_data | default([]) }}"
-            data_type: "Mroute"
-          register: normalized_mroute_result
-
-        - name: Store normalized Mroute data
-          ansible.builtin.set_fact:
-            normalized_mroute_data: "{{ normalized_data }}"
-          when: normalized_mroute_result is not skipped
-
-    - name: Store network baseline data (normalized for time-agnostic comparison)
+    - name: Store network baseline data (raw, unmodified for comparison)
       ansible.builtin.set_fact:
         network_baseline:
           platform: "{{ platform }}"
           device: "{{ inventory_hostname }}"
           network_resources: "{{ ansible_network_resources }}"
-          arp_data: "{{ normalized_arp_data if normalized_arp_data else gathered_arp_data }}"
-          mac_data: "{{ normalized_mac_data if normalized_mac_data else gathered_mac_data }}"
-          rib_data: "{{ normalized_rib_data if normalized_rib_data else gathered_rib_data }}"
-          fib_data: "{{ normalized_fib_data if normalized_fib_data else gathered_fib_data }}"
-          bfd_data: "{{ normalized_bfd_data if normalized_bfd_data else gathered_bfd_data }}"
-          pim_interface_data: "{{ normalized_pim_interface_data if normalized_pim_interface_data else gathered_pim_interface_data }}"
-          pim_neighbor_data: "{{ normalized_pim_neighbor_data if normalized_pim_neighbor_data else gathered_pim_neighbor_data }}"
+          arp_data: "{{ gathered_arp_data }}"
+          mac_data: "{{ gathered_mac_data }}"
+          rib_data: "{{ gathered_rib_data }}"
+          fib_data: "{{ gathered_fib_data }}"
+          bfd_data: "{{ gathered_bfd_data }}"
+          pim_interface_data: "{{ gathered_pim_interface_data }}"
+          pim_neighbor_data: "{{ gathered_pim_neighbor_data }}"
           pim_rp_data: "{{ gathered_pim_rp_data }}"
-          igmp_interface_data: "{{ normalized_igmp_interface_data if normalized_igmp_interface_data else gathered_igmp_interface_data }}"
-          igmp_groups_data: "{{ normalized_igmp_groups_data if normalized_igmp_groups_data else gathered_igmp_groups_data }}"
+          igmp_interface_data: "{{ gathered_igmp_interface_data }}"
+          igmp_groups_data: "{{ gathered_igmp_groups_data }}"
           mroute_summary_data: "{{ gathered_mroute_summary_data }}"
-          mroute_data: "{{ normalized_mroute_data if normalized_mroute_data else gathered_mroute_data }}"
+          mroute_data: "{{ gathered_mroute_data }}"
           anycast_rp_data: "{{ gathered_anycast_rp_data }}"
 
     - name: Display gathered network resources summary
@@ -465,6 +310,9 @@
         - validation_phase == 'post_upgrade'
 
     - name: Load pre-upgrade baseline for comparison (post-upgrade only)
+      when:
+        - validation_phase is defined
+        - validation_phase == 'post_upgrade'
       block:
         - name: Check if baseline file exists
           ansible.builtin.stat:
@@ -480,10 +328,6 @@
         - name: Store current state as post-upgrade data
           ansible.builtin.set_fact:
             network_baseline_post: "{{ network_baseline }}"
-
-      when:
-        - validation_phase is defined
-        - validation_phase == 'post_upgrade'
 
   rescue:
     - name: Network resources gathering failed
