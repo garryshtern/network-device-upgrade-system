@@ -33,6 +33,23 @@
 - name: NX-OS comprehensive network resources gathering
   when: platform == 'nxos'
   block:
+    - name: Load baseline data for post-upgrade comparison (BEFORE gathering current data)
+      when:
+        - validation_phase is defined
+        - validation_phase == 'post_upgrade'
+        - baseline_file_pre_upgrade is defined
+      block:
+        - name: Check if baseline file exists
+          ansible.builtin.stat:
+            path: "{{ baseline_file_pre_upgrade }}"
+          register: baseline_file
+          delegate_to: localhost
+
+        - name: Load baseline data
+          ansible.builtin.set_fact:
+            network_baseline_pre: "{{ lookup('file', baseline_file_pre_upgrade) | from_json }}"
+          when: baseline_file.stat.exists
+
     - name: Initialize gathered data variables
       ansible.builtin.set_fact:
         gathered_arp_data: {}
@@ -311,29 +328,12 @@
         - validation_phase == 'post_upgrade'
         - baseline_file_post_upgrade is defined
 
-    - name: Load pre-upgrade baseline for comparison (post-upgrade only)
+    - name: Store current state as post-upgrade data (comparison with pre-upgrade baseline)
       when:
-        - network_baseline is not defined
         - validation_phase is defined
         - validation_phase == 'post_upgrade'
-      block:
-        - name: Check if baseline file exists
-          ansible.builtin.stat:
-            path: "{{ baseline_file_pre_upgrade }}"
-          register: baseline_file
-          delegate_to: localhost
-          when: baseline_file_pre_upgrade is defined
-
-        - name: Load baseline data
-          ansible.builtin.set_fact:
-            network_baseline_pre: "{{ lookup('file', baseline_file_pre_upgrade) | from_json }}"
-          when:
-            - baseline_file.stat.exists
-            - baseline_file_pre_upgrade is defined
-
-        - name: Store current state as post-upgrade data
-          ansible.builtin.set_fact:
-            network_baseline_post: "{{ network_baseline }}"
+      ansible.builtin.set_fact:
+        network_baseline_post: "{{ network_baseline }}"
 
   rescue:
     - name: Network resources gathering failed
