@@ -36,8 +36,8 @@
           bfd_configured: false
           bfd_data_available: false
 
-    - name: Run interface validation (first - foundation for all comparisons)
-      ansible.builtin.include_tasks: interface-validation.yml
+    - name: Run network resource validation (first - foundation for all comparisons)
+      ansible.builtin.include_tasks: network-resource-validation.yml
 
     - name: Run BGP validation
       ansible.builtin.include_tasks: bgp-validation.yml
