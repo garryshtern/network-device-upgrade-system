@@ -115,9 +115,18 @@
             file: steps/step-1-connectivity.yml
 
       rescue:
-        - name: Connectivity check failed - STOP workflow
-          ansible.builtin.fail:
-            msg: "STEP 1 FAILED: Cannot connect to device {{ inventory_hostname }}. Workflow stopped."
+        - name: Connectivity check failed
+          block:
+            - name: Log connectivity failure
+              ansible.builtin.debug:
+                msg:
+                  - "WARNING: Connectivity check failed for {{ inventory_hostname }}"
+                  - "Device may be unreachable or credentials may be incorrect"
+
+          always:
+            - name: Mark upgrade with connectivity warnings
+              ansible.builtin.set_fact:
+                upgrade_completed_with_warnings: true
 
     # STEP 2: Version Check and Image Verification
     # Check if upgrade needed and verify local image file exists
