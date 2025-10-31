@@ -27,15 +27,21 @@
         network_resources_removed: "{{ network_baseline_pre.network_resources | difference(network_baseline_post.network_resources) }}"
         network_resources_comparison_match: "{{ network_baseline_post.network_resources == network_baseline_pre.network_resources }}"
 
-    - name: Report network_resources changes (if any)
+    - name: Report network_resources added changes
       ansible.builtin.debug:
         msg:
           - "=== Network Resources Configuration Changes ==="
-          - "{{ '' if network_resources_added | length == 0 else 'Added/Modified Resources:' }}"
-          - "{{ network_resources_added | to_nice_json if network_resources_added | length > 0 else '' }}"
-          - "{{ '' if network_resources_removed | length == 0 else 'Removed Resources:' }}"
-          - "{{ network_resources_removed | to_nice_json if network_resources_removed | length > 0 else '' }}"
-      when: network_resources_added | length > 0 or network_resources_removed | length > 0
+          - "Added/Modified Resources:"
+          - "{{ network_resources_added | to_nice_json }}"
+      when: network_resources_added | length > 0
+
+    - name: Report network_resources removed changes
+      ansible.builtin.debug:
+        msg:
+          - "=== Network Resources Configuration Changes ==="
+          - "Removed Resources:"
+          - "{{ network_resources_removed | to_nice_json }}"
+      when: network_resources_removed | length > 0
 
     - name: Report no network_resources changes
       ansible.builtin.debug:
