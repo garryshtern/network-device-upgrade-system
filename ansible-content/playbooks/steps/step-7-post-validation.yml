@@ -5,9 +5,15 @@
 # Dependencies: STEP 1 (managed by main workflow tags)
 # NOTE: STEP 5 baseline must exist from prior run, STEP 6 should have been run
 
+- name: Set baseline file paths as facts
+  ansible.builtin.set_fact:
+    baseline_file_pre_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
+    baseline_file_post_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_post_upgrade }}"
+    baseline_file_comparison: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_comparison }}"
+
 - name: Check if pre-upgrade baseline file exists
   ansible.builtin.stat:
-    path: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
+    path: "{{ baseline_file_pre_upgrade }}"
   register: baseline_file
   delegate_to: localhost
   changed_when: false
@@ -19,7 +25,7 @@
       - ""
       - "Post-upgrade validation REQUIRES a baseline from step 5 (pre-upgrade gathering)."
       - ""
-      - "Baseline path: {{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
+      - "Baseline path: {{ baseline_file_pre_upgrade }}"
       - "File found: {{ baseline_file.stat.exists }}"
       - ""
       - "You must run step 5 BEFORE step 6 and step 7."
@@ -65,7 +71,7 @@
 - name: Save comparison validation results to file
   ansible.builtin.copy:
     content: "{{ validation_comparison_results | to_nice_json }}"
-    dest: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_comparison }}"
+    dest: "{{ baseline_file_comparison }}"
     mode: '0644'
   delegate_to: localhost
   changed_when: false
@@ -81,8 +87,8 @@
       - "Routing Comparison: {{ validation_comparison_results.routing_status }}"
       - ""
       - "Files saved:"
-      - "  - {{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_post_upgrade }}"
-      - "  - {{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_comparison }}"
+      - "  - {{ baseline_file_post_upgrade }}"
+      - "  - {{ baseline_file_comparison }}"
       - "=========================================="
 
 - name: Display baseline comparison changes (on failure)
