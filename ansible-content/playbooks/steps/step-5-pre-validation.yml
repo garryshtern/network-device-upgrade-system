@@ -9,8 +9,6 @@
 - name: Set baseline file paths as facts
   ansible.builtin.set_fact:
     baseline_file_pre_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
-    baseline_file_post_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_post_upgrade }}"
-    baseline_file_comparison: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_comparison }}"
 
 - name: Display STEP 5 entry
   ansible.builtin.debug:
