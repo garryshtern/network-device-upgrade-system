@@ -19,10 +19,6 @@
     - not ansible_check_mode
     - network_baseline_pre is defined
     - network_baseline_post is defined
-    - network_baseline_pre.arp_data is defined
-    - network_baseline_post.arp_data is defined
-    - network_baseline_pre.mac_data is defined
-    - network_baseline_post.mac_data is defined
   block:
     - name: Normalize ARP pre-upgrade data
       ansible.builtin.include_tasks: normalize-baseline-data.yml
@@ -73,8 +69,6 @@
   when:
     - validation_phase is not defined or validation_phase != 'post_upgrade' or
       platform != 'nxos' or
-      network_baseline_pre is not defined or network_baseline_post is not defined or
-      network_baseline_pre.arp_data is not defined or network_baseline_post.arp_data is not defined or
-      network_baseline_pre.mac_data is not defined or network_baseline_post.mac_data is not defined
+      network_baseline_pre is not defined or network_baseline_post is not defined
   ansible.builtin.set_fact:
     arp_mac_comparison_status: "NOT_RUN"
