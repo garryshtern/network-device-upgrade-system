@@ -26,7 +26,7 @@
     # All validation tasks are now centralized in network-validation role
     network_validation_tasks:
       - "bgp-validation.yml"
-      - "interface-validation.yml"
+      - "network-resource-validation.yml"
       - "routing-validation.yml"
       - "arp-validation.yml"
       - "multicast-validation.yml"
@@ -50,7 +50,7 @@
           All network validation is now centralized in network-validation role
           Testing {{ network_validation_tasks | length }} validation tasks:
           - BGP validation
-          - Interface validation
+          - Network Resource validation
           - Routing validation
           - ARP validation
           - Multicast validation

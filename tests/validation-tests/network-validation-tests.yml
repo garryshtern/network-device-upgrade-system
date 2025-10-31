@@ -16,7 +16,7 @@
       register: validation_structure_check
       loop:
         - "bgp-validation.yml"
-        - "interface-validation.yml"
+        - "network-resource-validation.yml"
         - "routing-validation.yml"
         - "multicast-validation.yml"
         - "arp-validation.yml"
@@ -35,7 +35,7 @@
       register: validation_task_syntax
       loop:
         - "bgp-validation.yml"
-        - "interface-validation.yml"
+        - "network-resource-validation.yml"
         - "multicast-validation.yml"
         - "routing-validation.yml"
         - "arp-validation.yml"
