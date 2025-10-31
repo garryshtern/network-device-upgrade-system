@@ -45,11 +45,6 @@
     batch_id: "{{ ansible_play_batch | hash('md5') }}"
     operator_id: "{{ lookup('env', 'USER')  }}"
 
-    # Baseline file paths (available to all tasks in the play)
-    baseline_file_pre_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
-    baseline_file_post_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_post_upgrade }}"
-    baseline_file_comparison: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_comparison }}"
-
   # NOTE: Timeouts and retries are defined in group_vars/all.yml:
   #   connectivity_timeout, reboot_wait_time, max_retry_attempts
 
