@@ -118,7 +118,7 @@
 
         - name: Verify centralized network validation exists
           stat:
-            path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/tasks/bgp-validation.yml"
+            path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/tasks/network-resource-validation.yml"
           register: centralized_validation_check
 
         - name: Assert centralized validation capabilities exist

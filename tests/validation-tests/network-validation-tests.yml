@@ -15,7 +15,6 @@
         path: "{{ validation_role_path }}/tasks/{{ item }}"
       register: validation_structure_check
       loop:
-        - "bgp-validation.yml"
         - "network-resource-validation.yml"
         - "routing-validation.yml"
         - "multicast-validation.yml"
@@ -34,7 +33,6 @@
         python -c "import yaml; yaml.safe_load(open('{{ validation_role_path }}/tasks/{{ item }}'))"
       register: validation_task_syntax
       loop:
-        - "bgp-validation.yml"
         - "network-resource-validation.yml"
         - "multicast-validation.yml"
         - "routing-validation.yml"

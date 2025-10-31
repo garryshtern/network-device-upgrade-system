@@ -1,175 +1,119 @@
 ---
-# Routing Protocol Validation
-# Validates RIB and FIB data availability
-# Uses raw baseline data from network-resources-gathering
-# DESIGN: Single block pattern with platform gate
+# Routing Data Validation
+# Compares RIB (Routing Information Base) and FIB (Forwarding Information Base) data
+# Validates all routing state before operational state validation
 #
-# DATA SOURCES (raw baseline data from network-resources-gathering):
-# - RIB data: network_baseline.rib_data
-# - FIB data: network_baseline.fib_data
-#
-# FEATURES:
-# - RIB data availability validation
-# - FIB data availability validation
+# DESIGN: Extract complete rib_data and fib_data dicts from baseline data, normalize, compare using difference(), report only deltas
+# DATA SOURCES:
+# - RIB data: network_baseline.rib_data (from 'show ip route vrf all')
+# - FIB data: network_baseline.fib_data (from 'show forwarding ipv4 route')
+# - Pre-upgrade baseline: network_baseline_pre
+# - Post-upgrade baseline: network_baseline_post
 
-- name: NX-OS Routing Validation (uses raw baseline data from network-resources-gathering)
-  when:
-    - platform == 'nxos'
-    - not ansible_check_mode
-    - network_baseline is defined
-    - network_baseline.rib_data is defined
-    - network_baseline.fib_data is defined
-  block:
-    - name: Use raw RIB and FIB baseline data
-      ansible.builtin.set_fact:
-        rib_data_available: "{{ network_baseline.rib_data | length > 0 }}"
-        fib_data_available: "{{ network_baseline.fib_data | length > 0 }}"
-
-    - name: Debug RIB and FIB data availability
-      ansible.builtin.debug:
-        msg:
-          - "=== RIB/FIB Validation ==="
-          - "RIB Data Available: {{ rib_data_available }}"
-          - "FIB Data Available: {{ fib_data_available }}"
-      when:
-        - show_debug | bool
-
-- name: Store routing baseline (NX-OS)
-  when:
-    - platform == 'nxos'
-    - not ansible_check_mode
-  ansible.builtin.set_fact:
-    routing_baseline:
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      rib_data_available: "{{ rib_data_available if rib_data_available is defined else false }}"
-      fib_data_available: "{{ fib_data_available if fib_data_available is defined else false }}"
-
-- name: Store routing baseline for check mode
-  when:
-    - ansible_check_mode
-  ansible.builtin.set_fact:
-    routing_baseline:
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      rib_data_available: false
-      fib_data_available: false
-
-- name: Routing validation summary
-  ansible.builtin.debug:
-    msg:
-      - "=== Routing Validation Results ==="
-      - "RIB Data Available: {{ routing_baseline.rib_data_available }}"
-      - "FIB Data Available: {{ routing_baseline.fib_data_available }}"
-      - "Status: {{ 'DATA COLLECTED' if routing_baseline.rib_data_available or routing_baseline.fib_data_available else 'NO DATA' }}"
-      - "================================="
-
-# Compare RIB and FIB data against pre-upgrade baseline (post-upgrade only)
-- name: Compare RIB and FIB data (post-upgrade validation)
+# Post-upgrade comparison for RIB and FIB data
+- name: Compare RIB and FIB data with baseline (post-upgrade only)
   when:
     - validation_phase is defined
     - validation_phase == 'post_upgrade'
+    - platform == 'nxos'
+    - not ansible_check_mode
     - network_baseline_pre is defined
     - network_baseline_post is defined
-    - network_baseline_pre.rib_data is defined
-    - network_baseline_post.rib_data is defined
   block:
     # RIB Data Comparison
-    - name: Normalize RIB pre-upgrade data for comparison
+    - name: Normalize RIB pre-upgrade data
       ansible.builtin.include_tasks: normalize-baseline-data.yml
       vars:
         data_to_normalize: "{{ network_baseline_pre.rib_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.rib_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.rib_data if baseline_comparison_excluded_fields.rib_data is defined else [] }}"
 
     - name: Store normalized RIB pre data
       ansible.builtin.set_fact:
         rib_pre_normalized: "{{ normalized_data }}"
 
-    - name: Normalize RIB post-upgrade data for comparison
+    - name: Normalize RIB post-upgrade data
       ansible.builtin.include_tasks: normalize-baseline-data.yml
       vars:
         data_to_normalize: "{{ network_baseline_post.rib_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.rib_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.rib_data if baseline_comparison_excluded_fields.rib_data is defined else [] }}"
 
-    - name: Calculate RIB deltas (added/removed)
+    - name: Calculate RIB and FIB deltas using difference filter
       ansible.builtin.set_fact:
         rib_post_normalized: "{{ normalized_data }}"
         rib_added: "{{ normalized_data | difference(rib_pre_normalized) }}"
         rib_removed: "{{ rib_pre_normalized | difference(normalized_data) }}"
         rib_comparison_match: "{{ normalized_data == rib_pre_normalized }}"
 
-    - name: Report RIB comparison results
-      ansible.builtin.debug:
-        msg:
-          - "=== RIB Data Comparison ==="
-          - "Pre-upgrade entries: {{ network_baseline_pre.rib_data | length }}"
-          - "Post-upgrade entries: {{ network_baseline_post.rib_data | length }}"
-          - "Match: {{ rib_comparison_match }}"
-          - "Added entries: {{ rib_added | length }}"
-          - "{{ '' if rib_added | length == 0 else 'Added RIB entries:' }}"
-          - "{{ rib_added | to_nice_json if rib_added | length > 0 else '' }}"
-          - "Removed entries: {{ rib_removed | length }}"
-          - "{{ '' if rib_removed | length == 0 else 'Removed RIB entries:' }}"
-          - "{{ rib_removed | to_nice_json if rib_removed | length > 0 else '' }}"
-      when: show_debug | bool
-
-    # FIB Data Comparison
-    - name: Normalize FIB pre-upgrade data for comparison
+    - name: Normalize FIB pre-upgrade data
       ansible.builtin.include_tasks: normalize-baseline-data.yml
       vars:
         data_to_normalize: "{{ network_baseline_pre.fib_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.fib_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.fib_data if baseline_comparison_excluded_fields.fib_data is defined else [] }}"
 
     - name: Store normalized FIB pre data
       ansible.builtin.set_fact:
         fib_pre_normalized: "{{ normalized_data }}"
 
-    - name: Normalize FIB post-upgrade data for comparison
+    - name: Normalize FIB post-upgrade data
       ansible.builtin.include_tasks: normalize-baseline-data.yml
       vars:
         data_to_normalize: "{{ network_baseline_post.fib_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.fib_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.fib_data if baseline_comparison_excluded_fields.fib_data is defined else [] }}"
 
-    - name: Calculate FIB deltas (added/removed)
+    - name: Calculate FIB deltas using difference filter
       ansible.builtin.set_fact:
         fib_post_normalized: "{{ normalized_data }}"
         fib_added: "{{ normalized_data | difference(fib_pre_normalized) }}"
         fib_removed: "{{ fib_pre_normalized | difference(normalized_data) }}"
         fib_comparison_match: "{{ normalized_data == fib_pre_normalized }}"
 
-    - name: Report FIB comparison results
+    - name: Report RIB added entries
       ansible.builtin.debug:
         msg:
-          - "=== FIB Data Comparison ==="
-          - "Pre-upgrade entries: {{ network_baseline_pre.fib_data | length }}"
-          - "Post-upgrade entries: {{ network_baseline_post.fib_data | length }}"
-          - "Match: {{ fib_comparison_match }}"
-          - "Added entries: {{ fib_added | length }}"
-          - "{{ '' if fib_added | length == 0 else 'Added FIB entries:' }}"
-          - "{{ fib_added | to_nice_json if fib_added | length > 0 else '' }}"
-          - "Removed entries: {{ fib_removed | length }}"
-          - "{{ '' if fib_removed | length == 0 else 'Removed FIB entries:' }}"
-          - "{{ fib_removed | to_nice_json if fib_removed | length > 0 else '' }}"
-      when: show_debug | bool
+          - "=== RIB and FIB Data Comparison ==="
+          - "Added/Modified RIB Entries:"
+          - "{{ rib_added | to_nice_json }}"
+      when: rib_added | length > 0
 
-    - name: Store routing comparison status
+    - name: Report RIB removed entries
+      ansible.builtin.debug:
+        msg:
+          - "=== RIB and FIB Data Comparison ==="
+          - "Removed RIB Entries:"
+          - "{{ rib_removed | to_nice_json }}"
+      when: rib_removed | length > 0
+
+    - name: Report FIB added entries
+      ansible.builtin.debug:
+        msg:
+          - "=== RIB and FIB Data Comparison ==="
+          - "Added/Modified FIB Entries:"
+          - "{{ fib_added | to_nice_json }}"
+      when: fib_added | length > 0
+
+    - name: Report FIB removed entries
+      ansible.builtin.debug:
+        msg:
+          - "=== RIB and FIB Data Comparison ==="
+          - "Removed FIB Entries:"
+          - "{{ fib_removed | to_nice_json }}"
+      when: fib_removed | length > 0
+
+    - name: Report no RIB and FIB changes
+      ansible.builtin.debug:
+        msg:
+          - "=== RIB and FIB Data Comparison ==="
+          - "Status: No changes detected in RIB and FIB data"
+      when: rib_comparison_match and fib_comparison_match and rib_added | length == 0 and rib_removed | length == 0 and fib_added | length == 0 and fib_removed | length == 0
+
+    - name: Determine routing comparison status
       ansible.builtin.set_fact:
         routing_comparison_status: "{{ 'PASS' if rib_comparison_match and fib_comparison_match else 'FAIL' }}"
 
-- name: IOS-XE Routing Validation (placeholder for future implementation)
+- name: Set routing comparison status when not applicable
   when:
-    - platform == 'ios'
-    - not ansible_check_mode
-  block:
-    - name: Get routing table (IOS-XE)
-      cisco.ios.ios_command:
-        commands:
-          - show ip route summary
-          - show ip route
-      register: ios_routing_info
-
-    - name: Store IOS-XE routing baseline (placeholder)
-      ansible.builtin.set_fact:
-        routing_baseline:
-          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-          total_routes: 0
-          platform: "ios"
-          raw_output: "{{ ios_routing_info.stdout }}"
+    - validation_phase is not defined or validation_phase != 'post_upgrade' or
+      platform != 'nxos' or
+      network_baseline_pre is not defined or network_baseline_post is not defined
+  ansible.builtin.set_fact:
+    routing_comparison_status: "NOT_RUN"
