@@ -54,62 +54,54 @@
   #   connectivity_timeout, reboot_wait_time, max_retry_attempts
 
   pre_tasks:
-    - name: Initialize ansible_date_time if facts not gathered
+    - name: Pre-task initialization block
       tags:
         - always
-      ansible.builtin.set_fact:
-        ansible_date_time:
-          iso8601: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-          epoch: "{{ lookup('pipe', 'date +%s') }}"
-      when: ansible_date_time is not defined
+      block:
+        - name: Initialize ansible_date_time if facts not gathered
+          ansible.builtin.set_fact:
+            ansible_date_time:
+              iso8601: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+              epoch: "{{ lookup('pipe', 'date +%s') }}"
+          when: ansible_date_time is not defined
 
-    - name: Validate required variables
-      tags:
-        - always
-      ansible.builtin.assert:
-        that:
-          - target_firmware is defined
-          - target_hosts is defined
-        fail_msg: "Required variables missing. target_firmware and target_hosts must be defined."
+        - name: Validate required variables
+          ansible.builtin.assert:
+            that:
+              - target_firmware is defined
+              - target_hosts is defined
+            fail_msg: "Required variables missing. target_firmware and target_hosts must be defined."
 
-    - name: Set firmware version for workflow
-      tags:
-        - always
-      ansible.builtin.set_fact:
-        firmware_version: "{{ target_firmware }}"
+        - name: Set firmware version for workflow
+          ansible.builtin.set_fact:
+            firmware_version: "{{ target_firmware }}"
 
-    - name: Set upgrade start timestamp
-      tags:
-        - always
-      ansible.builtin.set_fact:
-        upgrade_start_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-        upgrade_job_id: "{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}"
+        - name: Set upgrade start timestamp
+          ansible.builtin.set_fact:
+            upgrade_start_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+            upgrade_job_id: "{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}"
 
-    - name: Validate maintenance window requirement
-      tags:
-        - always
-      ansible.builtin.assert:
-        that:
-          - maintenance_window | bool
-        fail_msg: "Firmware upgrades require maintenance_window=true"
-      when: not ansible_check_mode
+        - name: Validate maintenance window requirement
+          ansible.builtin.assert:
+            that:
+              - maintenance_window | bool
+            fail_msg: "Firmware upgrades require maintenance_window=true"
+          when: not ansible_check_mode
 
-    - name: Display upgrade parameters
-      tags:
-        - always
-      ansible.builtin.debug:
-        msg:
-          - "=== Network Device Upgrade Workflow ==="
-          - "Target Device: {{ inventory_hostname }}"
-          - "Target Firmware: {{ firmware_version }}"
-          - "Maintenance Window: {{ maintenance_window }}"
-          - "Batch ID: {{ batch_id }}"
-          - "Job ID: {{ upgrade_job_id }}"
-          - "Baseline Files:"
-          - "  Pre-upgrade: {{ baseline_file_pre_upgrade }}"
-          - "  Post-upgrade: {{ baseline_file_post_upgrade }}"
-          - "  Comparison: {{ baseline_file_comparison }}"
-          - "======================================="
+        - name: Display upgrade parameters
+          ansible.builtin.debug:
+            msg:
+              - "=== Network Device Upgrade Workflow ==="
+              - "Target Device: {{ inventory_hostname }}"
+              - "Target Firmware: {{ firmware_version }}"
+              - "Maintenance Window: {{ maintenance_window }}"
+              - "Batch ID: {{ batch_id }}"
+              - "Job ID: {{ upgrade_job_id }}"
+              - "Baseline Files:"
+              - "  Pre-upgrade: {{ baseline_file_pre_upgrade }}"
+              - "  Post-upgrade: {{ baseline_file_post_upgrade }}"
+              - "  Comparison: {{ baseline_file_comparison }}"
+              - "======================================="
 
   tasks:
     # STEP 1: Basic Connectivity Check
