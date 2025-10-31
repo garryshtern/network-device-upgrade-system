@@ -21,15 +21,6 @@
 - name: NX-OS Network Validation
   when: platform == 'nxos'
   block:
-    - name: Initialize all comparison status variables to NOT_RUN
-      ansible.builtin.set_fact:
-        interface_comparison_status: "NOT_RUN"
-        arp_mac_comparison_status: "NOT_RUN"
-        bgp_comparison_status: "NOT_RUN"
-        routing_comparison_status: "NOT_RUN"
-        bfd_comparison_status: "NOT_RUN"
-        multicast_comparison_status: "NOT_RUN"
-
     - name: Run network resource validation (first - foundation for all comparisons)
       ansible.builtin.include_tasks: network-resource-validation.yml
 
@@ -53,7 +44,7 @@
 
 # POST-UPGRADE COMPARISON VALIDATION RESULTS
 # Aggregates comparison status between pre/post upgrade baselines
-# All status variables initialized to NOT_RUN at block start, then overridden by validation tasks
+# Each validation task sets its own status variable (interface_comparison_status, arp_mac_comparison_status, etc.)
 - name: Aggregate comparison validation results
   ansible.builtin.set_fact:
     validation_comparison_results:
