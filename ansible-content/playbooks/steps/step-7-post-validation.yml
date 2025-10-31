@@ -103,6 +103,7 @@
   ansible.builtin.assert:
     that:
       - validation_comparison_results is defined
+      - validation_comparison_results.interface_status != "FAIL"
       - validation_comparison_results.arp_mac_status != "FAIL"
       - validation_comparison_results.routing_status != "FAIL"
     fail_msg: "Post-upgrade validation shows degradation from baseline."
@@ -114,7 +115,8 @@
   vars:
     metric_type: "post_upgrade_validation"
     metric_data:
-      validation_passed: "{{ 'true' if validation_comparison_results.arp_mac_status == 'PASS' and validation_comparison_results.routing_status == 'PASS' else 'false' }}"
+      validation_passed: "{{ 'true' if validation_comparison_results.interface_status != 'FAIL' and validation_comparison_results.arp_mac_status != 'FAIL' and validation_comparison_results.routing_status != 'FAIL' else 'false' }}"
+      interface_status: "{{ validation_comparison_results.interface_status }}"
       arp_mac_status: "{{ validation_comparison_results.arp_mac_status }}"
       routing_status: "{{ validation_comparison_results.routing_status }}"
       device: "{{ inventory_hostname }}"

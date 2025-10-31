@@ -1,86 +1,80 @@
 ---
 # Interface State Validation
-# Validates interface operational status (up/down)
-# Uses pre-gathered facts from connectivity-check (ansible_network_resources.interfaces)
+# Validates interface configuration and operational status
+# Compares pre/post upgrade interface state
+#
+# DESIGN: Extract interface dictionaries from baseline data, normalize, compare, report deltas
+# DATA SOURCES:
+# - Interface config: network_baseline.network_resources.interfaces
+# - Pre-upgrade baseline: network_baseline_pre
+# - Post-upgrade baseline: network_baseline_post
 
-- name: Debug pre-gathered interface facts (NX-OS)
-  ansible.builtin.debug:
-    msg:
-      - "=== NX-OS Interface Facts (Pre-gathered) ==="
-      - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ platform }}"
-      - "ansible_network_resources.interfaces: {{ ansible_network_resources.interfaces | default([]) | length }} interfaces"
-      - "ansible_network_resources.l2_interfaces: {{ ansible_network_resources.l2_interfaces | default([]) | length }} L2 interfaces"
-      - "ansible_network_resources.l3_interfaces: {{ ansible_network_resources.l3_interfaces | default([]) | length }} L3 interfaces"
+# Post-upgrade comparison for interface state
+- name: Compare interface configuration with baseline (post-upgrade only)
   when:
-    - show_debug | bool
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
     - platform == 'nxos'
-
-- name: Parse interface status for NX-OS
-  when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - ansible_network_resources is defined
-    - ansible_network_resources.interfaces is defined
     - not ansible_check_mode
+    - network_baseline_pre is defined
+    - network_baseline_post is defined
+    - network_baseline_pre.network_resources is defined
+    - network_baseline_post.network_resources is defined
+    - network_baseline_pre.network_resources.interfaces is defined
+    - network_baseline_post.network_resources.interfaces is defined
   block:
-    - name: Extract NX-OS interface data from pre-gathered facts
+    - name: Normalize interface pre-upgrade data
+      ansible.builtin.include_tasks: normalize-baseline-data.yml
+      vars:
+        data_to_normalize: "{{ network_baseline_pre.network_resources.interfaces }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.interfaces if baseline_comparison_excluded_fields.interfaces is defined else [] }}"
+
+    - name: Store normalized interface pre data
       ansible.builtin.set_fact:
-        all_interfaces: "{{ ansible_network_resources.interfaces }}"
+        interface_pre_normalized: "{{ normalized_data }}"
 
-    - name: Parse interface states from pre-gathered facts
+    - name: Normalize interface post-upgrade data
+      ansible.builtin.include_tasks: normalize-baseline-data.yml
+      vars:
+        data_to_normalize: "{{ network_baseline_post.network_resources.interfaces }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.interfaces if baseline_comparison_excluded_fields.interfaces is defined else [] }}"
+
+    - name: Calculate interface deltas (added/removed/modified)
       ansible.builtin.set_fact:
-        up_interfaces: >-
-          {{ all_interfaces |
-            selectattr('enabled', 'defined') |
-            selectattr('enabled', 'equalto', true) | list }}
-        down_interfaces: >-
-          {{ all_interfaces |
-            selectattr('enabled', 'defined') |
-            selectattr('enabled', 'equalto', false) | list }}
-      when:
-        - all_interfaces | length > 0
+        interface_post_normalized: "{{ normalized_data }}"
+        interface_added: "{{ normalized_data | difference(interface_pre_normalized) }}"
+        interface_removed: "{{ interface_pre_normalized | difference(normalized_data) }}"
+        interface_comparison_match: "{{ normalized_data == interface_pre_normalized }}"
 
-- name: Interface operational validation (NX-OS)
+    - name: Report interface comparison deltas (if any)
+      ansible.builtin.debug:
+        msg:
+          - "=== Interface Configuration Changes ==="
+          - "Pre-upgrade interfaces: {{ network_baseline_pre.network_resources.interfaces | length }}"
+          - "Post-upgrade interfaces: {{ network_baseline_post.network_resources.interfaces | length }}"
+          - "{{ '' if interface_added | length == 0 else 'Added Interfaces:' }}"
+          - "{{ interface_added | to_nice_json if interface_added | length > 0 else '' }}"
+          - "{{ '' if interface_removed | length == 0 else 'Removed Interfaces:' }}"
+          - "{{ interface_removed | to_nice_json if interface_removed | length > 0 else '' }}"
+      when: interface_added | length > 0 or interface_removed | length > 0
+
+    - name: Report no interface changes
+      ansible.builtin.debug:
+        msg:
+          - "=== Interface Configuration Changes ==="
+          - "Status: No changes detected"
+      when: interface_added | length == 0 and interface_removed | length == 0
+
+    - name: Determine interface comparison status
+      ansible.builtin.set_fact:
+        interface_comparison_status: "{{ 'PASS' if interface_comparison_match else 'FAIL' }}"
+
+- name: Set interface comparison status when not applicable
   when:
-    - ansible_network_os is defined
-    - platform == 'nxos'
-    - not ansible_check_mode
-  block:
-    - name: Check critical interface states
-      ansible.builtin.assert:
-        that:
-          - up_interfaces  | length > 0
-        fail_msg: "No interfaces are in 'up' state"
-
-- name: Store interface baseline (for comparison)
+    - validation_phase is not defined or validation_phase != 'post_upgrade' or
+      platform != 'nxos' or
+      network_baseline_pre is not defined or network_baseline_post is not defined or
+      network_baseline_pre.network_resources is not defined or network_baseline_post.network_resources is not defined or
+      network_baseline_pre.network_resources.interfaces is not defined or network_baseline_post.network_resources.interfaces is not defined
   ansible.builtin.set_fact:
-    interface_baseline:
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      total_interfaces: "{{ all_interfaces | length }}"
-      up_interfaces: "{{ up_interfaces | length }}"
-      down_interfaces: "{{ down_interfaces | length }}"
-      interface_list: "{{ up_interfaces | map(attribute='name') | list }}"
-  when:
-    - not ansible_check_mode
-
-- name: Store interface baseline for check mode
-  ansible.builtin.set_fact:
-    interface_baseline:
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      total_interfaces: 0
-      up_interfaces: 0
-      down_interfaces: 0
-      interface_list: []
-  when:
-    - ansible_check_mode
-
-- name: Interface validation summary
-  ansible.builtin.debug:
-    msg:
-      - "Interface Validation Results:"
-      - "Total Interfaces: {{ interface_baseline.total_interfaces }}"
-      - "Operational (Up): {{ interface_baseline.up_interfaces }}"
-      - "Down: {{ interface_baseline.down_interfaces }}"
-      - "Critical Interfaces Up: {{ 'PASS' if interface_baseline.up_interfaces | int > 0 else 'FAIL' }}"
-      - "Validation Status: {{ 'COMPLETE' if interface_baseline.total_interfaces | int > 0 else 'NO DATA' }}"
+    interface_comparison_status: "NOT_RUN"

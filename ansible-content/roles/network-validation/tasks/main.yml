@@ -36,12 +36,12 @@
           bfd_configured: false
           bfd_data_available: false
 
+    - name: Run interface validation (first - foundation for all comparisons)
+      ansible.builtin.include_tasks: interface-validation.yml
+
     - name: Run BGP validation
       ansible.builtin.include_tasks: bgp-validation.yml
       when: bgp_enabled | bool
-
-    - name: Run interface validation
-      ansible.builtin.include_tasks: interface-validation.yml
 
     - name: Run routing validation
       ansible.builtin.include_tasks: routing-validation.yml
@@ -90,6 +90,7 @@
 - name: Aggregate comparison validation results (post-upgrade only)
   ansible.builtin.set_fact:
     validation_comparison_results:
+      interface_status: "{{ interface_comparison_status if interface_comparison_status is defined else 'NOT_RUN' }}"
       arp_mac_status: "{{ arp_mac_comparison_status if arp_mac_comparison_status is defined else 'NOT_RUN' }}"
       bgp_status: "{{ bgp_comparison_status if bgp_comparison_status is defined else 'NOT_RUN' }}"
       routing_status: "{{ routing_comparison_status if routing_comparison_status is defined else 'NOT_RUN' }}"
@@ -104,6 +105,7 @@
 - name: Aggregate comparison validation results (not post-upgrade or check mode)
   ansible.builtin.set_fact:
     validation_comparison_results:
+      interface_status: "NOT_RUN"
       arp_mac_status: "NOT_RUN"
       bgp_status: "NOT_RUN"
       routing_status: "NOT_RUN"
