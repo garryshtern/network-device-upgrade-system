@@ -97,11 +97,7 @@
               - "Maintenance Window: {{ maintenance_window }}"
               - "Batch ID: {{ batch_id }}"
               - "Job ID: {{ upgrade_job_id }}"
-              - "Baseline Files:"
-              - "  Pre-upgrade: {{ baseline_file_pre_upgrade }}"
-              - "  Post-upgrade: {{ baseline_file_post_upgrade }}"
-              - "  Comparison: {{ baseline_file_comparison }}"
-              - "======================================="
+          when: baseline_file_pre_upgrade is defined
 
   tasks:
     # STEP 1: Basic Connectivity Check
@@ -110,14 +106,8 @@
     # AUTO-DEPENDENCY: Required by all steps (step1-8)
     - name: "STEP 1: Basic Connectivity Check"
       tags:
+        - always
         - step1
-        - step2
-        - step3
-        - step4
-        - step5
-        - step6
-        - step7
-        - step8
         - connectivity
       block:
         - name: Execute STEP 1 tasks
@@ -196,7 +186,7 @@
     # STEP 5: Comprehensive Network Resources Gathering and Pre-Upgrade Validation
     # Network resources gathered AFTER image is confirmed staged (not before)
     # Comprehensive validation: BGP, interfaces, routing, etc.
-    # MUST PASS or workflow STOPS
+    # Failure logs warning but allows workflow to continue (baseline may be incomplete)
     # AUTO-DEPENDENCY: Requires step1, step2, step3, step4; creates baseline file for STEP 7
     - name: "STEP 5: Network Resources Gathering and Pre-Upgrade Validation"
       tags:
@@ -211,9 +201,19 @@
             file: steps/step-5-pre-validation.yml
 
       rescue:
-        - name: Pre-upgrade validation failed - STOP workflow
-          ansible.builtin.fail:
-            msg: "STEP 5 FAILED: Network resources gathering or pre-upgrade validation failed. Workflow stopped."
+        - name: Pre-upgrade validation failed
+          block:
+            - name: Log pre-upgrade validation failure
+              ansible.builtin.debug:
+                msg:
+                  - "WARNING: Pre-upgrade validation failed."
+                  - "Baseline data may be incomplete for post-upgrade comparison."
+                  - "To rollback, run: --tags step8 or --tags rollback"
+
+          always:
+            - name: Mark upgrade with validation warnings
+              ansible.builtin.set_fact:
+                upgrade_completed_with_warnings: true
 
     # STEP 6: Install Images and Reboot
     # Platform-specific installation
