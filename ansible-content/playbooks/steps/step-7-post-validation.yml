@@ -62,14 +62,6 @@
     validation_phase: "post_upgrade"
     compare_to_baseline: true
 
-- name: Save collection validation results to file
-  ansible.builtin.copy:
-    content: "{{ validation_collection_results | to_nice_json }}"
-    dest: "{{ baseline_base_path }}/{{ inventory_hostname }}_post_check_collection.json"
-    mode: '0644'
-  delegate_to: localhost
-  changed_when: false
-
 - name: Save comparison validation results to file
   ansible.builtin.copy:
     content: "{{ validation_comparison_results | to_nice_json }}"
@@ -89,9 +81,8 @@
       - "Comparison Status: {{ validation_comparison_results.arp_mac_status }}, {{ validation_comparison_results.routing_status }}"
       - ""
       - "Files saved:"
-      - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_network_baseline.json"
+      - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_pre_upgrade_baseline.json"
       - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_post_upgrade_baseline.json"
-      - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_post_check_collection.json"
       - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_post_check_comparison.json"
       - "=========================================="
 
