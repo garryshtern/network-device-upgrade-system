@@ -130,8 +130,6 @@
         - step4
         - version_check
         - image_check
-      when:
-        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Execute STEP 2 tasks (includes STEP 1)
           ansible.builtin.include_tasks:
@@ -171,8 +169,6 @@
       tags:
         - step4
         - image_upload
-      when:
-        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Execute STEP 4 tasks
           ansible.builtin.include_tasks:
@@ -193,8 +189,6 @@
         - step5
         - pre_check
         - config_backup
-      when:
-        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Execute STEP 5 tasks
           ansible.builtin.include_tasks:
@@ -223,8 +217,6 @@
       tags:
         - step6
         - install
-      when:
-        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Execute STEP 6 tasks
           ansible.builtin.include_tasks:
@@ -245,8 +237,6 @@
       tags:
         - step7
         - post_check
-      when:
-        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Execute STEP 7 tasks
           ansible.builtin.include_tasks:
@@ -275,8 +265,6 @@
       tags:
         - step8
         - rollback
-      when:
-        - not ansible_check_mode or inventory_hostname != 'localhost'
       block:
         - name: Execute STEP 8 tasks
           ansible.builtin.include_tasks:
