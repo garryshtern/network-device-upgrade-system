@@ -44,11 +44,11 @@
 
 # POST-UPGRADE COMPARISON VALIDATION RESULTS
 # Aggregates comparison status between pre/post upgrade baselines
-# Each validation task sets its own status variable (interface_comparison_status, arp_mac_comparison_status, etc.)
+# Each validation task sets its own status variable
 - name: Aggregate comparison validation results
   ansible.builtin.set_fact:
     validation_comparison_results:
-      network_resources_status: "{{ interface_comparison_status }}"
+      network_resources_status: "{{ network_resources_comparison_status }}"
       arp_mac_status: "{{ arp_mac_comparison_status }}"
       bgp_status: "{{ bgp_comparison_status }}"
       routing_status: "{{ routing_comparison_status }}"
