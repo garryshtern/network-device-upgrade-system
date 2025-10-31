@@ -55,6 +55,8 @@
 
   pre_tasks:
     - name: Initialize ansible_date_time if facts not gathered
+      tags:
+        - always
       ansible.builtin.set_fact:
         ansible_date_time:
           iso8601: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
@@ -62,6 +64,8 @@
       when: ansible_date_time is not defined
 
     - name: Validate required variables
+      tags:
+        - always
       ansible.builtin.assert:
         that:
           - target_firmware is defined
@@ -69,15 +73,21 @@
         fail_msg: "Required variables missing. target_firmware and target_hosts must be defined."
 
     - name: Set firmware version for workflow
+      tags:
+        - always
       ansible.builtin.set_fact:
         firmware_version: "{{ target_firmware }}"
 
     - name: Set upgrade start timestamp
+      tags:
+        - always
       ansible.builtin.set_fact:
         upgrade_start_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
         upgrade_job_id: "{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}"
 
     - name: Validate maintenance window requirement
+      tags:
+        - always
       ansible.builtin.assert:
         that:
           - maintenance_window | bool
@@ -85,6 +95,8 @@
       when: not ansible_check_mode
 
     - name: Display upgrade parameters
+      tags:
+        - always
       ansible.builtin.debug:
         msg:
           - "=== Network Device Upgrade Workflow ==="
