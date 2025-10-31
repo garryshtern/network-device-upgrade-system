@@ -91,7 +91,10 @@
   ansible.builtin.set_fact:
     validation_comparison_results:
       arp_mac_status: "{{ arp_mac_comparison_status if arp_mac_comparison_status is defined else 'NOT_RUN' }}"
+      bgp_status: "{{ bgp_comparison_status if bgp_comparison_status is defined else 'NOT_RUN' }}"
       routing_status: "{{ routing_comparison_status if routing_comparison_status is defined else 'NOT_RUN' }}"
+      bfd_status: "{{ bfd_comparison_status if bfd_comparison_status is defined else 'NOT_RUN' }}"
+      multicast_status: "{{ multicast_comparison_status if multicast_comparison_status is defined else 'NOT_RUN' }}"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when:
     - not ansible_check_mode
@@ -102,7 +105,10 @@
   ansible.builtin.set_fact:
     validation_comparison_results:
       arp_mac_status: "NOT_RUN"
+      bgp_status: "NOT_RUN"
       routing_status: "NOT_RUN"
+      bfd_status: "NOT_RUN"
+      multicast_status: "NOT_RUN"
       timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
   when:
     - ansible_check_mode or (validation_phase is not defined or validation_phase != 'post_upgrade')

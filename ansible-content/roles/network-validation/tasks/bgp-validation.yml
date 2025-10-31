@@ -116,6 +116,27 @@
   ansible.builtin.set_fact:
     bgp_comparison: {}
 
+# Step 5a: Determine BGP comparison status for aggregation
+- name: Determine BGP comparison status
+  when:
+    - bgp_validation_mode == 'post_upgrade'
+    - bgp_comparison != {}
+  ansible.builtin.set_fact:
+    bgp_comparison_status: >-
+      {{
+        'PASS' if (bgp_comparison.neighbor_count_match and
+                   bgp_comparison.established_count_match and
+                   bgp_comparison.prefix_variance_percentage | float <= 10 and
+                   bgp_comparison.new_down_neighbors | length == 0)
+        else 'FAIL'
+      }}
+
+- name: Set BGP comparison status when not applicable
+  when:
+    - bgp_validation_mode != 'post_upgrade' or bgp_comparison == {}
+  ansible.builtin.set_fact:
+    bgp_comparison_status: "NOT_RUN"
+
 # Step 6: Calculate validation errors
 - name: Build validation errors list
   ansible.builtin.set_fact:

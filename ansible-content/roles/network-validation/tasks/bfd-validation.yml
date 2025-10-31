@@ -112,6 +112,66 @@
       - "Overall Status: {{ 'CONFIGURED' if bfd_baseline.bfd_configured else 'NOT CONFIGURED' }}"
       - "============================"
 
+# Post-upgrade comparison for BFD state
+- name: Compare BFD state with baseline (post-upgrade only)
+  when:
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+    - network_baseline_pre is defined
+    - network_baseline_post is defined
+    - network_baseline_pre.bfd_data is defined
+    - network_baseline_post.bfd_data is defined
+  block:
+    - name: Normalize BFD pre-upgrade data
+      ansible.builtin.include_tasks: normalize-baseline-data.yml
+      vars:
+        data_to_normalize: "{{ network_baseline_pre.bfd_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.bfd_data if baseline_comparison_excluded_fields.bfd_data is defined else [] }}"
+
+    - name: Store normalized BFD pre data
+      ansible.builtin.set_fact:
+        bfd_pre_normalized: "{{ normalized_data }}"
+
+    - name: Normalize BFD post-upgrade data
+      ansible.builtin.include_tasks: normalize-baseline-data.yml
+      vars:
+        data_to_normalize: "{{ network_baseline_post.bfd_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.bfd_data if baseline_comparison_excluded_fields.bfd_data is defined else [] }}"
+
+    - name: Calculate BFD deltas (added/removed)
+      ansible.builtin.set_fact:
+        bfd_post_normalized: "{{ normalized_data }}"
+        bfd_added: "{{ normalized_data | difference(bfd_pre_normalized) }}"
+        bfd_removed: "{{ bfd_pre_normalized | difference(normalized_data) }}"
+        bfd_comparison_match: "{{ normalized_data == bfd_pre_normalized }}"
+
+    - name: Report BFD comparison results
+      ansible.builtin.debug:
+        msg:
+          - "=== BFD Data Comparison ==="
+          - "Pre-upgrade BFD neighbors: {{ network_baseline_pre.bfd_data | length }}"
+          - "Post-upgrade BFD neighbors: {{ network_baseline_post.bfd_data | length }}"
+          - "Match: {{ bfd_comparison_match }}"
+          - "Added neighbors: {{ bfd_added | length }}"
+          - "{{ '' if bfd_added | length == 0 else 'Added BFD neighbors:' }}"
+          - "{{ bfd_added | to_nice_json if bfd_added | length > 0 else '' }}"
+          - "Removed neighbors: {{ bfd_removed | length }}"
+          - "{{ '' if bfd_removed | length == 0 else 'Removed BFD neighbors:' }}"
+          - "{{ bfd_removed | to_nice_json if bfd_removed | length > 0 else '' }}"
+      when: show_debug | bool
+
+    - name: Determine BFD comparison status
+      ansible.builtin.set_fact:
+        bfd_comparison_status: "{{ 'PASS' if bfd_comparison_match else 'FAIL' }}"
+
+- name: Set BFD comparison status when not applicable
+  when:
+    - validation_phase is not defined or validation_phase != 'post_upgrade' or
+      network_baseline_pre is not defined or network_baseline_post is not defined or
+      network_baseline_pre.bfd_data is not defined or network_baseline_post.bfd_data is not defined
+  ansible.builtin.set_fact:
+    bfd_comparison_status: "NOT_RUN"
+
 - name: IOS-XE BFD Validation (placeholder for future implementation)
   when:
     - platform == 'ios'

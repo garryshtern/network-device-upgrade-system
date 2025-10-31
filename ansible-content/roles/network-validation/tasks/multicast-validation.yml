@@ -74,3 +74,120 @@
       - "Mroute Data Available: {{ multicast_baseline.mroute_data_available }}"
       - "Overall Status: {{ 'CONFIGURED' if multicast_baseline.pim_configured else 'NOT CONFIGURED' }}"
       - "==============================================="
+
+# Post-upgrade comparison for multicast state
+- name: Compare PIM/IGMP/Mroute data with baseline (post-upgrade only)
+  when:
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+    - multicast_enabled | bool
+    - network_baseline_pre is defined
+    - network_baseline_post is defined
+  block:
+    # PIM Interface Comparison
+    - name: Compare PIM interface data
+      when:
+        - network_baseline_pre.pim_interface_data is defined
+        - network_baseline_post.pim_interface_data is defined
+      block:
+        - name: Normalize PIM interface pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.pim_interface_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.pim_interface_data if baseline_comparison_excluded_fields.pim_interface_data is defined else [] }}"
+
+        - name: Store normalized PIM interface pre data
+          ansible.builtin.set_fact:
+            pim_interface_pre_normalized: "{{ normalized_data }}"
+
+        - name: Normalize PIM interface post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.pim_interface_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.pim_interface_data if baseline_comparison_excluded_fields.pim_interface_data is defined else [] }}"
+
+        - name: Calculate PIM interface deltas
+          ansible.builtin.set_fact:
+            pim_interface_post_normalized: "{{ normalized_data }}"
+            pim_interface_match: "{{ normalized_data == pim_interface_pre_normalized }}"
+
+    # IGMP Group Comparison
+    - name: Compare IGMP group data
+      when:
+        - network_baseline_pre.igmp_groups_data is defined
+        - network_baseline_post.igmp_groups_data is defined
+      block:
+        - name: Normalize IGMP groups pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.igmp_groups_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.igmp_groups_data if baseline_comparison_excluded_fields.igmp_groups_data is defined else [] }}"
+
+        - name: Store normalized IGMP groups pre data
+          ansible.builtin.set_fact:
+            igmp_groups_pre_normalized: "{{ normalized_data }}"
+
+        - name: Normalize IGMP groups post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.igmp_groups_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.igmp_groups_data if baseline_comparison_excluded_fields.igmp_groups_data is defined else [] }}"
+
+        - name: Calculate IGMP groups deltas
+          ansible.builtin.set_fact:
+            igmp_groups_post_normalized: "{{ normalized_data }}"
+            igmp_groups_match: "{{ normalized_data == igmp_groups_pre_normalized }}"
+
+    # Multicast Route Comparison
+    - name: Compare multicast route data
+      when:
+        - network_baseline_pre.mroute_data is defined
+        - network_baseline_post.mroute_data is defined
+      block:
+        - name: Normalize mroute pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.mroute_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.mroute_data if baseline_comparison_excluded_fields.mroute_data is defined else [] }}"
+
+        - name: Store normalized mroute pre data
+          ansible.builtin.set_fact:
+            mroute_pre_normalized: "{{ normalized_data }}"
+
+        - name: Normalize mroute post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.mroute_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.mroute_data if baseline_comparison_excluded_fields.mroute_data is defined else [] }}"
+
+        - name: Calculate mroute deltas
+          ansible.builtin.set_fact:
+            mroute_post_normalized: "{{ normalized_data }}"
+            mroute_match: "{{ normalized_data == mroute_pre_normalized }}"
+
+    - name: Report multicast comparison results
+      ansible.builtin.debug:
+        msg:
+          - "=== Multicast Data Comparison ==="
+          - "{{ 'PIM Interfaces Match: ' + (pim_interface_match | string) if pim_interface_match is defined else '' }}"
+          - "{{ 'IGMP Groups Match: ' + (igmp_groups_match | string) if igmp_groups_match is defined else '' }}"
+          - "{{ 'Mroutes Match: ' + (mroute_match | string) if mroute_match is defined else '' }}"
+      when: show_debug | bool
+
+    - name: Determine multicast comparison status
+      ansible.builtin.set_fact:
+        multicast_comparison_status: >-
+          {{
+            'PASS' if ((pim_interface_match | default(true)) and
+                       (igmp_groups_match | default(true)) and
+                       (mroute_match | default(true)))
+            else 'FAIL'
+          }}
+
+- name: Set multicast comparison status when not applicable
+  when:
+    - validation_phase is not defined or validation_phase != 'post_upgrade' or
+      not (multicast_enabled | bool) or
+      network_baseline_pre is not defined or network_baseline_post is not defined
+  ansible.builtin.set_fact:
+    multicast_comparison_status: "NOT_RUN"
