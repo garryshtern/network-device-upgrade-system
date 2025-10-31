@@ -3,7 +3,7 @@
 # Compares entire network_resources tree (interfaces, L2/L3, VLANs, LAG, LACP, BFD, BGP config, etc.)
 # Validates all configuration facts before operational state validation
 #
-# DESIGN: Extract complete network_resources dict from baseline data, normalize, compare, report deltas
+# DESIGN: Extract complete network_resources dict from baseline data, compare, report deltas
 # DATA SOURCES:
 # - Complete network config: network_baseline.network_resources (all config resources)
 # - Pre-upgrade baseline: network_baseline_pre
@@ -21,47 +21,23 @@
     - network_baseline_pre.network_resources is defined
     - network_baseline_post.network_resources is defined
   block:
-    - name: Normalize network_resources pre-upgrade data
-      ansible.builtin.include_tasks: normalize-baseline-data.yml
-      vars:
-        data_to_normalize: "{{ network_baseline_pre.network_resources }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.network_resources if baseline_comparison_excluded_fields.network_resources is defined else [] }}"
-
-    - name: Store normalized network_resources pre data
-      ansible.builtin.set_fact:
-        network_resources_pre_normalized: "{{ normalized_data }}"
-
-    - name: Normalize network_resources post-upgrade data
-      ansible.builtin.include_tasks: normalize-baseline-data.yml
-      vars:
-        data_to_normalize: "{{ network_baseline_post.network_resources }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.network_resources if baseline_comparison_excluded_fields.network_resources is defined else [] }}"
-
     - name: Calculate network_resources deltas
       ansible.builtin.set_fact:
-        network_resources_post_normalized: "{{ normalized_data }}"
-        network_resources_added: "{{ normalized_data | difference(network_resources_pre_normalized) }}"
-        network_resources_removed: "{{ network_resources_pre_normalized | difference(normalized_data) }}"
-        network_resources_comparison_match: "{{ normalized_data == network_resources_pre_normalized }}"
+        network_resources_pre: "{{ network_baseline_pre.network_resources }}"
+        network_resources_post: "{{ network_baseline_post.network_resources }}"
+        network_resources_comparison_match: "{{ network_baseline_post.network_resources == network_baseline_pre.network_resources }}"
 
-    - name: Report network_resources comparison deltas (if any)
+    - name: Report network_resources comparison results
       ansible.builtin.debug:
         msg:
           - "=== Network Resources Configuration Changes ==="
-          - "Pre-upgrade resources keys: {{ network_baseline_pre.network_resources.keys() | list | join(', ') }}"
-          - "Post-upgrade resources keys: {{ network_baseline_post.network_resources.keys() | list | join(', ') }}"
-          - "{{ '' if network_resources_added | length == 0 else 'Added/Modified Resources:' }}"
-          - "{{ network_resources_added | to_nice_json if network_resources_added | length > 0 else '' }}"
-          - "{{ '' if network_resources_removed | length == 0 else 'Removed Resources:' }}"
-          - "{{ network_resources_removed | to_nice_json if network_resources_removed | length > 0 else '' }}"
-      when: network_resources_added | length > 0 or network_resources_removed | length > 0
-
-    - name: Report no network_resources changes
-      ansible.builtin.debug:
-        msg:
-          - "=== Network Resources Configuration Changes ==="
-          - "Status: No changes detected in network resources configuration"
-      when: network_resources_added | length == 0 and network_resources_removed | length == 0
+          - "Pre-upgrade resources keys: {{ network_resources_pre.keys() | list | join(', ') }}"
+          - "Post-upgrade resources keys: {{ network_resources_post.keys() | list | join(', ') }}"
+          - "Match: {{ network_resources_comparison_match }}"
+          - "Pre-upgrade network_resources:"
+          - "{{ network_resources_pre | to_nice_json }}"
+          - "Post-upgrade network_resources:"
+          - "{{ network_resources_post | to_nice_json }}"
 
     - name: Determine network_resources comparison status
       ansible.builtin.set_fact:
