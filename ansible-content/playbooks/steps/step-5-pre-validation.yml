@@ -45,6 +45,7 @@
     tasks_from: metrics-export
   vars:
     metric_type: "pre_upgrade_baseline"
-    metric_value: 1
-    metric_status: "baseline_collected"
-  when: export_metrics | default(false) | bool
+    metric_data:
+      baseline_collected: "true"
+      device: "{{ inventory_hostname }}"
+  when: export_metrics | bool

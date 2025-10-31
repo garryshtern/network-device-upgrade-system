@@ -113,6 +113,9 @@
     tasks_from: metrics-export
   vars:
     metric_type: "post_upgrade_validation"
-    metric_value: "{{ 1 if validation_comparison_results.arp_mac_status == 'PASS' and validation_comparison_results.routing_status == 'PASS' else 0 }}"
-    metric_status: "{{ validation_comparison_results.arp_mac_status }}_{{ validation_comparison_results.routing_status }}"
-  when: export_metrics | default(false) | bool
+    metric_data:
+      validation_passed: "{{ 'true' if validation_comparison_results.arp_mac_status == 'PASS' and validation_comparison_results.routing_status == 'PASS' else 'false' }}"
+      arp_mac_status: "{{ validation_comparison_results.arp_mac_status }}"
+      routing_status: "{{ validation_comparison_results.routing_status }}"
+      device: "{{ inventory_hostname }}"
+  when: export_metrics | bool

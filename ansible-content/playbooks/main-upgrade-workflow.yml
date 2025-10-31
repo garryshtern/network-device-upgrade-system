@@ -204,19 +204,16 @@
             file: steps/step-5-pre-validation.yml
 
       rescue:
-        - name: Pre-upgrade validation failed
-          block:
-            - name: Log pre-upgrade validation failure
-              ansible.builtin.debug:
-                msg:
-                  - "WARNING: Pre-upgrade validation failed."
-                  - "Baseline data may be incomplete for post-upgrade comparison."
-                  - "To rollback, run: --tags step8 or --tags rollback"
+        - name: Log pre-upgrade validation failure
+          ansible.builtin.debug:
+            msg:
+              - "WARNING: Pre-upgrade validation failed."
+              - "Baseline data may be incomplete for post-upgrade comparison."
+              - "To rollback, run: --tags step8 or --tags rollback"
 
-          always:
-            - name: Mark upgrade with validation warnings
-              ansible.builtin.set_fact:
-                upgrade_completed_with_warnings: true
+        - name: Mark upgrade with validation warnings
+          ansible.builtin.set_fact:
+            upgrade_completed_with_warnings: true
 
     # STEP 6: Install Images and Reboot
     # Platform-specific installation
@@ -252,18 +249,15 @@
             file: steps/step-7-post-validation.yml
 
       rescue:
-        - name: Post-validation failed - rollback available via STEP 8
-          block:
-            - name: Log post-validation failure
-              ansible.builtin.debug:
-                msg:
-                  - "WARNING: Post-upgrade validation failed."
-                  - "To rollback, run: --tags step8 or --tags rollback"
+        - name: Log post-validation failure
+          ansible.builtin.debug:
+            msg:
+              - "WARNING: Post-upgrade validation failed."
+              - "To rollback, run: --tags step8 or --tags rollback"
 
-          always:
-            - name: Mark upgrade with validation warnings
-              ansible.builtin.set_fact:
-                upgrade_completed_with_warnings: true
+        - name: Mark upgrade with validation warnings
+          ansible.builtin.set_fact:
+            upgrade_completed_with_warnings: true
 
     # STEP 8: Emergency Rollback
     # Restores device to previous firmware and configuration
