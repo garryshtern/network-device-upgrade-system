@@ -45,8 +45,13 @@
     batch_id: "{{ ansible_play_batch | hash('md5') }}"
     operator_id: "{{ lookup('env', 'USER')  }}"
 
-    # NOTE: Timeouts and retries are defined in group_vars/all.yml:
-    #   connectivity_timeout, reboot_wait_time, max_retry_attempts
+    # Baseline file paths (available to all tasks in the play)
+    baseline_file_pre_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
+    baseline_file_post_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_post_upgrade }}"
+    baseline_file_comparison: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_comparison }}"
+
+  # NOTE: Timeouts and retries are defined in group_vars/all.yml:
+  #   connectivity_timeout, reboot_wait_time, max_retry_attempts
 
   pre_tasks:
     - name: Initialize ansible_date_time if facts not gathered
@@ -72,12 +77,6 @@
         upgrade_start_time: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
         upgrade_job_id: "{{ inventory_hostname }}_{{ ansible_play_batch | hash('md5') }}"
 
-    - name: Set baseline file paths as facts
-      ansible.builtin.set_fact:
-        baseline_file_pre_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
-        baseline_file_post_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_post_upgrade }}"
-        baseline_file_comparison: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_comparison }}"
-
     - name: Validate maintenance window requirement
       ansible.builtin.assert:
         that:
@@ -94,6 +93,10 @@
           - "Maintenance Window: {{ maintenance_window }}"
           - "Batch ID: {{ batch_id }}"
           - "Job ID: {{ upgrade_job_id }}"
+          - "Baseline Files:"
+          - "  Pre-upgrade: {{ baseline_file_pre_upgrade }}"
+          - "  Post-upgrade: {{ baseline_file_post_upgrade }}"
+          - "  Comparison: {{ baseline_file_comparison }}"
           - "======================================="
 
   tasks:
