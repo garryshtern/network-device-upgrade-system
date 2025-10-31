@@ -4,12 +4,7 @@
 # Failure triggers OPTIONAL rollback (does not stop workflow)
 # Dependencies: STEP 1 (managed by main workflow tags)
 # NOTE: STEP 5 baseline must exist from prior run, STEP 6 should have been run
-
-- name: Set baseline file paths as facts
-  ansible.builtin.set_fact:
-    baseline_file_pre_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
-    baseline_file_post_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_post_upgrade }}"
-    baseline_file_comparison: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_comparison }}"
+# NOTE: Baseline file paths are defined in main workflow pre_tasks
 
 - name: Check if pre-upgrade baseline file exists
   ansible.builtin.stat:
