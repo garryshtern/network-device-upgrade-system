@@ -328,12 +328,14 @@
         - validation_phase == 'post_upgrade'
         - baseline_file_post_upgrade is defined
 
-    - name: Store current state as post-upgrade data (comparison with pre-upgrade baseline)
+    - name: Alias post-upgrade data for validation comparison
       when:
         - validation_phase is defined
         - validation_phase == 'post_upgrade'
       ansible.builtin.set_fact:
         network_baseline_post: "{{ network_baseline }}"
+      # Note: This aliases network_baseline to network_baseline_post so validation tasks
+      # can reference post-upgrade data with a clear naming convention (vs network_baseline_pre)
 
   rescue:
     - name: Network resources gathering failed
