@@ -37,3 +37,13 @@
       - "=========================================="
       - "Baseline data ready for post-upgrade comparison"
       - "=========================================="
+
+- name: Export step 5 metrics
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: metrics-export
+  vars:
+    metric_type: "pre_upgrade_baseline"
+    metric_value: 1
+    metric_status: "baseline_collected"
+  when: export_metrics | default(false) | bool

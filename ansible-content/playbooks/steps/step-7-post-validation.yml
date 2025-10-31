@@ -105,3 +105,13 @@
       - validation_comparison_results.arp_mac_status != "FAIL"
       - validation_comparison_results.routing_status != "FAIL"
     fail_msg: "Post-upgrade validation shows degradation from baseline."
+
+- name: Export step 7 metrics
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: metrics-export
+  vars:
+    metric_type: "post_upgrade_validation"
+    metric_value: "{{ 1 if validation_comparison_results.arp_mac_status == 'PASS' and validation_comparison_results.routing_status == 'PASS' else 0 }}"
+    metric_status: "{{ validation_comparison_results.arp_mac_status }}_{{ validation_comparison_results.routing_status }}"
+  when: export_metrics | default(false) | bool
