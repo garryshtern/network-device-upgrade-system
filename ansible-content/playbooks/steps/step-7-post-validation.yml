@@ -78,8 +78,12 @@
       - "POST-UPGRADE BASELINE COMPARISON RESULTS"
       - "=========================================="
       - "Device: {{ inventory_hostname }}"
+      - "Network Resources: {{ validation_comparison_results.network_resources_status }}"
       - "ARP/MAC Comparison: {{ validation_comparison_results.arp_mac_status }}"
+      - "BGP Comparison: {{ validation_comparison_results.bgp_status }}"
       - "Routing Comparison: {{ validation_comparison_results.routing_status }}"
+      - "BFD Comparison: {{ validation_comparison_results.bfd_status }}"
+      - "Multicast Comparison: {{ validation_comparison_results.multicast_status }}"
       - ""
       - "Files saved:"
       - "  - {{ baseline_file_post_upgrade }}"
@@ -87,12 +91,13 @@
       - "=========================================="
 
 - name: Display baseline comparison changes (on failure)
-  when: validation_comparison_results.arp_mac_status == "FAIL" or validation_comparison_results.routing_status == "FAIL"
+  when: validation_comparison_results.network_resources_status == "FAIL" or validation_comparison_results.arp_mac_status == "FAIL" or validation_comparison_results.routing_status == "FAIL"
   ansible.builtin.debug:
     msg:
       - "=========================================="
       - "BASELINE COMPARISON DIFFERENCES DETECTED"
       - "=========================================="
+      - "Network Resources: {{ validation_comparison_results.network_resources_status }}"
       - "ARP/MAC Status: {{ validation_comparison_results.arp_mac_status }}"
       - "Routing Status: {{ validation_comparison_results.routing_status }}"
       - ""
@@ -103,7 +108,7 @@
   ansible.builtin.assert:
     that:
       - validation_comparison_results is defined
-      - validation_comparison_results.interface_status != "FAIL"
+      - validation_comparison_results.network_resources_status != "FAIL"
       - validation_comparison_results.arp_mac_status != "FAIL"
       - validation_comparison_results.routing_status != "FAIL"
     fail_msg: "Post-upgrade validation shows degradation from baseline."
@@ -115,8 +120,8 @@
   vars:
     metric_type: "post_upgrade_validation"
     metric_data:
-      validation_passed: "{{ 'true' if validation_comparison_results.interface_status != 'FAIL' and validation_comparison_results.arp_mac_status != 'FAIL' and validation_comparison_results.routing_status != 'FAIL' else 'false' }}"
-      interface_status: "{{ validation_comparison_results.interface_status }}"
+      validation_passed: "{{ 'true' if validation_comparison_results.network_resources_status != 'FAIL' and validation_comparison_results.arp_mac_status != 'FAIL' and validation_comparison_results.routing_status != 'FAIL' else 'false' }}"
+      network_resources_status: "{{ validation_comparison_results.network_resources_status }}"
       arp_mac_status: "{{ validation_comparison_results.arp_mac_status }}"
       routing_status: "{{ validation_comparison_results.routing_status }}"
       device: "{{ inventory_hostname }}"

@@ -1,171 +1,80 @@
 ---
-# ARP and MAC Table Validation
-# Validates ARP and MAC data availability
-# Uses raw baseline data from network-resources-gathering
-# DESIGN: Single block pattern with platform gate
+# ARP and MAC Data Validation
+# Compares entire arp_data and mac_data (arp_data normalized, mac_data raw)
+# Validates all ARP and MAC state before operational state validation
 #
-# DATA SOURCES (raw baseline data from network-resources-gathering):
-# - ARP data: network_baseline.arp_data
-# - MAC data: network_baseline.mac_data
-#
-# FEATURES:
-# - ARP data availability validation
-# - MAC data availability validation
+# DESIGN: Extract complete arp_data and mac_data dicts from baseline data, normalize arp_data, compare, report deltas
+# DATA SOURCES:
+# - ARP data: network_baseline.arp_data (normalized for comparison)
+# - MAC data: network_baseline.mac_data (raw comparison)
+# - Pre-upgrade baseline: network_baseline_pre
+# - Post-upgrade baseline: network_baseline_post
 
-- name: NX-OS ARP and MAC Validation (uses raw baseline data from network-resources-gathering)
-  when:
-    - platform == 'nxos'
-    - not ansible_check_mode
-    - network_baseline is defined
-  block:
-    - name: Use raw ARP and MAC baseline data
-      ansible.builtin.set_fact:
-        arp_data_available: "{{ network_baseline.arp_data | length > 0 if network_baseline.arp_data is defined else false }}"
-        mac_data_available: "{{ network_baseline.mac_data | length > 0 if network_baseline.mac_data is defined else false }}"
-
-    - name: Display ARP-MAC validation
-      ansible.builtin.debug:
-        msg:
-          - "=== ARP and MAC Table Validation ==="
-          - "ARP Data Available: {{ arp_data_available }}"
-          - "MAC Data Available: {{ mac_data_available }}"
-      when: show_debug | bool
-- name: Store ARP baseline (NX-OS)
-  when:
-    - platform == 'nxos'
-    - not ansible_check_mode
-  ansible.builtin.set_fact:
-    arp_baseline:
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      arp_data_available: "{{ arp_data_available if arp_data_available is defined else false }}"
-      mac_data_available: "{{ mac_data_available if mac_data_available is defined else false }}"
-
-- name: Store ARP baseline for check mode
-  when:
-    - ansible_check_mode
-  ansible.builtin.set_fact:
-    arp_baseline:
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      arp_data_available: false
-      mac_data_available: false
-
-- name: ARP validation summary
-  ansible.builtin.debug:
-    msg:
-      - "=== ARP and MAC Table Validation Results ==="
-      - "ARP Data Available: {{ arp_baseline.arp_data_available }}"
-      - "MAC Data Available: {{ arp_baseline.mac_data_available }}"
-      - "Overall Status: {{ 'DATA COLLECTED' if arp_baseline.arp_data_available or arp_baseline.mac_data_available else 'NO DATA' }}"
-      - "============================================"
-
-- name: IOS-XE ARP Validation (placeholder for future implementation)
-  when:
-    - platform == 'ios'
-    - not ansible_check_mode
-  block:
-    - name: Get ARP information (IOS-XE)
-      cisco.ios.ios_command:
-        commands:
-          - show ip arp
-          - show arp summary
-      register: ios_arp_info
-
-    - name: Store IOS-XE ARP baseline (placeholder)
-      ansible.builtin.set_fact:
-        arp_baseline:
-          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-          total_arp_entries: 0
-          platform: "ios"
-          raw_output: "{{ ios_arp_info.stdout }}"
-
-# Compare ARP and MAC data against pre-upgrade baseline (post-upgrade only)
-- name: Compare ARP and MAC data (post-upgrade validation)
+# Post-upgrade comparison for ARP and MAC data
+- name: Compare ARP and MAC data with baseline (post-upgrade only)
   when:
     - validation_phase is defined
     - validation_phase == 'post_upgrade'
+    - platform == 'nxos'
+    - not ansible_check_mode
     - network_baseline_pre is defined
     - network_baseline_post is defined
     - network_baseline_pre.arp_data is defined
     - network_baseline_post.arp_data is defined
+    - network_baseline_pre.mac_data is defined
+    - network_baseline_post.mac_data is defined
   block:
-    # ARP Data Comparison
-    - name: Normalize ARP pre-upgrade data for comparison
+    - name: Normalize ARP pre-upgrade data
       ansible.builtin.include_tasks: normalize-baseline-data.yml
       vars:
         data_to_normalize: "{{ network_baseline_pre.arp_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.arp_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.arp_data if baseline_comparison_excluded_fields.arp_data is defined else [] }}"
 
     - name: Store normalized ARP pre data
       ansible.builtin.set_fact:
         arp_pre_normalized: "{{ normalized_data }}"
 
-    - name: Normalize ARP post-upgrade data for comparison
+    - name: Normalize ARP post-upgrade data
       ansible.builtin.include_tasks: normalize-baseline-data.yml
       vars:
         data_to_normalize: "{{ network_baseline_post.arp_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.arp_data }}"
+        fields_to_exclude: "{{ baseline_comparison_excluded_fields.arp_data if baseline_comparison_excluded_fields.arp_data is defined else [] }}"
 
-    - name: Calculate ARP deltas (added/removed)
+    - name: Calculate ARP and MAC comparison
       ansible.builtin.set_fact:
         arp_post_normalized: "{{ normalized_data }}"
-        arp_added: "{{ normalized_data | difference(arp_pre_normalized) }}"
-        arp_removed: "{{ arp_pre_normalized | difference(normalized_data) }}"
         arp_comparison_match: "{{ normalized_data == arp_pre_normalized }}"
+        mac_comparison_match: "{{ network_baseline_post.mac_data == network_baseline_pre.mac_data }}"
 
-    - name: Report ARP comparison results
+    - name: Report ARP and MAC comparison results
       ansible.builtin.debug:
         msg:
-          - "=== ARP Data Comparison ==="
-          - "Pre-upgrade entries: {{ network_baseline_pre.arp_data | length }}"
-          - "Post-upgrade entries: {{ network_baseline_post.arp_data | length }}"
-          - "Match: {{ arp_comparison_match }}"
-          - "Added entries: {{ arp_added | length }}"
-          - "{{ '' if arp_added | length == 0 else 'Added ARP entries:' }}"
-          - "{{ arp_added | to_nice_json if arp_added | length > 0 else '' }}"
-          - "Removed entries: {{ arp_removed | length }}"
-          - "{{ '' if arp_removed | length == 0 else 'Removed ARP entries:' }}"
-          - "{{ arp_removed | to_nice_json if arp_removed | length > 0 else '' }}"
-      when: show_debug | bool
+          - "=== ARP and MAC Data Comparison ==="
+          - "ARP Pre-upgrade entries: {{ network_baseline_pre.arp_data | length }}"
+          - "ARP Post-upgrade entries: {{ network_baseline_post.arp_data | length }}"
+          - "ARP Match: {{ arp_comparison_match }}"
+          - "Pre-upgrade ARP (normalized):"
+          - "{{ arp_pre_normalized | to_nice_json }}"
+          - "Post-upgrade ARP (normalized):"
+          - "{{ arp_post_normalized | to_nice_json }}"
+          - "MAC Pre-upgrade entries: {{ network_baseline_pre.mac_data | length }}"
+          - "MAC Post-upgrade entries: {{ network_baseline_post.mac_data | length }}"
+          - "MAC Match: {{ mac_comparison_match }}"
+          - "Pre-upgrade MAC:"
+          - "{{ network_baseline_pre.mac_data | to_nice_json }}"
+          - "Post-upgrade MAC:"
+          - "{{ network_baseline_post.mac_data | to_nice_json }}"
 
-    # MAC Data Comparison
-    - name: Normalize MAC pre-upgrade data for comparison
-      ansible.builtin.include_tasks: normalize-baseline-data.yml
-      vars:
-        data_to_normalize: "{{ network_baseline_pre.mac_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.mac_data }}"
-
-    - name: Store normalized MAC pre data
-      ansible.builtin.set_fact:
-        mac_pre_normalized: "{{ normalized_data }}"
-
-    - name: Normalize MAC post-upgrade data for comparison
-      ansible.builtin.include_tasks: normalize-baseline-data.yml
-      vars:
-        data_to_normalize: "{{ network_baseline_post.mac_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.mac_data }}"
-
-    - name: Calculate MAC deltas (added/removed)
-      ansible.builtin.set_fact:
-        mac_post_normalized: "{{ normalized_data }}"
-        mac_added: "{{ normalized_data | difference(mac_pre_normalized) }}"
-        mac_removed: "{{ mac_pre_normalized | difference(normalized_data) }}"
-        mac_comparison_match: "{{ normalized_data == mac_pre_normalized }}"
-
-    - name: Report MAC comparison results
-      ansible.builtin.debug:
-        msg:
-          - "=== MAC Data Comparison ==="
-          - "Pre-upgrade entries: {{ network_baseline_pre.mac_data | length }}"
-          - "Post-upgrade entries: {{ network_baseline_post.mac_data | length }}"
-          - "Match: {{ mac_comparison_match }}"
-          - "Added entries: {{ mac_added | length }}"
-          - "{{ '' if mac_added | length == 0 else 'Added MAC entries:' }}"
-          - "{{ mac_added | to_nice_json if mac_added | length > 0 else '' }}"
-          - "Removed entries: {{ mac_removed | length }}"
-          - "{{ '' if mac_removed | length == 0 else 'Removed MAC entries:' }}"
-          - "{{ mac_removed | to_nice_json if mac_removed | length > 0 else '' }}"
-      when: show_debug | bool
-
-    - name: Store ARP/MAC comparison status
+    - name: Determine ARP/MAC comparison status
       ansible.builtin.set_fact:
         arp_mac_comparison_status: "{{ 'PASS' if arp_comparison_match and mac_comparison_match else 'FAIL' }}"
+
+- name: Set ARP/MAC comparison status when not applicable
+  when:
+    - validation_phase is not defined or validation_phase != 'post_upgrade' or
+      platform != 'nxos' or
+      network_baseline_pre is not defined or network_baseline_post is not defined or
+      network_baseline_pre.arp_data is not defined or network_baseline_post.arp_data is not defined or
+      network_baseline_pre.mac_data is not defined or network_baseline_post.mac_data is not defined
+  ansible.builtin.set_fact:
+    arp_mac_comparison_status: "NOT_RUN"

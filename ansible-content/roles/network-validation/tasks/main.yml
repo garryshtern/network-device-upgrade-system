@@ -21,23 +21,11 @@
 - name: NX-OS Network Validation
   when: platform == 'nxos'
   block:
-    - name: Initialize validation baselines
-      ansible.builtin.set_fact:
-        interface_baseline:
-          up_interfaces: 0
-          total_interfaces: 0
-        routing_baseline:
-          rib_data_available: false
-          fib_data_available: false
-        arp_baseline:
-          arp_data_available: false
-          mac_data_available: false
-        bfd_baseline:
-          bfd_configured: false
-          bfd_data_available: false
-
     - name: Run network resource validation (first - foundation for all comparisons)
       ansible.builtin.include_tasks: network-resource-validation.yml
+
+    - name: Run ARP and MAC validation (second - baseline comparison)
+      ansible.builtin.include_tasks: arp-validation.yml
 
     - name: Run BGP validation
       ansible.builtin.include_tasks: bgp-validation.yml
@@ -45,9 +33,6 @@
 
     - name: Run routing validation
       ansible.builtin.include_tasks: routing-validation.yml
-
-    - name: Run ARP validation
-      ansible.builtin.include_tasks: arp-validation.yml
 
     - name: Run multicast validation
       ansible.builtin.include_tasks: multicast-validation.yml
@@ -57,40 +42,13 @@
       ansible.builtin.include_tasks: bfd-validation.yml
       when: bfd_enabled | bool
 
-# DATA COLLECTION VALIDATION RESULTS
-# Aggregates status of baseline data collection for each validation type
-- name: Aggregate data collection validation results
-  ansible.builtin.set_fact:
-    validation_collection_results:
-      interface_status: "{{ 'PASS' if interface_baseline.up_interfaces | int > 0 else 'FAIL' }}"
-      routing_status: "{{ 'PASS' if routing_baseline.rib_data_available or routing_baseline.fib_data_available else 'FAIL' }}"
-      arp_status: "{{ 'PASS' if arp_baseline.arp_data_available or arp_baseline.mac_data_available else 'FAIL' }}"
-      bgp_status: "{{ 'PASS' if bgp_enabled and bgp_validation.bgp_configured and bgp_validation.peers_established | int > 0 else 'SKIP' if not bgp_enabled else 'FAIL' }}"
-      bfd_status: "{{ 'PASS' if bfd_enabled and bfd_baseline.bfd_configured and bfd_baseline.bfd_data_available else 'SKIP' if not bfd_enabled else 'FAIL' }}"
-      multicast_status: "{{ 'PASS' if multicast_enabled and (pim_interface_baseline.configured if pim_interface_baseline is defined else false) else 'SKIP' if not multicast_enabled else 'FAIL' }}"
-      overall_status: "{{ 'PASS' if (interface_baseline.up_interfaces | int > 0) and (routing_baseline.rib_data_available or routing_baseline.fib_data_available) else 'FAIL' }}"
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-  when: not ansible_check_mode
-
-- name: Aggregate data collection validation results (check mode)
-  ansible.builtin.set_fact:
-    validation_collection_results:
-      interface_status: "SKIP"
-      routing_status: "SKIP"
-      arp_status: "SKIP"
-      bgp_status: "SKIP"
-      bfd_status: "SKIP"
-      multicast_status: "SKIP"
-      overall_status: "SKIP"
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-  when: ansible_check_mode
-
 # POST-UPGRADE COMPARISON VALIDATION RESULTS
 # Aggregates comparison status between pre/post upgrade baselines
+# Variables set by validation tasks: interface_comparison_status, arp_mac_comparison_status, bgp_comparison_status, routing_comparison_status, bfd_comparison_status, multicast_comparison_status
 - name: Aggregate comparison validation results (post-upgrade only)
   ansible.builtin.set_fact:
     validation_comparison_results:
-      interface_status: "{{ interface_comparison_status if interface_comparison_status is defined else 'NOT_RUN' }}"
+      network_resources_status: "{{ interface_comparison_status if interface_comparison_status is defined else 'NOT_RUN' }}"
       arp_mac_status: "{{ arp_mac_comparison_status if arp_mac_comparison_status is defined else 'NOT_RUN' }}"
       bgp_status: "{{ bgp_comparison_status if bgp_comparison_status is defined else 'NOT_RUN' }}"
       routing_status: "{{ routing_comparison_status if routing_comparison_status is defined else 'NOT_RUN' }}"
@@ -105,7 +63,7 @@
 - name: Aggregate comparison validation results (not post-upgrade or check mode)
   ansible.builtin.set_fact:
     validation_comparison_results:
-      interface_status: "NOT_RUN"
+      network_resources_status: "NOT_RUN"
       arp_mac_status: "NOT_RUN"
       bgp_status: "NOT_RUN"
       routing_status: "NOT_RUN"
