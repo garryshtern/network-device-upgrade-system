@@ -59,8 +59,7 @@ send_metrics: true
 # Field names are based on actual Cisco NX-OS JSON output from show commands
 baseline_comparison_excluded_fields:
   arp_data:
-    - age
-    - time_stamp
+    - time-stamp
   mac_data:
     - age
   rib_data:
