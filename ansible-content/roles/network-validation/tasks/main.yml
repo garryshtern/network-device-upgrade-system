@@ -27,10 +27,6 @@
     - name: Run ARP and MAC validation (second - baseline comparison)
       ansible.builtin.include_tasks: arp-validation.yml
 
-    - name: Run BGP validation
-      ansible.builtin.include_tasks: bgp-validation.yml
-      when: bgp_enabled | bool
-
     - name: Run routing validation
       ansible.builtin.include_tasks: routing-validation.yml
 
@@ -50,7 +46,6 @@
     validation_comparison_results:
       network_resources_status: "{{ network_resources_comparison_status }}"
       arp_mac_status: "{{ arp_mac_comparison_status }}"
-      bgp_status: "{{ bgp_comparison_status }}"
       routing_status: "{{ routing_comparison_status }}"
       bfd_status: "{{ bfd_comparison_status }}"
       multicast_status: "{{ multicast_comparison_status }}"

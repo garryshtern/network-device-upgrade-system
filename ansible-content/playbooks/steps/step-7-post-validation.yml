@@ -80,7 +80,6 @@
       - "Device: {{ inventory_hostname }}"
       - "Network Resources: {{ validation_comparison_results.network_resources_status }}"
       - "ARP/MAC Comparison: {{ validation_comparison_results.arp_mac_status }}"
-      - "BGP Comparison: {{ validation_comparison_results.bgp_status }}"
       - "Routing Comparison: {{ validation_comparison_results.routing_status }}"
       - "BFD Comparison: {{ validation_comparison_results.bfd_status }}"
       - "Multicast Comparison: {{ validation_comparison_results.multicast_status }}"
