@@ -74,13 +74,13 @@
   ansible.builtin.debug:
     msg:
       - "=========================================="
-      - "POST-UPGRADE VALIDATION RESULTS"
+      - "POST-UPGRADE BASELINE COMPARISON RESULTS"
       - "=========================================="
       - "Device: {{ inventory_hostname }}"
-      - "Collection Status: {{ validation_collection_results.overall_status }}"
-      - "Comparison Status: {{ validation_comparison_results.arp_mac_status }}, {{ validation_comparison_results.routing_status }}"
+      - "ARP/MAC Comparison: {{ validation_comparison_results.arp_mac_status }}"
+      - "Routing Comparison: {{ validation_comparison_results.routing_status }}"
       - ""
-      - "Files saved in this step:"
+      - "Files saved:"
       - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_post_upgrade_baseline.json"
       - "  - {{ baseline_base_path }}/{{ inventory_hostname }}_post_check_comparison.json"
       - "=========================================="
