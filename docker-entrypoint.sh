@@ -692,14 +692,6 @@ execute_ansible_playbook() {
 
     log "Extra variables: $extra_vars"
 
-    # Handle Ansible tags for step-based workflow execution
-    # Use ANSIBLE_TAGS environment variable to specify which steps to run (step1, step2, ..., step7)
-    # If no tags specified, all steps will be executed
-    local ansible_tags="${ANSIBLE_TAGS:-}"
-    if [[ -n "$ansible_tags" ]]; then
-        log "Ansible tags specified: ${ansible_tags}"
-    fi
-
     # Debug: Show key authentication variables
     if [[ "$extra_vars" =~ vault_cisco_nxos_username=([^[:space:]]+) ]]; then
         log "DEBUG: CISCO_NXOS_USERNAME is set to: ${BASH_REMATCH[1]}"
@@ -710,13 +702,13 @@ execute_ansible_playbook() {
     # Execute ansible-playbook with mode-specific flags
     # Using ansible-content/inventory/hosts.yml ensures group_vars/all.yml is discovered
     # group_vars must be in same directory as inventory file for Ansible to find it
+    # Note: ansible_opts already includes --tags if ANSIBLE_TAGS was specified in build_ansible_options()
     case "$mode" in
         syntax-check)
             ansible-playbook \
                 --syntax-check \
                 -i "$ansible_inventory" \
                 ${ansible_opts} \
-                ${ansible_tags:+--tags "$ansible_tags"} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
             success "Syntax check completed successfully"
@@ -726,7 +718,6 @@ execute_ansible_playbook() {
                 --check --diff \
                 -i "$ansible_inventory" \
                 ${ansible_opts} \
-                ${ansible_tags:+--tags "$ansible_tags"} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
             success "Dry run completed successfully"
@@ -735,7 +726,6 @@ execute_ansible_playbook() {
             ansible-playbook \
                 -i "$ansible_inventory" \
                 ${ansible_opts} \
-                ${ansible_tags:+--tags "$ansible_tags"} \
                 ${extra_vars:+--extra-vars "$extra_vars"} \
                 "$playbook"
             success "Playbook execution completed"
