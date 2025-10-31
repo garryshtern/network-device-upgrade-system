@@ -289,18 +289,19 @@
     - name: Save network baseline to filesystem (pre-upgrade only)
       ansible.builtin.copy:
         content: "{{ network_baseline | to_nice_json }}"
-        dest: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
+        dest: "{{ baseline_file_pre_upgrade }}"
         mode: '0644'
       delegate_to: localhost
       when:
         - network_baseline is defined
         - validation_phase is defined
         - validation_phase == 'pre_upgrade'
+        - baseline_file_pre_upgrade is defined
 
     - name: Save post-upgrade baseline to file (post-upgrade only)
       ansible.builtin.copy:
         content: "{{ network_baseline | to_nice_json }}"
-        dest: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_post_upgrade }}"
+        dest: "{{ baseline_file_post_upgrade }}"
         mode: '0644'
       delegate_to: localhost
       changed_when: false
@@ -308,6 +309,7 @@
         - network_baseline is defined
         - validation_phase is defined
         - validation_phase == 'post_upgrade'
+        - baseline_file_post_upgrade is defined
 
     - name: Load pre-upgrade baseline for comparison (post-upgrade only)
       when:
@@ -317,14 +319,17 @@
       block:
         - name: Check if baseline file exists
           ansible.builtin.stat:
-            path: "{{ baseline_base_path }}/{{ inventory_hostname }}{{ baseline_suffix_pre_upgrade }}"
+            path: "{{ baseline_file_pre_upgrade }}"
           register: baseline_file
           delegate_to: localhost
+          when: baseline_file_pre_upgrade is defined
 
         - name: Load baseline data
           ansible.builtin.set_fact:
-            network_baseline_pre: "{{ lookup('file', baseline_base_path + '/' + inventory_hostname + baseline_suffix_pre_upgrade) | from_json }}"
-          when: baseline_file.stat.exists
+            network_baseline_pre: "{{ lookup('file', baseline_file_pre_upgrade) | from_json }}"
+          when:
+            - baseline_file.stat.exists
+            - baseline_file_pre_upgrade is defined
 
         - name: Store current state as post-upgrade data
           ansible.builtin.set_fact:

@@ -61,30 +61,25 @@
       total_received_prefixes: 0
       down_neighbors: []
 
-# Step 4: Load baseline if available (post-upgrade mode only)
-- name: Load baseline BGP state
+# Step 4: Load baseline BGP data from network_baseline (post-upgrade mode only)
+- name: Load baseline BGP state from network baseline
   when:
     - bgp_is_configured
     - bgp_validation_mode == 'post_upgrade'
-  block:
-    - name: Check for existing baseline
-      ansible.builtin.stat:
-        path: "{{ baseline_base_path }}/{{ inventory_hostname }}_bgp_baseline.json"
-      register: baseline_file
-      delegate_to: localhost
-
-    - name: Load baseline data
-      ansible.builtin.set_fact:
-        bgp_baseline: "{{ lookup('file', baseline_base_path + '/' + inventory_hostname + '_bgp_baseline.json') | from_json }}"
-      when: baseline_file.stat.exists
-
-  rescue:
-    - name: Set empty baseline on failure
-      ansible.builtin.set_fact:
-        bgp_baseline: {}
+    - network_baseline_pre is defined
+    - network_baseline_pre.network_resources is defined
+    - network_baseline_pre.network_resources.bgp_global is defined
+  ansible.builtin.set_fact:
+    bgp_baseline:
+      analysis:
+        total_neighbors: "{{ network_baseline_pre.network_resources.bgp_global.neighbors | default([]) | length }}"
+        established_neighbors: "{{ network_baseline_pre.network_resources.bgp_global.neighbors | default([]) | selectattr('state', 'defined') | selectattr('state', 'equalto', 'Established') | list | length }}"
+        total_received_prefixes: "{{ network_baseline_pre.network_resources.bgp_global.neighbors | default([]) | sum(attribute='received_prefixes', start=0) }}"
+      neighbors: "{{ network_baseline_pre.network_resources.bgp_global.neighbors | default([]) }}"
 
 - name: Set empty baseline when not applicable
-  when: not bgp_is_configured or bgp_validation_mode != 'post_upgrade'
+  when:
+    - not bgp_is_configured or bgp_validation_mode != 'post_upgrade' or network_baseline_pre is not defined
   ansible.builtin.set_fact:
     bgp_baseline: {}
 
@@ -185,16 +180,8 @@
         established_neighbors: "{{ bgp_analysis.established_neighbors }}"
         total_prefixes: "{{ bgp_analysis.total_received_prefixes }}"
 
-# Step 9: Save baseline (pre-upgrade only)
-- name: Save baseline BGP state
-  when:
-    - bgp_is_configured
-    - bgp_validation_mode == 'pre_upgrade'
-  ansible.builtin.copy:
-    content: "{{ bgp_validation.current | to_nice_json }}"
-    dest: "{{ baseline_base_path }}/{{ inventory_hostname }}_bgp_baseline.json"
-    mode: '0644'
-  delegate_to: localhost
+# Step 9: BGP baseline is saved as part of network_baseline in network-resources-gathering
+# No separate file needed - all baseline data is consolidated in the main baseline file
 
 # Step 10: Log to InfluxDB
 - name: Log BGP validation to InfluxDB
