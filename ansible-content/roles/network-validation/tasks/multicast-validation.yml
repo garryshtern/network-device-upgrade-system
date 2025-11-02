@@ -11,6 +11,10 @@
 # - Post-upgrade baseline: network_baseline_post
 
 # Post-upgrade comparison for multicast data
+- name: Initialize multicast comparison status
+  ansible.builtin.set_fact:
+    multicast_comparison_status: "NOT_RUN"
+
 - name: Compare multicast data with baseline (post-upgrade only)
   when:
     - validation_phase is defined
@@ -290,11 +294,3 @@
             else 'FAIL'
           }}
 
-- name: Set multicast comparison status when not applicable
-  when:
-    - validation_phase is not defined or validation_phase != 'post_upgrade' or
-      platform != 'nxos' or
-      not (multicast_enabled | bool) or
-      network_baseline_pre is not defined or network_baseline_post is not defined
-  ansible.builtin.set_fact:
-    multicast_comparison_status: "NOT_RUN"
