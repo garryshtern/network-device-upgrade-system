@@ -176,19 +176,19 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
 - **YAML/JSON Validation** - File syntax and structure validation ✅
 - **CI/CD Integration** - GitHub Actions automated testing ✅
 
-**See comprehensive guide**: [Testing Framework Guide](docs/testing-framework-guide.md)
+**See comprehensive guide**: [Documentation Hub](docs/README.md) - Complete testing and setup documentation
 
 ## 📚 Documentation
 
 **Complete documentation with architectural diagrams and implementation guides:**
 
 - **[📖 Documentation Hub](docs/README.md)** - Start here for comprehensive guides
-- **[⚙️ Installation Guide](docs/installation-guide.md)** - Step-by-step deployment  
-- **[🔄 Workflow Guide](docs/upgrade-workflow-guide.md)** - Upgrade process and safety mechanisms
-- **[🏗️ Platform Guide](docs/platform-implementation-status.md)** - Technical implementation details
-- **[📊 Implementation Status](docs/platform-implementation-status.md)** - Current completion analysis
-- **[🧪 Testing Framework Guide](docs/testing-framework-guide.md)** - Comprehensive testing without physical devices
-- **[🧪 Molecule Testing Guide](docs/molecule-testing-guide.md)** - Role-specific container testing
+- **[⚙️ Installation & Configuration](CLAUDE.md)** - Complete system documentation including installation, parameters, and troubleshooting
+- **[🔄 Upgrade Workflow Guide](docs/user-guides/upgrade-workflow-guide.md)** - Upgrade process and safety mechanisms
+- **[🐳 Container Deployment Guide](docs/user-guides/container-deployment.md)** - Docker/Podman deployment
+- **[📋 Ansible Module Usage](docs/user-guides/ansible-module-usage-guide.md)** - Ansible module reference
+- **[🏗️ Platform Implementation Status](docs/platform-guides/platform-implementation-status.md)** - Technical implementation details and feature support
+- **[📊 Network Validation Data Types](docs/internal/network-validation-data-types.md)** - Comprehensive validation reference for developers
 
 ## Architecture
 
@@ -327,14 +327,14 @@ The system uses **`main-upgrade-workflow.yml`** as the single entry point for al
 
 | Tag | Step Name | Description | Dependencies | Safe During Business Hours |
 |-----|-----------|-------------|--------------|---------------------------|
-| `step1` | Health Check | Initial connectivity validation | None | ✅ Yes |
-| `step2` | Hash Verification | SHA512 firmware integrity check | step1 (direct); steps 1-2 (via tags) | ✅ Yes |
-| `step3` | Pre-Upgrade Backup | Configuration backup before changes | step1 (direct); steps 1-3 (via tags) | ✅ Yes |
-| `step4` | Image Loading | Transfer firmware to device (PHASE 1) | step1 (direct); steps 1-4 (via tags) | ✅ Yes |
-| `step5` | Pre-Upgrade Validation | Network state baseline capture | step1 (direct); steps 1-5 (via tags) | ✅ Yes |
-| `step6` | Image Installation | Install firmware and reboot (PHASE 2) | step1 (direct); steps 1-6 (via tags) | ⚠️ Maintenance Window |
-| `step7` | Post-Upgrade Validation | Network state verification | step1 (direct); steps 1-7 (via tags) | ⚠️ Maintenance Window |
-| `step8` | Emergency Rollback | Restore previous firmware and config | step1 (direct); triggered by step7 or manual | ⚠️ Maintenance Window |
+| `step1` | Connectivity Check | Initial SSH/NETCONF connectivity validation | None | ✅ Yes |
+| `step2` | Version Check | Collect current firmware version and verify file exists | step1 (direct); steps 1-2 (via tags) | ✅ Yes |
+| `step3` | Space Check | Verify sufficient disk space, auto-clean if needed | step1 (direct); steps 1-3 (via tags) | ✅ Yes |
+| `step4` | Image Upload | Upload firmware and verify SHA512 hash (PHASE 1) | step1 (direct); steps 1-4 (via tags) | ✅ Yes |
+| `step5` | Config Backup & Pre-Validation | Backup config and capture network state baseline | step1 (direct); steps 1-5 (via tags) | ✅ Yes |
+| `step6` | Installation & Reboot | Install firmware and reboot device (PHASE 2) | step1 (direct); steps 1-6 (via tags) | ⚠️ Maintenance Window |
+| `step7` | Post-Upgrade Validation | Validate network state after upgrade (PHASE 3) | step1 (direct); steps 1-7 (via tags) | ⚠️ Maintenance Window |
+| `step8` | Emergency Rollback | Restore previous firmware and configuration | step1 (direct); triggered by step7 or manual | ⚠️ Maintenance Window |
 
 ### Execution Examples
 
@@ -425,8 +425,8 @@ For users migrating from legacy individual playbooks:
 ## Support
 
 For technical support and questions:
-- Check the [Installation Guide](docs/installation-guide.md) troubleshooting section
-- Review platform-specific procedures in [Platform Implementation Guide](docs/platform-implementation-status.md)
+- Check the [CLAUDE.md](CLAUDE.md) for complete documentation and troubleshooting
+- Review platform-specific procedures in [Platform Implementation Guide](docs/platform-guides/platform-implementation-status.md)
 - Examine log files in `$HOME/.local/share/network-upgrade/logs/`
 - Use the built-in health check: `./scripts/system-health.sh`
 
