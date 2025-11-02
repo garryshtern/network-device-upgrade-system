@@ -1,0 +1,170 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                  CLAUDE CODE QUICK REFERENCE CARD                             ║
+║                  Network Device Upgrade System                                ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+📍 YOUR DOCUMENTS
+─────────────────────────────────────────────────────────────────────────────
+CLAUDE.md                    → Complete standards and requirements
+CLAUDE_WORKING_GUIDE.md      → THIS IS YOUR DAILY REFERENCE ⭐
+docs/internal/               → Technical reference docs
+
+⚡ TASK DECISION MATRIX
+─────────────────────────────────────────────────────────────────────────────
+Simple (1-2 files)           → Just do it → test → commit
+Medium (3-10 files)          → Create todo list → systematic approach
+Complex (10+ files/phases)   → Use parallel agents → phase-by-phase
+Uncertain scope              → Start with 4-phase analysis checklist
+
+🔍 WHEN YOU NEED TO ANALYZE
+─────────────────────────────────────────────────────────────────────────────
+Phase 1: Inventory all files       (glob patterns, multiple search methods)
+Phase 2: Analyze each file         (map to purpose, note issues)
+Phase 3: Cross-verify findings     (multiple search tools, 100% check)
+Phase 4: Document search patterns  (report what you found & how)
+
+⚡ SPEED UP WITH PARALLEL AGENTS
+─────────────────────────────────────────────────────────────────────────────
+Agent 1 (Explore)     → Find all files, create inventory
+Agent 2 (general)     → Read and analyze for accuracy
+Agent 3 (Explore)     → Verify links, cross-check findings
+Result: 3x faster (30 min → 10 min)
+
+🎯 NETWORK VALIDATION TEMPLATE
+─────────────────────────────────────────────────────────────────────────────
+1. Initialize: comparison_status: NOT_RUN (once, at start)
+2. Main block: all validation logic
+3. Data blocks: normalize → compare (diff()) → report (inside block)
+4. Set status: comparison_status: PASS/FAIL (once, at end)
+
+KEY RULES:
+  • Empty data: returns empty (no complex conditionals)
+  • Reporting: put INSIDE data blocks, not after
+  • Status: set ONCE at start, ONCE at end (never in middle)
+
+✅ PRE-COMMIT CHECKLIST
+─────────────────────────────────────────────────────────────────────────────
+□ All tests pass (./tests/run-all-tests.sh → Passed: 22, Failed: 0)
+□ Syntax valid (with required extra_vars for playbooks)
+□ Linting clean (ansible-lint, yamllint → 0 errors)
+□ Changes consistent (found ALL instances, not just obvious)
+□ Documentation updated (matches code changes)
+□ Tests updated (reflect new/modified behavior)
+
+🚫 COMMON MISTAKES
+─────────────────────────────────────────────────────────────────────────────
+1. Empty data handling → Don't create conditions for empty data
+2. Reporting location → Move inside blocks, not after
+3. Status management → Set once at start, once at end
+4. Inconsistency → Check ALL similar tasks, make consistent
+5. Incomplete analysis → Use multiple search methods, state 100% coverage
+
+🔎 SEARCH PATTERNS
+─────────────────────────────────────────────────────────────────────────────
+Find all files of type:
+  glob: "docs/**/*.md"            → All markdown
+  glob: "**/*.yml"                → All YAML
+  glob: "**/defaults/main.yml"    → All defaults
+
+Search content:
+  grep: "pattern"                 → Simple search
+  grep: "when: bgp_enabled"       → Conditionals
+  grep: "| default()"             → Bad patterns
+
+Verify findings (use ALL three):
+  1. glob pattern matching
+  2. grep/ripgrep content search
+  3. Manual review of key sections
+
+🏃 QUICK WORKFLOWS
+─────────────────────────────────────────────────────────────────────────────
+Bug Fix (single issue):
+  find instances → fix everywhere → test → commit
+
+Audit (28+ files):
+  4-phase methodology OR 3-agent parallel (3x faster)
+
+Network Validation Task:
+  create → fill structure (init/block/data-blocks/status) → test → commit
+
+Refactoring (multiple files):
+  understand pattern → find all instances → fix consistently → verify
+
+❓ WHEN YOU'RE UNSURE
+─────────────────────────────────────────────────────────────────────────────
+"Am I done analyzing?"
+  □ Multiple search methods used?
+  □ Total count of files stated?
+  □ Search patterns documented?
+  □ Could more instances exist?
+  → If ANY unchecked: keep searching
+
+"Is this consistent?"
+  □ Found ALL similar patterns?
+  □ Applied change everywhere?
+  □ Checked all roles, tasks, plays?
+  □ No exceptions/edge cases?
+  → If ANY unchecked: search more
+
+"Tests really passing?"
+  □ Full suite run (not subset)?
+  □ Exit code 0?
+  □ "Passed: 22" exactly?
+  □ No failures hidden?
+  → Always show exact output
+
+📋 COMMAND REFERENCE
+─────────────────────────────────────────────────────────────────────────────
+# Run all tests
+./tests/run-all-tests.sh
+
+# Syntax check (ALWAYS with extra_vars)
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1"
+
+# Linting
+ansible-lint ansible-content/ --offline --parseable-severity
+yamllint ansible-content/
+
+# Git operations
+git status                  # See what changed
+git add <file>             # Stage specific file
+git commit -m "message"    # Commit with message
+git push origin branch     # Push to remote
+
+📚 DOCUMENT NAVIGATION
+─────────────────────────────────────────────────────────────────────────────
+For daily work, specific task:
+  → CLAUDE_WORKING_GUIDE.md (10 sections, examples, matrices)
+
+For detailed standards, requirements:
+  → CLAUDE.md (complete guidance, all quality standards)
+
+For validation data types, patterns:
+  → docs/internal/network-validation-data-types.md
+
+For implementation details:
+  → Role-specific files in ansible-content/
+
+🎯 NEXT TASK CHECKLIST
+─────────────────────────────────────────────────────────────────────────────
+□ Read "When Starting Any Task" in CLAUDE_WORKING_GUIDE.md
+□ Identify task type (simple/medium/complex/uncertain)
+□ Choose approach from appropriate section
+□ Create todo list (if medium/complex)
+□ Run baseline tests
+□ Follow workflow steps
+□ Pre-commit checklist before pushing
+□ Commit with clear message
+□ Push to remote
+
+═══════════════════════════════════════════════════════════════════════════════
+
+KEY PRINCIPLES TO REMEMBER:
+  ✓ Completeness over speed (100% coverage required)
+  ✓ Document what you searched (search patterns matter)
+  ✓ Consistency across codebase (no exceptions)
+  ✓ Tests MUST pass (never commit with failing tests)
+  ✓ Quality first (no shortcuts, no compromises)
+
+═══════════════════════════════════════════════════════════════════════════════
