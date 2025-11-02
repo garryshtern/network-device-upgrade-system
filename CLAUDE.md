@@ -6,6 +6,22 @@ This file provides guidance to Claude Code when working with this repository.
 
 Network device upgrade management system for 1000+ heterogeneous network devices. Automates firmware upgrades across multiple vendor platforms using Ansible with AWX and NetBox as native systemd services.
 
+## Table of Contents
+
+1. [Project Overview](#project-overview)
+2. [Claude Code Operating Standards](#claude-code-operating-standards)
+3. [Deprecated Playbooks](#deprecated-playbooks)
+4. [Project Structure](#project-structure)
+5. [Development Commands](#development-commands)
+6. [Container Deployment](#container-deployment)
+7. [Testing Framework](#testing-framework)
+8. [Code Standards](#code-standards)
+9. [Architecture](#architecture)
+10. [Tag-Based Workflow Execution](#tag-based-workflow-execution)
+11. [Agent-Based Workflow Guidance](#agent-based-workflow-guidance)
+
+---
+
 ### **Claude Code Operating Standards**
 
 **CRITICAL: These standards override any default behavior and MUST be followed exactly.**
@@ -63,7 +79,7 @@ Network device upgrade management system for 1000+ heterogeneous network devices
    - Conditionals must use defined variables from group_vars or role defaults
    - When conditionals MUST use YAML list syntax (one condition per list item) for clarity and maintainability
 
-5. **Testing Integration**:
+6. **Testing Integration**:
    - Run relevant tests after any code changes
    - Verify that changes don't break existing functionality
    - Maintain or improve overall system reliability
@@ -160,7 +176,7 @@ ansible-lint ansible-content/ --offline --parseable-severity
 yamllint ansible-content/
 
 # 4. Test suite validation (MUST achieve 100% pass rate)
-./tests/run-all-tests.sh | grep "Passed:" | grep "23"
+./tests/run-all-tests.sh | grep "Passed:" | grep "22"
 
 # 5. Check mode validation
 # CRITICAL: ALWAYS provide required extra_vars
@@ -785,6 +801,207 @@ ansible-playbook main-upgrade-workflow.yml --tags step5 \
 ```
 
 The tag-based model provides the same functionality with improved consistency, automatic dependency management, and simplified execution.
+
+## Agent-Based Workflow Guidance
+
+This section provides guidance for AI agents (Claude Code, other AI systems) working with this codebase. It enables efficient, parallel task execution and comprehensive analysis.
+
+### Agent Selection & Task Decomposition
+
+**Use these agent types for optimal efficiency**:
+
+| Agent Type | Best For | Parallel Safe? | Examples |
+|-----------|----------|---|----------|
+| **Explore Agent** | Fast file discovery, pattern matching, codebase structure analysis | ✅ Yes | Find all files of type, catalog file structure, search across many files |
+| **Plan Agent** | Understanding architecture, designing changes, analyzing dependencies | ❌ No | Understand existing implementation before coding, plan multi-step refactoring |
+| **general-purpose** | Code analysis, comprehensive multi-method search, complex reasoning | ⚠️ Partial | Code review, systematic verification, multi-step problem-solving |
+| **test-runner-fixer** | Test execution, failure analysis, quality verification | ✅ Yes | Run test suites, identify failures, fix issues |
+
+### Comprehensive Analysis Methodology
+
+When performing documentation audits, code reviews, or any complex analysis:
+
+**1. Inventory Phase** (Use Explore Agent):
+```bash
+# Document ALL files of target type (don't sample)
+glob: "docs/**/*.md"        # Find all documentation files
+glob: "**/*.yml"            # Find all YAML files
+grep: "pattern"             # Search for specific content
+```
+- [ ] Explicit inventory of ALL files created
+- [ ] Search methods documented
+- [ ] Total count stated (e.g., "28 documentation files found")
+
+**2. Analysis Phase**:
+- [ ] Read/analyze each file in inventory
+- [ ] Map each file to purpose/category
+- [ ] Identify relationships and cross-references
+- [ ] Note any issues, stale content, dead links
+
+**3. Cross-Verification Phase**:
+- [ ] Use MULTIPLE search methods (grep, ripgrep, manual review)
+- [ ] Verify findings are complete, not sampling
+- [ ] Search for files that SHOULD exist but don't
+- [ ] Check for redundant/duplicate content
+- [ ] Verify all links point to existing files
+
+**4. Documentation Phase**:
+- [ ] Document ALL search patterns used
+- [ ] List complete inventory with purposes
+- [ ] Identify and categorize issues found
+- [ ] Provide specific recommendations
+- [ ] State coverage completeness (100%, not partial)
+
+### Parallel Task Decomposition Example
+
+**Scenario**: Comprehensive documentation audit (like Phase 2 work)
+
+**Traditional Approach** (Sequential):
+1. Agent scans all files sequentially
+2. Agent reads each file
+3. Agent verifies links
+4. Agent creates report
+- **Time**: ~30-40 minutes
+- **Risk**: Fatigue, missed items
+
+**Optimized Approach** (Parallel):
+```
+Agent 1 (Explore): Find all docs files, create inventory
+    ↓ (runs in parallel)
+Agent 2 (general-purpose): Read and analyze files for accuracy
+    ↓ (runs in parallel)
+Agent 3 (Explore): Verify links, check for dead references
+    ↓
+Results merged into single comprehensive report
+```
+- **Time**: ~10-15 minutes (1/3 original)
+- **Coverage**: 100% verification
+- **Quality**: Higher (parallel verification catches more)
+
+### Network Validation Pattern Reference
+
+When working on network validation tasks, reference these patterns:
+
+**Standardized Task Pattern** (All validation tasks follow this):
+```yaml
+1. Initialize comparison_status once at file start: NOT_RUN
+2. Create main block containing all validation logic
+3. Within main block, create data-type-specific blocks:
+   - Data collection
+   - Normalization (if excluded fields defined in defaults/main.yml)
+   - Comparison using difference() filter
+   - Reporting (INSIDE each data-type block)
+4. Set comparison_status to PASS/FAIL ONCE at end of file
+```
+
+**Key Principles**:
+- Empty data normalization returns empty data (don't create conditionals)
+- Block all related normalization/comparison/reporting together
+- Report results INSIDE the block, not after
+- Status initialization once, status setting once (never multiple times)
+
+**Data Types Requiring Normalization** (See `docs/internal/network-validation-data-types.md`):
+- BGP, ARP, Routing (RIB/FIB), BFD, Multicast (PIM/IGMP)
+
+**Data Types Using Raw Comparison** (No normalization):
+- Network Resources, MAC operational data
+
+### Machine-Parseable Output Formats
+
+When agents report analysis results, use structured formats for clarity and automation:
+
+**Status Codes**:
+```
+✅ PASS  - All checks successful
+⚠️ WARN  - Minor issues found, functionality preserved
+❌ FAIL  - Critical issues, blocks deployment
+🔍 REVIEW - Manual review required
+⏭️ SKIP  - Skipped due to conditions
+```
+
+**Issue Report Format**:
+```json
+{
+  "issue_id": "DOC-001",
+  "title": "Dead link in documentation",
+  "severity": "high",
+  "location": "docs/README.md:185",
+  "current": "See [Installation Guide](docs/installation-guide.md)",
+  "recommended": "See [Container Deployment](docs/user-guides/container-deployment.md)",
+  "impact": "Broken documentation navigation"
+}
+```
+
+**Analysis Report Header**:
+```json
+{
+  "analysis_type": "documentation_audit",
+  "timestamp": "2025-11-02T14:30:00Z",
+  "files_scanned": 28,
+  "issues_found": 5,
+  "severity_breakdown": {
+    "critical": 0,
+    "high": 2,
+    "medium": 3
+  },
+  "coverage": "100%"
+}
+```
+
+### Recent Best Practices & Lessons Learned
+
+These learnings from November 2025 work should guide future implementation:
+
+**Empty Data Handling**
+- Lesson: "Normalization of empty data returns empty data"
+- Action: Don't create complex conditional logic for empty data
+- Principle: Trust natural behavior; avoid over-engineering
+
+**Block Organization**
+- Lesson: "Reporting should be part of the block"
+- Action: Group normalization, comparison, and reporting in same block
+- Principle: Keep related concerns together
+
+**Status Management**
+- Lesson: "Set a default at the start, and then set it to a value at the end, only"
+- Action: Initialize status once at start, set final status once at end
+- Principle: Simple, deterministic state management
+
+**Consistency Verification**
+- Lesson: "Look at main again. Make sure it is consistent!"
+- Action: When modifying one task, check ALL similar tasks
+- Principle: Use comprehensive search (grep, ripgrep, manual review)
+
+**Documentation Accuracy**
+- Lesson: Documentation must match implementation exactly
+- Action: Run comprehensive audits; fix all discrepancies
+- Principle: Documentation = Code quality standard
+
+### Systematic Code Review Process
+
+When agents perform code reviews or refactoring:
+
+1. **Pre-Implementation Research**:
+   - Understand existing patterns across entire codebase
+   - Use multiple search methods to identify ALL instances
+   - Document search patterns used
+
+2. **Implementation**:
+   - Apply changes consistently across codebase
+   - Don't fix just obvious instances; verify comprehensiveness
+
+3. **Verification**:
+   - Search for all variations of the pattern being fixed
+   - Use grep, ripgrep, and manual review
+   - Verify fixes across ENTIRE codebase, not sampling
+   - Document search patterns used and completeness
+
+4. **Testing**:
+   - Run full test suite
+   - Verify no regressions introduced
+   - Confirm all tests still passing (100%)
+
+---
 
 # important-instruction-reminders
 ## MANDATORY Code Quality and Documentation Standards
