@@ -46,10 +46,7 @@ Internal implementation notes and developer resources:
 
 - **[Deployment Guide](internal/deployment-guide.md)** - Deployment directory structure reference
 - **[Network Validation Data Types](internal/network-validation-data-types.md)** - Comprehensive validation data types and normalization rules
-
-### [Archived](archived/) - Historical Documentation
-
-Directory for archived analysis reports (currently empty).
+- **[Baseline Comparison Examples](internal/baseline-comparison-examples.md)** - Example output from baseline comparison for all data types
 
 ### [GitHub Templates](github-templates/) - Repository Templates
 
