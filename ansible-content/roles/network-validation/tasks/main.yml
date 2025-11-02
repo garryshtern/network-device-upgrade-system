@@ -30,13 +30,11 @@
     - name: Run routing validation
       ansible.builtin.include_tasks: routing-validation.yml
 
-    - name: Run multicast validation
+    - name: Run multicast validation (skipped if multicast_enabled is false)
       ansible.builtin.include_tasks: multicast-validation.yml
-      when: multicast_enabled | bool
 
     - name: Run BFD validation
       ansible.builtin.include_tasks: bfd-validation.yml
-      when: bfd_enabled | bool
 
 # POST-UPGRADE COMPARISON VALIDATION RESULTS
 # Aggregates comparison status between pre/post upgrade baselines

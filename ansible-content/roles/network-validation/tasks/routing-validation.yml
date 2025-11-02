@@ -10,6 +10,11 @@
 # - Pre-upgrade baseline: network_baseline_pre
 # - Post-upgrade baseline: network_baseline_post
 
+# Initialize routing comparison status
+- name: Initialize routing comparison status
+  ansible.builtin.set_fact:
+    routing_comparison_status: "NOT_RUN"
+
 # Post-upgrade comparison for RIB and FIB data
 - name: Compare RIB and FIB data with baseline (post-upgrade only)
   when:
@@ -20,100 +25,101 @@
     - network_baseline_pre is defined
     - network_baseline_post is defined
   block:
-    # RIB Data Comparison
-    - name: Normalize RIB pre-upgrade data
-      ansible.builtin.include_tasks: normalize-baseline-data.yml
-      vars:
-        data_to_normalize: "{{ network_baseline_pre.rib_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.rib_data if baseline_comparison_excluded_fields.rib_data is defined else [] }}"
+    # RIB Data - Normalize and Compare
+    - name: RIB Data Comparison
+      when: network_baseline_pre.rib_data is defined and network_baseline_post.rib_data is defined
+      block:
+        - name: Normalize RIB pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.rib_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.rib_data }}"
 
-    - name: Store normalized RIB pre data
-      ansible.builtin.set_fact:
-        rib_pre_normalized: "{{ normalized_data }}"
+        - name: Store normalized RIB pre data
+          ansible.builtin.set_fact:
+            rib_pre_normalized: "{{ normalized_data }}"
 
-    - name: Normalize RIB post-upgrade data
-      ansible.builtin.include_tasks: normalize-baseline-data.yml
-      vars:
-        data_to_normalize: "{{ network_baseline_post.rib_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.rib_data if baseline_comparison_excluded_fields.rib_data is defined else [] }}"
+        - name: Normalize RIB post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.rib_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.rib_data }}"
 
-    - name: Calculate RIB and FIB deltas using difference filter
-      ansible.builtin.set_fact:
-        rib_post_normalized: "{{ normalized_data }}"
-        rib_added: "{{ normalized_data | difference(rib_pre_normalized) }}"
-        rib_removed: "{{ rib_pre_normalized | difference(normalized_data) }}"
-        rib_comparison_match: "{{ normalized_data == rib_pre_normalized }}"
+        - name: Calculate RIB deltas
+          ansible.builtin.set_fact:
+            rib_post_normalized: "{{ normalized_data }}"
+            rib_added: "{{ normalized_data | difference(rib_pre_normalized) }}"
+            rib_removed: "{{ rib_pre_normalized | difference(normalized_data) }}"
+            rib_comparison_match: "{{ normalized_data == rib_pre_normalized }}"
 
-    - name: Normalize FIB pre-upgrade data
-      ansible.builtin.include_tasks: normalize-baseline-data.yml
-      vars:
-        data_to_normalize: "{{ network_baseline_pre.fib_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.fib_data if baseline_comparison_excluded_fields.fib_data is defined else [] }}"
+        - name: Report RIB added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== RIB and FIB Data Comparison ==="
+              - "Added/Modified RIB Entries:"
+              - "{{ rib_added | to_nice_json }}"
+          when: rib_added | length > 0
 
-    - name: Store normalized FIB pre data
-      ansible.builtin.set_fact:
-        fib_pre_normalized: "{{ normalized_data }}"
+        - name: Report RIB removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== RIB and FIB Data Comparison ==="
+              - "Removed RIB Entries:"
+              - "{{ rib_removed | to_nice_json }}"
+          when: rib_removed | length > 0
 
-    - name: Normalize FIB post-upgrade data
-      ansible.builtin.include_tasks: normalize-baseline-data.yml
-      vars:
-        data_to_normalize: "{{ network_baseline_post.fib_data }}"
-        fields_to_exclude: "{{ baseline_comparison_excluded_fields.fib_data if baseline_comparison_excluded_fields.fib_data is defined else [] }}"
+    # FIB Data - Normalize and Compare
+    - name: FIB Data Comparison
+      when: network_baseline_pre.fib_data is defined and network_baseline_post.fib_data is defined
+      block:
+        - name: Normalize FIB pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.fib_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.fib_data }}"
 
-    - name: Calculate FIB deltas using difference filter
-      ansible.builtin.set_fact:
-        fib_post_normalized: "{{ normalized_data }}"
-        fib_added: "{{ normalized_data | difference(fib_pre_normalized) }}"
-        fib_removed: "{{ fib_pre_normalized | difference(normalized_data) }}"
-        fib_comparison_match: "{{ normalized_data == fib_pre_normalized }}"
+        - name: Store normalized FIB pre data
+          ansible.builtin.set_fact:
+            fib_pre_normalized: "{{ normalized_data }}"
 
-    - name: Report RIB added entries
-      ansible.builtin.debug:
-        msg:
-          - "=== RIB and FIB Data Comparison ==="
-          - "Added/Modified RIB Entries:"
-          - "{{ rib_added | to_nice_json }}"
-      when: rib_added | length > 0
+        - name: Normalize FIB post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.fib_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.fib_data }}"
 
-    - name: Report RIB removed entries
-      ansible.builtin.debug:
-        msg:
-          - "=== RIB and FIB Data Comparison ==="
-          - "Removed RIB Entries:"
-          - "{{ rib_removed | to_nice_json }}"
-      when: rib_removed | length > 0
+        - name: Calculate FIB deltas
+          ansible.builtin.set_fact:
+            fib_post_normalized: "{{ normalized_data }}"
+            fib_added: "{{ normalized_data | difference(fib_pre_normalized) }}"
+            fib_removed: "{{ fib_pre_normalized | difference(normalized_data) }}"
+            fib_comparison_match: "{{ normalized_data == fib_pre_normalized }}"
 
-    - name: Report FIB added entries
-      ansible.builtin.debug:
-        msg:
-          - "=== RIB and FIB Data Comparison ==="
-          - "Added/Modified FIB Entries:"
-          - "{{ fib_added | to_nice_json }}"
-      when: fib_added | length > 0
+        - name: Report FIB added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== RIB and FIB Data Comparison ==="
+              - "Added/Modified FIB Entries:"
+              - "{{ fib_added | to_nice_json }}"
+          when: fib_added | length > 0
 
-    - name: Report FIB removed entries
-      ansible.builtin.debug:
-        msg:
-          - "=== RIB and FIB Data Comparison ==="
-          - "Removed FIB Entries:"
-          - "{{ fib_removed | to_nice_json }}"
-      when: fib_removed | length > 0
+        - name: Report FIB removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== RIB and FIB Data Comparison ==="
+              - "Removed FIB Entries:"
+              - "{{ fib_removed | to_nice_json }}"
+          when: fib_removed | length > 0
 
     - name: Report no RIB and FIB changes
       ansible.builtin.debug:
         msg:
           - "=== RIB and FIB Data Comparison ==="
           - "Status: No changes detected in RIB and FIB data"
-      when: rib_comparison_match and fib_comparison_match and rib_added | length == 0 and rib_removed | length == 0 and fib_added | length == 0 and fib_removed | length == 0
+      when:
+        - rib_comparison_match | default(true)
+        - fib_comparison_match | default(true)
 
     - name: Determine routing comparison status
       ansible.builtin.set_fact:
-        routing_comparison_status: "{{ 'PASS' if rib_comparison_match and fib_comparison_match else 'FAIL' }}"
-
-- name: Set routing comparison status when not applicable
-  when:
-    - validation_phase is not defined or validation_phase != 'post_upgrade' or
-      platform != 'nxos' or
-      network_baseline_pre is not defined or network_baseline_post is not defined
-  ansible.builtin.set_fact:
-    routing_comparison_status: "NOT_RUN"
+        routing_comparison_status: "{{ 'PASS' if (rib_comparison_match | default(true)) and (fib_comparison_match | default(true)) else 'FAIL' }}"

@@ -9,6 +9,11 @@
 # - Pre-upgrade baseline: network_baseline_pre
 # - Post-upgrade baseline: network_baseline_post
 
+# Initialize network resources comparison status
+- name: Initialize network resources comparison status
+  ansible.builtin.set_fact:
+    network_resources_comparison_status: "NOT_RUN"
+
 # Post-upgrade comparison for network resources
 - name: Compare network resources configuration with baseline (post-upgrade only)
   when:
@@ -21,44 +26,39 @@
     - network_baseline_pre.network_resources is defined
     - network_baseline_post.network_resources is defined
   block:
-    - name: Calculate network_resources deltas using difference filter
-      ansible.builtin.set_fact:
-        network_resources_added: "{{ network_baseline_post.network_resources | difference(network_baseline_pre.network_resources) }}"
-        network_resources_removed: "{{ network_baseline_pre.network_resources | difference(network_baseline_post.network_resources) }}"
-        network_resources_comparison_match: "{{ network_baseline_post.network_resources == network_baseline_pre.network_resources }}"
+    # Network Resources - Raw Comparison (no normalization needed)
+    - name: Network Resources Data Comparison
+      block:
+        - name: Calculate network_resources deltas using difference filter
+          ansible.builtin.set_fact:
+            network_resources_added: "{{ network_baseline_post.network_resources | difference(network_baseline_pre.network_resources) }}"
+            network_resources_removed: "{{ network_baseline_pre.network_resources | difference(network_baseline_post.network_resources) }}"
+            network_resources_comparison_match: "{{ network_baseline_post.network_resources == network_baseline_pre.network_resources }}"
 
-    - name: Report network_resources added changes
-      ansible.builtin.debug:
-        msg:
-          - "=== Network Resources Configuration Changes ==="
-          - "Added/Modified Resources:"
-          - "{{ network_resources_added | to_nice_json }}"
-      when: network_resources_added | length > 0
+        - name: Report network_resources added changes
+          ansible.builtin.debug:
+            msg:
+              - "=== Network Resources Configuration Changes ==="
+              - "Added/Modified Resources:"
+              - "{{ network_resources_added | to_nice_json }}"
+          when: network_resources_added | length > 0
 
-    - name: Report network_resources removed changes
-      ansible.builtin.debug:
-        msg:
-          - "=== Network Resources Configuration Changes ==="
-          - "Removed Resources:"
-          - "{{ network_resources_removed | to_nice_json }}"
-      when: network_resources_removed | length > 0
+        - name: Report network_resources removed changes
+          ansible.builtin.debug:
+            msg:
+              - "=== Network Resources Configuration Changes ==="
+              - "Removed Resources:"
+              - "{{ network_resources_removed | to_nice_json }}"
+          when: network_resources_removed | length > 0
 
-    - name: Report no network_resources changes
-      ansible.builtin.debug:
-        msg:
-          - "=== Network Resources Configuration Changes ==="
-          - "Status: No changes detected in network resources configuration"
-      when: network_resources_added | length == 0 and network_resources_removed | length == 0
+        - name: Report no network_resources changes
+          ansible.builtin.debug:
+            msg:
+              - "=== Network Resources Configuration Changes ==="
+              - "Status: No changes detected in network resources configuration"
+          when:
+            - network_resources_comparison_match | default(true)
 
-    - name: Determine network_resources comparison status
-      ansible.builtin.set_fact:
-        network_resources_comparison_status: "{{ 'PASS' if network_resources_comparison_match else 'FAIL' }}"
-
-- name: Set network_resources comparison status when not applicable
-  when:
-    - validation_phase is not defined or validation_phase != 'post_upgrade' or
-      platform != 'nxos' or
-      network_baseline_pre is not defined or network_baseline_post is not defined or
-      network_baseline_pre.network_resources is not defined or network_baseline_post.network_resources is not defined
-  ansible.builtin.set_fact:
-    network_resources_comparison_status: "NOT_RUN"
+        - name: Determine network_resources comparison status
+          ansible.builtin.set_fact:
+            network_resources_comparison_status: "{{ 'PASS' if network_resources_comparison_match else 'FAIL' }}"
