@@ -8,12 +8,10 @@ Complete documentation for the Network Device Upgrade Management System - automa
 
 Essential documentation for operators and administrators:
 
-- **[Installation Guide](user-guides/installation-guide.md)** - Complete system installation and setup
 - **[Container Deployment Guide](user-guides/container-deployment.md)** - Docker/Podman deployment
 - **[Upgrade Workflow Guide](user-guides/upgrade-workflow-guide.md)** - How to perform upgrades
-- **[Inventory Parameters Reference](user-guides/inventory-parameters.md)** - Complete variable documentation
 - **[Ansible Module Usage Guide](user-guides/ansible-module-usage-guide.md)** - Ansible module reference
-- **[Troubleshooting Guide](user-guides/troubleshooting.md)** - Common issues and solutions
+- **[Comprehensive Project Guide](../CLAUDE.md)** - Complete system documentation including installation, parameters, and troubleshooting
 
 ### [Platform Guides](platform-guides/) - Platform-Specific Documentation
 

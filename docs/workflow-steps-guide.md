@@ -8,8 +8,8 @@ The upgrade workflow has **8 independent steps** with a streamlined dependency m
 Step 1: Connectivity ✓ (no dependencies)
 Step 2: Version Check (depends on step1 directly; steps 1-2 via tags)
 Step 3: Space Check (depends on step1 directly; steps 1-3 via tags)
-Step 4: Upload Image + Backup Config (depends on step1 directly; steps 1-4 via tags)
-Step 5: Pre-Upgrade Validation (depends on step1 directly; steps 1-5 via tags, creates baseline)
+Step 4: Image Upload (depends on step1 directly; steps 1-4 via tags)
+Step 5: Config Backup and Pre-Upgrade Validation (depends on step1 directly; steps 1-5 via tags, creates baseline)
 Step 6: Install Firmware + Reboot (depends on step1 directly; steps 1-6 via tags)
 Step 7: Post-Upgrade Validation (depends on step1 directly; steps 1-7 via tags, requires step 5 baseline)
 Step 8: Emergency Rollback (depends on step1 directly; triggered by step7 or manual)
@@ -43,20 +43,21 @@ Step 8: Emergency Rollback (depends on step1 directly; triggered by step7 or man
 
 ---
 
-### Step 4: Upload Image + Backup Config
+### Step 4: Image Upload
 **What it does:**
-- Stages firmware image on device
-- Backs up running configuration
+- Uploads firmware image to devices
+- Verifies SHA512 hash after upload (mandatory)
 **Dependencies:** Step 1 (directly); Steps 1-4 (orchestrated by main workflow tags)
 **Command:** `ansible-playbook main-upgrade-workflow.yml --tags step4 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5`
-**When to use:** To prepare devices before the actual upgrade (recommended for safety)
+**When to use:** To stage firmware and verify integrity before pre-upgrade validation
 
 ---
 
-### Step 5: Pre-Upgrade Validation
+### Step 5: Config Backup and Pre-Upgrade Validation
 **What it does:**
-- Gathers comprehensive network state (BGP, interfaces, routes, etc.)
-- Validates network is healthy
+- Backs up running configuration
+- Gathers comprehensive network state (interfaces, routing, ARP, BGP, multicast, BFD, etc.)
+- Captures pre-upgrade baseline for post-upgrade comparison
 - **Saves baseline file for later comparison**
 **Dependencies:** Step 1 (directly); Steps 1-5 (orchestrated by main workflow tags)
 **Command:** `ansible-playbook main-upgrade-workflow.yml --tags step5 -e target_hosts=mydevice -e max_concurrent=5`
@@ -104,26 +105,43 @@ Step 8: Emergency Rollback (depends on step1 directly; triggered by step7 or man
 
 ### 1. **Safe Full Upgrade** (Recommended)
 ```bash
-# Step 1: Validate devices are reachable
-ansible-playbook main-upgrade-workflow.yml --tags step5 \
+# Step 1: Connectivity check
+ansible-playbook main-upgrade-workflow.yml --tags step1 \
+  -e target_hosts=prod-switches \
+  -e max_concurrent=5
+
+# Step 2: Version check
+ansible-playbook main-upgrade-workflow.yml --tags step2 \
   -e target_hosts=prod-switches \
   -e target_firmware=nxos.10.3.3.bin \
   -e max_concurrent=5
 
-# Step 2: Upload firmware and backup config
+# Step 3: Space check
+ansible-playbook main-upgrade-workflow.yml --tags step3 \
+  -e target_hosts=prod-switches \
+  -e target_firmware=nxos.10.3.3.bin \
+  -e max_concurrent=5
+
+# Step 4: Upload firmware
 ansible-playbook main-upgrade-workflow.yml --tags step4 \
   -e target_hosts=prod-switches \
   -e target_firmware=nxos.10.3.3.bin \
   -e max_concurrent=5
 
-# Step 3: Install firmware (during maintenance window)
+# Step 5: Pre-upgrade validation and config backup
+ansible-playbook main-upgrade-workflow.yml --tags step5 \
+  -e target_hosts=prod-switches \
+  -e target_firmware=nxos.10.3.3.bin \
+  -e max_concurrent=5
+
+# Step 6: Install firmware (during maintenance window)
 ansible-playbook main-upgrade-workflow.yml --tags step6 \
   -e target_hosts=prod-switches \
   -e target_firmware=nxos.10.3.3.bin \
   -e max_concurrent=5 \
   -e maintenance_window=true
 
-# Step 4: Validate everything still works
+# Step 7: Post-upgrade validation
 ansible-playbook main-upgrade-workflow.yml --tags step7 \
   -e target_hosts=prod-switches \
   -e max_concurrent=5
