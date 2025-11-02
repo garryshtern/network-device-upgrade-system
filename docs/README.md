@@ -8,19 +8,15 @@ Complete documentation for the Network Device Upgrade Management System - automa
 
 Essential documentation for operators and administrators:
 
-- **[Container Deployment Guide](user-guides/container-deployment.md)** - Docker/Podman deployment
 - **[Upgrade Workflow Guide](user-guides/upgrade-workflow-guide.md)** - How to perform upgrades
-- **[Ansible Module Usage Guide](user-guides/ansible-module-usage-guide.md)** - Ansible module reference
-- **[Comprehensive Project Guide](../CLAUDE.md)** - Complete system documentation including installation, parameters, and troubleshooting
+- **[Container Deployment Guide](user-guides/container-deployment.md)** - Docker/Podman deployment
+- **[Complete Project Guide](../CLAUDE.md)** - Installation, configuration, parameters, and troubleshooting
 
 ### [Platform Guides](platform-guides/) - Platform-Specific Documentation
 
-Platform-specific implementation details and standards:
+Platform-specific implementation details and feature support:
 
-- **[Firmware Naming Standards](platform-guides/firmware-naming-standards.md)** - Firmware file naming conventions
-- **[Firmware Operations](platform-guides/firmware-operations.md)** - Firmware management procedures
-- **[Platform File Transfer Guide](platform-guides/platform-file-transfer-guide.md)** - Secure file transfer methods
-- **[Platform Implementation Status](platform-guides/platform-implementation-status.md)** - Feature support matrix
+- **[Platform Implementation Status](platform-guides/platform-implementation-status.md)** - Feature support matrix for all platforms
 
 **Supported Platforms**: Cisco NX-OS, Cisco IOS-XE, FortiOS, Opengear, Metamako MOS
 
@@ -36,35 +32,24 @@ Deployment, monitoring, and optimization guides:
 
 Testing framework and quality assurance documentation:
 
-- **[Testing Framework Guide](testing/testing-framework-guide.md)** - Comprehensive test suite documentation
-- **[Molecule Testing Guide](testing/molecule-testing-guide.md)** - Container-based testing
-- **[Pre-Commit Setup](testing/pre-commit-setup.md)** - Git hooks and validation
+- **[Pre-Commit Setup](testing/pre-commit-setup.md)** - Git hooks and validation procedures
 
-### [Architecture](architecture/) - System Design & Requirements
+### [Architecture](architecture/) - System Design & CI/CD
 
-System architecture, design decisions, and requirements:
+System architecture and CI/CD pipeline design:
 
-- **[Main Upgrade Workflow Architecture](architecture/main-upgrade-workflow.md)** - 7-step upgrade workflow with automatic dependency resolution
-- **[GitHub Actions Workflow Architecture](architecture/workflow-architecture.md)** - CI/CD pipeline design
-- **[Project Requirements](architecture/project-requirements.md)** - System requirements and specifications
-- **[Technical Debt](architecture/technical-debt.md)** - Known limitations and future improvements
+- **[GitHub Actions Workflow Architecture](architecture/workflow-architecture.md)** - CI/CD pipeline design and optimization
 
 ### [Internal](internal/) - Developer Documentation
 
 Internal implementation notes and developer resources:
 
-- **[SSH Key Privilege Drop Solution](internal/ssh-key-privilege-drop-solution.md)** - Container security implementation
 - **[Deployment Guide](internal/deployment-guide.md)** - Deployment directory structure reference
-- **[AI Code Reviews](internal/ai-code-reviews/)** - Automated code analysis reports
+- **[Network Validation Data Types](internal/network-validation-data-types.md)** - Comprehensive validation data types and normalization rules
 
 ### [Archived](archived/) - Historical Documentation
 
-Archived analysis reports and one-time assessments:
-
-- Code analysis reports
-- Workflow optimization studies
-- Platform-specific analysis (NX-OS facts, connectivity validation)
-- Historical testing summaries
+Directory for archived analysis reports (currently empty).
 
 ### [GitHub Templates](github-templates/) - Repository Templates
 
@@ -78,10 +63,9 @@ GitHub issue and PR templates:
 
 New to the system? Start here:
 
-1. **[Installation Guide](user-guides/installation-guide.md)** - Set up the system
+1. **[CLAUDE.md](../CLAUDE.md)** - Installation, setup, and configuration
 2. **[Container Deployment](user-guides/container-deployment.md)** - Deploy with Docker/Podman
 3. **[Upgrade Workflow Guide](user-guides/upgrade-workflow-guide.md)** - Run your first upgrade
-4. **[Inventory Parameters](user-guides/inventory-parameters.md)** - Configure your environment
 
 ## 🔧 Common Tasks
 
@@ -89,7 +73,7 @@ New to the system? Start here:
 See [Upgrade Workflow Guide](user-guides/upgrade-workflow-guide.md)
 
 ### Troubleshooting Issues
-See [Troubleshooting Guide](user-guides/troubleshooting.md)
+See [CLAUDE.md](../CLAUDE.md) - Troubleshooting section
 
 ### Platform-Specific Configuration
 See [Platform Guides](platform-guides/)
@@ -140,7 +124,6 @@ See [Grafana Integration Guide](deployment/grafana-integration.md)
 Please see:
 - [Pull Request Template](github-templates/PULL_REQUEST_TEMPLATE.md)
 - [Bug Report Template](github-templates/bug_report.md)
-- [Feature Request Template](github-templates/feature_request.md)
 
 ## 📝 Documentation Standards
 
@@ -154,6 +137,6 @@ Please see:
 
 ---
 
-**Last Updated**: October 2025  
-**System Version**: 4.0.0  
-**Documentation Version**: 2.0.0
+**Last Updated**: November 2, 2025
+**System Version**: 4.0.0
+**Documentation Version**: 3.0.0
