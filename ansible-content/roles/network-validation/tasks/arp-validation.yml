@@ -59,7 +59,7 @@
             msg:
               - "=== ARP and MAC Data Comparison ==="
               - "Added/Modified ARP Entries:"
-              - "{{ arp_added | to_nice_json }}"
+              - "{{ arp_added | to_proper_json }}"
           when: arp_added | length > 0
 
         - name: Report ARP removed entries
@@ -67,7 +67,7 @@
             msg:
               - "=== ARP and MAC Data Comparison ==="
               - "Removed ARP Entries:"
-              - "{{ arp_removed | to_nice_json }}"
+              - "{{ arp_removed | to_proper_json }}"
           when: arp_removed | length > 0
 
     # MAC Data - Raw Comparison (no normalization needed)
@@ -87,7 +87,7 @@
             msg:
               - "=== ARP and MAC Data Comparison ==="
               - "Added/Modified MAC Entries:"
-              - "{{ mac_added | to_nice_json }}"
+              - "{{ mac_added | to_proper_json }}"
           when: mac_added | length > 0
 
         - name: Report MAC removed entries
@@ -95,7 +95,7 @@
             msg:
               - "=== ARP and MAC Data Comparison ==="
               - "Removed MAC Entries:"
-              - "{{ mac_removed | to_nice_json }}"
+              - "{{ mac_removed | to_proper_json }}"
           when: mac_removed | length > 0
 
     - name: Report no ARP and MAC changes

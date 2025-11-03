@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-Custom Ansible filters for platform detection and matching.
+Custom Ansible filters for platform detection, data normalization, and formatting.
 
-This module provides filters to simplify platform-specific conditional logic
-in playbooks and roles.
+This module provides filters to simplify platform-specific conditional logic,
+recursive data operations, and proper JSON formatting in playbooks and roles.
 """
+
+import json
 
 
 def is_platform(network_os, platform_name):
@@ -182,6 +184,28 @@ def difference_recursive(data1, data2):
         return data1 if data1 != data2 else []
 
 
+def to_proper_json(data, indent=2):
+    """
+    Convert data to properly formatted JSON with proper newline handling.
+
+    Unlike to_nice_json which renders newlines as literal '\n' characters,
+    this filter properly formats JSON with actual newlines for readable output.
+
+    Args:
+        data: The data structure to format as JSON
+        indent: Number of spaces for indentation (default: 2)
+
+    Returns:
+        Properly formatted JSON string with real newlines
+
+    Examples:
+        >>> data = {'name': 'test', 'items': [1, 2, 3]}
+        >>> to_proper_json(data)
+        '{\n  "name": "test",\n  "items": [\n    1,\n    2,\n    3\n  ]\n}'
+    """
+    return json.dumps(data, indent=indent, sort_keys=True)
+
+
 class FilterModule:
     """Ansible filter plugin class."""
 
@@ -191,4 +215,5 @@ class FilterModule:
             'is_platform': is_platform,
             'remove_excluded_fields_recursive': remove_excluded_fields_recursive,
             'difference_recursive': difference_recursive,
+            'to_proper_json': to_proper_json,
         }
