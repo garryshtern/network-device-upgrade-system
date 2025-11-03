@@ -166,11 +166,11 @@
           ansible.builtin.set_fact:
             epld_installation_results:
               target_epld: "{{ target_epld_firmware }}"
-              modules_upgraded: "{{ epld_modules_to_upgrade | default([]) | length }}"
+              modules_upgraded: "{{ epld_modules_to_upgrade | length }}"
               upgrade_method: "{{ 'Non-disruptive' if has_dual_sup_for_epld else 'Disruptive' }}"
               success: "{{ epld_upgrade_status is defined and 'Success' in epld_upgrade_status.stdout[0] }}"
-              current_versions: "{{ epld_modules | default([]) }}"
-              updated_versions: "{{ updated_epld_modules | default([]) }}"
+              current_versions: "{{ epld_modules }}"
+              updated_versions: "{{ updated_epld_modules }}"
               system_stable: "{{ post_epld_stability is defined }}"
               completion_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 

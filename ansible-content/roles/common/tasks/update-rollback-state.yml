@@ -23,7 +23,7 @@
     rollback_state: >
       {{ rollback_state | combine({
         'steps_' + step_status: rollback_state['steps_' + step_status] + [step_name],
-        'current_step': step_name if (update_current_step | default(false)) else rollback_state.current_step
+        'current_step': step_name if update_current_step else rollback_state.current_step
       }) }}
   when:
     - step_name is defined

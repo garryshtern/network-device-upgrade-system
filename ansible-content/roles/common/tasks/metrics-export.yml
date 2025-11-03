@@ -20,7 +20,7 @@
 
     - name: Add metric fields to line protocol
       ansible.builtin.set_fact:
-        influx_fields_list: "{{ influx_fields_list | default([]) + [item.key + '=' + item.value | string] }}"
+        influx_fields_list: "{{ influx_fields_list + [item.key + '=' + item.value | string] }}"
       loop: "{{ metric_data | dict2items }}"
       when: metric_data | length > 0
 

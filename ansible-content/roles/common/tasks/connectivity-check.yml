@@ -29,7 +29,7 @@
             (platform == 'ios') | ternary('ansible.netcommon.network_cli',
             (platform == 'fortios') | ternary('httpapi',
             (platform == 'opengear') | ternary('ssh',
-            ansible_connection | default('ansible.netcommon.network_cli'))))))
+            ansible_connection)))))
           }}
         ansible_network_os: >-
           {{
@@ -45,7 +45,7 @@
             (platform == 'ios') | ternary(vault_cisco_iosxe_username,
             (platform == 'fortios') | ternary(vault_fortios_username,
             (platform == 'opengear') | ternary(vault_opengear_username,
-            ansible_user | default('admin'))))))
+            ansible_user))))
           }}
         ansible_password: >-
           {{
@@ -99,11 +99,11 @@
           ansible.builtin.debug:
             msg:
               - "=== NX-OS Basic Connectivity Verified ==="
-              - "Hostname: {{ ansible_net_hostname | default('N/A') }}"
-              - "Model: {{ ansible_net_model | default('N/A') }}"
-              - "Serial: {{ ansible_net_serialnum | default('N/A') }}"
-              - "OS Version: {{ ansible_net_version | default('N/A') }}"
-              - "Image: {{ ansible_net_image | default('N/A') }}"
+              - "Hostname: {{ ansible_net_hostname }}"
+              - "Model: {{ ansible_net_model }}"
+              - "Serial: {{ ansible_net_serialnum }}"
+              - "OS Version: {{ ansible_net_version }}"
+              - "Image: {{ ansible_net_image }}"
               - "Status: Connected"
               - "========================================"
           when:
@@ -244,5 +244,5 @@
       cisco_nxos (for Cisco NX-OS devices), cisco_iosxe (for Cisco IOS-XE devices),
       fortios (for Fortinet FortiGate devices), opengear (for Opengear devices).
       Alternatively, define 'platform' variable in host_vars for this host.
-      Current groups: {{ group_names | default([]) }}
+      Current groups: {{ group_names }}
   when: platform is not defined

@@ -35,7 +35,7 @@
 
     - name: Save NX-OS config backup to file
       ansible.builtin.copy:
-        content: "{{ ansible_net_config | default('# No config retrieved') }}"
+        content: "{{ ansible_net_config }}"
         dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
         mode: '0644'
       delegate_to: localhost
@@ -43,7 +43,7 @@
 
     - name: Save IOS-XE config backup to file
       ansible.builtin.copy:
-        content: "{{ ansible_net_config | default('# No config retrieved') }}"
+        content: "{{ ansible_net_config }}"
         dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
         mode: '0644'
       delegate_to: localhost

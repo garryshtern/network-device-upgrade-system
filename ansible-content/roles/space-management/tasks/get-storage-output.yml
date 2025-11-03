@@ -37,10 +37,10 @@
       ansible.builtin.set_fact:
         storage_output: >-
           {{
-            nxos_result if (platform == 'nxos' and nxos_result is defined and not nxos_result.skipped | default(false)) else
-            ios_result if (platform == 'ios' and ios_result is defined and not ios_result.skipped | default(false)) else
-            fortios_result if (platform == 'fortios' and fortios_result is defined and not fortios_result.skipped | default(false)) else
-            opengear_result if (platform == 'opengear' and opengear_result is defined and not opengear_result.skipped | default(false)) else
+            nxos_result if (platform == 'nxos' and nxos_result is defined and not nxos_result.skipped) else
+            ios_result if (platform == 'ios' and ios_result is defined and not ios_result.skipped) else
+            fortios_result if (platform == 'fortios' and fortios_result is defined and not fortios_result.skipped) else
+            opengear_result if (platform == 'opengear' and opengear_result is defined and not opengear_result.skipped) else
             {}
           }}
   when:

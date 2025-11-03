@@ -67,7 +67,7 @@
 
     - name: Log active session check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check active console sessions: {{ active_sessions_check.stderr | default(active_sessions_check.stdout) | default('Unknown error') }}"
+        msg: "Warning: Failed to check active console sessions: {{ active_sessions_check.stderr if active_sessions_check.stderr is defined else (active_sessions_check.stdout if active_sessions_check.stdout is defined else default_error_message) }}"
       when:
         - active_sessions_check is defined
         - active_sessions_check.rc is defined

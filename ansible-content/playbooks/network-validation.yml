@@ -62,6 +62,6 @@
         that:
           - validation_collection_results is defined
           - validation_collection_results.overall_status == "PASS"
-        fail_msg: "Network validation failed - overall status is {{ validation_collection_results.overall_status | default('unknown') }}"
+        fail_msg: "Network validation failed - overall status is {{ validation_collection_results.overall_status if validation_collection_results.overall_status is defined else validation_overall_status }}"
         success_msg: "Network validation passed - all services healthy"
       when: validation_type == 'post_upgrade'

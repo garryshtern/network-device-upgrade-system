@@ -16,7 +16,7 @@
 
     - name: Log token refresh failures
       ansible.builtin.debug:
-        msg: "Warning: API token refresh failed: {{ token_refresh.msg | default('Unknown error') }}"
+        msg: "Warning: API token refresh failed: {{ token_refresh.msg if token_refresh.msg is defined else default_error_message }}"
       when:
         - token_refresh is defined
         - token_refresh.failed is defined
@@ -89,7 +89,7 @@
 
     - name: Log critical power check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check critical power outlets: {{ critical_power_check.msg | default('Unknown error') }}"
+        msg: "Warning: Failed to check critical power outlets: {{ critical_power_check.msg if critical_power_check.msg is defined else default_error_message }}"
       when:
         - critical_power_check is defined
         - critical_power_check.failed is defined

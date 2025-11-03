@@ -1,0 +1,247 @@
+---
+# Global Variables for Network Device Upgrade System
+# All variables that were previously using | default() must be defined here
+# CRITICAL: Variables MUST have concrete values - no | default() allowed here per CLAUDE.md rules
+
+# =============================================================================
+# ANSIBLE FACTS DEFAULTS (for cases where facts may not be gathered yet)
+# =============================================================================
+# These provide safe defaults when ansible_net_* facts are not yet available
+ansible_net_hostname: "N/A"
+ansible_net_model: "N/A"
+ansible_net_serialnum: "N/A"
+ansible_net_version: "N/A"
+ansible_net_image: "N/A"
+ansible_net_gather_network_resources: []
+ansible_net_config: "# No config retrieved"
+
+# =============================================================================
+# NETBOX INTEGRATION
+# =============================================================================
+# NetBox API connection settings
+# NOTE: These pull from environment variables at runtime
+# Set NETBOX_URL, NETBOX_TOKEN, etc. in your environment
+netbox_url: "http://netbox:8000"
+netbox_token: ""
+
+# Default Ansible connection credentials
+default_ansible_user: "admin"
+default_ansible_password: ""
+
+# SNMP settings
+default_snmp_community: ""
+default_snmp_version: "2c"
+
+# =============================================================================
+# DEVICE CONNECTION DEFAULTS
+# =============================================================================
+# Default connection method
+ansible_connection: "ansible.netcommon.network_cli"
+ansible_user: "admin"
+
+# Connection timeout settings
+default_command_timeout: 60
+default_connect_timeout: 30
+default_persistent_timeout: 300
+default_persistent_command_timeout: 300
+
+# SSH key file default path
+default_ssh_key_file: "/var/lib/awx/.ssh/network_devices"
+
+# Group names default (for inventory groups)
+group_names: []
+
+# =============================================================================
+# FIRMWARE MANAGEMENT
+# =============================================================================
+# Storage and firmware paths
+default_firmware_directory: "bootflash:"
+default_minimum_free_space_mb: 4096
+default_backup_directory: "bootflash:backup/"
+
+# =============================================================================
+# DEVICE METADATA DEFAULTS
+# =============================================================================
+# Default values for device metadata
+default_rack_name: "unknown"
+default_rack_position: 0
+default_platform: "unknown"
+default_serial_number: "unknown"
+
+# EPLD upgrade defaults
+epld_modules_to_upgrade: []
+epld_modules: []
+updated_epld_modules: []
+
+# Opengear defaults
+active_sessions: 0
+total_power_usage: 0
+
+# Hardware specifications defaults
+default_memory_mb: 0
+default_cpu_cores: 1
+
+# =============================================================================
+# FEATURE FLAGS DEFAULTS
+# =============================================================================
+# Network protocol feature flags
+multicast_enabled: true
+bfd_enabled: false
+vpc_enabled: false
+bgp_enabled: true
+ospf_enabled: false
+
+# Monitoring flags
+monitoring_enabled: true
+
+# =============================================================================
+# UPGRADE AND MAINTENANCE DEFAULTS
+# =============================================================================
+# Firmware and upgrade tracking
+default_current_firmware: "unknown"
+default_last_upgrade_date: "never"
+default_upgrade_status: "unknown"
+default_maintenance_window: "TBD"
+default_change_window: "standard"
+
+# =============================================================================
+# COMPLIANCE AND SECURITY DEFAULTS
+# =============================================================================
+# Security and compliance settings
+default_compliance_profile: "standard"
+default_security_zone: "internal"
+default_criticality: "medium"
+
+# =============================================================================
+# GEOGRAPHIC AND ORGANIZATIONAL DEFAULTS
+# =============================================================================
+# Location defaults
+default_country: "unknown"
+default_timezone: "UTC"
+
+# =============================================================================
+# VALIDATION AND BASELINE SETTINGS
+# =============================================================================
+# Baseline comparison paths
+baseline_base_path: "./baselines"
+baseline_file_pre_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}_pre_upgrade.json"
+baseline_file_post_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}_post_upgrade.json"
+
+# Comparison status initialization
+comparison_status: "NOT_RUN"
+
+# Validation overall status
+validation_overall_status: "unknown"
+
+# =============================================================================
+# BACKUP SETTINGS
+# =============================================================================
+# Configuration backup settings
+backup_base_path: "./backups"
+backup_type: "pre_upgrade"
+include_startup_config: false
+
+# =============================================================================
+# METRICS AND MONITORING
+# =============================================================================
+# Metrics export settings
+send_metrics: false
+log_metrics_locally: false
+debug_metrics: false
+update_netbox: false
+
+# InfluxDB connection settings (these should be defined if send_metrics is true)
+influxdb_url: ""
+influxdb_token: ""
+influxdb_bucket: "network_upgrades"
+influxdb_org: "default"
+
+# Metrics webhook settings (optional)
+metrics_webhook_url: ""
+metrics_webhook_token: ""
+
+# =============================================================================
+# DEBUG AND DISPLAY SETTINGS
+# =============================================================================
+# Control debug output
+show_debug: false
+
+# =============================================================================
+# PLATFORM-SPECIFIC DEFAULTS
+# =============================================================================
+# FortiOS VDOM default
+vdom: "root"
+
+# =============================================================================
+# COMMAND RESULT DEFAULTS
+# =============================================================================
+# Default skip status for command results (used in storage checks)
+# These are used when checking if a command was skipped
+default_skipped: false
+
+# =============================================================================
+# ROLLBACK STATE DEFAULTS
+# =============================================================================
+# Default value for update_current_step flag
+update_current_step: false
+
+# =============================================================================
+# GATHERED DATA INITIALIZATION
+# =============================================================================
+# Initialize gathered data as empty structures
+influx_fields_list: []
+metric_data: {}
+
+# =============================================================================
+# NETWORK RESOURCES DEFAULTS
+# =============================================================================
+# Default empty structures for network resources
+ansible_network_resources: {}
+
+# =============================================================================
+# FORTIOS DEFAULTS (from installation task)
+# =============================================================================
+# Default error message for missing data
+default_error_message: "Unknown error"
+
+# Default verification status
+default_verification_status: "Not Verified"
+
+# =============================================================================
+# NETWORK VALIDATION DEFAULTS
+# =============================================================================
+# Default empty baseline structures
+network_baseline: {}
+network_baseline_pre: {}
+network_baseline_post: {}
+
+# Initialize gathered network data structures
+gathered_arp_data: {}
+gathered_mac_data: {}
+gathered_rib_data: {}
+gathered_fib_data: {}
+gathered_bfd_data: {}
+gathered_pim_interface_data: {}
+gathered_pim_neighbor_data: {}
+gathered_pim_rp_data: {}
+gathered_anycast_rp_data: {}
+gathered_igmp_interface_data: {}
+gathered_igmp_groups_data: {}
+gathered_mroute_summary_data: {}
+gathered_mroute_data: {}
+
+# =============================================================================
+# STORAGE OUTPUT DEFAULTS
+# =============================================================================
+# Platform-specific result structures
+nxos_result:
+  skipped: false
+ios_result:
+  skipped: false
+fortios_result:
+  skipped: false
+opengear_result:
+  skipped: false
+
+# Consolidated storage output
+storage_output: {}

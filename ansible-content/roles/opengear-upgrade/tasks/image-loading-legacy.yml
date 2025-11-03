@@ -130,7 +130,7 @@
 
     - name: Log existing firmware check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check for existing firmware: {{ existing_firmware.stderr | default(existing_firmware.stdout) | default('Unknown error') }}"
+        msg: "Warning: Failed to check for existing firmware: {{ existing_firmware.stderr if existing_firmware.stderr is defined else (existing_firmware.stdout if existing_firmware.stdout is defined else default_error_message) }}"
       when:
         - existing_firmware is defined
         - existing_firmware.rc is defined
