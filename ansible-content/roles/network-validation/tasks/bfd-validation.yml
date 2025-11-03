@@ -74,7 +74,7 @@
           - "=== BFD Data Comparison ==="
           - "Status: No changes detected in BFD data"
       when:
-        - bfd_comparison_match | default(true)
+        - bfd_comparison_match
 
     - name: Determine BFD comparison status
       ansible.builtin.set_fact:

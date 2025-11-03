@@ -100,9 +100,9 @@
           - "=== ARP and MAC Data Comparison ==="
           - "Status: No changes detected in ARP and MAC data"
       when:
-        - arp_comparison_match | default(true)
-        - mac_comparison_match | default(true)
+        - arp_comparison_match
+        - mac_comparison_match
 
     - name: Determine ARP/MAC comparison status
       ansible.builtin.set_fact:
-        arp_mac_comparison_status: "{{ 'PASS' if (arp_comparison_match | default(true)) and (mac_comparison_match | default(true)) else 'FAIL' }}"
+        arp_mac_comparison_status: "{{ 'PASS' if arp_comparison_match and mac_comparison_match else 'FAIL' }}"

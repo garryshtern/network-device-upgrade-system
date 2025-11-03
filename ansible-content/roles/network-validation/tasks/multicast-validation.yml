@@ -272,24 +272,24 @@
           - "=== Multicast Data Comparison ==="
           - "Status: No changes detected in multicast data"
       when:
-        - pim_interface_match | default(true)
-        - pim_neighbor_match | default(true)
-        - pim_rp_match | default(true)
-        - igmp_interface_match | default(true)
-        - igmp_groups_match | default(true)
-        - mroute_match | default(true)
+        - pim_interface_match
+        - pim_neighbor_match
+        - pim_rp_match
+        - igmp_interface_match
+        - igmp_groups_match
+        - mroute_match
 
     - name: Determine multicast comparison status
       ansible.builtin.set_fact:
         multicast_comparison_status: >-
           {{
             'PASS' if (
-              (pim_interface_match | default(true)) and
-              (pim_neighbor_match | default(true)) and
-              (pim_rp_match | default(true)) and
-              (igmp_interface_match | default(true)) and
-              (igmp_groups_match | default(true)) and
-              (mroute_match | default(true))
+              pim_interface_match and
+              pim_neighbor_match and
+              pim_rp_match and
+              igmp_interface_match and
+              igmp_groups_match and
+              mroute_match
             )
             else 'FAIL'
           }}

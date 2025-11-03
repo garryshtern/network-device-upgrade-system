@@ -57,7 +57,7 @@
               - "=== Network Resources Configuration Changes ==="
               - "Status: No changes detected in network resources configuration"
           when:
-            - network_resources_comparison_match | default(true)
+            - network_resources_comparison_match
 
         - name: Determine network_resources comparison status
           ansible.builtin.set_fact:

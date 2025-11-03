@@ -117,9 +117,9 @@
           - "=== RIB and FIB Data Comparison ==="
           - "Status: No changes detected in RIB and FIB data"
       when:
-        - rib_comparison_match | default(true)
-        - fib_comparison_match | default(true)
+        - rib_comparison_match
+        - fib_comparison_match
 
     - name: Determine routing comparison status
       ansible.builtin.set_fact:
-        routing_comparison_status: "{{ 'PASS' if (rib_comparison_match | default(true)) and (fib_comparison_match | default(true)) else 'FAIL' }}"
+        routing_comparison_status: "{{ 'PASS' if rib_comparison_match and fib_comparison_match else 'FAIL' }}"

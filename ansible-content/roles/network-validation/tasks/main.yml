@@ -14,7 +14,7 @@
       - "=========================================="
       - "Device: {{ inventory_hostname }}"
       - "Platform: {{ platform }}"
-      - "Validation Phase: {{ validation_phase | default('not specified') }}"
+      - "Validation Phase: {{ validation_phase }}"
       - "WARNING: Facts MUST be gathered before this role"
       - "=========================================="
 
