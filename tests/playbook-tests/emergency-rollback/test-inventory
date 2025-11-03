@@ -1,0 +1,6 @@
+[emergency_rollback_devices]
+localhost ansible_connection=local
+
+[emergency_rollback_devices:vars]
+ansible_network_os=cisco.nxos.nxos
+device_platform=cisco_nxos

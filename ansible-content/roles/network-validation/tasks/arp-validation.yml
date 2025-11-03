@@ -27,7 +27,9 @@
   block:
     # ARP Data - Normalize and Compare
     - name: ARP Data Comparison
-      when: network_baseline_pre.arp_data is defined and network_baseline_post.arp_data is defined
+      when:
+        - network_baseline_pre.arp_data is defined
+        - network_baseline_post.arp_data is defined
       block:
         - name: Normalize ARP pre-upgrade data
           ansible.builtin.include_tasks: normalize-baseline-data.yml
@@ -70,7 +72,9 @@
 
     # MAC Data - Raw Comparison (no normalization needed)
     - name: MAC Data Comparison
-      when: network_baseline_pre.mac_data is defined and network_baseline_post.mac_data is defined
+      when:
+        - network_baseline_pre.mac_data is defined
+        - network_baseline_post.mac_data is defined
       block:
         - name: Calculate MAC deltas
           ansible.builtin.set_fact:
