@@ -48,9 +48,6 @@ default_persistent_command_timeout: 300
 # SSH key file default path
 default_ssh_key_file: "/var/lib/awx/.ssh/network_devices"
 
-# Group names default (for inventory groups)
-group_names: []
-
 # =============================================================================
 # FIRMWARE MANAGEMENT
 # =============================================================================
