@@ -134,9 +134,7 @@
       ansible.builtin.assert:
         that:
           - item.calculated_result == item.expected_result
-        fail_msg: >-
-          Space calculation failed for {{ item.name }}:
-          expected {{ item.expected_result }}, got {{ item.calculated_result }}
+        fail_msg: "Space calculation failed for {{ item.name }}: expected {{ item.expected_result }}, got {{ item.calculated_result }}"
       loop: "{{ space_test_results }}"
 
     # Test filesystem detection and assessment

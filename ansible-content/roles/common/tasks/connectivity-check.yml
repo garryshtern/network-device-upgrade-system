@@ -182,17 +182,13 @@
       rescue:
         - name: Connection or version retrieval failed
           ansible.builtin.fail:
-            msg: |
+            msg: >-
               Failed to connect to device {{ inventory_hostname }} or retrieve version information.
-              This is required for upgrade operations.
-
-              Please check:
-              - Device connectivity (network, SSH access)
-              - Credentials (username, password, or SSH key)
-              - Device is responding to commands
-
-              Platform: {{ platform }}
-              Error occurred during version retrieval.
+              This is required for upgrade operations. Please check:
+              (1) Device connectivity (network, SSH access),
+              (2) Credentials (username, password, or SSH key),
+              (3) Device is responding to commands.
+              Platform: {{ platform }}. Error occurred during version retrieval.
 
     - name: Simulate connectivity test in check mode
       ansible.builtin.set_fact:
@@ -242,16 +238,11 @@
 
 - name: Platform not defined - provide guidance
   ansible.builtin.fail:
-    msg: |
+    msg: >-
       Platform variable not defined for host {{ inventory_hostname }}.
-
       To fix this, ensure your host is a member of a platform group in your inventory:
-        - cisco_nxos (for Cisco NX-OS devices)
-        - cisco_iosxe (for Cisco IOS-XE devices)
-        - fortios (for Fortinet FortiGate devices)
-        - opengear (for Opengear devices)
-
+      cisco_nxos (for Cisco NX-OS devices), cisco_iosxe (for Cisco IOS-XE devices),
+      fortios (for Fortinet FortiGate devices), opengear (for Opengear devices).
       Alternatively, define 'platform' variable in host_vars for this host.
-
       Current groups: {{ group_names | default([]) }}
   when: platform is not defined

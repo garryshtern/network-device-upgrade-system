@@ -83,17 +83,17 @@
 
 - name: Display upgrade plan
   ansible.builtin.debug:
-    msg: |
-      Opengear Upgrade Plan for {{ inventory_hostname }}:
-      Model: {{ opengear_upgrade_state.device_model }}
-      Architecture: {{ opengear_upgrade_state.architecture | title }}
-      Type: {{ opengear_upgrade_state.device_type }}
-      Current Version: {{ opengear_upgrade_state.current_version }}
-      Target Version: {{ opengear_upgrade_state.target_version }}
-      Upgrade Method: {{ opengear_upgrade_state.upgrade_method | upper }}
-      API Available: {{ api_available | string | title }}
-      Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}
-      Power Outlets: {{ opengear_upgrade_state.power_ports | length }}
+    msg:
+      - "Opengear Upgrade Plan for {{ inventory_hostname }}:"
+      - "Model: {{ opengear_upgrade_state.device_model }}"
+      - "Architecture: {{ opengear_upgrade_state.architecture | title }}"
+      - "Type: {{ opengear_upgrade_state.device_type }}"
+      - "Current Version: {{ opengear_upgrade_state.current_version }}"
+      - "Target Version: {{ opengear_upgrade_state.target_version }}"
+      - "Upgrade Method: {{ opengear_upgrade_state.upgrade_method | upper }}"
+      - "API Available: {{ api_available | string | title }}"
+      - "Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}"
+      - "Power Outlets: {{ opengear_upgrade_state.power_ports | length }}"
 
 - name: Validate upgrade path
   ansible.builtin.assert:

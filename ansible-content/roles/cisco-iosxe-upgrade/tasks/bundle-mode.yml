@@ -60,11 +60,11 @@
   block:
     - name: Display new boot configuration
       ansible.builtin.debug:
-        msg: |
-          Bundle Mode Configuration Complete:
-          - Target Image: {{ target_image_filename }}
-          - Boot System: {{ new_boot_config.stdout[0] }}
-          - Reboot Required: {{ requires_reboot }}
+        msg:
+          - "Bundle Mode Configuration Complete:"
+          - "- Target Image: {{ target_image_filename }}"
+          - "- Boot System: {{ new_boot_config.stdout[0] }}"
+          - "- Reboot Required: {{ requires_reboot }}"
 
     - name: Verify image file exists on device
       cisco.ios.ios_command:

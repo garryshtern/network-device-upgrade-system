@@ -30,20 +30,17 @@
 
     - name: Display upgrade plan
       ansible.builtin.debug:
-        msg: |
-          FortiOS Upgrade Plan for {{ inventory_hostname }}:
-          Current Version: {{ fortios_upgrade_state.current_version }}
-          Target Version: {{ fortios_upgrade_state.target_version }}
-          Multi-Step Required: {{ fortios_upgrade_state.multi_step_required }}
-          Upgrade Path: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}
-          Current Step: >-
-            {{ fortios_upgrade_state.current_step }}/
-            {{ fortios_upgrade_state.upgrade_path |
-                length }}
-          HA Mode: {{ fortios_upgrade_state.ha_mode }}
-          HA Role: {{ fortios_upgrade_state.ha_role }}
-          VDOM Mode: {{ fortios_upgrade_state.vdom_mode }}
-          License: {{ fortios_upgrade_state.license_status }}
+        msg:
+          - "FortiOS Upgrade Plan for {{ inventory_hostname }}:"
+          - "Current Version: {{ fortios_upgrade_state.current_version }}"
+          - "Target Version: {{ fortios_upgrade_state.target_version }}"
+          - "Multi-Step Required: {{ fortios_upgrade_state.multi_step_required }}"
+          - "Upgrade Path: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}"
+          - "Current Step: {{ fortios_upgrade_state.current_step }}/{{ fortios_upgrade_state.upgrade_path | length }}"
+          - "HA Mode: {{ fortios_upgrade_state.ha_mode }}"
+          - "HA Role: {{ fortios_upgrade_state.ha_role }}"
+          - "VDOM Mode: {{ fortios_upgrade_state.vdom_mode }}"
+          - "License: {{ fortios_upgrade_state.license_status }}"
 
     - name: Validate upgrade path
       ansible.builtin.assert:

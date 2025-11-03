@@ -97,11 +97,9 @@
 
     - name: Warn about critical power outlets
       ansible.builtin.debug:
-        msg: |
-          WARNING: {{ critical_power_check.json | length if
-          critical_power_check.json is defined else 0 }} critical power outlets
-          detected.
-          Firmware upgrade may cause brief power interruption.
+        msg:
+          - "WARNING: {{ critical_power_check.json | length if critical_power_check.json is defined else 0 }} critical power outlets detected."
+          - "Firmware upgrade may cause brief power interruption."
       when:
         - opengear_upgrade_state.device_type == "smart_pdu"
         - critical_power_check.json is defined
@@ -286,23 +284,15 @@
             fail_msg: "Power management not operational after upgrade"
 - name: Log installation completion
   ansible.builtin.debug:
-    msg: |-
-      Opengear Installation Completed Successfully:
-      - Device Model: {{ opengear_upgrade_state.device_model }}
-      - Device Type: {{ opengear_upgrade_state.device_type | title }}
-      - Previous Version: {{ opengear_upgrade_state.current_version }}
-      - New Version: {{ post_install_info.json.version }}
-      - Installation Method: Web API
-      - >-
-        Config Backup: {{ config_backup.json.backup_id if
-          config_backup.json is defined else 'Not Created' }}
-      - >-
-        System Health: {{ post_install_health.json.status if
-          post_install_health.json is defined else 'Not Checked' }}
-      - >-
-        Serial Ports: {{ post_serial_status.json |
-          length if post_serial_status is defined else 'N/A' }} operational
-      - >-
-        Power Outlets: {{ post_power_status.json |
-          length if post_power_status is defined else 'N/A' }} operational
-      - Status: SUCCESS
+    msg:
+      - "Opengear Installation Completed Successfully:"
+      - "- Device Model: {{ opengear_upgrade_state.device_model }}"
+      - "- Device Type: {{ opengear_upgrade_state.device_type | title }}"
+      - "- Previous Version: {{ opengear_upgrade_state.current_version }}"
+      - "- New Version: {{ post_install_info.json.version }}"
+      - "- Installation Method: Web API"
+      - "- Config Backup: {{ config_backup.json.backup_id if config_backup.json is defined else 'Not Created' }}"
+      - "- System Health: {{ post_install_health.json.status if post_install_health.json is defined else 'Not Checked' }}"
+      - "- Serial Ports: {{ post_serial_status.json | length if post_serial_status is defined else 'N/A' }} operational"
+      - "- Power Outlets: {{ post_power_status.json | length if post_power_status is defined else 'N/A' }} operational"
+      - "- Status: SUCCESS"

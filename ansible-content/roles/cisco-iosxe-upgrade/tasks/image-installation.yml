@@ -177,24 +177,13 @@
 
 - name: Log installation completion
   ansible.builtin.debug:
-    msg: |-
-      IOS-XE Installation Completed:
-      - Previous Version: {{ iosxe_upgrade_state.current_version }}
-      - New Version: {{ iosxe_upgrade_state.target_version }}
-      - >-
-        Installation Method: {{ 'Install Mode' if
-          iosxe_upgrade_state.install_mode else 'Bundle Mode' }}
-      - Reboot Required: {{ bundle_mode_reboot_required }}
-      - >
-        System Responsive:
-        {{ 'YES' if post_install_version is defined else 'CHECK' }}
-      - >
-        Errors Found:
-        {{ 'YES' if post_install_errors.stdout[0] != '' else 'NONE' }}
-      - >-
-        Interfaces Up: {{ post_install_interfaces.stdout[0].count('up') if
-          post_install_interfaces is defined else 'Unknown' }}
-      - >-
-        Status:
-        {{ 'SUCCESS' if iosxe_upgrade_state.target_version
-        in post_install_version.stdout[0] else 'VERIFICATION REQUIRED' }}
+    msg:
+      - "IOS-XE Installation Completed:"
+      - "- Previous Version: {{ iosxe_upgrade_state.current_version }}"
+      - "- New Version: {{ iosxe_upgrade_state.target_version }}"
+      - "- Installation Method: {{ 'Install Mode' if iosxe_upgrade_state.install_mode else 'Bundle Mode' }}"
+      - "- Reboot Required: {{ bundle_mode_reboot_required }}"
+      - "- System Responsive: {{ 'YES' if post_install_version is defined else 'CHECK' }}"
+      - "- Errors Found: {{ 'YES' if post_install_errors.stdout[0] != '' else 'NONE' }}"
+      - "- Interfaces Up: {{ post_install_interfaces.stdout[0].count('up') if post_install_interfaces is defined else 'Unknown' }}"
+      - "- Status: {{ 'SUCCESS' if iosxe_upgrade_state.target_version in post_install_version.stdout[0] else 'VERIFICATION REQUIRED' }}"

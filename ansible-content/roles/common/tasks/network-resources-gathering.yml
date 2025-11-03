@@ -349,14 +349,7 @@
   rescue:
     - name: Network resources gathering failed
       ansible.builtin.fail:
-        msg: |
-          Failed to gather comprehensive network resources for {{ inventory_hostname }}.
-
-          This is required for pre-upgrade validation.
-          Please check:
-          - Device is still reachable
-          - Platform configuration is correct
-          - Network resource modules are supported on this device
+        msg: "Failed to gather comprehensive network resources for {{ inventory_hostname }}. This is required for pre-upgrade validation. Please check: (1) Device is still reachable, (2) Platform configuration is correct, (3) Network resource modules are supported on this device"
 
 - name: IOS-XE comprehensive network resources gathering
   when: platform == 'ios'
@@ -382,10 +375,7 @@
   rescue:
     - name: Network resources gathering failed
       ansible.builtin.fail:
-        msg: |
-          Failed to gather comprehensive network resources for {{ inventory_hostname }}.
-
-          This is required for pre-upgrade validation.
+        msg: "Failed to gather comprehensive network resources for {{ inventory_hostname }}. This is required for pre-upgrade validation."
 
 - name: Skip network resources gathering for other platforms
   ansible.builtin.debug:

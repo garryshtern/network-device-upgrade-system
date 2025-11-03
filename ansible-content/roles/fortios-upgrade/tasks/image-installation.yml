@@ -240,26 +240,16 @@
 
 - name: Installation completion logging
   ansible.builtin.debug:
-    msg: |-
-      FortiOS Installation Completed Successfully:
-      - Device Type: >-
-          {{ 'HA Cluster' if fortios_upgrade_state.ha_mode != 'standalone'
-          else 'Standalone' }}
-      - Previous Version: {{ fortios_upgrade_state.current_version }}
-      - New Version: {{ post_install_system_status.meta.results.version }}
-      - HA Mode: {{ fortios_upgrade_state.ha_mode }}
-      - System Health: >-
-          {{ 'OK' if post_install_health.meta.results.cpu_usage | int < 50
-          else 'High Load' }}
-      - Active Policies: >-
-          {{ post_install_policies.meta.results.total_policies  }}
-      - Interface Status: >-
-          {{ post_install_interfaces.meta.results |
-          selectattr('status', 'equalto', 'up') | list | length }} up
-      - VPN Tunnels: >-
-          {{ post_install_vpn.meta.results.active_sessions }}
-      - HA Sync Status: >-
-          {{ post_install_ha_status.meta.results.sync_status }}
-      - License Status: >-
-          {{ post_install_license.meta.results.status }}
-      - Status: SUCCESS
+    msg:
+      - "FortiOS Installation Completed Successfully:"
+      - "- Device Type: {{ 'HA Cluster' if fortios_upgrade_state.ha_mode != 'standalone' else 'Standalone' }}"
+      - "- Previous Version: {{ fortios_upgrade_state.current_version }}"
+      - "- New Version: {{ post_install_system_status.meta.results.version }}"
+      - "- HA Mode: {{ fortios_upgrade_state.ha_mode }}"
+      - "- System Health: {{ 'OK' if post_install_health.meta.results.cpu_usage | int < 50 else 'High Load' }}"
+      - "- Active Policies: {{ post_install_policies.meta.results.total_policies }}"
+      - "- Interface Status: {{ post_install_interfaces.meta.results | selectattr('status', 'equalto', 'up') | list | length }} up"
+      - "- VPN Tunnels: {{ post_install_vpn.meta.results.active_sessions }}"
+      - "- HA Sync Status: {{ post_install_ha_status.meta.results.sync_status }}"
+      - "- License Status: {{ post_install_license.meta.results.status }}"
+      - "- Status: SUCCESS"

@@ -46,15 +46,15 @@
 
     - name: Log pre-installation status
       ansible.builtin.debug:
-        msg: |
-          Pre-Installation Status:
-          - Device Architecture: {{ device_architecture | title }}
-          - Current Version: {{ pre_upgrade_version }}
-          - Firmware Path: {{ opengear_firmware_ready_path }}
-          - Upgrade Command: {{ upgrade_config.command }}
-          - Target Version: {{ opengear_upgrade_state.target_version }}
-          - Staging Info:
-          {{ staging_info.stdout }}
+        msg:
+          - "Pre-Installation Status:"
+          - "- Device Architecture: {{ device_architecture | title }}"
+          - "- Current Version: {{ pre_upgrade_version }}"
+          - "- Firmware Path: {{ opengear_firmware_ready_path }}"
+          - "- Upgrade Command: {{ upgrade_config.command }}"
+          - "- Target Version: {{ opengear_upgrade_state.target_version }}"
+          - "- Staging Info:"
+          - "{{ staging_info.stdout }}"
 
 - name: Console server preparation
   block:
@@ -75,11 +75,9 @@
 
     - name: Warn about active sessions
       ansible.builtin.debug:
-        msg: |
-          WARNING: >
-            {{ active_sessions_check.stdout | trim }}
-            active console sessions detected.
-          These sessions will be disconnected during the upgrade.
+        msg:
+          - "WARNING: {{ active_sessions_check.stdout | trim }} active console sessions detected."
+          - "These sessions will be disconnected during the upgrade."
       when: active_sessions_check.stdout | trim | int > 0
 
     - name: Send maintenance message to users
@@ -125,20 +123,14 @@
 
     - name: Log upgrade command execution output
       ansible.builtin.debug:
-        msg: |
-          {{ upgrade_config.command | title }} Command Execution:
-          - Command: >
-            {{ upgrade_config.command }}
-            {% if upgrade_config.options is defined %}
-            {{ upgrade_config.options }}
-            {% endif %}{{ opengear_firmware_ready_path }}
-          - Return Code: {{ upgrade_execution.rc }}
-          - Output:
-          {{ upgrade_execution.stdout }}
-          {% if upgrade_execution.stderr %}
-          - Error Output:
-          {{ upgrade_execution.stderr }}
-          {% endif %}
+        msg:
+          - "{{ upgrade_config.command | title }} Command Execution:"
+          - "- Command: {{ upgrade_config.command }} {% if upgrade_config.options is defined %}{{ upgrade_config.options }} {% endif %}{{ opengear_firmware_ready_path }}"
+          - "- Return Code: {{ upgrade_execution.rc }}"
+          - "- Output:"
+          - "{{ upgrade_execution.stdout }}"
+          - "{% if upgrade_execution.stderr %}- Error Output:{% endif %}"
+          - "{% if upgrade_execution.stderr %}{{ upgrade_execution.stderr }}{% endif %}"
 
     - name: Check upgrade command output for success indicators
       ansible.builtin.assert:
@@ -280,15 +272,14 @@
 
     - name: Log installation completion
       ansible.builtin.debug:
-        msg: |-
-          Opengear {{ upgrade_config.command | title }}
-          Installation Completed Successfully:
-          - Device Model: {{ opengear_upgrade_state.device_model }}
-          - Device Architecture: {{ device_architecture | title }}
-          - Previous Version: {{ pre_upgrade_version }}
-          - New Version: {{ post_upgrade_version }}
-          - Installation Method: {{ upgrade_config.command }} CLI Command
-          - Firmware File: {{ opengear_firmware_ready_path }}
-          - Serial Ports: {{ post_serial_ports.stdout | trim }} detected
-          - Storage Mount: {{ opengear_storage_path }}
-          - Status: SUCCESS
+        msg:
+          - "Opengear {{ upgrade_config.command | title }} Installation Completed Successfully:"
+          - "- Device Model: {{ opengear_upgrade_state.device_model }}"
+          - "- Device Architecture: {{ device_architecture | title }}"
+          - "- Previous Version: {{ pre_upgrade_version }}"
+          - "- New Version: {{ post_upgrade_version }}"
+          - "- Installation Method: {{ upgrade_config.command }} CLI Command"
+          - "- Firmware File: {{ opengear_firmware_ready_path }}"
+          - "- Serial Ports: {{ post_serial_ports.stdout | trim }} detected"
+          - "- Storage Mount: {{ opengear_storage_path }}"
+          - "- Status: SUCCESS"

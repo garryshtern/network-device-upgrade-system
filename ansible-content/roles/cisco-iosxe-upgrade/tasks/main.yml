@@ -27,12 +27,12 @@
 
 - name: Display upgrade plan
   ansible.builtin.debug:
-    msg: |
-      IOS-XE Upgrade Plan for {{ inventory_hostname }}:
-      Current Version: {{ iosxe_upgrade_state.current_version }}
-      Target Version: {{ iosxe_upgrade_state.target_version }}
-      Install Mode: {{ iosxe_upgrade_state.install_mode }}
-      Boot Mode: {{ iosxe_upgrade_state.boot_mode }}
+    msg:
+      - "IOS-XE Upgrade Plan for {{ inventory_hostname }}:"
+      - "Current Version: {{ iosxe_upgrade_state.current_version }}"
+      - "Target Version: {{ iosxe_upgrade_state.target_version }}"
+      - "Install Mode: {{ iosxe_upgrade_state.install_mode }}"
+      - "Boot Mode: {{ iosxe_upgrade_state.boot_mode }}"
 
 - name: Validate upgrade path
   ansible.builtin.assert:

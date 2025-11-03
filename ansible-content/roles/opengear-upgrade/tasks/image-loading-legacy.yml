@@ -155,18 +155,12 @@
 
     - name: Log transfer completion
       ansible.builtin.debug:
-        msg: |
-          Firmware transfer completed:
-          - Source: {{ local_firmware_path }}
-          - Destination:
-            {{ opengear_storage_path }}/{{ target_firmware_filename }}
-          - Storage Mount: {{ opengear_storage_path }}
-          - Size:
-            {{
-              firmware_transfer.size if
-              firmware_transfer.size is defined else
-              'Unknown'
-            }} bytes
+        msg:
+          - "Firmware transfer completed:"
+          - "- Source: {{ local_firmware_path }}"
+          - "- Destination: {{ opengear_storage_path }}/{{ target_firmware_filename }}"
+          - "- Storage Mount: {{ opengear_storage_path }}"
+          - "- Size: {{ firmware_transfer.size if firmware_transfer.size is defined else 'Unknown' }} bytes"
 
 - name: Verify firmware integrity
   block:
@@ -194,18 +188,18 @@
       ansible.builtin.assert:
         that:
           - expected_checksum == device_calculated_checksum
-        fail_msg: |
-          Checksum verification failed!
-          Expected: {{ expected_checksum }}
-          Calculated: {{ device_calculated_checksum }}
+        fail_msg:
+          - "Checksum verification failed!"
+          - "Expected: {{ expected_checksum }}"
+          - "Calculated: {{ device_calculated_checksum }}"
 
     - name: Log successful checksum verification
       ansible.builtin.debug:
-        msg: |
-          Firmware integrity verified successfully:
-          - Expected MD5: {{ expected_checksum }}
-          - Device MD5: {{ device_calculated_checksum }}
-          - Status: VERIFIED
+        msg:
+          - "Firmware integrity verified successfully:"
+          - "- Expected MD5: {{ expected_checksum }}"
+          - "- Device MD5: {{ device_calculated_checksum }}"
+          - "- Status: VERIFIED"
 
 - name: Prepare firmware for upgrade installation
   block:
@@ -250,24 +244,22 @@
 
     - name: Log backup completion
       ansible.builtin.debug:
-        msg: |
-          Configuration backup completed:
-          - Backup Location: {{ opengear_storage_path }}/
-          - Backup Time:
-            {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-          - CLI Result:
-            {{ config_backup_result.stdout }}
+        msg:
+          - "Configuration backup completed:"
+          - "- Backup Location: {{ opengear_storage_path }}/"
+          - "- Backup Time: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          - "- CLI Result: {{ config_backup_result.stdout }}"
 
 - name: Log image loading completion
   ansible.builtin.debug:
-    msg: |-
-      Opengear Image Loading Completed:
-      - Device: {{ inventory_hostname }}
-      - Model: {{ opengear_upgrade_state.device_model }}
-      - Architecture: {{ device_architecture | title }}
-      - Firmware File: {{ target_firmware_filename }}
-      - Storage Mount: {{ opengear_storage_path }}
-      - Firmware Path: {{ opengear_firmware_ready_path }}
-      - Transfer Method: SCP
-      - Checksum Status: VERIFIED
-      - Ready for {{ upgrade_config.command }}: YES
+    msg:
+      - "Opengear Image Loading Completed:"
+      - "- Device: {{ inventory_hostname }}"
+      - "- Model: {{ opengear_upgrade_state.device_model }}"
+      - "- Architecture: {{ device_architecture | title }}"
+      - "- Firmware File: {{ target_firmware_filename }}"
+      - "- Storage Mount: {{ opengear_storage_path }}"
+      - "- Firmware Path: {{ opengear_firmware_ready_path }}"
+      - "- Transfer Method: SCP"
+      - "- Checksum Status: VERIFIED"
+      - "- Ready for {{ upgrade_config.command }}: YES"

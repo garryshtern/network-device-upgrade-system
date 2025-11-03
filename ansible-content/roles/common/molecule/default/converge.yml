@@ -88,8 +88,7 @@
       block:
         - name: Mock connectivity test (simulated)
           ansible.builtin.debug:
-            msg: >-
-              Testing connectivity to {{ device_hostname }} ({{ device_ip }})
+            msg: "Testing connectivity to {{ device_hostname }} ({{ device_ip }})"
 
         - name: Simulate ping test result
           ansible.builtin.set_fact:

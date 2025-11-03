@@ -63,12 +63,9 @@
 
 - name: Log install mode completion
   ansible.builtin.debug:
-    msg: |-
-      Install Mode Upgrade Completed:
-      - Previous Version: {{ iosxe_upgrade_state.current_version }}
-      - New Version: {{ iosxe_upgrade_state.target_version }}
-      - Method: Install Mode
-      - >-
-        Status: {{ 'Success' if iosxe_upgrade_state.target_version
-        in post_install_version.stdout[0] else
-          'Verification Required' }}
+    msg:
+      - "Install Mode Upgrade Completed:"
+      - "- Previous Version: {{ iosxe_upgrade_state.current_version }}"
+      - "- New Version: {{ iosxe_upgrade_state.target_version }}"
+      - "- Method: Install Mode"
+      - "- Status: {{ 'Success' if iosxe_upgrade_state.target_version in post_install_version.stdout[0] else 'Verification Required' }}"

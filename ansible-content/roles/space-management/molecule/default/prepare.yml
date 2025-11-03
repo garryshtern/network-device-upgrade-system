@@ -271,25 +271,24 @@
 
     - name: Validate storage test environment
       ansible.builtin.debug:
-        msg: |
-          Space Management Test Environment Prepared:
-          - Platform filesystems: ✅ ({{
-            platform_filesystem_map.keys() | list | length }} platforms)
-          - Mock storage tools: ✅
-          - Configuration files: ✅
-          - Test firmware images: ✅
-          - Cleanup simulation: ✅
-
-          Storage Scenarios Available:
-          - Sufficient space (2GB+ available)
-          - Warning level (1GB available)
-          - Critical level (<500MB available)
-          - Multiple platform types
-
-          Test Capabilities:
-          - Space assessment across platforms
-          - Cleanup simulation and validation
-          - Threshold-based decision making
-          - Safety margin calculations
-
-          Ready for comprehensive storage testing
+        msg:
+          - "Space Management Test Environment Prepared:"
+          - "- Platform filesystems: ✅ ({{ platform_filesystem_map.keys() | list | length }} platforms)"
+          - "- Mock storage tools: ✅"
+          - "- Configuration files: ✅"
+          - "- Test firmware images: ✅"
+          - "- Cleanup simulation: ✅"
+          - ""
+          - "Storage Scenarios Available:"
+          - "- Sufficient space (2GB+ available)"
+          - "- Warning level (1GB available)"
+          - "- Critical level (<500MB available)"
+          - "- Multiple platform types"
+          - ""
+          - "Test Capabilities:"
+          - "- Space assessment across platforms"
+          - "- Cleanup simulation and validation"
+          - "- Threshold-based decision making"
+          - "- Safety margin calculations"
+          - ""
+          - "Ready for comprehensive storage testing"

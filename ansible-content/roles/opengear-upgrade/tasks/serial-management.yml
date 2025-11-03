@@ -104,17 +104,9 @@
 
 - name: Serial management summary
   ansible.builtin.debug:
-    msg: |-
-      Serial Port Management Summary:
-      - Total Ports: {{ opengear_upgrade_state.serial_ports | length }}
-      - Active Sessions (Pre): {{ active_sessions.json | length }}
-      - >-
-        Ports Tested:
-        {{ port_connectivity_test.results |
-        selectattr('json.status', 'equalto', 'ok') |
-        list | length  }}
-      - >-
-        Status:
-        {{ 'All Operational' if post_upgrade_port_status.results |
-        length == opengear_upgrade_state.serial_ports | length
-        else 'Check Required' }}
+    msg:
+      - "Serial Port Management Summary:"
+      - "- Total Ports: {{ opengear_upgrade_state.serial_ports | length }}"
+      - "- Active Sessions (Pre): {{ active_sessions.json | length }}"
+      - "- Ports Tested: {{ port_connectivity_test.results | selectattr('json.status', 'equalto', 'ok') | list | length }}"
+      - "- Status: {{ 'All Operational' if post_upgrade_port_status.results | length == opengear_upgrade_state.serial_ports | length else 'Check Required' }}"

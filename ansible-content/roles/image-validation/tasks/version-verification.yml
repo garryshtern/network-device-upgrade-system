@@ -59,10 +59,7 @@
   ansible.builtin.assert:
     that:
       - version_matches
-    fail_msg: |
-      Firmware version mismatch detected:
-      Expected version: {{ expected_firmware_version }}
-      Actual version:   {{ actual_firmware_version }}
+    fail_msg: "Firmware version mismatch detected - Expected version: {{ expected_firmware_version }}, Actual version: {{ actual_firmware_version }}"
     success_msg: "Firmware version verification passed: {{ actual_firmware_version }}"
   when:
     - strict_version_check | bool
@@ -70,11 +67,11 @@
 
 - name: Warning for version check in non-strict mode
   ansible.builtin.debug:
-    msg: |
-      Version verification in non-strict mode:
-      Expected: {{ expected_firmware_version }}
-      Actual:   {{ actual_firmware_version }}
-      Match:    {{ version_matches }}
+    msg:
+      - "Version verification in non-strict mode:"
+      - "Expected: {{ expected_firmware_version }}"
+      - "Actual: {{ actual_firmware_version }}"
+      - "Match: {{ version_matches }}"
   when: not (strict_version_check | bool)
 
 - name: Set version verification result

@@ -334,25 +334,25 @@
 
     - name: Validate common utilities test environment
       ansible.builtin.debug:
-        msg: |
-          Common Utilities Test Environment Prepared:
-          - Connectivity tools: ✅ (ping, ssh, telnet simulation)
-          - Health monitoring: ✅ (cpu, memory, disk, network)
-          - Storage cleanup: ✅ (logs, temp, cache management)
-          - Metrics export: ✅ (JSON, YAML, Prometheus formats)
-          - Error handling: ✅ (timeout, auth, command scenarios)
-
-          Test Capabilities:
-          - Cross-platform utility testing
-          - Safety validation (preserve recent files)
-          - Multi-format metrics export
-          - Comprehensive error scenario handling
-          - Health threshold validation
-
-          Configuration Files:
-          - Connectivity settings: ✅
-          - Health monitoring thresholds: ✅
-          - Metrics export configuration: ✅
-          - Storage cleanup policies: ✅
-
-          Ready for comprehensive common utilities testing
+        msg:
+          - "Common Utilities Test Environment Prepared:"
+          - "- Connectivity tools: ✅ (ping, ssh, telnet simulation)"
+          - "- Health monitoring: ✅ (cpu, memory, disk, network)"
+          - "- Storage cleanup: ✅ (logs, temp, cache management)"
+          - "- Metrics export: ✅ (JSON, YAML, Prometheus formats)"
+          - "- Error handling: ✅ (timeout, auth, command scenarios)"
+          - ""
+          - "Test Capabilities:"
+          - "- Cross-platform utility testing"
+          - "- Safety validation (preserve recent files)"
+          - "- Multi-format metrics export"
+          - "- Comprehensive error scenario handling"
+          - "- Health threshold validation"
+          - ""
+          - "Configuration Files:"
+          - "- Connectivity settings: ✅"
+          - "- Health monitoring thresholds: ✅"
+          - "- Metrics export configuration: ✅"
+          - "- Storage cleanup policies: ✅"
+          - ""
+          - "Ready for comprehensive common utilities testing"

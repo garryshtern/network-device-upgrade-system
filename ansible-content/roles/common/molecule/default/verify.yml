@@ -96,9 +96,7 @@
           - item.expected_behavior is defined
           - item.error_type in ['timeout', 'auth', 'command', 'network']
           - item.expected_behavior in ['retry', 'fail_fast', 'log_and_continue']
-        fail_msg: >-
-          Error scenario {{ item.name }} has invalid
-          structure
+        fail_msg: "Error scenario {{ item.name }} has invalid structure"
       loop: "{{ error_scenarios }}"
 
     # Test timeout value ranges are reasonable
@@ -190,36 +188,34 @@
     # Success message
     - name: Display verification success
       ansible.builtin.debug:
-        msg: |
-          ✅ Common Role Verification PASSED
-
-          Shared Utilities Validated:
-          - Connectivity checks: ✅
-          - >-
-            Health monitoring: ✅
-            ({{ health_check_categories | length }} categories)
-          - Storage cleanup: ✅ ({{ storage_paths | length }} paths)
-          - Metrics export: ✅ ({{ export_formats | join(', ') }})
-          - Error handling: ✅ ({{ error_scenarios | length }} scenarios)
-
-          Cross-Platform Support:
-          - Device configuration: ✅
-          - Generic fallback: ✅
-          - Timeout handling: ✅
-          - Safety settings: ✅
-
-          Configuration Validation:
-          - Timeout ranges: ✅ ({{ connectivity_timeout }}s connectivity)
-          - Cleanup safety: ✅ (preserve recent: {{ preserve_recent_files }})
-          - Export formats: ✅ ({{ export_formats | length }} formats)
-          - Health thresholds: ✅
-
-          Task Structure:
-          - Required task files: ✅
-          - Utility functions: ✅
-          - Error scenarios: ✅
-
-          Status: Ready for cross-platform deployment
+        msg:
+          - "✅ Common Role Verification PASSED"
+          - ""
+          - "Shared Utilities Validated:"
+          - "- Connectivity checks: ✅"
+          - "- Health monitoring: ✅ ({{ health_check_categories | length }} categories)"
+          - "- Storage cleanup: ✅ ({{ storage_paths | length }} paths)"
+          - "- Metrics export: ✅ ({{ export_formats | join(', ') }})"
+          - "- Error handling: ✅ ({{ error_scenarios | length }} scenarios)"
+          - ""
+          - "Cross-Platform Support:"
+          - "- Device configuration: ✅"
+          - "- Generic fallback: ✅"
+          - "- Timeout handling: ✅"
+          - "- Safety settings: ✅"
+          - ""
+          - "Configuration Validation:"
+          - "- Timeout ranges: ✅ ({{ connectivity_timeout }}s connectivity)"
+          - "- Cleanup safety: ✅ (preserve recent: {{ preserve_recent_files }})"
+          - "- Export formats: ✅ ({{ export_formats | length }} formats)"
+          - "- Health thresholds: ✅"
+          - ""
+          - "Task Structure:"
+          - "- Required task files: ✅"
+          - "- Utility functions: ✅"
+          - "- Error scenarios: ✅"
+          - ""
+          - "Status: Ready for cross-platform deployment"
 
     # Test specific common utility scenarios
     - name: Test specific utility scenarios

@@ -370,10 +370,7 @@
 
     - name: Fail if rollback unsuccessful
       ansible.builtin.fail:
-        msg: |
-          Emergency rollback failed for {{ inventory_hostname }}
-          Failed steps: {{ rollback_state.steps_failed | join(', ') }}
-          Manual intervention required
+        msg: "Emergency rollback failed for {{ inventory_hostname }}. Failed steps: {{ rollback_state.steps_failed | join(', ') }}. Manual intervention required."
       when:
         - not rollback_successful
         - not emergency_mode

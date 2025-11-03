@@ -168,15 +168,15 @@
 
 - name: Log image loading completion
   ansible.builtin.debug:
-    msg: |-
-      Secure Opengear Image Loading Completed:
-      - Device: {{ opengear_upgrade_state.device_model if opengear_upgrade_state is defined else 'Unknown' }}
-      - Firmware File: {{ target_firmware_filename }}
-      - Size: {{ uploaded_firmware_info.size_mb }}MB
-      - Checksum: {{ uploaded_firmware_info.checksum }}
-      - Transfer Method: Server-Initiated PUSH (API Upload)
-      - Security Level: HIGH (server pushes file)
-      - Status: Ready for Installation
+    msg:
+      - "Secure Opengear Image Loading Completed:"
+      - "- Device: {{ opengear_upgrade_state.device_model if opengear_upgrade_state is defined else 'Unknown' }}"
+      - "- Firmware File: {{ target_firmware_filename }}"
+      - "- Size: {{ uploaded_firmware_info.size_mb }}MB"
+      - "- Checksum: {{ uploaded_firmware_info.checksum }}"
+      - "- Transfer Method: Server-Initiated PUSH (API Upload)"
+      - "- Security Level: HIGH (server pushes file)"
+      - "- Status: Ready for Installation"
   when:
     - opengear_upgrade_state is defined
     - uploaded_firmware_info is defined

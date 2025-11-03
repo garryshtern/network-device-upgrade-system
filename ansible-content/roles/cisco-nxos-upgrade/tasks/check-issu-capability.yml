@@ -56,11 +56,11 @@
 
 - name: Display ISSU capability assessment
   ansible.builtin.debug:
-    msg: |
-      ISSU Capability Assessment:
-      - Platform: {{ ansible_net_platform if ansible_net_platform is defined else 'unknown' }}
-      - Model: {{ ansible_net_model if ansible_net_model is defined else 'unknown' }}
-      - Dual Supervisors: {{ has_dual_sup }}
-      - Platform ISSU Support: {{ platform_supports_issu }}
-      - ISSU Capable: {{ nxos_upgrade_state.issu_capable }}
-      - Selected Method: {{ nxos_upgrade_state.upgrade_method }}
+    msg:
+      - "ISSU Capability Assessment:"
+      - "- Platform: {{ ansible_net_platform if ansible_net_platform is defined else 'unknown' }}"
+      - "- Model: {{ ansible_net_model if ansible_net_model is defined else 'unknown' }}"
+      - "- Dual Supervisors: {{ has_dual_sup }}"
+      - "- Platform ISSU Support: {{ platform_supports_issu }}"
+      - "- ISSU Capable: {{ nxos_upgrade_state.issu_capable }}"
+      - "- Selected Method: {{ nxos_upgrade_state.upgrade_method }}"

@@ -51,12 +51,10 @@
 
 - name: Display install mode assessment
   ansible.builtin.debug:
-    msg: |-
-      Install Mode Assessment:
-      - Platform: {{ ansible_net_platform }}
-      - Install Mode Supported: {{ platform_supports_install }}
-      - >-
-        Current Boot: {{ 'Install Mode' if
-          'packages.conf' in current_boot_mode.stdout[0] else 'Bundle Mode' }}
-      - Selected Method: {{ iosxe_upgrade_state.boot_mode }}
-      - Available Space: {{ iosxe_upgrade_state.available_space }} bytes
+    msg:
+      - "Install Mode Assessment:"
+      - "- Platform: {{ ansible_net_platform }}"
+      - "- Install Mode Supported: {{ platform_supports_install }}"
+      - "- Current Boot: {{ 'Install Mode' if 'packages.conf' in current_boot_mode.stdout[0] else 'Bundle Mode' }}"
+      - "- Selected Method: {{ iosxe_upgrade_state.boot_mode }}"
+      - "- Available Space: {{ iosxe_upgrade_state.available_space }} bytes"

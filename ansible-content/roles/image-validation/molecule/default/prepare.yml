@@ -191,20 +191,20 @@
 
     - name: Validate security test environment
       ansible.builtin.debug:
-        msg: |
-          Image Validation Security Test Environment Prepared:
-          - Cryptographic libraries: ✅
-          - CA certificates: ✅
-          - Security tools: ✅
-          - Configuration files: ✅
-          - Hash database: ✅
-          - Signature validation: ✅
-
-          Security Features Available:
-          - Certificate chain validation
-          - Digital signature verification
-          - Hash algorithm validation
-          - Vendor trust validation
-          - Timestamp verification
-
-          Ready for security-critical testing
+        msg:
+          - "Image Validation Security Test Environment Prepared:"
+          - "- Cryptographic libraries: ✅"
+          - "- CA certificates: ✅"
+          - "- Security tools: ✅"
+          - "- Configuration files: ✅"
+          - "- Hash database: ✅"
+          - "- Signature validation: ✅"
+          - ""
+          - "Security Features Available:"
+          - "- Certificate chain validation"
+          - "- Digital signature verification"
+          - "- Hash algorithm validation"
+          - "- Vendor trust validation"
+          - "- Timestamp verification"
+          - ""
+          - "Ready for security-critical testing"

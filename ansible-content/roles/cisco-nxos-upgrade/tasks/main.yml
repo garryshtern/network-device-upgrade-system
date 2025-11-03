@@ -12,12 +12,12 @@
 
 - name: Display upgrade plan
   ansible.builtin.debug:
-    msg: |
-      NX-OS Upgrade Plan for {{ inventory_hostname }}:
-      Current Version: {{ nxos_upgrade_state.current_version }}
-      Target Version: {{ nxos_upgrade_state.target_version }}
-      ISSU Capable: {{ nxos_upgrade_state.issu_capable }}
-      Upgrade Method: {{ nxos_upgrade_state.upgrade_method }}
+    msg:
+      - "NX-OS Upgrade Plan for {{ inventory_hostname }}:"
+      - "Current Version: {{ nxos_upgrade_state.current_version }}"
+      - "Target Version: {{ nxos_upgrade_state.target_version }}"
+      - "ISSU Capable: {{ nxos_upgrade_state.issu_capable }}"
+      - "Upgrade Method: {{ nxos_upgrade_state.upgrade_method }}"
 
 - name: Validate upgrade path
   ansible.builtin.assert:

@@ -78,10 +78,9 @@
 
     - name: Warn about active sessions
       ansible.builtin.debug:
-        msg: |
-          WARNING: >
-            {{ active_sessions  }} active console sessions detected.
-          These may be disconnected during the upgrade process.
+        msg:
+          - "WARNING: {{ active_sessions }} active console sessions detected."
+          - "These may be disconnected during the upgrade process."
       when: active_sessions  | int > 0
 
 - name: Check network connectivity to managed devices
@@ -101,13 +100,11 @@
 
 - name: Log console server assessment
   ansible.builtin.debug:
-    msg: |-
-      Console Server Assessment:
-      - Model: {{ opengear_upgrade_state.device_model }}
-      - Architecture: {{ opengear_upgrade_state.architecture | title }}
-      - Detection Method: {{ 'API' if api_available else 'CLI' }}
-      - Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}
-      - Active Sessions: {{ active_sessions  }}
-      - >-
-        Ready for Upgrade: {{ 'Yes' if active_sessions |
-          default(0) | int == 0 else 'Caution - Active Sessions' }}
+    msg:
+      - "Console Server Assessment:"
+      - "- Model: {{ opengear_upgrade_state.device_model }}"
+      - "- Architecture: {{ opengear_upgrade_state.architecture | title }}"
+      - "- Detection Method: {{ 'API' if api_available else 'CLI' }}"
+      - "- Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}"
+      - "- Active Sessions: {{ active_sessions }}"
+      - "- Ready for Upgrade: {{ 'Yes' if active_sessions | default(0) | int == 0 else 'Caution - Active Sessions' }}"

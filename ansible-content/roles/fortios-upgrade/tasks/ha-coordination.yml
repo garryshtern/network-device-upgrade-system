@@ -96,13 +96,11 @@
 
 - name: Log HA coordination status
   ansible.builtin.debug:
-    msg: |-
-      HA Cluster Coordination:
-      - Mode: {{ ha_cluster_info.mode }}
-      - Role: {{ ha_cluster_info.role }}
-      - Sync Status: {{ ha_cluster_info.sync_status }}
-      - Cluster Members: {{ ha_cluster_info.members | length }}
-      - Upgrade Priority: {{ current_upgrade_priority }}
-      - >
-        Ready for Upgrade: >
-          {{ 'Yes' if ha_cluster_info.sync_status == 'synchronized' else 'No' }}
+    msg:
+      - "HA Cluster Coordination:"
+      - "- Mode: {{ ha_cluster_info.mode }}"
+      - "- Role: {{ ha_cluster_info.role }}"
+      - "- Sync Status: {{ ha_cluster_info.sync_status }}"
+      - "- Cluster Members: {{ ha_cluster_info.members | length }}"
+      - "- Upgrade Priority: {{ current_upgrade_priority }}"
+      - "- Ready for Upgrade: {{ 'Yes' if ha_cluster_info.sync_status == 'synchronized' else 'No' }}"

@@ -161,15 +161,11 @@
 
 - name: Log web automation completion
   ansible.builtin.debug:
-    msg: |-
-      Opengear Web Automation Completed:
-      - Device: {{ opengear_upgrade_state.device_model }}
-      - Previous Version: {{ opengear_upgrade_state.current_version }}
-      - New Version: {{ post_upgrade_info.json.version }}
-      - Type: {{ opengear_upgrade_state.device_type | title }}
-      - Method: Web Interface API
-      - >-
-        Status:
-        {{ 'Success' if opengear_upgrade_state.target_version in
-        post_upgrade_info.json.version else
-          'Verification Required' }}
+    msg:
+      - "Opengear Web Automation Completed:"
+      - "- Device: {{ opengear_upgrade_state.device_model }}"
+      - "- Previous Version: {{ opengear_upgrade_state.current_version }}"
+      - "- New Version: {{ post_upgrade_info.json.version }}"
+      - "- Type: {{ opengear_upgrade_state.device_type | title }}"
+      - "- Method: Web Interface API"
+      - "- Status: {{ 'Success' if opengear_upgrade_state.target_version in post_upgrade_info.json.version else 'Verification Required' }}"
