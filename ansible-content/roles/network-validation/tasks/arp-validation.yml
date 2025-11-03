@@ -50,8 +50,8 @@
         - name: Calculate ARP deltas
           ansible.builtin.set_fact:
             arp_post_normalized: "{{ normalized_data }}"
-            arp_added: "{{ normalized_data | difference(arp_pre_normalized) }}"
-            arp_removed: "{{ arp_pre_normalized | difference(normalized_data) }}"
+            arp_added: "{{ normalized_data | difference_recursive(arp_pre_normalized) }}"
+            arp_removed: "{{ arp_pre_normalized | difference_recursive(normalized_data) }}"
             arp_comparison_match: "{{ normalized_data == arp_pre_normalized }}"
 
         - name: Report ARP added entries
@@ -78,8 +78,8 @@
       block:
         - name: Calculate MAC deltas
           ansible.builtin.set_fact:
-            mac_added: "{{ network_baseline_post.mac_data | difference(network_baseline_pre.mac_data) }}"
-            mac_removed: "{{ network_baseline_pre.mac_data | difference(network_baseline_post.mac_data) }}"
+            mac_added: "{{ network_baseline_post.mac_data | difference_recursive(network_baseline_pre.mac_data) }}"
+            mac_removed: "{{ network_baseline_pre.mac_data | difference_recursive(network_baseline_post.mac_data) }}"
             mac_comparison_match: "{{ network_baseline_post.mac_data == network_baseline_pre.mac_data }}"
 
         - name: Report MAC added entries
