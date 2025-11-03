@@ -83,29 +83,37 @@
                 'current_step': 'firmware_installation'
               }) }}
 
-        - name: Install firmware - Cisco NX-OS
-          ansible.builtin.include_role:
-            name: cisco-nxos-upgrade
-            tasks_from: image-installation
+        - name: NX-OS Platform Block
           when: platform == 'nxos'
+          block:
+            - name: Install firmware - Cisco NX-OS
+              ansible.builtin.include_role:
+                name: cisco-nxos-upgrade
+                tasks_from: image-installation
 
-        - name: Install firmware - Cisco IOS-XE
-          ansible.builtin.include_role:
-            name: cisco-iosxe-upgrade
-            tasks_from: image-installation
+        - name: IOS-XE Platform Block
           when: platform == 'ios'
+          block:
+            - name: Install firmware - Cisco IOS-XE
+              ansible.builtin.include_role:
+                name: cisco-iosxe-upgrade
+                tasks_from: image-installation
 
-        - name: Install firmware - Opengear
-          ansible.builtin.include_role:
-            name: opengear-upgrade
-            tasks_from: image-installation
+        - name: Opengear Platform Block
           when: platform == 'opengear'
+          block:
+            - name: Install firmware - Opengear
+              ansible.builtin.include_role:
+                name: opengear-upgrade
+                tasks_from: image-installation
 
-        - name: Install firmware - FortiOS
-          ansible.builtin.include_role:
-            name: fortios-upgrade
-            tasks_from: image-installation
+        - name: FortiOS Platform Block
           when: platform == 'fortios'
+          block:
+            - name: Install firmware - FortiOS
+              ansible.builtin.include_role:
+                name: fortios-upgrade
+                tasks_from: image-installation
 
         - name: Mark pre-reboot tasks complete
           ansible.builtin.set_fact:

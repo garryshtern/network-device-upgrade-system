@@ -19,35 +19,37 @@
 
 - name: Platform-specific configuration backup
   block:
-    - name: Gather NX-OS configuration facts
-      cisco.nxos.nxos_facts:
-        gather_subset:
-          - config
-      register: nxos_config_facts
+    - name: NX-OS Platform Block
       when: platform == 'nxos'
+      block:
+        - name: Gather NX-OS configuration facts
+          cisco.nxos.nxos_facts:
+            gather_subset:
+              - config
+          register: nxos_config_facts
 
-    - name: Gather IOS-XE configuration facts
-      cisco.ios.ios_facts:
-        gather_subset:
-          - config
-      register: ios_config_facts
+        - name: Save NX-OS config backup to file
+          ansible.builtin.copy:
+            content: "{{ ansible_net_config }}"
+            dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
+            mode: '0644'
+          delegate_to: localhost
+
+    - name: IOS-XE Platform Block
       when: platform == 'ios'
+      block:
+        - name: Gather IOS-XE configuration facts
+          cisco.ios.ios_facts:
+            gather_subset:
+              - config
+          register: ios_config_facts
 
-    - name: Save NX-OS config backup to file
-      ansible.builtin.copy:
-        content: "{{ ansible_net_config }}"
-        dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
-        mode: '0644'
-      delegate_to: localhost
-      when: platform == 'nxos'
-
-    - name: Save IOS-XE config backup to file
-      ansible.builtin.copy:
-        content: "{{ ansible_net_config }}"
-        dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
-        mode: '0644'
-      delegate_to: localhost
-      when: platform == 'ios'
+        - name: Save IOS-XE config backup to file
+          ansible.builtin.copy:
+            content: "{{ ansible_net_config }}"
+            dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
+            mode: '0644'
+          delegate_to: localhost
 
 - name: Display backup results
   ansible.builtin.debug:

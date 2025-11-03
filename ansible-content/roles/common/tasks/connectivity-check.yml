@@ -70,108 +70,111 @@
     - name: Step 1 & 2 - Connect and retrieve basic device information (tests auth and connection)
       when: not ansible_check_mode
       block:
-        - name: Gather basic NX-OS facts for connectivity verification
-          cisco.nxos.nxos_facts:
-            gather_subset:
-              - hardware
-              - min
-          register: nxos_facts_output
+        - name: NX-OS Platform Block
           when: platform == 'nxos'
+          block:
+            - name: Gather basic NX-OS facts for connectivity verification
+              cisco.nxos.nxos_facts:
+                gather_subset:
+                  - hardware
+                  - min
+              register: nxos_facts_output
 
-        - name: Parse and store NX-OS version from facts
-          ansible.builtin.set_fact:
-            device_version_info:
-              raw_output: "{{ ansible_net_version }}"
-              platform: "{{ platform }}"
-              timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ ansible_net_version }}"
-              model: "{{ ansible_net_model }}"
-              hostname: "{{ ansible_net_hostname }}"
-              serial: "{{ ansible_net_serialnum }}"
-              image: "{{ ansible_net_image }}"
-            current_firmware_version: "{{ ansible_net_version }}"
-          when:
-            - platform == 'nxos'
-            - nxos_facts_output is defined
-            - nxos_facts_output is succeeded
+            - name: Parse and store NX-OS version from facts
+              ansible.builtin.set_fact:
+                device_version_info:
+                  raw_output: "{{ ansible_net_version }}"
+                  platform: "{{ platform }}"
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  version: "{{ ansible_net_version }}"
+                  model: "{{ ansible_net_model }}"
+                  hostname: "{{ ansible_net_hostname }}"
+                  serial: "{{ ansible_net_serialnum }}"
+                  image: "{{ ansible_net_image }}"
+                current_firmware_version: "{{ ansible_net_version }}"
+              when:
+                - nxos_facts_output is defined
+                - nxos_facts_output is succeeded
 
-        - name: Display basic NX-OS facts after successful connection
-          ansible.builtin.debug:
-            msg:
-              - "=== NX-OS Basic Connectivity Verified ==="
-              - "Hostname: {{ ansible_net_hostname }}"
-              - "Model: {{ ansible_net_model }}"
-              - "Serial: {{ ansible_net_serialnum }}"
-              - "OS Version: {{ ansible_net_version }}"
-              - "Image: {{ ansible_net_image }}"
-              - "Status: Connected"
-              - "========================================"
-          when:
-            - platform == 'nxos'
-            - nxos_facts_output is succeeded
-            - show_debug | bool
+            - name: Display basic NX-OS facts after successful connection
+              ansible.builtin.debug:
+                msg:
+                  - "=== NX-OS Basic Connectivity Verified ==="
+                  - "Hostname: {{ ansible_net_hostname }}"
+                  - "Model: {{ ansible_net_model }}"
+                  - "Serial: {{ ansible_net_serialnum }}"
+                  - "OS Version: {{ ansible_net_version }}"
+                  - "Image: {{ ansible_net_image }}"
+                  - "Status: Connected"
+                  - "========================================"
+              when:
+                - nxos_facts_output is succeeded
+                - show_debug | bool
 
-        - name: Get IOS-XE version
-          cisco.ios.ios_command:
-            commands:
-              - show version
-          register: ios_version_output
-          changed_when: false
+        - name: IOS-XE Platform Block
           when: platform == 'ios'
+          block:
+            - name: Get IOS-XE version
+              cisco.ios.ios_command:
+                commands:
+                  - show version
+              register: ios_version_output
+              changed_when: false
 
-        - name: Parse and store IOS-XE version
-          ansible.builtin.set_fact:
-            device_version_info:
-              raw_output: "{{ ios_version_output.stdout[0] }}"
-              platform: "{{ platform }}"
-              timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first }}"
-            current_firmware_version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first }}"
-          when:
-            - platform == 'ios'
-            - ios_version_output is defined
-            - ios_version_output.stdout is defined
-            - ios_version_output is succeeded
+            - name: Parse and store IOS-XE version
+              ansible.builtin.set_fact:
+                device_version_info:
+                  raw_output: "{{ ios_version_output.stdout[0] }}"
+                  platform: "{{ platform }}"
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first }}"
+                current_firmware_version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first }}"
+              when:
+                - ios_version_output is defined
+                - ios_version_output.stdout is defined
+                - ios_version_output is succeeded
 
-        - name: Get FortiOS version
-          fortinet.fortios.fortios_monitor_fact:
-            vdom: "root"
-            selector: "system_status"
-          register: fortios_version_output
+        - name: FortiOS Platform Block
           when: platform == 'fortios'
+          block:
+            - name: Get FortiOS version
+              fortinet.fortios.fortios_monitor_fact:
+                vdom: "root"
+                selector: "system_status"
+              register: fortios_version_output
 
-        - name: Parse and store FortiOS version
-          ansible.builtin.set_fact:
-            device_version_info:
-              raw_output: "{{ fortios_version_output }}"
-              platform: "{{ platform }}"
-              timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ fortios_version_output.meta.results.version }}"
-            current_firmware_version: "{{ fortios_version_output.meta.results.version }}"
-          when:
-            - platform == 'fortios'
-            - fortios_version_output is defined
-            - fortios_version_output is succeeded
+            - name: Parse and store FortiOS version
+              ansible.builtin.set_fact:
+                device_version_info:
+                  raw_output: "{{ fortios_version_output }}"
+                  platform: "{{ platform }}"
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  version: "{{ fortios_version_output.meta.results.version }}"
+                current_firmware_version: "{{ fortios_version_output.meta.results.version }}"
+              when:
+                - fortios_version_output is defined
+                - fortios_version_output is succeeded
 
-        - name: Get Opengear version
-          ansible.builtin.raw: config -g config.version
-          register: opengear_version_output
-          changed_when: false
+        - name: Opengear Platform Block
           when: platform == 'opengear'
+          block:
+            - name: Get Opengear version
+              ansible.builtin.raw: config -g config.version
+              register: opengear_version_output
+              changed_when: false
 
-        - name: Parse and store Opengear version
-          ansible.builtin.set_fact:
-            device_version_info:
-              raw_output: "{{ opengear_version_output.stdout }}"
-              platform: "{{ platform }}"
-              timestamp: "{{ ansible_date_time.iso8601 }}"
-              version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') }}"
-            current_firmware_version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') }}"
-          when:
-            - platform == 'opengear'
-            - opengear_version_output is defined
-            - opengear_version_output.stdout is defined
-            - opengear_version_output is succeeded
+            - name: Parse and store Opengear version
+              ansible.builtin.set_fact:
+                device_version_info:
+                  raw_output: "{{ opengear_version_output.stdout }}"
+                  platform: "{{ platform }}"
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') }}"
+                current_firmware_version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') }}"
+              when:
+                - opengear_version_output is defined
+                - opengear_version_output.stdout is defined
+                - opengear_version_output is succeeded
 
         - name: Set connection test result (success)
           ansible.builtin.set_fact:

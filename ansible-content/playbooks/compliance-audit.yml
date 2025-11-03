@@ -135,49 +135,53 @@
               }}
     - name: Platform-Specific Compliance Checks
       block:
-        # Cisco NX-OS Compliance
-        - name: Cisco NX-OS compliance validation
-          ansible.builtin.include_role:
-            name: cisco-nxos-upgrade
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/nxos_compliance_{{ audit_timestamp }}.json"
+        - name: NX-OS Platform Block
           when: platform == 'nxos'
+          block:
+            - name: Cisco NX-OS compliance validation
+              ansible.builtin.include_role:
+                name: cisco-nxos-upgrade
+                tasks_from: compliance-audit
+              vars:
+                audit_output: >
+                  "{{ audit_results_path }}/{{ inventory_hostname
+                    }}/nxos_compliance_{{ audit_timestamp }}.json"
 
-        # Cisco IOS-XE Compliance
-        - name: Cisco IOS-XE compliance validation
-          ansible.builtin.include_role:
-            name: cisco-iosxe-upgrade
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/iosxe_compliance_{{ audit_timestamp }}.json"
+        - name: IOS-XE Platform Block
           when: platform == 'ios'
+          block:
+            - name: Cisco IOS-XE compliance validation
+              ansible.builtin.include_role:
+                name: cisco-iosxe-upgrade
+                tasks_from: compliance-audit
+              vars:
+                audit_output: >
+                  "{{ audit_results_path }}/{{ inventory_hostname
+                    }}/iosxe_compliance_{{ audit_timestamp }}.json"
 
-        # Opengear Compliance
-        - name: Opengear compliance validation
-          ansible.builtin.include_role:
-            name: opengear-upgrade
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/opengear_compliance_{{ audit_timestamp }}.json"
+        - name: Opengear Platform Block
           when: platform == 'opengear'
+          block:
+            - name: Opengear compliance validation
+              ansible.builtin.include_role:
+                name: opengear-upgrade
+                tasks_from: compliance-audit
+              vars:
+                audit_output: >
+                  "{{ audit_results_path }}/{{ inventory_hostname
+                    }}/opengear_compliance_{{ audit_timestamp }}.json"
 
-        # FortiOS Compliance
-        - name: FortiOS compliance validation
-          ansible.builtin.include_role:
-            name: fortios-upgrade
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/fortios_compliance_{{ audit_timestamp }}.json"
+        - name: FortiOS Platform Block
           when: platform == 'fortios'
+          block:
+            - name: FortiOS compliance validation
+              ansible.builtin.include_role:
+                name: fortios-upgrade
+                tasks_from: compliance-audit
+              vars:
+                audit_output: >
+                  "{{ audit_results_path }}/{{ inventory_hostname
+                    }}/fortios_compliance_{{ audit_timestamp }}.json"
 
         - name: Update compliance results - platform specific
           ansible.builtin.set_fact:

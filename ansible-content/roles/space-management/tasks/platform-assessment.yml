@@ -34,28 +34,34 @@
         - not ansible_check_mode
         - inventory_hostname != 'localhost'
       block:
-        - name: Get NX-OS running image
-          cisco.nxos.nxos_command:
-            commands:
-              - show version | include image
-          register: running_image_result
-          changed_when: false
+        - name: NX-OS Platform Block
           when: platform == 'nxos'
+          block:
+            - name: Get NX-OS running image
+              cisco.nxos.nxos_command:
+                commands:
+                  - show version | include image
+              register: running_image_result
+              changed_when: false
 
-        - name: Get IOS-XE running image
-          cisco.ios.ios_command:
-            commands:
-              - show version | include System image
-          register: running_image_result
-          changed_when: false
+        - name: IOS-XE Platform Block
           when: platform == 'ios'
+          block:
+            - name: Get IOS-XE running image
+              cisco.ios.ios_command:
+                commands:
+                  - show version | include System image
+              register: running_image_result
+              changed_when: false
 
-        - name: Skip running image detection for FortiOS and Opengear
-          ansible.builtin.set_fact:
-            running_image_result:
-              stdout:
-                - "N/A"
+        - name: FortiOS/Opengear Platform Block
           when: platform in ['fortios', 'opengear']
+          block:
+            - name: Skip running image detection for FortiOS and Opengear
+              ansible.builtin.set_fact:
+                running_image_result:
+                  stdout:
+                    - "N/A"
 
     - name: Simulate running image for check mode or localhost
       ansible.builtin.set_fact:
@@ -92,31 +98,35 @@
         - not ansible_check_mode
         - inventory_hostname != 'localhost'
       block:
-        - name: Remove NX-OS obsolete images
-          cisco.nxos.nxos_command:
-            commands:
-              - "delete bootflash:{{ item }} no-prompt"
-          loop: "{{ cleanup_candidates }}"
-          when:
-            - platform == 'nxos'
-            - preserve_current_image
-            - item != running_image_file
-            - cleanup_candidates | length > 0
-          register: cleanup_result
-          failed_when: false
+        - name: NX-OS Platform Block
+          when: platform == 'nxos'
+          block:
+            - name: Remove NX-OS obsolete images
+              cisco.nxos.nxos_command:
+                commands:
+                  - "delete bootflash:{{ item }} no-prompt"
+              loop: "{{ cleanup_candidates }}"
+              when:
+                - preserve_current_image
+                - item != running_image_file
+                - cleanup_candidates | length > 0
+              register: cleanup_result
+              failed_when: false
 
-        - name: Remove IOS-XE obsolete images
-          cisco.ios.ios_command:
-            commands:
-              - "delete /force bootflash:/{{ item }}"
-          loop: "{{ cleanup_candidates }}"
-          when:
-            - platform == 'ios'
-            - preserve_current_image
-            - item != running_image_file
-            - cleanup_candidates | length > 0
-          register: cleanup_result
-          failed_when: false
+        - name: IOS-XE Platform Block
+          when: platform == 'ios'
+          block:
+            - name: Remove IOS-XE obsolete images
+              cisco.ios.ios_command:
+                commands:
+                  - "delete /force bootflash:/{{ item }}"
+              loop: "{{ cleanup_candidates }}"
+              when:
+                - preserve_current_image
+                - item != running_image_file
+                - cleanup_candidates | length > 0
+              register: cleanup_result
+              failed_when: false
 
     - name: Log cleanup actions
       ansible.builtin.debug:
