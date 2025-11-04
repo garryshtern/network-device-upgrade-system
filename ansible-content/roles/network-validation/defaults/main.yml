@@ -41,8 +41,8 @@ ansible_net_resources:
 routing_summary:
   total_routes: 0
 
-# Metrics control
-send_metrics: true
+# Metrics control - NOTE: Use export_metrics from group_vars (standardized naming)
+export_metrics: true
 
 # Baseline comparison - fields to exclude from equality checks
 # These fields are time-sensitive and will change between pre/post measurements

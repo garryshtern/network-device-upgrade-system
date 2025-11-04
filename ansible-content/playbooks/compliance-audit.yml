@@ -267,7 +267,7 @@
           {{ ansible_date_time.epoch }}000000000
       when:
         - influxdb_url is defined
-        - send_metrics
+        - export_metrics | bool
       failed_when: false
 
     - name: Update NetBox with compliance status

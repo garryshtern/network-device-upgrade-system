@@ -145,7 +145,7 @@ structured_logging: true
 
 # Compliance and reporting
 generate_report: true  # Generate compliance/validation reports
-# NOTE: send_metrics/export_metrics - use ansible-content/group_vars/all.yml (standardized as export_metrics)
+# NOTE: export_metrics - use ansible-content/group_vars/all.yml (standardized variable naming)
 # log_metrics_locally - use ansible-content/group_vars/all.yml
 compliance_standards: ['security_baseline', 'network_hardening']  # Default compliance standards
 current_firmware_version: "unknown"  # Current firmware version (detected at runtime)
