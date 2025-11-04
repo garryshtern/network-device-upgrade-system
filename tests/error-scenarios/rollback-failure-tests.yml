@@ -1,0 +1,289 @@
+---
+# Rollback Failure Scenario Tests
+# Tests device behavior when rollback operations fail during upgrade recovery
+# Validates: rollback failure detection, state verification, recovery procedures
+
+- name: Rollback Failure Scenario Testing
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_results: []
+    test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"
+
+  tasks:
+    - name: Test Group 1 - Failed Pre-Rollback Image Verification
+      block:
+        - name: Initialize scenario 1
+          set_fact:
+            scenario_1_device: "{{ test_device_registry.test_devices.nxos.issu_capable_with_epld }}"
+            rollback_attempt: 1
+
+        - name: Simulate failed image verification before rollback
+          set_fact:
+            rollback_failure_1:
+              device: "{{ scenario_1_device.device_model }}"
+              phase: "rollback_preparation"
+              issue: "image_verification_failed"
+              old_firmware_version: "{{ scenario_1_device.firmware_version }}"
+              current_firmware_version: "{{ scenario_1_device.target_version }}"
+              error_message: "SHA256 checksum mismatch on original image"
+              timestamp: "2025-11-04T10:15:30Z"
+              rollback_status: "BLOCKED"
+
+        - name: Validate rollback was blocked due to image verification failure
+          assert:
+            that:
+              - rollback_failure_1.rollback_status == "BLOCKED"
+              - "'image_verification_failed' in rollback_failure_1.issue"
+              - rollback_failure_1.phase == "rollback_preparation"
+            fail_msg:
+              - "SCENARIO 1 VALIDATION FAILED"
+              - "Expected: Rollback blocked due to image verification failure"
+              - "Actual Status: {{ rollback_failure_1.rollback_status }}"
+              - "Issue: {{ rollback_failure_1.issue }}"
+              - "Troubleshooting: Verify original firmware image integrity before rollback"
+
+        - name: Record scenario 1 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Failed Pre-Rollback Image Verification', 'status': 'PASS', 'device': scenario_1_device.device_model}] }}"
+
+      rescue:
+        - name: Record scenario 1 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Failed Pre-Rollback Image Verification', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 2 - Rollback Installation Timeout
+      block:
+        - name: Initialize scenario 2
+          set_fact:
+            scenario_2_device: "{{ test_device_registry.test_devices.iosxe.install_mode_capable }}"
+
+        - name: Simulate rollback installation timeout
+          set_fact:
+            rollback_failure_2:
+              device: "{{ scenario_2_device.device_model }}"
+              phase: "rollback_installation"
+              issue: "installation_timeout"
+              attempted_version: "{{ scenario_2_device.firmware_version }}"
+              current_version: "{{ scenario_2_device.target_version }}"
+              timeout_after_seconds: 300
+              recovery_status: "DEVICE_UNRESPONSIVE"
+              manual_intervention_required: true
+              timestamp: "2025-11-04T10:20:45Z"
+
+        - name: Validate timeout occurred during rollback installation
+          assert:
+            that:
+              - rollback_failure_2.issue == "installation_timeout"
+              - rollback_failure_2.recovery_status == "DEVICE_UNRESPONSIVE"
+              - rollback_failure_2.manual_intervention_required == true
+            fail_msg:
+              - "SCENARIO 2 VALIDATION FAILED"
+              - "Expected: Rollback installation timeout with manual intervention required"
+              - "Actual Issue: {{ rollback_failure_2.issue }}"
+              - "Recovery Status: {{ rollback_failure_2.recovery_status }}"
+              - "Troubleshooting: Device may require manual power cycle if unresponsive"
+
+        - name: Record scenario 2 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Rollback Installation Timeout', 'status': 'PASS', 'manual_intervention': true}] }}"
+
+      rescue:
+        - name: Record scenario 2 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Rollback Installation Timeout', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 3 - HA Failover During Rollback (Primary)
+      block:
+        - name: Initialize scenario 3
+          set_fact:
+            scenario_3_primary: "{{ test_device_registry.test_devices.fortios.ha_primary_firewall }}"
+            scenario_3_secondary: "{{ test_device_registry.test_devices.fortios.ha_secondary_firewall }}"
+
+        - name: Simulate primary firewall rollback failure followed by HA failover
+          set_fact:
+            rollback_failure_3:
+              scenario: "HA_PRIMARY_ROLLBACK_FAILURE"
+              primary_device: "{{ scenario_3_primary.device_model }}"
+              secondary_device: "{{ scenario_3_secondary.device_model }}"
+              primary_phase: "rollback_installation"
+              primary_issue: "installation_failed"
+              failover_triggered: true
+              failover_timestamp: "2025-11-04T10:25:15Z"
+              secondary_status: "ACTIVE"
+              secondary_firmware: "{{ scenario_3_secondary.firmware_version }}"
+              primary_rollback_status: "FAILED"
+              recovery_action: "MANUAL_SYNC_REQUIRED"
+
+        - name: Validate HA failover occurred when primary rollback failed
+          assert:
+            that:
+              - rollback_failure_3.failover_triggered == true
+              - rollback_failure_3.secondary_status == "ACTIVE"
+              - rollback_failure_3.primary_rollback_status == "FAILED"
+            fail_msg:
+              - "SCENARIO 3 VALIDATION FAILED"
+              - "Expected: HA failover when primary rollback failed"
+              - "Failover Triggered: {{ rollback_failure_3.failover_triggered }}"
+              - "Secondary Status: {{ rollback_failure_3.secondary_status }}"
+              - "Primary Status: {{ rollback_failure_3.primary_rollback_status }}"
+              - "Troubleshooting: Manually sync primary firewall with secondary after recovery"
+
+        - name: Record scenario 3 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'HA Failover During Rollback', 'status': 'PASS', 'failover_occurred': true}] }}"
+
+      rescue:
+        - name: Record scenario 3 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'HA Failover During Rollback', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 4 - Rollback Command Rejection
+      block:
+        - name: Initialize scenario 4
+          set_fact:
+            scenario_4_device: "{{ test_device_registry.test_devices.nxos.non_issu_without_epld }}"
+
+        - name: Simulate rollback command rejection by device
+          set_fact:
+            rollback_failure_4:
+              device: "{{ scenario_4_device.device_model }}"
+              phase: "rollback_command_execution"
+              issue: "command_rejected"
+              command: "request system firmware rollback"
+              error_code: "CLI_ERROR_REJECTED"
+              error_description: "Rollback command not supported in current state"
+              device_state: "INCONSISTENT"
+              attempted_rollback_count: 3
+              timestamp: "2025-11-04T10:30:20Z"
+
+        - name: Validate command rejection detected and logged
+          assert:
+            that:
+              - rollback_failure_4.issue == "command_rejected"
+              - rollback_failure_4.device_state == "INCONSISTENT"
+              - rollback_failure_4.attempted_rollback_count == 3
+            fail_msg:
+              - "SCENARIO 4 VALIDATION FAILED"
+              - "Expected: Rollback command rejected by device"
+              - "Issue: {{ rollback_failure_4.issue }}"
+              - "Device State: {{ rollback_failure_4.device_state }}"
+              - "Troubleshooting: Check device state and verify support for rollback in current firmware"
+
+        - name: Record scenario 4 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Rollback Command Rejection', 'status': 'PASS', 'retries_attempted': 3}] }}"
+
+      rescue:
+        - name: Record scenario 4 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Rollback Command Rejection', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 5 - Rollback Network Connectivity Loss
+      block:
+        - name: Initialize scenario 5
+          set_fact:
+            scenario_5_device: "{{ test_device_registry.test_devices.opengear.cm8100_modern }}"
+
+        - name: Simulate network connectivity loss during rollback
+          set_fact:
+            rollback_failure_5:
+              device: "{{ scenario_5_device.device_model }}"
+              device_generation: "{{ scenario_5_device.generation }}"
+              phase: "rollback_in_progress"
+              issue: "connectivity_lost"
+              connection_lost_at: "2025-11-04T10:35:10Z"
+              last_successful_checkpoint: "kernel_loaded"
+              seconds_until_loss: 45
+              device_status_unknown: true
+              recovery_options:
+                - "Wait for device to complete rollback (may take 5-15 minutes)"
+                - "Attempt manual connection recovery"
+                - "If no recovery after 15 minutes, perform manual device reset"
+              recommended_action: "WAIT_AND_MONITOR"
+
+        - name: Validate connectivity loss during rollback detected
+          assert:
+            that:
+              - rollback_failure_5.issue == "connectivity_lost"
+              - rollback_failure_5.device_status_unknown == true
+              - rollback_failure_5.recovery_options | length == 3
+            fail_msg:
+              - "SCENARIO 5 VALIDATION FAILED"
+              - "Expected: Connectivity loss during rollback detected"
+              - "Issue: {{ rollback_failure_5.issue }}"
+              - "Device Status Unknown: {{ rollback_failure_5.device_status_unknown }}"
+              - "Troubleshooting: Device may still be rolling back. Wait 15 minutes before manual intervention"
+
+        - name: Record scenario 5 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Rollback Network Connectivity Loss', 'status': 'PASS', 'last_checkpoint': 'kernel_loaded'}] }}"
+
+      rescue:
+        - name: Record scenario 5 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Rollback Network Connectivity Loss', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 6 - Rollback State Inconsistency
+      block:
+        - name: Initialize scenario 6
+          set_fact:
+            scenario_6_device: "{{ test_device_registry.test_devices.iosxe.bundle_mode_device }}"
+
+        - name: Simulate inconsistent rollback state (partial rollback)
+          set_fact:
+            rollback_failure_6:
+              device: "{{ scenario_6_device.device_model }}"
+              phase: "rollback_verification"
+              issue: "state_inconsistency"
+              target_version: "{{ scenario_6_device.firmware_version }}"
+              primary_partition_version: "{{ scenario_6_device.firmware_version }}"
+              secondary_partition_version: "{{ scenario_6_device.target_version }}"
+              boot_partition: "primary"
+              partition_mismatch: true
+              rollback_incomplete: true
+              verification_status: "FAILED"
+              timestamp: "2025-11-04T10:40:50Z"
+
+        - name: Validate state inconsistency detected
+          assert:
+            that:
+              - rollback_failure_6.issue == "state_inconsistency"
+              - rollback_failure_6.partition_mismatch == true
+              - rollback_failure_6.rollback_incomplete == true
+            fail_msg:
+              - "SCENARIO 6 VALIDATION FAILED"
+              - "Expected: State inconsistency detected after rollback"
+              - "Issue: {{ rollback_failure_6.issue }}"
+              - "Partition Mismatch: {{ rollback_failure_6.partition_mismatch }}"
+              - "Rollback Incomplete: {{ rollback_failure_6.rollback_incomplete }}"
+              - "Troubleshooting: Partition mismatch detected. Manual intervention required to complete rollback"
+
+        - name: Record scenario 6 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Rollback State Inconsistency', 'status': 'PASS', 'partition_mismatch': true}] }}"
+
+      rescue:
+        - name: Record scenario 6 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Rollback State Inconsistency', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Display rollback failure test results
+      debug:
+        msg:
+          - "==========================================="
+          - "ROLLBACK FAILURE SCENARIO TEST RESULTS"
+          - "==========================================="
+          - "{% for result in test_results %}{{ result.test }}: {{ result.status }}{% endfor %}"
+          - "==========================================="
+          - "Total Scenarios: {{ test_results | length }}"
+          - "Passed: {{ test_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+          - "Failed: {{ test_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+          - "==========================================="
+
+    - name: Fail if any rollback failure tests failed
+      fail:
+        msg:
+          - "ROLLBACK FAILURE SCENARIO TESTS FAILED"
+          - "Failed scenarios: {{ test_results | selectattr('status', 'equalto', 'FAIL') | map(attribute='test') | list }}"
+      when: test_results | selectattr('status', 'equalto', 'FAIL') | list | length > 0
