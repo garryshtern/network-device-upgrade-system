@@ -31,6 +31,16 @@
       - "3. Run step 7: ansible-playbook main-upgrade-workflow.yml --tags step7 -e target_hosts=mydevice -e max_concurrent=5"
   when: not baseline_file.stat.exists
 
+- name: Validate pre-upgrade baseline file integrity before comparison
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: validate-baseline-integrity
+  vars:
+    baseline_file_path: "{{ baseline_file_pre_upgrade }}"
+    baseline_type: "pre_upgrade"
+    fail_on_corruption: true
+  when: baseline_file.stat.exists
+
 - name: Display STEP 7 entry
   ansible.builtin.debug:
     msg:
