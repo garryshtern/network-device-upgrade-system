@@ -1,0 +1,218 @@
+---
+# Test Device Registry
+# Centralized definitions for all test devices and firmware versions
+# Used to eliminate duplication across test files
+
+# Standard firmware version pairs (used across multiple tests)
+firmware_pairs:
+  nxos_pair_1:
+    current: "9.3.10"
+    target: "10.1.2"
+    description: "NX-OS standard ISSU pair"
+  nxos_pair_2:
+    current: "9.2.4"
+    target: "10.1.2"
+    description: "NX-OS non-ISSU pair"
+  nxos_pair_3:
+    current: "10.0.1"
+    target: "10.2.3.M"
+    description: "NX-OS ISSU with multiple EPLD pair"
+  iosxe_pair_1:
+    current: "16.12.07"
+    target: "17.06.04"
+    description: "IOS-XE standard pair"
+  iosxe_pair_2:
+    current: "16.12.08"
+    target: "17.06.04"
+    description: "IOS-XE C9300 pair"
+  iosxe_pair_3:
+    current: "16.09.08"
+    target: "16.12.09"
+    description: "IOS-XE legacy bundle pair"
+  fortios_pair_1:
+    current: "7.0.8"
+    target: "7.2.4"
+    description: "FortiOS HA pair"
+  fortios_pair_2:
+    current: "7.0.12"
+    target: "7.2.4"
+    description: "FortiOS standalone pair"
+
+# Device Models
+device_models:
+  nxos:
+    - name: "N9K-C93180YC-EX"
+      id: "nxos_model_1"
+      issu_capable: true
+      epld_capable: true
+      nxapi_supported: true
+    - name: "N9K-C9336C-FX2"
+      id: "nxos_model_2"
+      issu_capable: false
+      epld_capable: false
+      nxapi_supported: false
+    - name: "N9K-C93240YC-FX2"
+      id: "nxos_model_3"
+      issu_capable: true
+      epld_capable: true
+      nxapi_supported: true
+  iosxe:
+    - name: "ISR4431"
+      id: "iosxe_model_1"
+      install_mode_capable: true
+    - name: "C9300-48U"
+      id: "iosxe_model_2"
+      install_mode_capable: true
+    - name: "C3850-48T"
+      id: "iosxe_model_3"
+      install_mode_capable: false
+  fortios:
+    - name: "FortiGate-600E"
+      id: "fortios_model_1"
+      ha_capable: true
+    - name: "FortiGate-200F"
+      id: "fortios_model_2"
+      ha_capable: false
+  opengear:
+    - name: "CM7100"
+      id: "opengear_model_1"
+      generation: "legacy"
+      architecture_detection: "legacy_cli"
+    - name: "OM7200"
+      id: "opengear_model_2"
+      generation: "legacy"
+      architecture_detection: "legacy_cli"
+    - name: "CM8100"
+      id: "opengear_model_3"
+      generation: "modern"
+      architecture_detection: "current_cli"
+    - name: "OM2200"
+      id: "opengear_model_4"
+      generation: "modern"
+      architecture_detection: "current_cli"
+
+# Standard test devices
+test_devices:
+  nxos:
+    issu_capable_with_epld:
+      device_model: "N9K-C93180YC-EX"
+      firmware_version: "9.3.10"
+      target_version: "10.1.2"
+      issu_capable: true
+      epld_upgrade_required: true
+      current_epld_version: "1.2.3"
+      target_epld_version: "1.3.1"
+      epld_images:
+        - "n9000-epld.10.1.2.img"
+      nxapi_enabled: true
+    non_issu_without_epld:
+      device_model: "N9K-C9336C-FX2"
+      firmware_version: "9.2.4"
+      target_version: "10.1.2"
+      issu_capable: false
+      epld_upgrade_required: false
+      current_epld_version: "1.3.0"
+      target_epld_version: "1.3.1"
+      epld_images: []
+      nxapi_enabled: false
+    issu_with_multiple_epld:
+      device_model: "N9K-C93240YC-FX2"
+      firmware_version: "10.0.1"
+      target_version: "10.2.3.M"
+      issu_capable: true
+      epld_upgrade_required: true
+      current_epld_version: "2.1.0"
+      target_epld_version: "2.2.1"
+      epld_images:
+        - "n9000-epld.10.2.3.M.img"
+        - "n9000-module-epld.10.2.3.M.img"
+      nxapi_enabled: true
+
+  iosxe:
+    install_mode_capable:
+      device_model: "ISR4431"
+      firmware_version: "16.12.07"
+      target_version: "17.06.04"
+      install_mode: true
+    bundle_mode_device:
+      device_model: "C9300-48U"
+      firmware_version: "16.12.08"
+      target_version: "17.06.04"
+      install_mode: false
+    legacy_bundle_only:
+      device_model: "C3850-48T"
+      firmware_version: "16.09.08"
+      target_version: "16.12.09"
+      install_mode: false
+
+  fortios:
+    ha_primary_firewall:
+      device_model: "FortiGate-600E"
+      firmware_version: "7.0.8"
+      target_version: "7.2.4"
+      ha_role: "primary"
+      ha_enabled: true
+    ha_secondary_firewall:
+      device_model: "FortiGate-600E"
+      firmware_version: "7.0.8"
+      target_version: "7.2.4"
+      ha_role: "secondary"
+      ha_enabled: true
+    standalone_firewall:
+      device_model: "FortiGate-200F"
+      firmware_version: "7.0.12"
+      target_version: "7.2.4"
+      ha_enabled: false
+
+  opengear:
+    cm7100_legacy:
+      device_model: "CM7100"
+      generation: "legacy"
+      architecture_detection: "legacy_cli"
+    om7200_legacy:
+      device_model: "OM7200"
+      generation: "legacy"
+      architecture_detection: "legacy_cli"
+    cm8100_modern:
+      device_model: "CM8100"
+      generation: "modern"
+      architecture_detection: "current_cli"
+    om2200_modern:
+      device_model: "OM2200"
+      generation: "modern"
+      architecture_detection: "current_cli"
+
+# Inventory defaults
+inventory_defaults:
+  localhost_addresses:
+    nxos_1: "127.0.0.1"
+    nxos_2: "127.0.0.2"
+    nxos_3: "127.0.0.3"
+    iosxe_1: "127.0.0.3"
+    iosxe_2: "127.0.0.4"
+    fortios_1: "127.0.0.5"
+    fortios_2: "127.0.0.6"
+    fortios_3: "127.0.0.7"
+    fortios_4: "127.0.0.8"
+    opengear_1: "127.0.0.7"
+    opengear_2: "127.0.0.8"
+    opengear_3: "127.0.0.9"
+    opengear_4: "127.0.0.10"
+
+  ansible_network_os:
+    nxos: "cisco.nxos.nxos"
+    iosxe: "cisco.ios.ios"
+    fortios: "fortinet.fortios.fortios"
+    opengear: "opengear"
+
+  ansible_connection:
+    nxos: "network_cli"
+    iosxe: "network_cli"
+    fortios: "httpapi"
+    opengear: "ssh"
+
+  auth_credentials:
+    username: "admin"
+    ssh_key_location: "/tmp/mock-ssh-key"
+    password_fallback: "mock_password"
+    ssh_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password"

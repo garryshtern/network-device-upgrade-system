@@ -7,63 +7,34 @@
   connection: local
   gather_facts: false
   vars:
+    test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"
     workflow_scenarios:
       - name: "NX-OS ISSU Capable Path"
-        device_vars:
-          platform: "nxos"
-          issu_capable: true
-          firmware_version: "9.3.10"
-          target_version: "10.1.2"
+        device_vars: "{{ test_device_registry.test_devices.nxos.issu_capable_with_epld | combine({'platform': 'nxos', 'issu_capable': true}) }}"
         expected_path: "issu_upgrade"
 
       - name: "NX-OS Non-ISSU Path"
-        device_vars:
-          platform: "nxos"
-          issu_capable: false
-          firmware_version: "9.2.4"
-          target_version: "10.1.2"
+        device_vars: "{{ test_device_registry.test_devices.nxos.non_issu_without_epld | combine({'platform': 'nxos', 'issu_capable': false}) }}"
         expected_path: "standard_upgrade"
 
       - name: "IOS-XE Install Mode Path"
-        device_vars:
-          platform: "ios"
-          install_mode: true
-          firmware_version: "16.12.07"
-          target_version: "17.06.04"
+        device_vars: "{{ test_device_registry.test_devices.iosxe.install_mode_capable | combine({'platform': 'ios', 'install_mode': true}) }}"
         expected_path: "install_mode"
 
       - name: "IOS-XE Bundle Mode Path"
-        device_vars:
-          platform: "ios"
-          install_mode: false
-          firmware_version: "16.12.07"
-          target_version: "17.06.04"
+        device_vars: "{{ test_device_registry.test_devices.iosxe.bundle_mode_device | combine({'platform': 'ios', 'install_mode': false}) }}"
         expected_path: "bundle_mode"
 
       - name: "FortiOS HA Primary Path"
-        device_vars:
-          platform: "fortios"
-          ha_enabled: true
-          ha_role: "primary"
-          firmware_version: "7.0.8"
-          target_version: "7.2.4"
+        device_vars: "{{ test_device_registry.test_devices.fortios.ha_primary_firewall | combine({'platform': 'fortios'}) }}"
         expected_path: "ha_primary_upgrade"
 
       - name: "FortiOS HA Secondary Path"
-        device_vars:
-          platform: "fortios"
-          ha_enabled: true
-          ha_role: "secondary"
-          firmware_version: "7.0.8"
-          target_version: "7.2.4"
+        device_vars: "{{ test_device_registry.test_devices.fortios.ha_secondary_firewall | combine({'platform': 'fortios'}) }}"
         expected_path: "ha_secondary_upgrade"
 
       - name: "Skip Validation Path"
-        device_vars:
-          platform: "nxos"
-          skip_validation: true
-          firmware_version: "9.3.10"
-          target_version: "10.1.2"
+        device_vars: "{{ test_device_registry.test_devices.nxos.issu_capable_with_epld | combine({'platform': 'nxos', 'skip_validation': true}) }}"
         expected_path: "skip_validation"
 
   tasks:
