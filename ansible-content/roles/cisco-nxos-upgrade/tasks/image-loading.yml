@@ -2,6 +2,7 @@
 # Cisco NX-OS Image Loading Tasks
 # Securely transfers firmware images from server to device
 # SECURITY: Uses server-initiated PUSH transfers (not device-initiated PULL)
+# NOTE: Core transfer logic refactored to common/tasks/secure-file-transfer.yml
 
 - name: Set firmware paths
   ansible.builtin.set_fact:
@@ -101,93 +102,30 @@
           loading_successful: true
           loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
-- name: Report firmware upload starting
-  ansible.builtin.debug:
-    msg:
-      - "=========================================="
-      - "UPLOADING FIRMWARE TO DEVICE"
-      - "=========================================="
-      - "Device: {{ inventory_hostname }}"
-      - "Firmware: {{ target_firmware }}"
-      - "Source: {{ local_firmware_path }}"
-      - "Destination: bootflash:{{ target_firmware }}"
-      - "Method: SCP (Server-Initiated PUSH)"
-      - "Status: STARTING UPLOAD..."
-      - "=========================================="
+- name: Transfer firmware if not already staged
   when: not target_firmware_exists
-
-- name: Transfer firmware image to device (Server-Initiated PUSH)
-  when: not target_firmware_exists
-
   block:
-    - name: Enable SCP server on NX-OS device
-      cisco.nxos.nxos_config:
-        lines:
-          - feature scp-server
-      register: scp_enable_result
-      failed_when: false  # May already be enabled
-
-    - name: Log SCP server enable failures
-      ansible.builtin.debug:
-        msg: "Warning: Failed to enable SCP server: {{ scp_enable_result.msg if scp_enable_result.msg is defined else 'Unknown error' }}"
-      when:
-        - scp_enable_result is defined
-        - scp_enable_result.failed is defined
-        - scp_enable_result.failed | bool
-
-    - name: Push firmware image from server to device via SCP
-      cisco.nxos.nxos_file_copy:
-        file_system: "bootflash:"
-        local_file: "{{ local_firmware_path }}"
-        remote_file: "{{ target_firmware }}"
-        file_pull: false  # Server pushes to device
-      register: nxos_file_copy_result
-      async: "{{ file_transfer_timeout }}"
-      poll: "{{ file_transfer_poll_interval }}"
-
-    - name: Display file transfer results
+    - name: Report firmware upload starting
       ansible.builtin.debug:
         msg:
-          - "File transfer completed"
-          - "Status: {{ nxos_file_copy_result.transfer_status }}"
-          - "Changed: {{ nxos_file_copy_result.changed }}"
+          - "=========================================="
+          - "UPLOADING FIRMWARE TO DEVICE"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Firmware: {{ target_firmware }}"
+          - "Source: {{ local_firmware_path }}"
+          - "Destination: bootflash:{{ target_firmware }}"
+          - "Method: SCP (Server-Initiated PUSH)"
+          - "Status: STARTING UPLOAD..."
+          - "=========================================="
 
-    - name: Verify secure file transfer completed successfully
-      ansible.builtin.assert:
-        that:
-          - nxos_file_copy_result is succeeded
-          - nxos_file_copy_result.transfer_status in nxos_valid_transfer_statuses
-        fail_msg:
-          - "Secure firmware file transfer failed or returned invalid status"
-          - "Expected status: {{ nxos_valid_transfer_statuses }}"
-          - "Actual status: {{ nxos_file_copy_result.transfer_status }}"
-          - "Full result: {{ nxos_file_copy_result | to_nice_json }}"
-
-- name: Post-upload verification
-  when: not target_firmware_exists
-  block:
-    - name: Calculate SHA512 hash of firmware file on device
-      cisco.nxos.nxos_command:
-        commands:
-          - show file bootflash:{{ target_firmware }} sha512sum
-      register: nxos_firmware_hash_result
-
-    - name: Extract device SHA512 hash from output
-      ansible.builtin.set_fact:
-        device_firmware_hash: "{{ nxos_firmware_hash_result.stdout[0] | regex_search('[a-f0-9]{128}') }}"
-
-    - name: Verify firmware SHA512 hash matches source
-      ansible.builtin.assert:
-        that:
-          - calculated_hash is defined
-          - device_firmware_hash is defined
-          - device_firmware_hash == calculated_hash
-        fail_msg:
-          - "Firmware SHA512 hash verification FAILED!"
-          - "Expected (source): {{ calculated_hash if calculated_hash is defined else 'MISSING - hash verification is MANDATORY' }}"
-          - "Actual (device): {{ device_firmware_hash }}"
-          - "File: {{ target_firmware }}"
-          - "Hash verification is REQUIRED for all firmware uploads"
+    - name: Execute platform-specific NX-OS firmware transfer
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: secure-file-transfer
+      vars:
+        transfer_handler_task: nxos-firmware-transfer.yml
+        local_file_path: "{{ local_firmware_path }}"
 
     - name: Set image loading results after upload
       ansible.builtin.set_fact:
@@ -195,7 +133,7 @@
           firmware_file: "{{ target_firmware }}"
           file_size_bytes: "{{ firmware_file_info.size_bytes }}"
           source_sha512: "{{ calculated_hash }}"
-          device_sha512: "{{ device_firmware_hash }}"
+          device_sha512: "{{ transferred_file_hash }}"
           hash_verified: true
           file_uploaded: true
           loading_successful: true

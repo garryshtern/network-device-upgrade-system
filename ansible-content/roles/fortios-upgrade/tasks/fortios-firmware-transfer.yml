@@ -1,0 +1,78 @@
+---
+# FortiOS Specific Firmware Transfer Handler
+# Called by secure-file-transfer.yml
+# Sets: transfer_result, transferred_file_hash
+
+- name: FortiOS firmware transfer block
+  block:
+    - name: Push firmware image from server to FortiOS device
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_firmware_upload"
+        params:
+          file_content: "{{ lookup('file', local_file_path) | b64encode }}"
+          # NOTE: filename parameter is FortiOS internal storage name (not our source filename)
+          filename: "{{ fortios_upgrade_state.target_version }}.out"
+      register: secure_upload
+      delegate_to: localhost
+      when: local_file_path is defined
+      vars:
+        ansible_connection: local
+
+    - name: Verify secure upload completion
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_firmware_list"
+      register: firmware_list
+      when:
+        - local_file_path is defined
+        - secure_upload is succeeded
+
+    - name: Get list of available firmware images
+      fortinet.fortios.fortios_monitor_fact:
+        vdom: "root"
+        selector: "system_firmware_list"
+      register: available_firmware
+
+    - name: Verify target firmware is available
+      ansible.builtin.assert:
+        that:
+          - >
+            available_firmware.meta.results | selectattr('version', 'equalto',
+              fortios_upgrade_state.target_version) | list | length > 0
+        fail_msg: "Target firmware not found in available images"
+
+    - name: Check firmware integrity
+      fortinet.fortios.fortios_monitor:
+        vdom: "root"
+        selector: "system_firmware_verify"
+        params:
+          version: "{{ fortios_upgrade_state.target_version }}"
+      register: firmware_verification
+
+    - name: Confirm firmware integrity
+      ansible.builtin.assert:
+        that:
+          - firmware_verification.meta.results.status == "valid"
+        fail_msg: "Firmware integrity check failed"
+
+    - name: Set transfer result (success)
+      ansible.builtin.set_fact:
+        transfer_result:
+          succeeded: true
+          method: "FortiOS API (Server-Initiated PUSH)"
+          error_message: null
+        transferred_file_hash: "{{ firmware_verification.meta.results.status }}"
+
+  rescue:
+    - name: Set transfer result (failure)
+      ansible.builtin.set_fact:
+        transfer_result:
+          succeeded: false
+          method: "FortiOS API (Server-Initiated PUSH)"
+          error_message: "{{ ansible_failed_result.msg | default('Unknown transfer error') }}"
+      ignore_errors: true
+
+    - name: Re-raise the error
+      ansible.builtin.fail:
+        msg: "{{ transfer_result.error_message }}"
