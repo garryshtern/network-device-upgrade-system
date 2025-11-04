@@ -88,11 +88,17 @@
           register: shutdown_wait_result
 
       rescue:
-        - name: Device shutdown detection failed - may be unreachable already
-          ansible.builtin.debug:
+        - name: Device shutdown detection failed - log and fail
+          ansible.builtin.fail:
             msg:
-              - "Note: Could not verify SSH port closure (expected if device shutdown quickly)"
-              - "Proceeding with device recovery wait..."
+              - "ERROR: Device did not shutdown after reboot command (SSH port still open after 600s)"
+              - "Device: {{ inventory_hostname }}"
+              - "Host: {{ ansible_host }}"
+              - "SSH Port: 22"
+              - "This indicates the reboot command may not have executed"
+              - "Possible causes: Device did not process reboot command, SSH service stayed responsive"
+              - "Manual intervention required - verify device state and reboot status"
+              - "Upgrade FAILED - cannot proceed without device shutdown"
 
       when: bundle_mode_reboot_required
 

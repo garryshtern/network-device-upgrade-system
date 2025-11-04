@@ -62,13 +62,14 @@
             step_status: "completed"
 
       rescue:
-        - name: Mark status assessment failed
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: update-rollback-state
-          vars:
-            step_name: "status_assessment"
-            step_status: "failed"
+        - name: Status assessment failed - CRITICAL ERROR
+          ansible.builtin.fail:
+            msg:
+              - "CRITICAL: Initial status assessment FAILED for {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "Could not verify device connectivity or status before rollback"
+              - "Cannot proceed with rollback without confirming device state"
+              - "Manual intervention required - verify device is reachable and responsive"
 
     # Step 2: Platform-specific firmware rollback
     - name: Step 2 - Firmware rollback
@@ -129,13 +130,15 @@
             step_status: "completed"
 
       rescue:
-        - name: Mark firmware rollback failed
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: update-rollback-state
-          vars:
-            step_name: "firmware_rollback"
-            step_status: "failed"
+        - name: Firmware rollback failed - CRITICAL ERROR
+          ansible.builtin.fail:
+            msg:
+              - "CRITICAL: Firmware rollback FAILED for {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "Device could not restore the previous firmware version"
+              - "The device may be left in an unstable or unbootable state"
+              - "Manual intervention required - check device console and perform manual recovery"
+              - "Review firmware rollback logs and consider factory recovery procedures"
 
     # Step 3: Configuration rollback
     - name: Step 3 - Configuration rollback
@@ -181,13 +184,15 @@
             step_status: "completed"
 
       rescue:
-        - name: Mark config rollback failed
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: update-rollback-state
-          vars:
-            step_name: "config_rollback"
-            step_status: "failed"
+        - name: Configuration rollback failed - CRITICAL ERROR
+          ansible.builtin.fail:
+            msg:
+              - "CRITICAL: Configuration rollback FAILED for {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "Device configuration could not be restored from backup"
+              - "The device may be running an incompatible configuration with the rolled-back firmware"
+              - "Manual intervention required - restore configuration manually if backup exists"
+              - "Review backup files and configuration restore logs"
 
     # Step 4: Device reboot (if required)
     - name: Step 4 - Device reboot
@@ -222,13 +227,15 @@
             step_status: "completed"
 
       rescue:
-        - name: Mark rollback reboot failed
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: update-rollback-state
-          vars:
-            step_name: "rollback_reboot"
-            step_status: "failed"
+        - name: Rollback reboot failed - CRITICAL ERROR
+          ansible.builtin.fail:
+            msg:
+              - "CRITICAL: Device reboot for rollback FAILED for {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "Device did not reboot or did not come back online after reboot"
+              - "The device may be hung, powered down, or experiencing boot issues"
+              - "Manual intervention required - check device console and power status"
+              - "Review device logs and consider manual reboot or recovery procedures"
 
     # Step 5: Post-rollback validation
     - name: Step 5 - Post-rollback validation
@@ -275,13 +282,15 @@
             step_status: "completed"
 
       rescue:
-        - name: Mark post-rollback validation failed
-          ansible.builtin.include_role:
-            name: common
-            tasks_from: update-rollback-state
-          vars:
-            step_name: "post_rollback_validation"
-            step_status: "failed"
+        - name: Post-rollback validation failed - CRITICAL ERROR
+          ansible.builtin.fail:
+            msg:
+              - "CRITICAL: Post-rollback validation FAILED for {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "Device health checks or network validation failed after rollback"
+              - "The device may be in an inconsistent or unstable state"
+              - "Manual intervention required - verify device connectivity, health, and network state"
+              - "Review validation logs and device console output"
 
   post_tasks:
     - name: Calculate rollback duration

@@ -18,10 +18,16 @@
           "{{ 'modern' if opengear_api_response.status == 200 else 'legacy' }}"
         api_available: "{{ opengear_api_response.status == 200 }}"
   rescue:
-    - name: API unavailable, assume legacy architecture
-      ansible.builtin.set_fact:
-        opengear_architecture: "legacy"
-        api_available: false
+    - name: API test failed - fail with detailed error
+      ansible.builtin.fail:
+        msg:
+          - "ERROR: Opengear device architecture detection FAILED for {{ inventory_hostname }}"
+          - "API test to /system/info endpoint failed unexpectedly"
+          - "This could indicate: (1) Device is unreachable, (2) API credentials are incorrect"
+          - "(3) Device may be in boot/recovery mode, (4) Network connectivity issue"
+          - "Cannot proceed without successfully detecting device architecture"
+          - "Please verify: Device connectivity, credentials, API availability"
+          - "If device is legacy (no API), ensure proper CLI connectivity and credentials"
 
 - name: Detect device information (Modern API)
   when: api_available
