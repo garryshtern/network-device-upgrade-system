@@ -1,0 +1,88 @@
+---
+# NX-OS Generic File Transfer Handler
+# Reusable file transfer routine for any file type (firmware, EPLD, configs, etc.)
+# Called with: nxos_file_path, nxos_remote_file, nxos_file_hash_source
+# Sets: transfer_result, transferred_file_hash
+
+- name: NX-OS generic file transfer block
+  block:
+    - name: Enable SCP server on NX-OS device
+      cisco.nxos.nxos_config:
+        lines:
+          - feature scp-server
+      register: scp_enable_result
+      failed_when: false  # May already be enabled
+
+    - name: Log SCP server enable failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to enable SCP server: {{ scp_enable_result.msg if scp_enable_result.msg is defined else 'Unknown error' }}"
+      when:
+        - scp_enable_result is defined
+        - scp_enable_result.failed is defined
+        - scp_enable_result.failed | bool
+
+    - name: Push file from server to device via SCP
+      cisco.nxos.nxos_file_copy:
+        file_system: "bootflash:"
+        local_file: "{{ nxos_file_path }}"
+        remote_file: "{{ nxos_remote_file }}"
+        file_pull: false  # Server pushes to device
+      register: nxos_file_copy_result
+      async: "{{ file_transfer_timeout }}"
+      poll: "{{ file_transfer_poll_interval }}"
+
+    - name: Verify secure file transfer completed successfully
+      ansible.builtin.assert:
+        that:
+          - nxos_file_copy_result is succeeded
+          - nxos_file_copy_result.transfer_status in nxos_valid_transfer_statuses
+        fail_msg:
+          - "Secure file transfer failed or returned invalid status"
+          - "File: {{ nxos_remote_file }}"
+          - "Expected status: {{ nxos_valid_transfer_statuses }}"
+          - "Actual status: {{ nxos_file_copy_result.transfer_status }}"
+          - "Full result: {{ nxos_file_copy_result | to_nice_json }}"
+
+    - name: Calculate SHA512 hash of file on device
+      cisco.nxos.nxos_command:
+        commands:
+          - show file bootflash:{{ nxos_remote_file }} sha512sum
+      register: nxos_file_hash_result
+
+    - name: Extract device SHA512 hash from output
+      ansible.builtin.set_fact:
+        device_file_hash: "{{ nxos_file_hash_result.stdout[0] | regex_search('[a-f0-9]{128}') }}"
+
+    - name: Verify SHA512 hash matches source
+      ansible.builtin.assert:
+        that:
+          - nxos_file_hash_source is defined
+          - device_file_hash is defined
+          - device_file_hash == nxos_file_hash_source
+        fail_msg:
+          - "SHA512 hash verification FAILED!"
+          - "File: {{ nxos_remote_file }}"
+          - "Expected (source): {{ nxos_file_hash_source if nxos_file_hash_source is defined else 'MISSING - hash verification is MANDATORY' }}"
+          - "Actual (device): {{ device_file_hash }}"
+          - "Hash verification is REQUIRED for all file uploads"
+
+    - name: Set transfer result (success)
+      ansible.builtin.set_fact:
+        transfer_result:
+          succeeded: true
+          method: "SCP (Server-Initiated PUSH)"
+          error_message: null
+        transferred_file_hash: "{{ device_file_hash }}"
+
+  rescue:
+    - name: Set transfer result (failure)
+      ansible.builtin.set_fact:
+        transfer_result:
+          succeeded: false
+          method: "SCP (Server-Initiated PUSH)"
+          error_message: "{{ ansible_failed_result.msg | default('Unknown transfer error') }}"
+      ignore_errors: true
+
+    - name: Re-raise the error
+      ansible.builtin.fail:
+        msg: "{{ transfer_result.error_message }}"

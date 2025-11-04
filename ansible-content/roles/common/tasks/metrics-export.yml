@@ -1,16 +1,41 @@
 ---
 # Common Metrics Export Tasks
 # Exports metrics to InfluxDB and other monitoring systems
+# GUARD RAILS:
+#   - Validates InfluxDB configuration if export_metrics enabled
+#   - Skips export silently if export_metrics disabled
+#   - Validates webhook has both URL and token if either specified
+#   - All failures non-blocking (don't impact upgrade)
 
 - name: Skip metrics export if no data
   ansible.builtin.meta: end_host
   when: metric_data | length == 0
 
+- name: Validate InfluxDB configuration if metrics enabled
+  block:
+    - name: Check InfluxDB configuration completeness
+      assert:
+        that:
+          - influxdb_url is defined and influxdb_url | length > 0
+          - influxdb_token is defined and influxdb_token | length > 0
+          - influxdb_bucket is defined and influxdb_bucket | length > 0
+        fail_msg:
+          - "METRICS EXPORT CONFIGURATION ERROR"
+          - "Metrics export enabled (export_metrics: true) but InfluxDB not configured"
+          - "Required environment variables:"
+          - "  - influxdb_url: {{ influxdb_url | default('NOT SET') }}"
+          - "  - influxdb_token: {{ 'SET' if (influxdb_token is defined and influxdb_token | length > 0) else 'NOT SET' }}"
+          - "  - influxdb_bucket: {{ influxdb_bucket | default('NOT SET') }}"
+          - ""
+          - "Fix: Either configure InfluxDB or set 'export_metrics: false' to disable metrics"
+  when: export_metrics | bool
+
 - name: InfluxDB metrics export
   when:
-    - send_metrics | bool
-    - influxdb_url is defined
-    - influxdb_token is defined
+    - export_metrics | bool
+    - influxdb_url is defined and influxdb_url | length > 0
+    - influxdb_token is defined and influxdb_token | length > 0
+    - influxdb_bucket is defined and influxdb_bucket | length > 0
   block:
     - name: Build InfluxDB line protocol entry
       ansible.builtin.set_fact:
@@ -63,7 +88,9 @@
           platform: "{{ platform }}"
           data: "{{ metric_data }}"
       register: webhook_export_result
-      when: metrics_webhook_url is defined
+      when:
+        - metrics_webhook_url is defined and metrics_webhook_url | length > 0
+        - metrics_webhook_token is defined and metrics_webhook_token | length > 0
       failed_when: false
 
     - name: Set metrics export results

@@ -141,21 +141,26 @@ include_startup_config: false
 # =============================================================================
 # METRICS AND MONITORING
 # =============================================================================
-# Metrics export settings
-send_metrics: false
+# Metrics export settings - STANDARDIZED VARIABLE NAME: export_metrics
+# Set to true to enable metrics export to InfluxDB, webhooks, and NetBox
+# Default: false (metrics disabled, non-intrusive)
+export_metrics: false
 log_metrics_locally: false
 debug_metrics: false
 update_netbox: false
 
-# InfluxDB connection settings (these should be defined if send_metrics is true)
-influxdb_url: ""
-influxdb_token: ""
-influxdb_bucket: "network_upgrades"
-influxdb_org: "default"
+# InfluxDB connection settings (REQUIRED if export_metrics is true)
+# All three must be configured: url, token, and bucket name
+# Empty values will cause metrics export to be skipped silently if export_metrics is false
+# Empty values will cause clear error message if export_metrics is true (enforced by metrics-export.yml)
+influxdb_url: ""                           # Example: "http://localhost:8086"
+influxdb_token: ""                         # InfluxDB v2 API token (keep secret!)
+influxdb_bucket: "network_upgrades"        # Bucket name (will be created if missing)
+influxdb_org: "default"                    # Organization name in InfluxDB
 
-# Metrics webhook settings (optional)
-metrics_webhook_url: ""
-metrics_webhook_token: ""
+# Metrics webhook settings (optional, requires both url and token if used)
+metrics_webhook_url: ""                    # Example: "https://example.com/metrics"
+metrics_webhook_token: ""                  # Bearer token for webhook authentication
 
 # =============================================================================
 # DEBUG AND DISPLAY SETTINGS
