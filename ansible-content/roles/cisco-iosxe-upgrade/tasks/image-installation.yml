@@ -82,14 +82,17 @@
             host: "{{ ansible_host }}"
             port: 22
             state: stopped
-            timeout: 300
+            timeout: 600
             delay: 30
           delegate_to: localhost
+          register: shutdown_wait_result
 
       rescue:
-        - name: Log device shutdown timeout warning
+        - name: Device shutdown detection failed - may be unreachable already
           ansible.builtin.debug:
-            msg: "Device did not cleanly shutdown within 5 minutes - may still be rebooting"
+            msg:
+              - "Note: Could not verify SSH port closure (expected if device shutdown quickly)"
+              - "Proceeding with device recovery wait..."
 
       when: bundle_mode_reboot_required
 
