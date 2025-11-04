@@ -34,7 +34,12 @@
                   - connection_wait_result.failed
                   - connection_wait_result.msg is defined
                   - "'Permission denied' in connection_wait_result.msg"
-                fail_msg: "Authentication failure not properly detected"
+                fail_msg:
+                  - "AUTHENTICATION FAILURE DETECTION FAILED"
+                  - "Expected: Permission denied message"
+                  - "Actual: {{ connection_wait_result.msg | default('No message') }}"
+                  - "Test: Early auth detection must fail immediately without timeout"
+                  - "Troubleshooting: Verify auth error messages are properly caught"
           rescue:
             - name: Handle test failure
               ansible.builtin.fail:
@@ -70,7 +75,13 @@
             that:
               - connection_attempts | length == 6
               - connection_attempts | map(attribute='status') | unique | list == ['timeout']
-            fail_msg: "Timeout simulation incorrect"
+            fail_msg:
+              - "TIMEOUT SIMULATION VERIFICATION FAILED"
+              - "Expected: 6 timeout attempts"
+              - "Actual: {{ connection_attempts | length }} attempts"
+              - "Attempt statuses: {{ connection_attempts | map(attribute='status') | unique | list }}"
+              - "Test: Device should fail after 6 x 10s retries = 60s timeout"
+              - "Troubleshooting: Verify retry count calculation is correct"
 
         - name: Simulate final connection failure after retries exhausted
           ansible.builtin.set_fact:
@@ -84,7 +95,12 @@
             that:
               - connection_wait_result.failed
               - "'Connection timeout' in connection_wait_result.msg or 'timeout' in connection_wait_result.msg.lower()"
-            fail_msg: "Timeout failure detection failed"
+            fail_msg:
+              - "TIMEOUT FAILURE MESSAGE VALIDATION FAILED"
+              - "Expected: Message containing 'timeout' or 'Connection timeout'"
+              - "Actual: {{ connection_wait_result.msg | default('NO MESSAGE') }}"
+              - "Test: Error messages must clearly indicate timeout condition"
+              - "Troubleshooting: Ensure connection error messages include timeout indicators"
 
         - name: Record test 2 result
           ansible.builtin.set_fact:
