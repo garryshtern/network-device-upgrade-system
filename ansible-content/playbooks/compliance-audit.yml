@@ -47,6 +47,19 @@
               {{ audit_results_path }}/{{ inventory_hostname
                 }}/security_baseline_{{ audit_timestamp }}.json
 
+        - name: Verify security baseline audit results
+          ansible.builtin.assert:
+            that:
+              - security_baseline_results is defined
+              - security_baseline_results.passed is defined
+              - security_baseline_results.failed is defined
+            fail_msg:
+              - "CRITICAL: Security baseline audit failed or returned invalid results"
+              - "Device: {{ inventory_hostname }}"
+              - "Expected security baseline results but audit did not complete properly"
+              - "This indicates a critical security compliance failure"
+              - "Manual investigation required before proceeding"
+
         - name: Update compliance results - security baseline
           ansible.builtin.set_fact:
             compliance_results: >-
@@ -70,20 +83,6 @@
                   }
                 })
               }}
-
-      rescue:
-        - name: Handle security baseline audit failure
-          ansible.builtin.set_fact:
-            compliance_results: >
-              {{
-                compliance_results | combine({
-                  'compliance_checks': {
-                    'failed': >
-                      compliance_results.compliance_checks.failed +
-                        ['security_baseline_audit_error']
-                  }
-                })
-              }}
     - name: Network Hardening Compliance Check
       when: "'network_hardening' in compliance_standards"
       block:
@@ -95,6 +94,19 @@
             audit_output: >
               "{{ audit_results_path }}/{{ inventory_hostname
                 }}/network_hardening_{{ audit_timestamp }}.json"
+
+        - name: Verify network hardening audit results
+          ansible.builtin.assert:
+            that:
+              - network_hardening_results is defined
+              - network_hardening_results.passed is defined
+              - network_hardening_results.failed is defined
+            fail_msg:
+              - "CRITICAL: Network hardening audit failed or returned invalid results"
+              - "Device: {{ inventory_hostname }}"
+              - "Expected network hardening results but audit did not complete properly"
+              - "This indicates a critical network security hardening failure"
+              - "Manual investigation required before proceeding"
 
         - name: Update compliance results - network hardening
           ansible.builtin.set_fact:
@@ -116,20 +128,6 @@
                     'warnings': >
                       compliance_results.compliance_checks.warnings +
                       network_hardening_results.warnings
-                  }
-                })
-              }}
-
-      rescue:
-        - name: Handle network hardening audit failure
-          ansible.builtin.set_fact:
-            compliance_results: >
-              {{
-                compliance_results | combine({
-                  'compliance_checks': {
-                    'failed': >
-                      compliance_results.compliance_checks.failed +
-                      ['network_hardening_audit_error']
                   }
                 })
               }}
@@ -183,6 +181,20 @@
                   "{{ audit_results_path }}/{{ inventory_hostname
                     }}/fortios_compliance_{{ audit_timestamp }}.json"
 
+        - name: Verify platform compliance audit results
+          ansible.builtin.assert:
+            that:
+              - platform_compliance_results is defined
+              - platform_compliance_results.passed is defined
+              - platform_compliance_results.failed is defined
+            fail_msg:
+              - "CRITICAL: Platform-specific compliance audit failed or returned invalid results"
+              - "Device: {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "Expected platform compliance results but audit did not complete properly"
+              - "This indicates a critical platform-specific compliance failure"
+              - "Manual investigation required before proceeding"
+
         - name: Update compliance results - platform specific
           ansible.builtin.set_fact:
             compliance_results: >
@@ -207,20 +219,6 @@
                 })
               }}
           when: platform_compliance_results is defined
-
-      rescue:
-        - name: Handle platform compliance audit failure
-          ansible.builtin.set_fact:
-            compliance_results: >
-              {{
-                compliance_results | combine({
-                  'compliance_checks': {
-                    'failed': >
-                      compliance_results.compliance_checks.failed +
-                      ['platform_compliance_audit_error']
-                  }
-                })
-              }}
 
   post_tasks:
     - name: Calculate compliance metrics

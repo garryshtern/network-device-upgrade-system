@@ -44,26 +44,14 @@
             step_name: status_assessment
 
         - name: Test device connectivity
-          block:
-            - name: Include connectivity check tasks
-              ansible.builtin.include_role:
-                name: common
-                tasks_from: connectivity-check
-          rescue:
-            - name: Log connectivity check failure
-              ansible.builtin.debug:
-                msg: "Connectivity check failed - continuing with rollback"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: connectivity-check
 
         - name: Gather current device state
-          block:
-            - name: Include device status tasks
-              ansible.builtin.include_role:
-                name: common
-                tasks_from: device-status
-          rescue:
-            - name: Log device status check failure
-              ansible.builtin.debug:
-                msg: "Device status check failed - continuing with rollback"
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: device-status
 
         - name: Mark status assessment complete
           ansible.builtin.include_role:

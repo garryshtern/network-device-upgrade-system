@@ -35,6 +35,18 @@
           skipped: []
           warnings: ["weak_encryption_detected"]
 
+    - name: Verify security baseline audit completed successfully
+      ansible.builtin.assert:
+        that:
+          - security_baseline_results is defined
+          - security_baseline_results.passed is defined
+          - security_baseline_results.failed is defined
+        fail_msg:
+          - "CRITICAL: Security baseline compliance audit failed"
+          - "Device: {{ inventory_hostname }}"
+          - "Expected security baseline results but audit did not complete properly"
+          - "This indicates a critical security compliance failure"
+
     - name: Update compliance results - security baseline
       ansible.builtin.set_fact:
         compliance_results: >-
@@ -59,20 +71,6 @@
             })
           }}
 
-  rescue:
-    - name: Handle security baseline audit failure
-      ansible.builtin.set_fact:
-        compliance_results: >
-          {{
-            compliance_results | combine({
-              'compliance_checks': {
-                'failed':
-                  compliance_results.compliance_checks.failed +
-                    ['security_baseline_audit_error']
-              }
-            })
-          }}
-
 - name: Network Hardening Compliance Check
   when: "'network_hardening' in (compliance_standards)"
   block:
@@ -83,6 +81,18 @@
           failed: []
           skipped: []
           warnings: []
+
+    - name: Verify network hardening audit completed successfully
+      ansible.builtin.assert:
+        that:
+          - network_hardening_results is defined
+          - network_hardening_results.passed is defined
+          - network_hardening_results.failed is defined
+        fail_msg:
+          - "CRITICAL: Network hardening compliance audit failed"
+          - "Device: {{ inventory_hostname }}"
+          - "Expected network hardening results but audit did not complete properly"
+          - "This indicates a critical network hardening failure"
 
     - name: Update compliance results - network hardening
       ansible.builtin.set_fact:
@@ -108,20 +118,6 @@
             })
           }}
 
-  rescue:
-    - name: Handle network hardening audit failure
-      ansible.builtin.set_fact:
-        compliance_results: >
-          {{
-            compliance_results | combine({
-              'compliance_checks': {
-                'failed':
-                  compliance_results.compliance_checks.failed +
-                  ['network_hardening_audit_error']
-              }
-            })
-          }}
-
 - name: Platform-Specific Compliance Checks
   block:
     - name: Platform-specific compliance placeholder
@@ -131,6 +127,20 @@
           failed: []
           skipped: []
           warnings: []
+
+    - name: Verify platform compliance audit completed successfully
+      when: platform_compliance_results is defined
+      ansible.builtin.assert:
+        that:
+          - platform_compliance_results is defined
+          - platform_compliance_results.passed is defined
+          - platform_compliance_results.failed is defined
+        fail_msg:
+          - "CRITICAL: Platform-specific compliance audit failed"
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ platform }}"
+          - "Expected platform compliance results but audit did not complete properly"
+          - "This indicates a critical platform-specific compliance failure"
 
     - name: Update compliance results - platform specific
       ansible.builtin.set_fact:
@@ -156,20 +166,6 @@
             })
           }}
       when: platform_compliance_results is defined
-
-  rescue:
-    - name: Handle platform compliance audit failure
-      ansible.builtin.set_fact:
-        compliance_results: >
-          {{
-            compliance_results | combine({
-              'compliance_checks': {
-                'failed':
-                  compliance_results.compliance_checks.failed +
-                  ['platform_compliance_audit_error']
-              }
-            })
-          }}
 
 - name: Calculate total checks count
   ansible.builtin.set_fact:

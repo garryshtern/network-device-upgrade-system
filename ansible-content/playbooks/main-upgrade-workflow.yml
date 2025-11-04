@@ -109,18 +109,15 @@
             file: steps/step-1-connectivity.yml
 
       rescue:
-        - name: Connectivity check failed
-          block:
-            - name: Log connectivity failure
-              ansible.builtin.debug:
-                msg:
-                  - "WARNING: Connectivity check failed for {{ inventory_hostname }}"
-                  - "Device may be unreachable or credentials may be incorrect"
-
-          always:
-            - name: Mark upgrade with connectivity warnings
-              ansible.builtin.set_fact:
-                upgrade_completed_with_warnings: true
+        - name: Connectivity check failed - STOP workflow
+          ansible.builtin.fail:
+            msg:
+              - "CRITICAL: Connectivity check failed for {{ inventory_hostname }}"
+              - "Device may be unreachable or credentials may be incorrect"
+              - "Verify: (1) Device connectivity (network, SSH access)"
+              - "       (2) Credentials (username, password, or SSH key)"
+              - "       (3) Device is responding to commands"
+              - "Upgrade workflow STOPPED - cannot proceed without connectivity"
 
     # STEP 2: Version Check and Image Verification
     # Check if upgrade needed and verify local image file exists

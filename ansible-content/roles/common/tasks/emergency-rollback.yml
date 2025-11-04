@@ -34,13 +34,7 @@
           }}
 
     - name: Test device connectivity
-      block:
-        - name: Include connectivity check tasks
-          ansible.builtin.include_tasks: connectivity-check.yml
-      rescue:
-        - name: Log connectivity check failure
-          ansible.builtin.debug:
-            msg: "Connectivity check failed - continuing with rollback"
+      ansible.builtin.include_tasks: connectivity-check.yml
 
     - name: Mark status assessment complete
       ansible.builtin.set_fact:
@@ -49,16 +43,6 @@
             'steps_completed': rollback_state.steps_completed +
             ['status_assessment']
           }) }}
-
-  rescue:
-    - name: Mark status assessment failed
-      ansible.builtin.set_fact:
-        rollback_state: >
-          {{ rollback_state | combine({
-            'steps_failed': rollback_state.steps_failed +
-            ['status_assessment']
-            })
-          }}
 
 # Step 2: Platform-specific firmware rollback
 - name: Step 2 - Firmware rollback
