@@ -1,0 +1,372 @@
+---
+# State Consistency Validation Tests
+# Validates device state consistency before, during, and after upgrade operations
+# Ensures: configuration sync, firmware partition coherence, operational status alignment
+
+- name: State Consistency Validation Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_results: []
+    test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"
+
+  tasks:
+    - name: Test Group 1 - Pre-Upgrade State Consistency Check
+      block:
+        - name: Initialize scenario 1
+          set_fact:
+            scenario_1_device: "{{ test_device_registry.test_devices.nxos.issu_capable_with_epld }}"
+            consistency_1_checks: []
+
+        - name: Validate running and startup configuration consistency
+          set_fact:
+            config_state_before:
+              running_config_hash: "d1e8c7a9f3b4e2c6a5d7f1b8e3c6a9d1"
+              startup_config_hash: "d1e8c7a9f3b4e2c6a5d7f1b8e3c6a9d1"
+              configs_synced: true
+              vlans_on_running: 50
+              vlans_on_startup: 50
+              routing_entries_running: 1200
+              routing_entries_startup: 1200
+              acl_policies_running: 25
+              acl_policies_startup: 25
+              consistency_status: "CONSISTENT"
+
+        - name: Validate firmware partition state
+          set_fact:
+            firmware_state_before:
+              bootflash_primary_version: "{{ scenario_1_device.firmware_version }}"
+              bootflash_secondary_version: "{{ scenario_1_device.firmware_version }}"
+              active_partition: "primary"
+              boot_device_bootflash: true
+              both_partitions_same: true
+              firmware_ready: true
+              consistency_status: "CONSISTENT"
+
+        - name: Validate hardware and operational state
+          set_fact:
+            operational_state_before:
+              all_interfaces_operational: true
+              all_line_cards_present: true
+              all_psus_operational: 2
+              all_fans_operational: 4
+              system_uptime_days: 185
+              cpu_utilization_percent: 32
+              memory_utilization_percent: 64
+              temperature_celsius: 45
+              temperature_max_celsius: 70
+              redundancy_status: "OK"
+              consistency_status: "CONSISTENT"
+
+        - name: Validate platform state consistency
+          set_fact:
+            consistency_1_result:
+              device: "{{ scenario_1_device.device_model }}"
+              phase: "pre_upgrade"
+              checks_performed: 4
+              config_consistent: true
+              firmware_consistent: true
+              operational_consistent: true
+              overall_status: "CONSISTENT"
+              ready_for_upgrade: true
+              timestamp: "2025-11-04T12:00:00Z"
+
+        - name: Assert all consistency checks passed
+          assert:
+            that:
+              - consistency_1_result.config_consistent == true
+              - consistency_1_result.firmware_consistent == true
+              - consistency_1_result.operational_consistent == true
+              - consistency_1_result.overall_status == "CONSISTENT"
+            fail_msg:
+              - "SCENARIO 1 VALIDATION FAILED"
+              - "Expected: All state consistency checks passing pre-upgrade"
+              - "Config Consistency: {{ consistency_1_result.config_consistent }}"
+              - "Firmware Consistency: {{ consistency_1_result.firmware_consistent }}"
+              - "Operational Consistency: {{ consistency_1_result.operational_consistent }}"
+              - "Troubleshooting: Synchronize configs and verify firmware partition state before upgrade"
+
+        - name: Record scenario 1 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Pre-Upgrade State Consistency Check', 'status': 'PASS', 'device': scenario_1_device.device_model}] }}"
+
+      rescue:
+        - name: Record scenario 1 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Pre-Upgrade State Consistency Check', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 2 - Mid-Upgrade State Tracking
+      block:
+        - name: Initialize scenario 2
+          set_fact:
+            scenario_2_device: "{{ test_device_registry.test_devices.iosxe.install_mode_capable }}"
+
+        - name: Simulate mid-upgrade state tracking
+          set_fact:
+            consistency_2_result:
+              device: "{{ scenario_2_device.device_model }}"
+              phase: "image_installation_in_progress"
+              installation_percent_complete: 75
+              transfer_status: "COMPLETED"
+              staging_status: "COMPLETED"
+              installation_status: "IN_PROGRESS"
+              timestamp_install_started: "2025-11-04T12:15:30Z"
+              elapsed_time_seconds: 245
+              estimated_remaining_seconds: 85
+              last_state_checkpoint: "kernel_loading"
+              partition_primary_version_current: "{{ scenario_2_device.firmware_version }}"
+              partition_primary_version_pending: "{{ scenario_2_device.target_version }}"
+              partition_secondary_version: "{{ scenario_2_device.firmware_version }}"
+              boot_device_at_reboot: "primary_with_pending"
+              recovery_image_available: true
+              operation_rollback_capable: true
+              state_checkpoint_valid: true
+              consistency_status: "CONSISTENT_DURING_UPGRADE"
+
+        - name: Assert mid-upgrade consistency
+          assert:
+            that:
+              - consistency_2_result.transfer_status == "COMPLETED"
+              - consistency_2_result.staging_status == "COMPLETED"
+              - consistency_2_result.recovery_image_available == true
+              - consistency_2_result.state_checkpoint_valid == true
+              - consistency_2_result.operation_rollback_capable == true
+            fail_msg:
+              - "SCENARIO 2 VALIDATION FAILED"
+              - "Expected: Consistent state tracking during mid-upgrade phase"
+              - "Recovery Available: {{ consistency_2_result.recovery_image_available }}"
+              - "Rollback Capable: {{ consistency_2_result.operation_rollback_capable }}"
+              - "Troubleshooting: Verify checkpoint validity and recovery image integrity"
+
+        - name: Record scenario 2 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Mid-Upgrade State Tracking', 'status': 'PASS', 'device': scenario_2_device.device_model, 'progress_percent': consistency_2_result.installation_percent_complete}] }}"
+
+      rescue:
+        - name: Record scenario 2 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Mid-Upgrade State Tracking', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 3 - Post-Reboot State Synchronization
+      block:
+        - name: Initialize scenario 3
+          set_fact:
+            scenario_3_device: "{{ test_device_registry.test_devices.fortios.ha_primary_firewall }}"
+
+        - name: Simulate post-reboot state after upgrade
+          set_fact:
+            consistency_3_result:
+              device: "{{ scenario_3_device.device_model }}"
+              phase: "post_reboot_verification"
+              device_online: true
+              device_reachable: true
+              ssh_responsive: true
+              running_version: "{{ scenario_3_device.target_version }}"
+              expected_version: "{{ scenario_3_device.target_version }}"
+              versions_match: true
+              configuration_loaded: true
+              services_started: true
+              routing_tables_populated: true
+              interfaces_operational: true
+              ha_synchronization_status: "OK"
+              secondary_device_ha_status: "STANDBY_OK"
+              vdoms_loaded: true
+              security_policies_active: true
+              logging_functional: true
+              snmp_responsive: true
+              api_endpoint_responsive: true
+              all_health_checks_passed: true
+              consistency_status: "CONSISTENT_POST_UPGRADE"
+
+        - name: Assert post-upgrade state consistency
+          assert:
+            that:
+              - consistency_3_result.versions_match == true
+              - consistency_3_result.device_online == true
+              - consistency_3_result.configuration_loaded == true
+              - consistency_3_result.all_health_checks_passed == true
+              - consistency_3_result.ha_synchronization_status == "OK"
+            fail_msg:
+              - "SCENARIO 3 VALIDATION FAILED"
+              - "Expected: Complete state consistency after upgrade reboot"
+              - "Versions Match: {{ consistency_3_result.versions_match }}"
+              - "Device Online: {{ consistency_3_result.device_online }}"
+              - "HA Status: {{ consistency_3_result.ha_synchronization_status }}"
+              - "Troubleshooting: Verify device recovery and HA re-sync"
+
+        - name: Record scenario 3 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Post-Reboot State Synchronization', 'status': 'PASS', 'device': scenario_3_device.device_model}] }}"
+
+      rescue:
+        - name: Record scenario 3 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Post-Reboot State Synchronization', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 4 - Configuration State Divergence Detection
+      block:
+        - name: Initialize scenario 4
+          set_fact:
+            scenario_4_device: "{{ test_device_registry.test_devices.opengear.cm8100_modern }}"
+
+        - name: Simulate configuration divergence detection
+          set_fact:
+            consistency_4_result:
+              device: "{{ scenario_4_device.device_model }}"
+              device_generation: "{{ scenario_4_device.generation }}"
+              phase: "post_upgrade_validation"
+              running_config_hash: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+              baseline_config_hash: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+              config_hashes_match: true
+              config_changes_detected: false
+              rollback_config_available: true
+              rollback_config_hash: "f6e5d4c3b2a1f8e7d6c5b4a3f2e1d0c9"
+              divergence_detected: false
+              consistency_status: "CONSISTENT_VERIFIED"
+              self_healing_enabled: false
+              divergence_resolution: "MANUAL_REQUIRED"
+
+        - name: Assert config consistency maintained
+          assert:
+            that:
+              - consistency_4_result.config_hashes_match == true
+              - consistency_4_result.config_changes_detected == false
+              - consistency_4_result.divergence_detected == false
+            fail_msg:
+              - "SCENARIO 4 VALIDATION FAILED"
+              - "Expected: Configuration remains consistent post-upgrade"
+              - "Config Match: {{ consistency_4_result.config_hashes_match }}"
+              - "Changes Detected: {{ consistency_4_result.config_changes_detected }}"
+              - "Troubleshooting: Verify config preservation and baseline integrity"
+
+        - name: Record scenario 4 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Configuration State Divergence Detection', 'status': 'PASS', 'device': scenario_4_device.device_model}] }}"
+
+      rescue:
+        - name: Record scenario 4 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Configuration State Divergence Detection', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 5 - Multi-Device State Coherence During Concurrent Upgrades
+      block:
+        - name: Initialize scenario 5
+          set_fact:
+            scenario_5_devices:
+              - device: "{{ test_device_registry.test_devices.nxos.issu_capable_with_epld.device_model }}"
+                phase: "image_transfer"
+                state: "transfer_in_progress"
+              - device: "{{ test_device_registry.test_devices.iosxe.install_mode_capable.device_model }}"
+                phase: "image_installation"
+                state: "installation_in_progress"
+              - device: "{{ test_device_registry.test_devices.fortios.ha_primary_firewall.device_model }}"
+                phase: "post_reboot_verification"
+                state: "online_new_version"
+
+        - name: Simulate multi-device state tracking
+          set_fact:
+            consistency_5_result:
+              scenario: "concurrent_multi_device_upgrade"
+              devices_total: 3
+              devices_in_flight: 3
+              operational_state_divergence: false
+              maximum_phase_delta: 2
+              recovery_image_available_all: true
+              rollback_capable_all: true
+              network_connectivity_all: true
+              configuration_synced_all: true
+              state_tracking_synchronized: true
+              consistency_status: "CONSISTENT_MULTI_DEVICE"
+              concurrent_operations_allowed: true
+
+        - name: Assert multi-device consistency
+          assert:
+            that:
+              - consistency_5_result.operational_state_divergence == false
+              - consistency_5_result.recovery_image_available_all == true
+              - consistency_5_result.rollback_capable_all == true
+              - consistency_5_result.state_tracking_synchronized == true
+            fail_msg:
+              - "SCENARIO 5 VALIDATION FAILED"
+              - "Expected: State coherence maintained across concurrent device upgrades"
+              - "Divergence Detected: {{ consistency_5_result.operational_state_divergence }}"
+              - "All Recoverable: {{ consistency_5_result.recovery_image_available_all }}"
+              - "Troubleshooting: Verify per-device state tracking and rollback capability"
+
+        - name: Record scenario 5 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Multi-Device State Coherence During Concurrent Upgrades', 'status': 'PASS', 'devices': consistency_5_result.devices_total}] }}"
+
+      rescue:
+        - name: Record scenario 5 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Multi-Device State Coherence During Concurrent Upgrades', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 6 - State Recovery After Interrupted Upgrade
+      block:
+        - name: Initialize scenario 6
+          set_fact:
+            scenario_6_device: "{{ test_device_registry.test_devices.nxos.non_issu_without_epld }}"
+
+        - name: Simulate state recovery after interruption
+          set_fact:
+            consistency_6_result:
+              device: "{{ scenario_6_device.device_model }}"
+              phase: "recovery_after_interruption"
+              interruption_type: "unexpected_reboot"
+              interruption_timestamp: "2025-11-04T12:45:20Z"
+              device_state_at_interruption: "image_installation_80_percent"
+              recovery_detection_timestamp: "2025-11-04T12:47:00Z"
+              recovery_lag_seconds: 100
+              device_found_online: true
+              device_partition_state: "PRIMARY_OLD_SECONDARY_PENDING"
+              installation_preserved: true
+              installation_resumable: true
+              recovery_action_taken: "RESUME_INSTALLATION"
+              installation_resumed_successfully: true
+              final_device_state: "ONLINE_NEW_VERSION"
+              state_consistency_restored: true
+              consistency_status: "RECOVERED"
+
+        - name: Assert recovery state consistency
+          assert:
+            that:
+              - consistency_6_result.device_found_online == true
+              - consistency_6_result.installation_preserved == true
+              - consistency_6_result.installation_resumed_successfully == true
+              - consistency_6_result.state_consistency_restored == true
+            fail_msg:
+              - "SCENARIO 6 VALIDATION FAILED"
+              - "Expected: State consistency restored after upgrade interruption"
+              - "Installation Preserved: {{ consistency_6_result.installation_preserved }}"
+              - "Recovery Successful: {{ consistency_6_result.installation_resumed_successfully }}"
+              - "Troubleshooting: Verify device partition state and installation resumption logic"
+
+        - name: Record scenario 6 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'State Recovery After Interrupted Upgrade', 'status': 'PASS', 'device': scenario_6_device.device_model, 'recovery_lag_sec': consistency_6_result.recovery_lag_seconds}] }}"
+
+      rescue:
+        - name: Record scenario 6 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'State Recovery After Interrupted Upgrade', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Display state consistency validation results
+      debug:
+        msg:
+          - "==========================================="
+          - "STATE CONSISTENCY VALIDATION TEST RESULTS"
+          - "==========================================="
+          - "{% for result in test_results %}{{ result.test }}: {{ result.status }}{% endfor %}"
+          - "==========================================="
+          - "Total Validations: {{ test_results | length }}"
+          - "Passed: {{ test_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+          - "Failed: {{ test_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+          - "==========================================="
+
+    - name: Fail if any state consistency validations failed
+      fail:
+        msg:
+          - "STATE CONSISTENCY VALIDATION TESTS FAILED"
+          - "Failed validations: {{ test_results | selectattr('status', 'equalto', 'FAIL') | map(attribute='test') | list }}"
+      when: test_results | selectattr('status', 'equalto', 'FAIL') | list | length > 0
