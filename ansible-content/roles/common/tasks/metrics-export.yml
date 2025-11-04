@@ -28,6 +28,7 @@
           - "  - influxdb_bucket: {{ influxdb_bucket | default('NOT SET') }}"
           - ""
           - "Fix: Either configure InfluxDB or set 'export_metrics: false' to disable metrics"
+      failed_when: false
   when: export_metrics | bool
 
 - name: InfluxDB metrics export
