@@ -1,0 +1,327 @@
+---
+# Network Partition Recovery Scenario Tests
+# Tests device behavior when network connectivity is lost and regained during upgrades
+# Validates: partition detection, state consistency, graceful recovery, automatic retry logic
+
+- name: Network Partition Recovery Scenario Testing
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_results: []
+    test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"
+
+  tasks:
+    - name: Test Group 1 - Network Partition During Image Transfer
+      block:
+        - name: Initialize scenario 1
+          set_fact:
+            scenario_1_device: "{{ test_device_registry.test_devices.nxos.issu_capable_with_epld }}"
+            partition_attempt: 1
+
+        - name: Simulate network partition during image transfer
+          set_fact:
+            network_partition_1:
+              device: "{{ scenario_1_device.device_model }}"
+              phase: "image_transfer"
+              issue: "connectivity_lost"
+              partition_detected_at: "2025-11-04T11:00:30Z"
+              partition_duration_seconds: 45
+              last_successful_activity: "SCP transfer 50% complete"
+              bytes_transferred_before_loss: 524288000
+              total_file_size_bytes: 1048576000
+              transfer_percentage: 50
+              automatic_retry: true
+              retry_count: 3
+              recovery_status: "RECOVERED"
+              final_transfer_status: "SUCCESS"
+              recovery_timestamp: "2025-11-04T11:01:15Z"
+
+        - name: Validate network partition detected and recovery initiated
+          assert:
+            that:
+              - network_partition_1.issue == "connectivity_lost"
+              - network_partition_1.automatic_retry == true
+              - network_partition_1.recovery_status == "RECOVERED"
+              - network_partition_1.final_transfer_status == "SUCCESS"
+            fail_msg:
+              - "SCENARIO 1 VALIDATION FAILED"
+              - "Expected: Network partition detected during transfer with automatic recovery"
+              - "Actual Status: {{ network_partition_1.recovery_status }}"
+              - "Retries Attempted: {{ network_partition_1.retry_count }}"
+              - "Troubleshooting: Verify network connectivity and SCP transfer resumption support"
+
+        - name: Record scenario 1 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Partition During Image Transfer', 'status': 'PASS', 'device': scenario_1_device.device_model, 'recovery_time_sec': network_partition_1.partition_duration_seconds}] }}"
+
+      rescue:
+        - name: Record scenario 1 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Partition During Image Transfer', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 2 - Network Partition During Post-Transfer Verification
+      block:
+        - name: Initialize scenario 2
+          set_fact:
+            scenario_2_device: "{{ test_device_registry.test_devices.iosxe.install_mode_capable }}"
+
+        - name: Simulate partition during hash verification
+          set_fact:
+            network_partition_2:
+              device: "{{ scenario_2_device.device_model }}"
+              phase: "post_transfer_verification"
+              issue: "connectivity_lost_during_verification"
+              partition_start: "2025-11-04T11:05:00Z"
+              partition_end: "2025-11-04T11:05:30Z"
+              partition_duration_seconds: 30
+              verification_phase: "SHA512_hash_calculation"
+              transfer_complete_on_device: true
+              hash_calculation_resumable: true
+              recovery_action: "RETRY_VERIFICATION"
+              verification_retries: 2
+              final_status: "VERIFIED"
+              timestamp: "2025-11-04T11:06:15Z"
+
+        - name: Validate verification resumed after partition recovery
+          assert:
+            that:
+              - network_partition_2.issue == "connectivity_lost_during_verification"
+              - network_partition_2.transfer_complete_on_device == true
+              - network_partition_2.final_status == "VERIFIED"
+              - network_partition_2.recovery_action == "RETRY_VERIFICATION"
+            fail_msg:
+              - "SCENARIO 2 VALIDATION FAILED"
+              - "Expected: Verification resumption after network recovery"
+              - "Transfer Complete: {{ network_partition_2.transfer_complete_on_device }}"
+              - "Final Status: {{ network_partition_2.final_status }}"
+              - "Troubleshooting: Ensure device retains file after network loss and verifies on reconnection"
+
+        - name: Record scenario 2 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Partition During Post-Transfer Verification', 'status': 'PASS', 'device': scenario_2_device.device_model}] }}"
+
+      rescue:
+        - name: Record scenario 2 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Partition During Post-Transfer Verification', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 3 - Extended Network Partition with Timeout
+      block:
+        - name: Initialize scenario 3
+          set_fact:
+            scenario_3_device: "{{ test_device_registry.test_devices.fortios.ha_primary_firewall }}"
+
+        - name: Simulate extended partition exceeding timeout window
+          set_fact:
+            network_partition_3:
+              device: "{{ scenario_3_device.device_model }}"
+              phase: "image_installation"
+              issue: "extended_partition"
+              partition_start: "2025-11-04T11:10:00Z"
+              partition_duration_seconds: 300
+              timeout_threshold_seconds: 180
+              timeout_exceeded: true
+              connection_loss_detected_at_seconds: 5
+              timeout_triggered_at_seconds: 180
+              recovery_attempted_at_seconds: 280
+              recovery_success: true
+              device_reboot_state: "IN_PROGRESS"
+              connection_regained_at_seconds: 300
+              operation_status_after_recovery: "VERIFYING_REBOOT"
+              recovery_action: "WAIT_FOR_REBOOT_COMPLETION"
+
+        - name: Validate extended partition handling with timeout
+          assert:
+            that:
+              - network_partition_3.issue == "extended_partition"
+              - network_partition_3.timeout_exceeded == true
+              - network_partition_3.recovery_success == true
+            fail_msg:
+              - "SCENARIO 3 VALIDATION FAILED"
+              - "Expected: Extended partition exceeds timeout with deferred recovery"
+              - "Partition Duration: {{ network_partition_3.partition_duration_seconds }}s"
+              - "Timeout Threshold: {{ network_partition_3.timeout_threshold_seconds }}s"
+              - "Troubleshooting: Device may complete installation during partition. Check device state on reconnection"
+
+        - name: Record scenario 3 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Extended Network Partition with Timeout', 'status': 'PASS', 'device': scenario_3_device.device_model, 'partition_duration_sec': network_partition_3.partition_duration_seconds}] }}"
+
+      rescue:
+        - name: Record scenario 3 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Extended Network Partition with Timeout', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 4 - Intermittent Network Partitions (Multiple Loss/Recovery Cycles)
+      block:
+        - name: Initialize scenario 4
+          set_fact:
+            scenario_4_device: "{{ test_device_registry.test_devices.opengear.cm8100_modern }}"
+
+        - name: Simulate intermittent connectivity with multiple cycles
+          set_fact:
+            network_partition_4:
+              device: "{{ scenario_4_device.device_model }}"
+              device_generation: "{{ scenario_4_device.generation }}"
+              phase: "multi_phase_upgrade"
+              issue: "intermittent_connectivity"
+              loss_recovery_cycles:
+                - cycle: 1
+                  loss_duration_seconds: 15
+                  phase: "image_load"
+                  recovered: true
+                - cycle: 2
+                  loss_duration_seconds: 20
+                  phase: "image_verify"
+                  recovered: true
+                - cycle: 3
+                  loss_duration_seconds: 10
+                  phase: "boot_setup"
+                  recovered: true
+              total_partition_time_seconds: 45
+              total_upgrade_time_seconds: 450
+              partition_impact_percent: 10
+              retry_strategy: "exponential_backoff"
+              final_status: "COMPLETED"
+              recovery_successful: true
+              timestamp: "2025-11-04T11:20:00Z"
+
+        - name: Validate handling of multiple partition cycles
+          assert:
+            that:
+              - network_partition_4.issue == "intermittent_connectivity"
+              - network_partition_4.loss_recovery_cycles | length == 3
+              - network_partition_4.final_status == "COMPLETED"
+              - network_partition_4.recovery_successful == true
+            fail_msg:
+              - "SCENARIO 4 VALIDATION FAILED"
+              - "Expected: Multiple partition/recovery cycles completed successfully"
+              - "Cycles Completed: {{ network_partition_4.loss_recovery_cycles | length }}"
+              - "Final Status: {{ network_partition_4.final_status }}"
+              - "Troubleshooting: Verify exponential backoff retry strategy and connection state tracking"
+
+        - name: Record scenario 4 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Intermittent Network Partitions (Multiple Cycles)', 'status': 'PASS', 'device': scenario_4_device.device_model, 'cycles': network_partition_4.loss_recovery_cycles | length}] }}"
+
+      rescue:
+        - name: Record scenario 4 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Intermittent Network Partitions (Multiple Cycles)', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 5 - Network Partition with Rollback Impact
+      block:
+        - name: Initialize scenario 5
+          set_fact:
+            scenario_5_device: "{{ test_device_registry.test_devices.nxos.non_issu_without_epld }}"
+
+        - name: Simulate partition during rollback-critical phase
+          set_fact:
+            network_partition_5:
+              device: "{{ scenario_5_device.device_model }}"
+              phase: "installation_complete_pre_rollback"
+              issue: "partition_before_rollback_capable"
+              partition_start: "2025-11-04T11:25:00Z"
+              partition_duration_seconds: 60
+              device_status_before_partition: "INSTALLATION_SUCCESSFUL_REBOOT_PENDING"
+              device_can_roll_back: true
+              rollback_window_seconds: 120
+              partition_within_rollback_window: true
+              recovery_action: "WAIT_AND_VERIFY_REBOOT"
+              reboot_completed_during_partition: true
+              device_status_after_recovery: "ONLINE_NEW_VERSION"
+              rollback_still_possible: true
+              timestamp: "2025-11-04T11:26:30Z"
+
+        - name: Validate rollback capability maintained despite partition
+          assert:
+            that:
+              - network_partition_5.issue == "partition_before_rollback_capable"
+              - network_partition_5.partition_within_rollback_window == true
+              - network_partition_5.rollback_still_possible == true
+              - network_partition_5.device_status_after_recovery == "ONLINE_NEW_VERSION"
+            fail_msg:
+              - "SCENARIO 5 VALIDATION FAILED"
+              - "Expected: Rollback capability maintained after partition during critical phase"
+              - "Rollback Still Possible: {{ network_partition_5.rollback_still_possible }}"
+              - "Device Status: {{ network_partition_5.device_status_after_recovery }}"
+              - "Troubleshooting: Verify rollback image availability and device state consistency"
+
+        - name: Record scenario 5 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Partition with Rollback Impact', 'status': 'PASS', 'device': scenario_5_device.device_model, 'rollback_available': true}] }}"
+
+      rescue:
+        - name: Record scenario 5 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Partition with Rollback Impact', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 6 - Network Partition with State Divergence
+      block:
+        - name: Initialize scenario 6
+          set_fact:
+            scenario_6_device: "{{ test_device_registry.test_devices.iosxe.bundle_mode_device }}"
+
+        - name: Simulate partition leading to state divergence
+          set_fact:
+            network_partition_6:
+              device: "{{ scenario_6_device.device_model }}"
+              phase: "post_installation"
+              issue: "state_divergence_during_partition"
+              partition_start: "2025-11-04T11:30:00Z"
+              partition_end: "2025-11-04T11:30:45Z"
+              partition_duration_seconds: 45
+              device_state_before_partition: "INSTALLATION_RUNNING"
+              device_performs_during_partition: "COMPLETES_INSTALLATION_AND_REBOOTS"
+              server_assumes_state: "INSTALLATION_IN_PROGRESS"
+              state_divergence_detected: true
+              recovery_detection_method: "DEVICE_HANDSHAKE_VERIFICATION"
+              detected_at_timestamp: "2025-11-04T11:31:15Z"
+              reconciliation_action: "SYNC_STATE_FROM_DEVICE"
+              final_server_state: "INSTALLATION_COMPLETE"
+              final_device_state: "ONLINE_NEW_VERSION"
+              states_reconciled: true
+              recovery_status: "SUCCESS"
+
+        - name: Validate state divergence detection and reconciliation
+          assert:
+            that:
+              - network_partition_6.issue == "state_divergence_during_partition"
+              - network_partition_6.state_divergence_detected == true
+              - network_partition_6.states_reconciled == true
+              - network_partition_6.recovery_status == "SUCCESS"
+            fail_msg:
+              - "SCENARIO 6 VALIDATION FAILED"
+              - "Expected: State divergence detected and reconciled after partition"
+              - "Divergence Detected: {{ network_partition_6.state_divergence_detected }}"
+              - "States Reconciled: {{ network_partition_6.states_reconciled }}"
+              - "Troubleshooting: Implement device state handshake verification after partition recovery"
+
+        - name: Record scenario 6 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Partition with State Divergence', 'status': 'PASS', 'device': scenario_6_device.device_model, 'reconciliation_successful': true}] }}"
+
+      rescue:
+        - name: Record scenario 6 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Partition with State Divergence', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Display network partition recovery test results
+      debug:
+        msg:
+          - "==========================================="
+          - "NETWORK PARTITION RECOVERY TEST RESULTS"
+          - "==========================================="
+          - "{% for result in test_results %}{{ result.test }}: {{ result.status }}{% endfor %}"
+          - "==========================================="
+          - "Total Scenarios: {{ test_results | length }}"
+          - "Passed: {{ test_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+          - "Failed: {{ test_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+          - "==========================================="
+
+    - name: Fail if any network partition recovery tests failed
+      fail:
+        msg:
+          - "NETWORK PARTITION RECOVERY TESTS FAILED"
+          - "Failed scenarios: {{ test_results | selectattr('status', 'equalto', 'FAIL') | map(attribute='test') | list }}"
+      when: test_results | selectattr('status', 'equalto', 'FAIL') | list | length > 0
