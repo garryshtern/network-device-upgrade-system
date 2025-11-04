@@ -4,17 +4,13 @@
 
 set -euo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
-# Test configuration
+# Source common test library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.."; pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib/test-common.sh"
+
+# Test configuration
 CONTAINER_IMAGE="${CONTAINER_IMAGE:-ghcr.io/garryshtern/network-device-upgrade-system:latest}"
 
 # Test suite tracking
@@ -30,48 +26,23 @@ JOB_NAMES_LIST=()
 JOB_RESULTS_FILE="/tmp/container-test-results-$$.txt"
 : > "$JOB_RESULTS_FILE"  # Clear results file
 
-log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
-}
-
-success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-section() {
-    echo -e "${CYAN}[SECTION]${NC} $1"
-}
-
 # Run individual test suite in background
 run_test_suite_async() {
     local suite_name="$1"
     local test_script="$2"
 
     TOTAL_SUITES=$((TOTAL_SUITES + 1))
+    section "Running test suite in parallel: $suite_name"
+    log "Script: $test_script"
 
     if [[ ! -f "$test_script" ]]; then
         error "Test script not found: $test_script"
+        FAILED_SUITES=$((FAILED_SUITES + 1))
         return 1
     fi
 
-    # Make script executable
-    chmod +x "$test_script"
-
-    # Run test in background and capture PID
-    local log_file="/tmp/container-test-${suite_name// /_}.log"
-    (
-        bash "$test_script" > "$log_file" 2>&1
-        echo "$suite_name|$?" >> "$JOB_RESULTS_FILE"
-    ) &
-
+    # Run test in background and capture its output
+    bash "$test_script" > "/tmp/container-test-$suite_name-$$.log" 2>&1 &
     local pid=$!
     JOB_PIDS_LIST+=($pid)
     JOB_NAMES_LIST+=("$suite_name")
