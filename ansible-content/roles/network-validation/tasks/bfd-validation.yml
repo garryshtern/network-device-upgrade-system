@@ -76,6 +76,19 @@
       when:
         - bfd_comparison_match
 
-    - name: Determine BFD comparison status
+    - name: Validate BFD comparison passed
+      ansible.builtin.assert:
+        that:
+          - bfd_comparison_match | bool
+        fail_msg:
+          - "CRITICAL: Network validation failed - BFD session mismatch detected"
+          - "This indicates BFD neighbor state changed during upgrade"
+          - "Pre-upgrade BFD sessions: {{ bfd_pre_normalized | length }}"
+          - "Post-upgrade BFD sessions: {{ bfd_post_normalized | length }}"
+          - "BFD added sessions: {{ bfd_added | length }}"
+          - "BFD removed sessions: {{ bfd_removed | length }}"
+          - "RECOMMENDATION: Investigate BFD neighbor changes or rollback upgrade"
+
+    - name: Set BFD comparison success status
       ansible.builtin.set_fact:
-        bfd_comparison_status: "{{ 'PASS' if bfd_comparison_match else 'FAIL' }}"
+        bfd_comparison_status: "PASS"

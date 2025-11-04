@@ -107,6 +107,22 @@
         - arp_comparison_match
         - mac_comparison_match
 
-    - name: Determine ARP/MAC comparison status
+    - name: Validate ARP and MAC comparison passed
+      ansible.builtin.assert:
+        that:
+          - arp_comparison_match | bool
+          - mac_comparison_match | bool
+        fail_msg:
+          - "CRITICAL: Network validation failed - ARP/MAC mismatch detected"
+          - "This indicates network state changed during upgrade"
+          - "Pre-upgrade ARP entries: {{ arp_pre_normalized | length }}"
+          - "Post-upgrade ARP entries: {{ arp_post_normalized | length }}"
+          - "ARP added entries: {{ arp_added | length }}"
+          - "ARP removed entries: {{ arp_removed | length }}"
+          - "MAC added entries: {{ mac_added | length }}"
+          - "MAC removed entries: {{ mac_removed | length }}"
+          - "RECOMMENDATION: Investigate network changes or rollback upgrade"
+
+    - name: Set ARP/MAC comparison success status
       ansible.builtin.set_fact:
-        arp_mac_comparison_status: "{{ 'PASS' if arp_comparison_match and mac_comparison_match else 'FAIL' }}"
+        arp_mac_comparison_status: "PASS"

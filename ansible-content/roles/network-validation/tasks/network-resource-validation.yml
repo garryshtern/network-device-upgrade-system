@@ -59,6 +59,17 @@
           when:
             - network_resources_comparison_match
 
-        - name: Determine network_resources comparison status
+        - name: Validate network resources comparison passed
+          ansible.builtin.assert:
+            that:
+              - network_resources_comparison_match | bool
+            fail_msg:
+              - "CRITICAL: Network validation failed - Network resources mismatch detected"
+              - "This indicates network configuration changed during upgrade"
+              - "Network resources added: {{ network_resources_added | length }}"
+              - "Network resources removed: {{ network_resources_removed | length }}"
+              - "RECOMMENDATION: Investigate configuration changes or rollback upgrade"
+
+        - name: Set network resources comparison success status
           ansible.builtin.set_fact:
-            network_resources_comparison_status: "{{ 'PASS' if network_resources_comparison_match else 'FAIL' }}"
+            network_resources_comparison_status: "PASS"

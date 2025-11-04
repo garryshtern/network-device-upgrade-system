@@ -124,6 +124,24 @@
         - rib_comparison_match
         - fib_comparison_match
 
-    - name: Determine routing comparison status
+    - name: Validate routing comparison passed
+      ansible.builtin.assert:
+        that:
+          - rib_comparison_match | bool
+          - fib_comparison_match | bool
+        fail_msg:
+          - "CRITICAL: Network validation failed - Routing mismatch detected"
+          - "This indicates routing state changed during upgrade"
+          - "Pre-upgrade RIB entries: {{ rib_pre_normalized | length }}"
+          - "Post-upgrade RIB entries: {{ rib_post_normalized | length }}"
+          - "RIB added entries: {{ rib_added | length }}"
+          - "RIB removed entries: {{ rib_removed | length }}"
+          - "Pre-upgrade FIB entries: {{ fib_pre_normalized | length }}"
+          - "Post-upgrade FIB entries: {{ fib_post_normalized | length }}"
+          - "FIB added entries: {{ fib_added | length }}"
+          - "FIB removed entries: {{ fib_removed | length }}"
+          - "RECOMMENDATION: Investigate routing changes or rollback upgrade"
+
+    - name: Set routing comparison success status
       ansible.builtin.set_fact:
-        routing_comparison_status: "{{ 'PASS' if rib_comparison_match and fib_comparison_match else 'FAIL' }}"
+        routing_comparison_status: "PASS"

@@ -291,18 +291,27 @@
         - igmp_groups_match
         - mroute_match
 
-    - name: Determine multicast comparison status
+    - name: Validate multicast comparison passed
+      ansible.builtin.assert:
+        that:
+          - pim_interface_match | bool
+          - pim_neighbor_match | bool
+          - pim_rp_match | bool
+          - igmp_interface_match | bool
+          - igmp_groups_match | bool
+          - mroute_match | bool
+        fail_msg:
+          - "CRITICAL: Network validation failed - Multicast state mismatch detected"
+          - "This indicates multicast configuration or state changed during upgrade"
+          - "PIM interface mismatch: {{ not pim_interface_match }}"
+          - "PIM neighbor mismatch: {{ not pim_neighbor_match }}"
+          - "PIM RP mismatch: {{ not pim_rp_match }}"
+          - "IGMP interface mismatch: {{ not igmp_interface_match }}"
+          - "IGMP groups mismatch: {{ not igmp_groups_match }}"
+          - "Multicast route mismatch: {{ not mroute_match }}"
+          - "RECOMMENDATION: Investigate multicast changes or rollback upgrade"
+
+    - name: Set multicast comparison success status
       ansible.builtin.set_fact:
-        multicast_comparison_status: >-
-          {{
-            'PASS' if (
-              pim_interface_match and
-              pim_neighbor_match and
-              pim_rp_match and
-              igmp_interface_match and
-              igmp_groups_match and
-              mroute_match
-            )
-            else 'FAIL'
-          }}
+        multicast_comparison_status: "PASS"
 
