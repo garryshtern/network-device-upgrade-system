@@ -80,8 +80,7 @@
           ansible.builtin.assert:
             that:
               - maintenance_window | bool
-            fail_msg: "Firmware upgrades require maintenance_window=true"
-          when: not ansible_check_mode
+            fail_msg: "Firmware upgrades require maintenance_window=true - must explicitly set -e maintenance_window=true"
 
         - name: Display upgrade parameters
           ansible.builtin.debug:
@@ -219,6 +218,12 @@
         - step6
         - install
       block:
+        - name: Enforce maintenance window before destructive firmware installation
+          ansible.builtin.assert:
+            that:
+              - maintenance_window | bool
+            fail_msg: "CRITICAL: Firmware installation requires maintenance_window=true. Refusing to proceed with destructive operation."
+
         - name: Execute STEP 6 tasks
           ansible.builtin.include_tasks:
             file: steps/step-6-installation.yml
