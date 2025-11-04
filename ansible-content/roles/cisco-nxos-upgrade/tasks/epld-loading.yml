@@ -84,56 +84,16 @@
               - "Status: STARTING UPLOAD..."
               - "=========================================="
 
-        - name: Push EPLD image from server to device via SCP
-          cisco.nxos.nxos_file_copy:
-            file_system: "bootflash:"
-            local_file: "{{ local_epld_path }}"
-            remote_file: "{{ target_epld_firmware }}"
-            file_pull: false  # Server pushes to device
-          register: nxos_epld_file_copy_result
-          async: "{{ file_transfer_timeout }}"
-          poll: "{{ file_transfer_poll_interval }}"
+        - name: Push EPLD image from server to device via SCP (uses generic file transfer handler)
+          ansible.builtin.include_tasks: nxos-generic-file-transfer.yml
+          vars:
+            nxos_file_path: "{{ local_epld_path }}"
+            nxos_remote_file: "{{ target_epld_firmware }}"
+            nxos_file_hash_source: "{{ epld_calculated_hash }}"
 
-        - name: Display EPLD file transfer results
-          ansible.builtin.debug:
-            msg:
-              - "EPLD file transfer completed"
-              - "Status: {{ nxos_epld_file_copy_result.transfer_status }}"
-              - "Changed: {{ nxos_epld_file_copy_result.changed }}"
-
-        - name: Verify EPLD secure file transfer completed successfully
-          ansible.builtin.assert:
-            that:
-              - nxos_epld_file_copy_result is succeeded
-              - nxos_epld_file_copy_result.transfer_status in nxos_valid_transfer_statuses
-            fail_msg:
-              - "Secure EPLD file transfer failed or returned invalid status"
-              - "Expected status: {{ nxos_valid_transfer_statuses }}"
-              - "Actual status: {{ nxos_epld_file_copy_result.transfer_status }}"
-              - "Full result: {{ nxos_epld_file_copy_result | to_nice_json }}"
-
-        - name: Calculate SHA512 hash of EPLD file on device
-          cisco.nxos.nxos_command:
-            commands:
-              - show file bootflash:{{ target_epld_firmware }} sha512sum
-          register: nxos_epld_hash_result
-
-        - name: Extract device EPLD SHA512 hash from output
+        - name: Extract device EPLD hash from transfer result
           ansible.builtin.set_fact:
-            device_epld_hash: "{{ nxos_epld_hash_result.stdout[0] | regex_search('[a-f0-9]{128}') }}"
-
-        - name: Verify EPLD SHA512 hash matches source
-          ansible.builtin.assert:
-            that:
-              - epld_calculated_hash is defined
-              - device_epld_hash is defined
-              - device_epld_hash == epld_calculated_hash
-            fail_msg:
-              - "EPLD SHA512 hash verification FAILED!"
-              - "Expected (source): {{ epld_calculated_hash if epld_calculated_hash is defined else 'MISSING - hash verification is MANDATORY' }}"
-              - "Actual (device): {{ device_epld_hash }}"
-              - "File: {{ target_epld_firmware }}"
-              - "Hash verification is REQUIRED for all EPLD uploads"
+            device_epld_hash: "{{ transferred_file_hash }}"
 
         - name: Set EPLD loading results after upload
           ansible.builtin.set_fact:
@@ -141,7 +101,7 @@
               epld_file: "{{ target_epld_firmware }}"
               file_size_bytes: "{{ epld_file_info.size_bytes if (epld_file_info is defined and epld_file_info.size_bytes is defined) else 0 }}"
               source_sha512: "{{ epld_calculated_hash }}"
-              device_sha512: "{{ device_epld_hash }}"
+              device_sha512: "{{ transferred_file_hash }}"
               hash_verified: true
               file_uploaded: true
               loading_successful: true
