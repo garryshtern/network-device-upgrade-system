@@ -206,6 +206,7 @@ main() {
         "Workflow_Integration:../tests/integration-tests/workflow-tests.yml"
         "Multi_Platform_Integration:../tests/integration-tests/multi-platform-integration-tests.yml"
         "Secure_Transfer_Integration:../tests/integration-tests/secure-transfer-integration-tests.yml"
+        "Timeout_Recovery_Integration:../tests/integration-tests/timeout-recovery-integration-tests.yml"
         "Network_Error_Simulation:../tests/error-scenarios/network_error_tests.yml"
         "Device_Error_Simulation:../tests/error-scenarios/device_error_tests.yml"
         "Concurrent_Upgrade_Errors:../tests/error-scenarios/concurrent_upgrade_tests.yml"
