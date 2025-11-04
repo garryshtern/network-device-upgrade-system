@@ -104,10 +104,9 @@ hash_file_extension: "sha512sum"  # Extension for hash files (e.g., firmware.bin
 signature_validation_enabled: false  # Enable if vendor supports it
 cleanup_images_after_upgrade: false
 
-# Monitoring and metrics
-export_metrics: true
-metrics_batch_size: 100
-metrics_export_interval: 30
+# NOTE: Metrics configuration moved to ansible-content/group_vars/all.yml
+# This ensures safe defaults (metrics disabled) for all scenarios
+# Use -e "export_metrics=true" in production with proper InfluxDB configuration
 
 # Notification settings
 send_notifications: true
@@ -132,12 +131,12 @@ validation_type: "post_upgrade"  # Default validation type: pre_upgrade or post_
 log_level: "info"  # debug, info, warning, error
 structured_logging: true
 log_retention_days: 30
-debug_metrics: false  # Enable verbose metrics debugging output
+# NOTE: debug_metrics - use ansible-content/group_vars/all.yml
 
 # Compliance and reporting
 generate_report: true  # Generate compliance/validation reports
-send_metrics: true  # Send metrics to monitoring systems
-log_metrics_locally: false  # Log metrics to local files
+# NOTE: send_metrics/export_metrics - use ansible-content/group_vars/all.yml (standardized as export_metrics)
+# log_metrics_locally - use ansible-content/group_vars/all.yml
 compliance_standards: ['security_baseline', 'network_hardening']  # Default compliance standards
 current_firmware_version: "unknown"  # Current firmware version (detected at runtime)
 site_name: "unknown"  # Site/location name
