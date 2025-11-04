@@ -40,13 +40,30 @@
     seconds: "{{ nxos_reboot_delay }}"
 
 - name: Wait for device to come back online
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-for-device
-  vars:
-    wait_timeout: "{{ nxos_reboot_timeout }}"
-    wait_delay: 30
-    wait_sleep: 10
+  block:
+    - name: Record reboot wait start time
+      set_fact:
+        reboot_wait_start: "{{ ansible_date_time.iso8601_basic_short }}"
+
+    - name: Wait for device to become reachable (with timeout safeguard)
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-for-device
+      vars:
+        wait_timeout: "{{ nxos_reboot_timeout }}"
+        wait_delay: 30
+        wait_sleep: 10
+      timeout: "{{ (nxos_reboot_timeout | int) + 120 }}"
+
+  rescue:
+    - name: Device failed to come back online - escalate as critical failure
+      ansible.builtin.fail:
+        msg:
+          - "CRITICAL: Device did not recover after {{ nxos_reboot_timeout }}s timeout"
+          - "Device: {{ inventory_hostname }}"
+          - "The device may be hung, powered down, or experiencing boot issues"
+          - "Manual intervention required - check device console/IPMI"
+          - "Upgrade cannot proceed - requires manual recovery"
 
 - name: Wait for NX-OS services to stabilize
   ansible.builtin.pause:

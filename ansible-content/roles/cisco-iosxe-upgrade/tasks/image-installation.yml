@@ -76,26 +76,49 @@
       when: bundle_mode_reboot_required
 
     - name: Wait for device to become unreachable
-      ansible.builtin.wait_for:
-        host: "{{ ansible_host }}"
-        port: 22
-        state: stopped
-        timeout: 300
-        delay: 30
-      delegate_to: localhost
+      block:
+        - name: Wait for SSH port to close (device shutdown)
+          ansible.builtin.wait_for:
+            host: "{{ ansible_host }}"
+            port: 22
+            state: stopped
+            timeout: 300
+            delay: 30
+          delegate_to: localhost
+
+      rescue:
+        - name: Log device shutdown timeout warning
+          ansible.builtin.debug:
+            msg: "Device did not cleanly shutdown within 5 minutes - may still be rebooting"
+
       when: bundle_mode_reboot_required
 
     - name: Wait for device to come back online
-      ansible.builtin.wait_for:
-        host: "{{ ansible_host }}"
-        port: 22
-        state: started
-        timeout: 900
-        delay: 60
-      delegate_to: localhost
+      block:
+        - name: Wait for SSH port to open (device recovery)
+          ansible.builtin.wait_for:
+            host: "{{ ansible_host }}"
+            port: 22
+            state: started
+            timeout: 900
+            delay: 60
+          delegate_to: localhost
+          register: port_wait_result
+
+      rescue:
+        - name: Device failed to come back online - critical failure
+          ansible.builtin.fail:
+            msg:
+              - "CRITICAL: Device did not recover after 900s (15 minutes) timeout"
+              - "Device: {{ inventory_hostname }}"
+              - "Host: {{ ansible_host }}"
+              - "The device may be hung in boot, has power issues, or network connectivity problem"
+              - "Manual intervention required - check device console and network"
+              - "Upgrade FAILED - requires manual recovery and rollback"
+
       when: bundle_mode_reboot_required
 
-    - name: Wait for device initialization
+    - name: Wait for device initialization and service stability
       ansible.builtin.pause:
         seconds: 120
       when: bundle_mode_reboot_required
