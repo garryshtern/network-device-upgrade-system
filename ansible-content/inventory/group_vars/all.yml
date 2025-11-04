@@ -1,6 +1,6 @@
 ---
-# Global Variables for Network Device Upgrade System
-# Applies to all devices across all vendors
+# Global Variables for Network Device Upgrade System - INVENTORY LEVEL
+# See CLAUDE.md for variable placement strategy and documentation
 
 # Connection settings
 ansible_connection_timeout: 30
@@ -48,6 +48,15 @@ firmware_size_gb: 2  # Expected firmware image size (GB)
 target_firmware: ""  # Must be set at runtime
 platform_firmware: {}  # Platform-specific firmware mappings
 
+# =============================================================================
+# NETBOX INTEGRATION (consolidated from playbook-level)
+# =============================================================================
+# NetBox API connection settings
+# NOTE: These pull from environment variables at runtime
+# Set NETBOX_URL, NETBOX_TOKEN, etc. in your environment
+netbox_url: "{{ lookup('env', 'NETBOX_URL') | default('http://netbox:8000') }}"
+netbox_token: "{{ lookup('env', 'NETBOX_TOKEN') | default('') }}"
+
 # Phase control
 image_loading_timeout: 3600  # Timeout for firmware image upload (1 hour)
 installation_timeout: 1800  # Timeout for firmware installation/reboot (30 minutes)
@@ -62,8 +71,8 @@ rollback_on_failure: true
 rollback_timeout: 600  # Rollback operation timeout (seconds)
 keep_backup_count: 3
 maintenance_window: false  # MUST be explicitly set to true for upgrades (safety)
-backup_type: "pre_upgrade"  # Type of backup: pre_upgrade, post_upgrade, scheduled
-include_startup_config: true  # Include startup config in backups
+# NOTE: backup_type, include_startup_config moved to ansible-content/group_vars/all.yml
+# These are backup configuration defaults and should be defined in playbook-level group_vars
 include_running_config: true  # Include running config in backups
 restore_config: true  # Restore config during rollback
 restore_firmware: true  # Restore firmware during rollback
@@ -77,7 +86,8 @@ baseline_capture_enabled: true
 convergence_monitoring: true
 
 # Debug settings
-show_debug: false  # Set to true to enable verbose debug output
+# NOTE: show_debug moved to ansible-content/group_vars/all.yml
+# This is a global debug flag and should be defined in playbook-level group_vars
 
 # Storage paths
 network_upgrade_base_path: "/var/lib/network-upgrade"
@@ -119,18 +129,18 @@ temperature_threshold_celsius: 45
 power_threshold_percent: 85
 
 # Network validation settings
+# NOTE: bgp_enabled, bfd_enabled, multicast_enabled moved to ansible-content/group_vars/all.yml
+# These are validation defaults and should be defined in playbook-level group_vars
 ping_test_enabled: true
 ping_test_host: "8.8.8.8"
 ping_test_count: 3
-bgp_enabled: true  # Enable BGP validation checks
-bfd_enabled: true  # Enable BFD validation checks
-multicast_enabled: true  # Enable multicast validation checks
 validation_type: "post_upgrade"  # Default validation type: pre_upgrade or post_upgrade
 
 # Logging
 log_level: "info"  # debug, info, warning, error
 structured_logging: true
-log_retention_days: 30
+# NOTE: log_retention_days moved to ansible-content/group_vars/all.yml
+# This is a logging default and should be defined in playbook-level group_vars
 # NOTE: debug_metrics - use ansible-content/group_vars/all.yml
 
 # Compliance and reporting

@@ -52,6 +52,62 @@ Project guidance for developers and automation systems working with the Network 
 - Exception: `| default()` allowed ONLY in `roles/*/defaults/main.yml`
 - ❌ **NEVER** use `and` in when conditionals - use YAML list syntax instead
 
+#### 3a. Variable Placement Strategy (MANDATORY)
+
+Two `group_vars/all.yml` files exist with different purposes - **understand and follow this hierarchy**:
+
+**File Locations and Purposes:**
+1. **Playbook-Level** (`ansible-content/group_vars/all.yml`) - **SOURCE OF TRUTH**
+   - ✅ Global defaults for ALL playbooks and roles
+   - ✅ Applied to all devices by default
+   - ✅ Override these via command line (`-e "var=value"`)
+
+2. **Inventory-Level** (`ansible-content/inventory/group_vars/all.yml`) - **ENVIRONMENT OVERRIDES**
+   - ✅ Site-specific customizations (paths, credentials)
+   - ✅ Platform-aware dynamic logic (jinja2 for credential lookup)
+   - ✅ Wins over playbook-level per Ansible precedence rules
+   - ❌ Should NOT duplicate global defaults unnecessarily
+
+**Ansible Variable Precedence (last wins):**
+```
+1. Playbook-level group_vars → lowest priority (base defaults)
+2. Inventory-level group_vars → wins over playbook-level (site overrides)
+3. Command line (-e "var=value") → highest priority (always wins)
+4. Role defaults → only for role-specific variables
+```
+
+**When Adding New Variables:**
+- **Is it a GLOBAL DEFAULT?** → Define ONLY in playbook-level group_vars
+- **Is it SITE-SPECIFIC?** → Define in inventory-level, reference in playbook-level
+- **Is it PLATFORM-AWARE?** → Complex logic in inventory-level, simple default in playbook-level
+- **Is it IDENTICAL in both files?** → ERROR! Remove from inventory-level (duplicates)
+
+**Example - Correct Variable Consolidation:**
+```yaml
+# PLAYBOOK-LEVEL (source of truth - base defaults)
+ansible-content/group_vars/all.yml:
+  bgp_enabled: true              # Global default: enable BGP validation
+  backup_type: "pre_upgrade"     # Global default: pre-upgrade backups
+  show_debug: false              # Global default: quiet output
+
+# INVENTORY-LEVEL (site customizations only)
+ansible-content/inventory/group_vars/all.yml:
+  ansible_user: >-               # ✅ CORRECT: Dynamic platform-aware logic
+    {{ (platform == 'nxos' and vault_cisco_nxos_username is defined)
+       | ternary(vault_cisco_nxos_username, '') or 'admin' }}
+  network_upgrade_base_path: "/var/lib/network-upgrade"  # ✅ Site-specific path
+  # NOTE: bgp_enabled, backup_type, show_debug removed (duplicates)
+```
+
+**Variables Consolidated (Phase 4 - Nov 2025):**
+- `bgp_enabled`: Enable/disable BGP validation globally
+- `bfd_enabled`: Enable/disable BFD validation globally
+- `multicast_enabled`: Enable/disable multicast validation globally
+- `backup_type`: Configuration backup mode (all sites use "pre_upgrade")
+- `include_startup_config`: Include startup config in backups (all sites use false)
+- `show_debug`: Global debug flag (all sites use false)
+- `log_retention_days`: Log retention period (all sites use 30 days)
+
 ### 4. Platform-Specific Organization (MANDATORY)
 
 All platform-specific tasks MUST be organized under a single block with ONE when clause:

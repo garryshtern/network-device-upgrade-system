@@ -6,6 +6,10 @@ opengear_connection_timeout: 300
 opengear_command_timeout: 60
 opengear_ssh_retries: 3
 
+# Opengear metrics defaults (consolidated from playbook-level)
+active_sessions: 0
+total_power_usage: 0
+
 # Architecture detection settings
 auto_detect_architecture: true
 fallback_architecture: "legacy"

@@ -11,6 +11,9 @@ fortios_api_version: "v2"
 fortios_api_timeout: 300
 fortios_verify_ssl: false
 
+# FortiOS VDOM settings (consolidated from playbook-level)
+vdom: "root"
+
 # HA cluster settings
 fortios_ha_enabled: false
 fortios_ha_sync_timeout: 600

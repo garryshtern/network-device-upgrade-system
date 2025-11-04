@@ -14,6 +14,12 @@ eigrp_configured: false
 pim_configured: false
 multicast_enabled: false
 
+# Feature flags for validation controls (consolidated from playbook-level)
+bgp_enabled: true              # Enable BGP validation by default
+bfd_enabled: false             # BFD validation optional
+ospf_enabled: false            # OSPF validation optional
+vpc_enabled: false             # VPC validation (Cisco-specific)
+
 # Baseline and comparison
 has_default_route: false
 
