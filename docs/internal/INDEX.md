@@ -26,17 +26,17 @@ This document serves as an index to all active internal documentation files used
 - **Usage**: Ensure all test files reference shared variables
 
 #### 2. **group-vars-organization-issue.md**
-- **Purpose**: Reference for variable organization patterns
+- **Purpose**: Resolution documentation for variable consolidation project
 - **Created**: November 4, 2025
-- **Status**: Active - Reference for variable placement decisions
+- **Status**: ✅ RESOLVED - November 5, 2025 (Archived for reference)
 - **Contents**:
-  - Two-tier group_vars architecture (playbook-level vs inventory-level)
-  - Variable placement strategy with examples
-  - Ansible variable precedence rules
-  - Consolidation recommendations completed
-  - Scope and purpose analysis
-- **Readers**: Developers adding or modifying variables
-- **Usage**: When deciding where to define new variables
+  - Historical issue analysis (two-tier group_vars conflict)
+  - Resolution: Consolidated to single source of truth (`inventory/group_vars/all.yml`)
+  - Deleted playbook-level directory (was non-functional)
+  - Variable consolidation completed (50+ variables moved)
+  - Verification results (all tests passing)
+- **Readers**: Developers understanding variable architecture decisions
+- **Usage**: Historical reference for how variable organization was resolved
 
 #### 3. **MOCK_DEVICE_PATTERN_ANALYSIS.md**
 - **Purpose**: Reference for mock device testing patterns
@@ -195,10 +195,10 @@ Do NOT create internal docs for:
 ### For Claude Code (AI Development Assistant)
 **Primary**: CLAUDE.md (mandatory standards + test pattern reference)
 **Reference**: test-data-consolidation-reference.md (when creating tests)
-**Reference**: group-vars-organization-issue.md (when adding variables)
+**Reference**: group-vars-organization-issue.md (historical - why variables are in inventory-level only)
 - Mandatory code standards
 - Test data consolidation pattern
-- Variable placement rules
+- Variable placement rules (inventory-level group_vars is single source of truth)
 - Error handling patterns
 
 ### For Test Developers / QA Engineers
@@ -210,10 +210,10 @@ Do NOT create internal docs for:
 - Mock device creation patterns
 
 ### For Backend Developers
-**Primary**: group-vars-organization-issue.md
+**Primary**: CLAUDE.md (Section 3a - Variable Placement Strategy)
 **Reference**: metrics-export-analysis.md
-- Variable organization patterns
-- Where to define new variables
+- Variable placement: All global variables in `ansible-content/inventory/group_vars/all.yml`
+- Where to define new variables (single source of truth)
 - Metrics architecture (if implementing metrics features)
 
 ### For Operations / Metrics Team

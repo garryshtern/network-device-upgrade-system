@@ -83,7 +83,7 @@ debug:
 
 **Variables**:
 - ❌ NO `| default()` in playbooks/tasks/conditionals
-- ✅ Put in `group_vars/all.yml` or `roles/*/defaults/main.yml`
+- ✅ Put in `ansible-content/inventory/group_vars/all.yml` (single source of truth) or `roles/*/defaults/main.yml`
 - Exception: `| default(omit)` for optional module params only
 
 **Platform Organization (MANDATORY)**:
@@ -205,7 +205,7 @@ yamllint ansible-content/
 
 **Main Workflow**: `ansible-content/playbooks/main-upgrade-workflow.yml` (8 steps, tag-based)
 **Test Suite**: 22 tests (run with `./tests/run-all-tests.sh`)
-**Platforms**: Cisco NX-OS, IOS-XE, FortiOS, Opengear, Metamako MOS
+**Platforms**: Cisco NX-OS, IOS-XE, FortiOS, Opengear
 **Tech Stack**: Ansible 11.0.0, AWX, NetBox, Grafana
 
 **Key Files**:

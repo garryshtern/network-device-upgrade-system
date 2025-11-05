@@ -72,41 +72,38 @@ Grafana (visualization)
 ### Issue 1: Conflicting Metrics Enablement Flags ⚠️ HIGH
 
 **Files Affected**:
-- `ansible-content/group_vars/all.yml` line 145: `send_metrics: false`
-- `ansible-content/inventory/group_vars/all.yml` line 108: `export_metrics: true`
-- `deployment/services/awx/inventories.yml` line 35: `send_metrics: true`
+- `ansible-content/inventory/group_vars/all.yml` line 209: `export_metrics: false` (single source of truth)
+- `deployment/services/awx/inventories.yml` line 35: `send_metrics: true` (outdated - should be export_metrics)
 
 **Problem**:
-- Three different files contain metrics configuration
 - Two different variable names (`send_metrics` vs `export_metrics`)
-- Conflicting default values (false vs true)
-- Unclear which takes precedence in different execution contexts
+- Inventory-level group_vars has `export_metrics: false` (correct)
+- AWX inventory has `send_metrics: true` (outdated variable name)
+- Inconsistent naming causes confusion about which variable to use
 
 **Impact**:
-- Playbooks may enable metrics while group_vars disables them
-- AWX templates use one variable name, playbooks use another
-- Operators confused about whether metrics are ON or OFF
+- AWX inventory uses outdated variable name `send_metrics`
+- Playbooks use `export_metrics`
+- Operators may set the wrong variable in AWX
+- Metrics may be unintentionally enabled or disabled
 
 **Example of Confusion**:
 ```yaml
 # In playbooks (uses export_metrics)
 when: export_metrics | bool
 
-# In group_vars (uses send_metrics)
-send_metrics: false
+# In inventory group_vars (uses export_metrics) ✓
+export_metrics: false
 
-# In AWX inventory (uses send_metrics)
+# In AWX inventory (uses send_metrics) ⚠️ WRONG
 send_metrics: true
 ```
 
 **Recommendation**:
-1. Choose single variable name: `export_metrics` (used in playbooks)
-2. Update all references consistently:
-   - `ansible-content/group_vars/all.yml`: Change `send_metrics` → `export_metrics`
-   - All playbook tasks already use `export_metrics` ✓
-   - `deployment/services/awx/inventories.yml`: Change `send_metrics` → `export_metrics`
-3. Define clear default: `export_metrics: false` (opt-in, not opt-out)
-4. Document in README that metrics are disabled by default
+1. Update `deployment/services/awx/inventories.yml`: Change `send_metrics` → `export_metrics`
+2. Verify all playbook tasks use `export_metrics` ✓ (already correct)
+3. Verify inventory-level group_vars has `export_metrics: false` ✓ (already correct)
+4. Document in README that metrics are disabled by default (use `export_metrics: true` to enable)
 
 **Fix Priority**: CRITICAL (Do first)
 
@@ -335,22 +332,21 @@ Result: Same metric appears twice with different timestamps.
 
 ## 4. Consistency Audit
 
-### Variable Naming Consistency: ⚠️ INCONSISTENT
+### Variable Naming Consistency: ⚠️ PARTIALLY INCONSISTENT
 
 ```yaml
-# export_metrics (used in playbooks - playbooks)
+# export_metrics (used in playbooks and inventory group_vars) ✓
 ansible-content/playbooks/steps/step-5-pre-validation.yml:62: when: export_metrics | bool
 ansible-content/playbooks/main-upgrade-workflow.yml:294: when: export_metrics | bool
-ansible-content/playbooks/emergency-rollback.yml:315: when: export_metrics | bool
+ansible-content/inventory/group_vars/all.yml:209: export_metrics: false
 
-# send_metrics (used in group_vars and AWX)
-ansible-content/group_vars/all.yml:145: send_metrics: false
+# send_metrics (used in AWX) ⚠️ OUTDATED
 deployment/services/awx/inventories.yml:35: send_metrics: true
 
-# No consistent naming across codebase
+# Inconsistency: Playbooks and inventory use export_metrics, AWX uses send_metrics
 ```
 
-**Recommendation**: Standardize on `export_metrics` everywhere.
+**Recommendation**: Update `deployment/services/awx/inventories.yml` to use `export_metrics` for consistency.
 
 ---
 

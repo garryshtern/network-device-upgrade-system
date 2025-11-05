@@ -9,7 +9,7 @@ Project guidance for developers and automation systems working with the Network 
 **Network device upgrade management system** for 1000+ heterogeneous network devices. Automates firmware upgrades across multiple vendor platforms using Ansible with AWX and NetBox as native systemd services.
 
 **Key Technologies**: Ansible 11.0.0, AWX, NetBox, Grafana, InfluxDB v2, Redis
-**Supported Platforms**: Cisco NX-OS, Cisco IOS-XE, FortiOS, Opengear, Metamako MOS
+**Supported Platforms**: Cisco NX-OS, Cisco IOS-XE, FortiOS, Opengear
 **Main Workflow**: `ansible-content/playbooks/main-upgrade-workflow.yml` (8-step tag-based execution)
 
 ---
@@ -54,59 +54,49 @@ Project guidance for developers and automation systems working with the Network 
 
 #### 3a. Variable Placement Strategy (MANDATORY)
 
-Two `group_vars/all.yml` files exist with different purposes - **understand and follow this hierarchy**:
+**Single Source of Truth**: All global variables are defined in `ansible-content/inventory/group_vars/all.yml`
 
-**File Locations and Purposes:**
-1. **Playbook-Level** (`ansible-content/group_vars/all.yml`) - **SOURCE OF TRUTH**
-   - ✅ Global defaults for ALL playbooks and roles
-   - ✅ Applied to all devices by default
-   - ✅ Override these via command line (`-e "var=value"`)
+**Key Fact:** Ansible only loads `group_vars` from directories relative to the inventory path. The `ansible-content/group_vars/` directory is NOT loaded by Ansible during playbook execution. All variables must be in `ansible-content/inventory/group_vars/all.yml` to be available to playbooks.
 
-2. **Inventory-Level** (`ansible-content/inventory/group_vars/all.yml`) - **ENVIRONMENT OVERRIDES**
-   - ✅ Site-specific customizations (paths, credentials)
-   - ✅ Platform-aware dynamic logic (jinja2 for credential lookup)
-   - ✅ Wins over playbook-level per Ansible precedence rules
-   - ❌ Should NOT duplicate global defaults unnecessarily
+**File Location and Purpose:**
+- **Inventory-Level** (`ansible-content/inventory/group_vars/all.yml`) - **SINGLE SOURCE OF TRUTH**
+  - ✅ ALL global defaults for all playbooks and roles
+  - ✅ Applied to all devices when running playbooks
+  - ✅ Override via command line (`-e "var=value"`)
+  - ✅ Contains platform-aware dynamic logic (jinja2 for credential lookup)
+  - ✅ Contains site-specific customizations (paths, credentials)
 
 **Ansible Variable Precedence (last wins):**
 ```
-1. Playbook-level group_vars → lowest priority (base defaults)
-2. Inventory-level group_vars → wins over playbook-level (site overrides)
-3. Command line (-e "var=value") → highest priority (always wins)
-4. Role defaults → only for role-specific variables
+1. Inventory-level group_vars → base defaults (loaded by Ansible)
+2. Command line (-e "var=value") → highest priority (always wins)
+3. Role defaults → only for role-specific variables
 ```
 
 **When Adding New Variables:**
-- **Is it a GLOBAL DEFAULT?** → Define ONLY in playbook-level group_vars
-- **Is it SITE-SPECIFIC?** → Define in inventory-level, reference in playbook-level
-- **Is it PLATFORM-AWARE?** → Complex logic in inventory-level, simple default in playbook-level
-- **Is it IDENTICAL in both files?** → ERROR! Remove from inventory-level (duplicates)
+- **Global variable?** → Define in `ansible-content/inventory/group_vars/all.yml`
+- **Site-specific?** → Define in inventory-level (it serves both purposes)
+- **Platform-aware?** → Use jinja2 logic in inventory-level group_vars
+- **Role-specific?** → Define in `roles/*/defaults/main.yml`
 
-**Example - Correct Variable Consolidation:**
+**Example - Variable Definition:**
 ```yaml
-# PLAYBOOK-LEVEL (source of truth - base defaults)
-ansible-content/group_vars/all.yml:
-  bgp_enabled: true              # Global default: enable BGP validation
-  backup_type: "pre_upgrade"     # Global default: pre-upgrade backups
-  show_debug: false              # Global default: quiet output
-
-# INVENTORY-LEVEL (site customizations only)
-ansible-content/inventory/group_vars/all.yml:
-  ansible_user: >-               # ✅ CORRECT: Dynamic platform-aware logic
-    {{ (platform == 'nxos' and vault_cisco_nxos_username is defined)
-       | ternary(vault_cisco_nxos_username, '') or 'admin' }}
-  network_upgrade_base_path: "/var/lib/network-upgrade"  # ✅ Site-specific path
-  # NOTE: bgp_enabled, backup_type, show_debug removed (duplicates)
+# ALL variables in: ansible-content/inventory/group_vars/all.yml
+bgp_enabled: true                    # Global default: enable BGP validation
+backup_type: "pre_upgrade"           # Global default: pre-upgrade backups
+show_debug: false                    # Global default: quiet output
+max_concurrent: 5                    # Default concurrency (override: -e "max_concurrent=10")
+ansible_user: >-                     # ✅ Platform-aware credential selection
+  {{ (platform == 'nxos' and vault_cisco_nxos_username is defined)
+     | ternary(vault_cisco_nxos_username, '') or 'admin' }}
+network_upgrade_base_path: "/var/lib/network-upgrade"  # Site-specific path
 ```
 
-**Variables Consolidated (Phase 4 - Nov 2025):**
-- `bgp_enabled`: Enable/disable BGP validation globally
-- `bfd_enabled`: Enable/disable BFD validation globally
-- `multicast_enabled`: Enable/disable multicast validation globally
-- `backup_type`: Configuration backup mode (all sites use "pre_upgrade")
-- `include_startup_config`: Include startup config in backups (all sites use false)
-- `show_debug`: Global debug flag (all sites use false)
-- `log_retention_days`: Log retention period (all sites use 30 days)
+**Variables Consolidated (Phase 5 - Nov 2025):**
+All global variables now in single location: `ansible-content/inventory/group_vars/all.yml`
+- Deleted: `ansible-content/group_vars/` directory (was not being loaded)
+- Consolidated: 50+ variables previously in playbook-level directory
+- Result: Single source of truth, variables load in ALL scenarios (including individual step execution)
 
 ### 3b. Test Data Consolidation Pattern (MANDATORY for test files)
 
