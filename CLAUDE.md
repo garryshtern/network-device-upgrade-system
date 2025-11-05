@@ -112,9 +112,8 @@ ansible-content/inventory/group_vars/all.yml:
 
 **Single Source of Truth for Test Data**: All test playbooks MUST use `tests/shared-test-vars.yml`
 
-**Pattern - How to Reference Shared Test Variables:**
+**Quick Pattern:**
 ```yaml
-# ✅ CORRECT: All test playbooks reference shared-test-vars.yml
 - name: My Test Suite
   hosts: localhost
   gather_facts: false
@@ -123,77 +122,27 @@ ansible-content/inventory/group_vars/all.yml:
   vars:
     # Playbook-specific variables only
     test_environment: true
-
-  tasks:
-    - name: Use shared variables
-      debug:
-        msg: "Testing device: {{ cisco_nxos_devices.n9k_c93180yc_ex.device_model }}"
 ```
 
-**What's in `tests/shared-test-vars.yml` (Single Source of Truth):**
-```yaml
-# Device configurations (all platforms)
-cisco_nxos_devices:
-  n9k_c93180yc_ex:     # ISSU + EPLD capable
-  n9k_c9336c_fx2:      # Non-ISSU capable
-  n9k_c93240yc_fx2:    # Multi-EPLD capable
+**Shared Variables Available:**
+- `cisco_nxos_devices` - NX-OS device configurations
+- `cisco_iosxe_devices` - IOS-XE device configurations
+- `fortios_devices` - FortiOS device configurations
+- `opengear_devices` - Opengear device configurations
+- `firmware_upgrade_scenarios` - 7 common upgrade paths
+- `test_environment` - Base paths for firmware, backups, baselines
 
-cisco_iosxe_devices:
-  isr4431:             # Router with install mode
-  c9300_48u:           # Switch without install mode
+**Benefits:**
+- Eliminated 50+ duplications
+- Easier maintenance (update once, all tests use it)
+- Consistency across test suite
 
-fortios_devices:
-  fortigate_600e_primary:
-  fortigate_600e_secondary:
-  fortigate_200f:
-  fortigate_100f:
-
-opengear_devices:
-  cm7100_legacy:       # Legacy architecture
-  om7200_legacy:
-  cm8100_modern:       # Modern architecture
-  om2200_modern:
-
-# Firmware upgrade scenarios (7 common paths)
-firmware_upgrade_scenarios:
-  nxos_9310_to_10121:
-  nxos_10010_to_1023m:
-  iosxe_1612_to_1706:
-  fortios_648_to_724:
-  fortios_701_to_724:
-  opengear_516_to_518:
-  opengear_24110_to_25070:
-
-# Test environment settings
-test_environment:
-  base_firmware_path: "/opt/firmware"
-  base_backup_path: "/opt/backups"
-  base_baseline_path: "/opt/baselines"
-```
-
-**Benefits of Consolidation:**
-- **Eliminated 50+ duplications**: Device configs, firmware pairs
-- **Easier maintenance**: Update device config once, all tests use it
-- **New test creation**: Copy scenarios from shared-test-vars instead of hardcoding
-- **Consistency**: All tests use same device definitions
-
-**Path Reference Rules:**
-- Integration test playbook → `vars_files: ../shared-test-vars.yml`
-- Unit test playbook → `vars_files: ../shared-test-vars.yml`
-- Validation test playbook → `vars_files: ../shared-test-vars.yml`
-- Vendor test playbook → `vars_files: ../shared-test-vars.yml`
-- Playbook test → `vars_files: ../../shared-test-vars.yml` (nested one level deeper)
-- Included task files → Add comment: `# Note: This is an included task file, shared-test-vars loaded by parent playbook`
-
-**For Included Task Files (not playbooks):**
-Don't add vars_files to task files - parent playbook handles loading. Just add comment:
-```yaml
----
-# This is an included task file
-# Note: This is an included task file, shared-test-vars loaded by parent playbook
-
-- name: Task in included file
-```
+**For Detailed Guidance:**
+→ See `docs/internal/test-data-consolidation-reference.md` for:
+- Complete pattern examples
+- Path reference rules for all test file locations
+- How to create new test files
+- Common patterns for accessing shared variables
 
 ### 4. Platform-Specific Organization (MANDATORY)
 
