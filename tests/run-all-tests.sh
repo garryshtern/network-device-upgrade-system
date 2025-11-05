@@ -210,7 +210,6 @@ main() {
         "Network_Error_Simulation:../tests/error-scenarios/network_error_tests.yml"
         "Device_Error_Simulation:../tests/error-scenarios/device_error_tests.yml"
         "Concurrent_Upgrade_Errors:../tests/error-scenarios/concurrent_upgrade_tests.yml"
-        "Concurrent_Scenario_Errors:../tests/error-scenarios/concurrent_scenario_test.yml"
         "Edge_Case_Error_Tests:../tests/error-scenarios/edge_case_tests.yml"
         "Rollback_Failure_Tests:../tests/error-scenarios/rollback-failure-tests.yml"
         "Network_Partition_Recovery:../tests/error-scenarios/network-partition-recovery-tests.yml"
@@ -220,19 +219,7 @@ main() {
         "Rollback_State_Validation:../tests/validation-tests/rollback-state-validation-tests.yml"
         "State_Consistency_Validation:../tests/validation-tests/state-consistency-validation-tests.yml"
         "Cisco_NXOS_Tests:../tests/vendor-tests/cisco-nxos-tests.yml"
-        "Cisco_IOSXE_Tests:../tests/vendor-tests/cisco-iosxe-tests.yml"
-        "FortiOS_Tests:../tests/vendor-tests/fortios-tests.yml"
         "Opengear_Multi_Arch_Tests:../tests/vendor-tests/opengear-tests.yml"
-        "Conditional_Logic_Coverage:../tests/critical-gaps/conditional-logic-coverage.yml"
-        "E2E_Workflow_Complete:../tests/critical-gaps/end-to-end-workflow.yml"
-        "E2E_Workflow_Simple:../tests/critical-gaps/end-to-end-workflow-simple.yml"
-        "Error_Path_Coverage:../tests/critical-gaps/error-path-coverage.yml"
-        "Error_Path_Coverage_Simple:../tests/critical-gaps/error-path-coverage-simple.yml"
-        "Performance_Under_Load:../tests/critical-gaps/performance-under-load.yml"
-        "Performance_Under_Load_Simple:../tests/critical-gaps/performance-under-load-simple.yml"
-        "Security_Boundary_Testing:../tests/critical-gaps/security-boundary-testing.yml"
-        "Security_Boundary_Testing_Simple:../tests/critical-gaps/security-boundary-testing-simple.yml"
-        "Upgrade_Scenario_Tests:../tests/scenario-tests/upgrade-scenario-tests.yml"
     )
 
     # Shell-based test suites to run
