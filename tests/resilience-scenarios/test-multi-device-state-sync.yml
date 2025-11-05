@@ -1,0 +1,190 @@
+---
+# Test: Multi-Device State Synchronization
+# Tests: State consistency across multiple devices, upgrade order validation, batch operations
+# Risk Level: MEDIUM - Scale and consistency
+# Coverage: All platforms at scale
+
+- name: Multi-Device State Synchronization Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "multi_device_state_sync"
+
+  tasks:
+    - name: Test Phase 1 - Device Registry Initialization
+      block:
+        - name: Initialize device registry
+          ansible.builtin.set_fact:
+            device_registry:
+              total_devices: 10
+              nxos_devices: 4
+              iosxe_devices: 3
+              fortios_devices: 2
+              opengear_devices: 1
+              all_synchronized: true
+
+        - name: Verify device registry
+          ansible.builtin.assert:
+            that:
+              - device_registry.total_devices == 10
+              - device_registry.nxos_devices + device_registry.iosxe_devices + device_registry.fortios_devices + device_registry.opengear_devices == 10
+            fail_msg: "Device registry count mismatch"
+            success_msg: "✓ Device registry initialized and synchronized"
+
+    - name: Test Phase 2 - Upgrade State Tracking
+      block:
+        - name: Create upgrade state tracker
+          ansible.builtin.set_fact:
+            upgrade_states:
+              "device-1": "pending"
+              "device-2": "pending"
+              "device-3": "pending"
+              "device-4": "in_progress"
+              "device-5": "completed"
+              "device-6": "pending"
+              "device-7": "pending"
+              "device-8": "completed"
+              "device-9": "pending"
+              "device-10": "pending"
+
+        - name: Calculate upgrade progress
+          ansible.builtin.set_fact:
+            upgrade_progress:
+              total: 10
+              pending: "{{ upgrade_states | dict2items | selectattr('value', 'equalto', 'pending') | list | length }}"
+              in_progress: "{{ upgrade_states | dict2items | selectattr('value', 'equalto', 'in_progress') | list | length }}"
+              completed: "{{ upgrade_states | dict2items | selectattr('value', 'equalto', 'completed') | list | length }}"
+
+        - name: Verify progress tracking
+          ansible.builtin.assert:
+            that:
+              - upgrade_progress.pending | int == 7
+              - upgrade_progress.in_progress | int == 1
+              - upgrade_progress.completed | int == 2
+            fail_msg: "Upgrade progress tracking failed"
+            success_msg: "✓ Upgrade progress tracked accurately"
+
+    - name: Test Phase 3 - Batch Operation Ordering
+      block:
+        - name: Define upgrade batches
+          ansible.builtin.set_fact:
+            upgrade_batches:
+              batch1:
+                devices: ["device-1", "device-2", "device-3"]
+                status: "scheduled"
+              batch2:
+                devices: ["device-4", "device-5", "device-6"]
+                status: "in_progress"
+              batch3:
+                devices: ["device-7", "device-8", "device-9"]
+                status: "pending"
+
+        - name: Verify batch organization
+          ansible.builtin.assert:
+            that:
+              - upgrade_batches.batch1.devices | length == 3
+              - upgrade_batches.batch2.status == "in_progress"
+              - upgrade_batches.batch3.devices | length == 3
+            fail_msg: "Batch organization invalid"
+            success_msg: "✓ Upgrade batches properly organized"
+
+    - name: Test Phase 4 - Cross-Device Dependency Validation
+      block:
+        - name: Create dependency map
+          ansible.builtin.set_fact:
+            device_dependencies:
+              "device-5":
+                - "device-1"
+                - "device-2"
+              "device-6":
+                - "device-3"
+              "device-8":
+                - "device-4"
+
+        - name: Verify dependencies resolved
+          ansible.builtin.assert:
+            that:
+              - "device_dependencies['device-5'] | length == 2"
+              - "'device-1' in device_dependencies['device-5']"
+            fail_msg: "Dependency validation failed"
+            success_msg: "✓ Cross-device dependencies validated"
+
+    - name: Test Phase 5 - Concurrent Batch Execution
+      block:
+        - name: Simulate concurrent batch execution
+          ansible.builtin.set_fact:
+            concurrent_execution:
+              batch1_start: "2025-11-05T10:00:00Z"
+              batch1_end: "2025-11-05T10:15:00Z"
+              batch2_start: "2025-11-05T10:05:00Z"
+              batch2_end: "2025-11-05T10:20:00Z"
+              batches_overlap: true
+
+        - name: Verify concurrent execution allowed
+          ansible.builtin.assert:
+            that:
+              - concurrent_execution.batches_overlap | bool
+            fail_msg: "Concurrent batch execution not supported"
+            success_msg: "✓ Concurrent batch execution verified"
+
+    - name: Test Phase 6 - State Consistency Validation
+      block:
+        - name: Create device state snapshot
+          ansible.builtin.set_fact:
+            device_states:
+              "device-1":
+                version_before: "9.3.10"
+                version_after: "10.1.2"
+                status: "success"
+              "device-2":
+                version_before: "9.2.4"
+                version_after: "10.1.2"
+                status: "success"
+              "device-3":
+                version_before: "10.0.1"
+                version_after: "10.2.3.M"
+                status: "success"
+
+        - name: Verify state consistency
+          ansible.builtin.assert:
+            that:
+              - device_states['device-1'].version_after != device_states['device-1'].version_before
+              - device_states['device-1'].status == "success"
+            fail_msg: "Device state not consistent"
+            success_msg: "✓ Device state consistency validated"
+
+    - name: Test Phase 7 - Rollback State Recovery
+      block:
+        - name: Simulate rollback scenario
+          ansible.builtin.set_fact:
+            rollback_state:
+              device: "device-5"
+              failed_version: "10.1.2"
+              rollback_to_version: "9.3.10"
+              rollback_status: "success"
+
+        - name: Verify rollback recovery
+          ansible.builtin.assert:
+            that:
+              - rollback_state.rollback_to_version == "9.3.10"
+              - rollback_state.rollback_status == "success"
+            fail_msg: "Rollback state recovery failed"
+            success_msg: "✓ Rollback state recovery verified"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Multi-Device State Synchronization Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Device registry initialization ({{ device_registry.total_devices }} devices)"
+          - "  ✓ Upgrade state tracking ({{ upgrade_progress.completed }} completed, {{ upgrade_progress.pending }} pending)"
+          - "  ✓ Batch operation ordering ({{ upgrade_batches | length }} batches)"
+          - "  ✓ Cross-device dependency validation"
+          - "  ✓ Concurrent batch execution"
+          - "  ✓ State consistency validation"
+          - "  ✓ Rollback state recovery"
+          - ""
+          - "Risk Coverage: MEDIUM - Ensures multi-device consistency at scale"

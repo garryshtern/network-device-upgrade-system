@@ -18,7 +18,7 @@ Platform-specific implementation details and feature support:
 
 - **[Platform Implementation Status](platform-guides/platform-implementation-status.md)** - Feature support matrix for all platforms
 
-**Supported Platforms**: Cisco NX-OS, Cisco IOS-XE, FortiOS, Opengear, Metamako MOS
+**Supported Platforms**: Cisco NX-OS, Cisco IOS-XE, FortiOS, Opengear
 
 ### [Deployment](deployment/) - System Deployment & Integration
 
@@ -102,7 +102,6 @@ See [Grafana Integration Guide](deployment/grafana-integration.md)
 2. **Cisco IOS-XE** - Catalyst switches (install mode, bundle mode)
 3. **FortiOS** - FortiGate firewalls (multi-step upgrades, HA support)
 4. **Opengear** - Console servers (legacy CLI + modern API)
-5. **Metamako MOS** - Low-latency network devices
 
 ## 📖 Additional Resources
 

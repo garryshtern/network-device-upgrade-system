@@ -45,7 +45,6 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
 - `CISCO_NXOS_SSH_KEY` - SSH private key path for Cisco NX-OS
 - `CISCO_IOSXE_SSH_KEY` - SSH private key path for Cisco IOS-XE
 - `OPENGEAR_SSH_KEY` - SSH private key path for Opengear
-- `METAMAKO_SSH_KEY` - SSH private key path for Metamako
 
 ### API Token Authentication
 - `FORTIOS_API_TOKEN` - API token for FortiOS devices
@@ -56,14 +55,12 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
 - `CISCO_IOSXE_PASSWORD` - Password for Cisco IOS-XE
 - `FORTIOS_PASSWORD` - Password for FortiOS
 - `OPENGEAR_PASSWORD` - Password for Opengear
-- `METAMAKO_PASSWORD` - Password for Metamako
 
 ### Username Configuration
 - `CISCO_NXOS_USERNAME` - Username for Cisco NX-OS
 - `CISCO_IOSXE_USERNAME` - Username for Cisco IOS-XE
 - `FORTIOS_USERNAME` - Username for FortiOS
 - `OPENGEAR_USERNAME` - Username for Opengear
-- `METAMAKO_USERNAME` - Username for Metamako
 
 ### Debug Configuration
 - `SHOW_DEBUG` - Enable verbose debug output (true/false, default: false)
@@ -506,11 +503,6 @@ Add `,Z` to volume mounts for SELinux relabeling:
 - Legacy models (CM7100, OM7200): Use `.flash` files, CLI-based
 - Modern models (CM8100, OM2100/OM2200): Use `.raucb` files, API-based
 - API token authentication available for modern models
-
-### Metamako MOS
-- Complete system upgrades (OS + applications)
-- Uses `.iso` firmware files
-- Supports application package installation (MetaWatch, MetaMux)
 
 ## Troubleshooting
 

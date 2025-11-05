@@ -1,0 +1,258 @@
+---
+# Test: Config Backup and Restore Functionality
+# Tests: Configuration backup creation and restoration from backup files
+# Risk Level: CRITICAL - Core recovery mechanism
+# Coverage: All platform device types
+
+- name: Configuration Backup and Restore Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "config_backup_restore"
+    backup_test_dir: "/tmp/test-backup-restore"
+    test_devices:
+      - name: "test-nxos-01"
+        platform: "cisco_nxos"
+        config_sample: |
+          hostname test-nxos-01
+          feature bgp
+          router bgp 65001
+            address-family ipv4 unicast
+              redistribute static route-map STATIC_TO_BGP
+      - name: "test-iosxe-01"
+        platform: "cisco_iosxe"
+        config_sample: |
+          hostname test-iosxe-01
+          router bgp 65002
+            bgp log-neighbor-changes
+            neighbor 10.0.0.1 remote-as 65001
+      - name: "test-fortios-01"
+        platform: "fortios"
+        config_sample: |
+          config system global
+              set hostname test-fortios-01
+              set timezone 04
+      - name: "test-opengear-01"
+        platform: "opengear"
+        config_sample: |
+          # Opengear console server config
+          set console/0/config/active 1
+
+  tasks:
+    - name: Test Phase 1 - Setup Test Environment
+      block:
+        - name: Create backup test directory
+          ansible.builtin.file:
+            path: "{{ backup_test_dir }}"
+            state: directory
+            mode: '0755'
+
+        - name: Create mock device config files
+          ansible.builtin.copy:
+            content: "{{ item.config_sample }}"
+            dest: "{{ backup_test_dir }}/{{ item.name }}.running-config"
+            mode: '0644'
+          loop: "{{ test_devices }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Verify config files created
+          ansible.builtin.stat:
+            path: "{{ backup_test_dir }}/{{ item.name }}.running-config"
+          register: config_files_stat
+          loop: "{{ test_devices }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Assert all config files exist
+          ansible.builtin.assert:
+            that:
+              - item.stat.exists
+              - item.stat.size > 0
+            fail_msg: "Config file not created: {{ item.stat.path }}"
+            success_msg: "✓ Config file created: {{ item.stat.path }}"
+          loop: "{{ config_files_stat.results }}"
+          loop_control:
+            label: "{{ item.item.name }}"
+
+    - name: Test Phase 2 - Create Backups
+      block:
+        - name: Create backup copies with timestamp
+          ansible.builtin.copy:
+            src: "{{ backup_test_dir }}/{{ item.name }}.running-config"
+            dest: "{{ backup_test_dir }}/{{ item.name }}.backup.20251104"
+            mode: '0644'
+            remote_src: true
+          loop: "{{ test_devices }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Verify backup files created
+          ansible.builtin.stat:
+            path: "{{ backup_test_dir }}/{{ item.name }}.backup.20251104"
+          register: backup_files_stat
+          loop: "{{ test_devices }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Assert all backups exist and match original
+          ansible.builtin.assert:
+            that:
+              - item.stat.exists
+              - item.stat.size > 0
+            fail_msg: "Backup file not created properly"
+            success_msg: "✓ Backup created for {{ item.item.name }}"
+          loop: "{{ backup_files_stat.results }}"
+          loop_control:
+            label: "{{ item.item.name }}"
+
+    - name: Test Phase 3 - Simulate Config Changes
+      block:
+        - name: Modify running configs (simulate device changes)
+          ansible.builtin.lineinfile:
+            path: "{{ backup_test_dir }}/{{ item.name }}.running-config"
+            line: "! MODIFIED BY TEST"
+            insertbefore: "^hostname"
+          loop: "{{ test_devices }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Verify configs were modified
+          ansible.builtin.stat:
+            path: "{{ backup_test_dir }}/{{ item.name }}.running-config"
+          register: modified_files_stat
+          loop: "{{ test_devices }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+    - name: Test Phase 4 - Restore from Backup
+      block:
+        - name: Restore configs from backup
+          ansible.builtin.copy:
+            src: "{{ backup_test_dir }}/{{ item.name }}.backup.20251104"
+            dest: "{{ backup_test_dir }}/{{ item.name }}.running-config"
+            mode: '0644'
+            remote_src: true
+          loop: "{{ test_devices }}"
+          loop_control:
+            label: "{{ item.name }}"
+
+        - name: Verify restoration by comparing file contents
+          ansible.builtin.shell:
+            cmd: |
+              BACKUP="{{ backup_test_dir }}/{{ item.name }}.backup.20251104"
+              RUNNING="{{ backup_test_dir }}/{{ item.name }}.running-config"
+              if diff -q "$BACKUP" "$RUNNING" > /dev/null 2>&1; then
+                echo "RESTORE_SUCCESS"
+              else
+                echo "RESTORE_FAILED"
+              fi
+          register: restore_check
+          loop: "{{ test_devices }}"
+          loop_control:
+            label: "{{ item.name }}"
+          changed_when: false
+
+        - name: Assert restoration successful for all devices
+          ansible.builtin.assert:
+            that:
+              - "'RESTORE_SUCCESS' in item.stdout"
+            fail_msg: "Restore failed for {{ item.item.name }}"
+            success_msg: "✓ Config successfully restored for {{ item.item.name }}"
+          loop: "{{ restore_check.results }}"
+          loop_control:
+            label: "{{ item.item.name }}"
+
+    - name: Test Phase 5 - Backup Corruption Detection
+      block:
+        - name: Create corrupted backup (truncated)
+          ansible.builtin.shell:
+            cmd: "head -c 100 {{ backup_test_dir }}/{{ test_devices[0].name }}.backup.20251104 > {{ backup_test_dir }}/{{ test_devices[0].name }}.corrupted.backup"
+
+        - name: Attempt to restore from corrupted backup
+          ansible.builtin.shell:
+            cmd: |
+              CORRUPTED="{{ backup_test_dir }}/{{ test_devices[0].name }}.corrupted.backup"
+              ORIGINAL="{{ backup_test_dir }}/{{ test_devices[0].name }}.backup.20251104"
+              CORRUPTED_SIZE=$(wc -c < "$CORRUPTED")
+              ORIGINAL_SIZE=$(wc -c < "$ORIGINAL")
+              if [ "$CORRUPTED_SIZE" -lt "$ORIGINAL_SIZE" ]; then
+                echo "CORRUPTION_DETECTED"
+              else
+                echo "CORRUPTION_NOT_DETECTED"
+              fi
+          register: corruption_detection
+          changed_when: false
+
+        - name: Assert corruption detection works
+          ansible.builtin.assert:
+            that:
+              - "'CORRUPTION_DETECTED' in corruption_detection.stdout"
+            fail_msg: "Corruption detection failed - corrupted backup not detected"
+            success_msg: "✓ Corrupted backup properly detected"
+
+    - name: Test Phase 6 - Missing Backup Handling
+      block:
+        - name: Verify missing backup file handling
+          ansible.builtin.stat:
+            path: "{{ backup_test_dir }}/nonexistent-device.backup.20251104"
+          register: missing_backup_stat
+
+        - name: Assert missing backup detection
+          ansible.builtin.assert:
+            that:
+              - not missing_backup_stat.stat.exists
+            fail_msg: "Missing backup not properly handled"
+            success_msg: "✓ Missing backup scenario handled correctly"
+
+    - name: Test Phase 7 - Backup Permissions and Access
+      block:
+        - name: Set restrictive permissions on backup
+          ansible.builtin.file:
+            path: "{{ backup_test_dir }}/{{ test_devices[0].name }}.backup.20251104"
+            mode: '0000'
+
+        - name: Attempt to read restricted backup
+          ansible.builtin.shell:
+            cmd: "cat {{ backup_test_dir }}/{{ test_devices[0].name }}.backup.20251104 2>&1"
+          register: permission_test
+          failed_when: false
+
+        - name: Restore permissions and verify restoration
+          ansible.builtin.file:
+            path: "{{ backup_test_dir }}/{{ test_devices[0].name }}.backup.20251104"
+            mode: '0644'
+
+        - name: Verify we can read restored permissions
+          ansible.builtin.shell:
+            cmd: "cat {{ backup_test_dir }}/{{ test_devices[0].name }}.backup.20251104 > /dev/null && echo SUCCESS"
+          register: permission_restore_test
+
+        - name: Assert permission handling
+          ansible.builtin.assert:
+            that:
+              - "'SUCCESS' in permission_restore_test.stdout"
+            fail_msg: "Permission restoration failed"
+            success_msg: "✓ Backup permissions properly handled"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Configuration Backup and Restore Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Backup creation from running configs"
+          - "  ✓ Config restoration from backups"
+          - "  ✓ Corruption detection in backup files"
+          - "  ✓ Missing backup handling"
+          - "  ✓ Backup file permission management"
+          - ""
+          - "Platforms Tested: {{ test_devices | length }}"
+          - "  - Cisco NX-OS"
+          - "  - Cisco IOS-XE"
+          - "  - FortiOS"
+          - "  - Opengear"
+          - ""
+          - "Risk Coverage: CRITICAL - Config restore is essential recovery mechanism"

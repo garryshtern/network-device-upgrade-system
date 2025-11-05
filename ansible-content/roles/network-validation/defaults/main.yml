@@ -42,7 +42,7 @@ routing_summary:
   total_routes: 0
 
 # Metrics control - NOTE: Use export_metrics from group_vars (standardized naming)
-export_metrics: true
+# NOTE: Removed duplicate export_metrics definition - use group_vars/all.yml setting
 
 # Baseline comparison - fields to exclude from equality checks
 # These fields are time-sensitive and will change between pre/post measurements

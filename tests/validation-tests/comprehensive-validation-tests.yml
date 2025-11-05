@@ -37,10 +37,6 @@
       expected_features:
         - "HA cluster coordination"
         - "VDOM handling"
-      expected_features:
-        - "Ultra-low latency procedures"
-        - "Custom CLI handling"
-        - "Timing validation"
 
   tasks:
     - name: Comprehensive Validation Test Suite Information
@@ -60,7 +56,6 @@
           - Cisco IOS-XE: Install/Bundle mode handling
           - Opengear: Multi-architecture support
           - FortiOS: HA cluster coordination
-          - Metamako MOS: Ultra-low latency procedures
 
     # ==========================================
     # Network Validation Tests (Centralized)

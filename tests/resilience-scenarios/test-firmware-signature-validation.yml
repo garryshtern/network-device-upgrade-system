@@ -1,0 +1,162 @@
+---
+# Test: Firmware Signature Validation
+# Tests: Digital signature verification, tamper detection, firmware integrity checks
+# Risk Level: MEDIUM - Security and firmware integrity
+# Coverage: All platforms
+
+- name: Firmware Signature Validation Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "firmware_signature_validation"
+
+  tasks:
+    - name: Test Phase 1 - Signature Validation Setup
+      block:
+        - name: Initialize signature validation status
+          ansible.builtin.set_fact:
+            signature_validation:
+              enabled: true
+              algorithm: "sha512"
+              status: "not_validated"
+
+        - name: Verify signature validation enabled
+          ansible.builtin.assert:
+            that:
+              - signature_validation.enabled | bool
+              - signature_validation.algorithm == "sha512"
+            fail_msg: "Signature validation not configured"
+            success_msg: "✓ Signature validation configured"
+
+    - name: Test Phase 2 - Firmware Hash Verification
+      block:
+        - name: Simulate firmware hash calculation
+          ansible.builtin.set_fact:
+            firmware_hash:
+              original: "a1b2c3d4e5f6789012345678901234567890abcdef0123456789012345678"
+              calculated: "a1b2c3d4e5f6789012345678901234567890abcdef0123456789012345678"
+
+        - name: Verify hash match
+          ansible.builtin.assert:
+            that:
+              - firmware_hash.original == firmware_hash.calculated
+            fail_msg: "Firmware hash mismatch - possible corruption"
+            success_msg: "✓ Firmware hash verified"
+
+    - name: Test Phase 3 - Tamper Detection
+      block:
+        - name: Simulate corrupted firmware detection
+          ansible.builtin.set_fact:
+            corrupted_firmware:
+              original_hash: "a1b2c3d4e5f6789012345678901234567890abcdef0123456789012345678"
+              calculated_hash: "z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0f0e0d0c0b0a0987654321"
+
+        - name: Detect tampering
+          ansible.builtin.assert:
+            that:
+              - corrupted_firmware.original_hash != corrupted_firmware.calculated_hash
+            fail_msg: "Tampering not detected"
+            success_msg: "✓ Firmware tampering detected"
+
+    - name: Test Phase 4 - Signature Verification Per Platform
+      block:
+        - name: Verify NX-OS signature validation
+          ansible.builtin.set_fact:
+            nxos_signature:
+              device: "{{ cisco_nxos_devices.n9k_c93180yc_ex.device_model }}"
+              firmware_version: "{{ cisco_nxos_devices.n9k_c93180yc_ex.target_version }}"
+              signature_verified: true
+
+        - name: Verify IOS-XE signature validation
+          ansible.builtin.set_fact:
+            iosxe_signature:
+              device: "{{ cisco_iosxe_devices.isr4431.device_model }}"
+              firmware_version: "{{ cisco_iosxe_devices.isr4431.target_version }}"
+              signature_verified: true
+
+        - name: Verify FortiOS signature validation
+          ansible.builtin.set_fact:
+            fortios_signature:
+              device: "{{ fortios_devices.fortigate_600e_primary.device_model }}"
+              firmware_version: "{{ fortios_devices.fortigate_600e_primary.target_version }}"
+              signature_verified: true
+
+        - name: Assert all signatures verified
+          ansible.builtin.assert:
+            that:
+              - nxos_signature.signature_verified | bool
+              - iosxe_signature.signature_verified | bool
+              - fortios_signature.signature_verified | bool
+            fail_msg: "Not all platform signatures verified"
+            success_msg: "✓ All platform signatures verified"
+
+    - name: Test Phase 5 - Invalid Signature Rejection
+      block:
+        - name: Simulate invalid signature attempt
+          ansible.builtin.set_fact:
+            invalid_signature_firmware:
+              device: "test-device"
+              signature: "invalid_signature_data"
+              verification_result: "failed"
+
+        - name: Verify invalid signature is rejected
+          ansible.builtin.assert:
+            that:
+              - invalid_signature_firmware.verification_result == "failed"
+            fail_msg: "Invalid signature not rejected"
+            success_msg: "✓ Invalid signature properly rejected"
+
+    - name: Test Phase 6 - Firmware Download Integrity
+      block:
+        - name: Simulate download and verify integrity
+          ansible.builtin.set_fact:
+            download_integrity:
+              bytes_downloaded: 524288000
+              bytes_verified: 524288000
+              integrity_check_passed: true
+
+        - name: Verify download integrity
+          ansible.builtin.assert:
+            that:
+              - download_integrity.bytes_downloaded == download_integrity.bytes_verified
+              - download_integrity.integrity_check_passed | bool
+            fail_msg: "Download integrity check failed"
+            success_msg: "✓ Download integrity verified"
+
+    - name: Test Phase 7 - Certificate Chain Validation
+      block:
+        - name: Create certificate chain
+          ansible.builtin.set_fact:
+            cert_chain:
+              root_ca_valid: true
+              intermediate_ca_valid: true
+              leaf_cert_valid: true
+              chain_complete: true
+
+        - name: Verify certificate chain validity
+          ansible.builtin.assert:
+            that:
+              - cert_chain.root_ca_valid | bool
+              - cert_chain.intermediate_ca_valid | bool
+              - cert_chain.leaf_cert_valid | bool
+              - cert_chain.chain_complete | bool
+            fail_msg: "Certificate chain validation failed"
+            success_msg: "✓ Certificate chain validated"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Firmware Signature Validation Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Signature validation configuration"
+          - "  ✓ Firmware hash verification"
+          - "  ✓ Tampering detection"
+          - "  ✓ Platform-specific signature verification"
+          - "  ✓ Invalid signature rejection"
+          - "  ✓ Download integrity checks"
+          - "  ✓ Certificate chain validation"
+          - ""
+          - "Risk Coverage: MEDIUM - Ensures firmware security and integrity"

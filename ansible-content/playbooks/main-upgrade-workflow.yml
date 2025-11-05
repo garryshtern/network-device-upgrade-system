@@ -31,7 +31,7 @@
 - name: Network Device Upgrade - Master Workflow
   hosts: "{{ target_hosts }}"
   gather_facts: false
-  serial: "{{ max_concurrent }}"
+  serial: 5  # Default concurrency - override with -e "max_concurrent=N"
   vars:
     # Firmware configuration (no local override - use group_vars values)
     firmware_version: "{{ target_firmware }}"

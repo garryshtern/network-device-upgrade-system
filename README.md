@@ -6,8 +6,7 @@ A complete AWX-based network device upgrade management system designed for manag
 
 This system provides automated firmware upgrade capabilities for:
 - **Cisco NX-OS** (Nexus Switches) with ISSU support
-- **Cisco IOS-XE** (Enterprise Routers/Switches) with Install Mode  
-- **Metamako MOS** (Ultra-Low Latency Switches) with Application Management
+- **Cisco IOS-XE** (Enterprise Routers/Switches) with Install Mode
 - **Opengear** (Console Servers/Smart PDUs) with multi-architecture support
 - **FortiOS** (Fortinet Firewalls) with HA coordination
 
@@ -206,10 +205,9 @@ graph TD
     F --> H[Grafana<br/>Dashboards<br/>Existing]
     
     C -.-> I[Cisco NX-OS]
-    C -.-> J[Cisco IOS-XE]  
+    C -.-> J[Cisco IOS-XE]
     C -.-> K[FortiOS]
-    C -.-> L[Metamako MOS]
-    C -.-> M[Opengear]
+    C -.-> L[Opengear]
     
     style A fill:#e1f5fe
     style C fill:#f3e5f5

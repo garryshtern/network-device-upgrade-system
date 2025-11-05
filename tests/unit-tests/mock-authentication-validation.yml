@@ -40,12 +40,6 @@
         expected_auth_method: "ssh_key_and_api_token"
         should_pass: true
 
-      - name: "Mock Metamako SSH Key Authentication"
-        inventory_path: "mock-inventories/all-platforms.yml"
-        expected_api_token: null
-        expected_auth_method: "ssh_key"
-        should_pass: true
-
   tasks:
     - name: Test mock device authentication scenarios
       include_tasks: validate_mock_auth_scenario.yml
@@ -125,6 +119,8 @@
                         'opengear': {'ssh_key': '/tmp/mock-opengear-key', 'api_token': 'mock-api-token-opengear-67890'},
                     }
 
+                    # Removed: Metamako MOS is no longer supported (Phase 4 - Nov 2025)
+
                     results = []
                     for platform, auth in platforms.items():
                         try:
@@ -137,8 +133,6 @@
                                 response = device.process_command('get system status')
                             elif platform == 'opengear':
                                 response = device.process_command('config -g config.system.version')
-                            elif platform == :
-                                response = device.process_command('mdk-version')
                             else:
                                 response = device.process_command('show version')
 

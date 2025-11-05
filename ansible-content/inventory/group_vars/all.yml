@@ -37,8 +37,10 @@ ansible_ssh_private_key_file: >-
 
 # Upgrade workflow settings
 target_hosts: all  # Default hosts pattern for playbooks
-# NOTE: max_concurrent MUST be provided as extra_vars (-e max_concurrent=N)
-# The 'serial' keyword is processed before group_vars are loaded by Ansible
+# Concurrency control - Default value; can be overridden with -e "max_concurrent=N"
+# The 'serial' keyword is processed before playbook-level group_vars are loaded,
+# but inventory-level group_vars ARE loaded in time for serial to use the value
+max_concurrent: 5
 max_retry_attempts: 3
 connectivity_timeout: 300
 reboot_wait_time: 600
@@ -169,3 +171,67 @@ platform_role_map:
   ios: "cisco-iosxe-upgrade"
   fortios: "fortios-upgrade"
   opengear: "opengear-upgrade"
+
+# =============================================================================
+# MOVED FROM PLAYBOOK-LEVEL group_vars (ensuring variables load for all scenarios)
+# =============================================================================
+
+# ANSIBLE FACTS DEFAULTS (for cases where facts may not be gathered yet)
+# These provide safe defaults when ansible_net_* facts are not yet available
+ansible_net_hostname: "N/A"
+ansible_net_model: "N/A"
+ansible_net_serialnum: "N/A"
+ansible_net_version: "N/A"
+ansible_net_image: "N/A"
+ansible_net_gather_network_resources: []
+ansible_net_config: "# No config retrieved"
+
+# DEVICE CONNECTION DEFAULTS
+# Default connection method (already defined above, but including for completeness)
+ansible_connection: "ansible.netcommon.network_cli"
+
+# Connection timeout settings (redundant with above but keeping for explicit definition)
+default_command_timeout: 60
+default_connect_timeout: 30
+default_persistent_timeout: 300
+default_persistent_command_timeout: 300
+
+# SSH key file default path
+default_ssh_key_file: "/var/lib/awx/.ssh/network_devices"
+
+# Monitoring flags
+monitoring_enabled: true
+
+# METRICS AND MONITORING
+# Metrics export settings - STANDARDIZED VARIABLE NAME: export_metrics
+# Set to true to enable metrics export to InfluxDB, webhooks, and NetBox
+# Default: false (metrics disabled, non-intrusive)
+export_metrics: false
+log_metrics_locally: false
+debug_metrics: false
+update_netbox: false
+
+# InfluxDB connection settings (REQUIRED if export_metrics is true)
+# All three must be configured: url, token, and bucket name
+# Empty values will cause metrics export to be skipped silently if export_metrics is false
+# Empty values will cause clear error message if export_metrics is true (enforced by metrics-export.yml)
+influxdb_url: ""                           # Example: "http://localhost:8086"
+influxdb_token: ""                         # InfluxDB v2 API token (keep secret!)
+influxdb_bucket: "network_upgrades"        # Bucket name (will be created if missing)
+influxdb_org: "default"                    # Organization name in InfluxDB
+
+# Metrics webhook settings (optional, requires both url and token if used)
+metrics_webhook_url: ""                    # Example: "https://example.com/metrics"
+metrics_webhook_token: ""                  # Bearer token for webhook authentication
+
+# DEBUG AND DISPLAY SETTINGS
+# Control debug output
+show_debug: false
+
+# LOGGING DEFAULTS
+# Log retention period
+log_retention_days: 30
+
+# ROLLBACK STATE DEFAULTS
+# Default value for update_current_step flag
+update_current_step: false

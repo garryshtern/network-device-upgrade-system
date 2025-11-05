@@ -85,12 +85,11 @@ graph TD
 - **Performance-only**: Timing and performance validation only  
 - **Stress-test**: High-load scenario testing only
 
-**Platform Coverage**: All 5 supported vendor platforms:
+**Platform Coverage**: All 4 supported vendor platforms:
 - Cisco NX-OS upgrade procedures
-- Cisco IOS-XE upgrade procedures  
+- Cisco IOS-XE upgrade procedures
 - FortiOS upgrade procedures
 - Opengear console server upgrades
-- Metamako MOS switch upgrades
 
 ### 5. AI Code Review (`claude-code-review.yml`)
 

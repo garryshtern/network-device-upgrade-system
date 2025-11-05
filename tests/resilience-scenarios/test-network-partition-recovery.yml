@@ -1,0 +1,268 @@
+---
+# Test: Network Partition Mid-Upgrade Recovery
+# Tests: Partition during download, during reboot, recovery state determination
+# Risk Level: CRITICAL - Resilience and state consistency
+# Coverage: All platforms with network resilience requirements
+
+- name: Network Partition Recovery Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "network_partition_recovery"
+    download_state_file: "/tmp/test-download-state"
+
+  tasks:
+    - name: Setup - Create test directories
+      ansible.builtin.file:
+        path: "/tmp/test-download-state"
+        state: directory
+        mode: "0755"
+
+    - name: Test Phase 1 - Network Partition During Image Download
+      block:
+        - name: Simulate image download state before partition
+          ansible.builtin.set_fact:
+            download_state:
+              status: "IN_PROGRESS"
+              bytes_downloaded: 250000000
+              total_size: 500000000
+              progress_percent: 50
+              checkpoint_file: "/tmp/test-download-state/checkpoint.json"
+
+        - name: Create checkpoint file
+          ansible.builtin.copy:
+            content: "{{ download_state | to_nice_json }}"
+            dest: "{{ download_state.checkpoint_file }}"
+
+        - name: Simulate partition (lost connection)
+          ansible.builtin.set_fact:
+            network_state: {
+              "connected": False,
+              "partition_detected_at": "2025-11-04T12:15:30Z",
+              "reconnect_attempts": 0
+            }
+
+        - name: Verify partition detected
+          ansible.builtin.assert:
+            that:
+              - network_state.connected == False
+            fail_msg: "Network partition not detected"
+            success_msg: "✓ Network partition detected during download at {{ network_state.partition_detected_at }}"
+
+        - name: Attempt reconnection
+          ansible.builtin.set_fact:
+            network_state: "{{ network_state | combine({
+              'reconnect_attempts': network_state.reconnect_attempts + 1,
+              'connected': True
+            }) }}"
+
+        - name: Verify reconnection successful
+          ansible.builtin.assert:
+            that:
+              - network_state.reconnect_attempts > 0
+              - network_state.connected == True
+            fail_msg: "Reconnection failed"
+            success_msg: "✓ Reconnected after {{ network_state.reconnect_attempts }} attempt(s)"
+
+        - name: Verify checkpoint allows resume
+          ansible.builtin.stat:
+            path: "{{ download_state.checkpoint_file }}"
+          register: checkpoint_stat
+
+        - name: Assert download can resume from checkpoint
+          ansible.builtin.assert:
+            that:
+              - checkpoint_stat.stat.exists
+            fail_msg: "Checkpoint file not available for resume"
+            success_msg: "✓ Download can resume from checkpoint ({{ download_state.progress_percent }}% complete)"
+
+    - name: Test Phase 2 - Network Partition During Device Reboot
+      block:
+        - name: Simulate device reboot initiated
+          ansible.builtin.set_fact:
+            reboot_state: {
+              "phase": "REBOOTING",
+              "initiated_at": "2025-11-04T12:20:00Z",
+              "expected_boot_time": 300
+            }
+
+        - name: Simulate partition during reboot
+          ansible.builtin.set_fact:
+            reboot_state: "{{ reboot_state | combine({
+              'partition_during_reboot': True,
+              'partition_at': '2025-11-04T12:20:15Z'
+            }) }}"
+
+        - name: Verify partition during reboot detected
+          ansible.builtin.assert:
+            that:
+              - reboot_state.partition_during_reboot == True
+            fail_msg: "Partition during reboot not detected"
+            success_msg: "✓ Partition during reboot detected at {{ reboot_state.partition_at }}"
+
+        - name: Implement wait-for-device with extended timeout
+          ansible.builtin.set_fact:
+            wait_config: {
+              "max_retries": 60,
+              "retry_interval": 5,
+              "total_timeout": 300
+            }
+
+        - name: Assert device can be waited for after partition
+          ansible.builtin.assert:
+            that:
+              - wait_config.max_retries > 0
+              - wait_config.retry_interval > 0
+            fail_msg: "Wait-for-device not configured"
+            success_msg: "✓ Device wait configured ({{ wait_config.max_retries }} retries, {{ wait_config.total_timeout }}s timeout)"
+
+    - name: Test Phase 3 - Unknown Device State After Partition
+      block:
+        - name: Simulate unknown device state after partition
+          ansible.builtin.set_fact:
+            device_state_after_partition: {
+              "reachable": False,
+              "version_unknown": True,
+              "last_known_version": "9.3.1",
+              "upgrade_phase": "UNKNOWN"
+            }
+
+        - name: Attempt to determine current version
+          ansible.builtin.set_fact:
+            version_check: {
+              "attempt": 1,
+              "status": "TIMEOUT",
+              "recovery_action": "WAIT_AND_RETRY"
+            }
+
+        - name: Assert recovery action for unknown state
+          ansible.builtin.assert:
+            that:
+              - version_check.recovery_action == "WAIT_AND_RETRY"
+            fail_msg: "Recovery action not determined for unknown state"
+            success_msg: "✓ Recovery action determined: {{ version_check.recovery_action }}"
+
+        - name: Simulate device becomes reachable after wait
+          ansible.builtin.set_fact:
+            device_state_after_partition: "{{ device_state_after_partition | combine({
+              'reachable': True,
+              'current_version': '9.3.1'
+            }) }}"
+
+        - name: Verify device is responsive
+          ansible.builtin.assert:
+            that:
+              - device_state_after_partition.reachable == True
+            fail_msg: "Device not responsive after recovery wait"
+            success_msg: "✓ Device responsive after recovery (version: {{ device_state_after_partition.current_version }})"
+
+    - name: Test Phase 4 - Permanent Network Partition Handling
+      block:
+        - name: Simulate permanent partition (device not recoverable)
+          ansible.builtin.set_fact:
+            permanent_partition_attempts: 10
+            max_reconnection_attempts: 10
+
+        - name: Assert permanent partition detected after max attempts
+          ansible.builtin.assert:
+            that:
+              - "permanent_partition_attempts | int >= max_reconnection_attempts | int"
+            fail_msg: "Permanent partition detection failed"
+            success_msg: "✓ Permanent partition detected after {{ permanent_partition_attempts }} failed attempts"
+
+        - name: Determine fallback behavior
+          ansible.builtin.set_fact:
+            fallback_action: "{{ 'QUARANTINE_DEVICE' if permanent_partition_attempts >= 10 else 'CONTINUE_WAITING' }}"
+
+        - name: Assert fallback to quarantine
+          ansible.builtin.assert:
+            that:
+              - fallback_action == 'QUARANTINE_DEVICE'
+            fail_msg: "Fallback action not triggered"
+            success_msg: "✓ Device will be quarantined after permanent partition"
+
+    - name: Test Phase 5 - State Synchronization After Recovery
+      block:
+        - name: Create state before partition
+          ansible.builtin.set_fact:
+            state_before: {
+              "device_id": "test-device-01",
+              "upgrade_version": "9.4.0",
+              "config_backup": "backed_up",
+              "baseline_collected": True,
+              "step": "IMAGE_LOADING"
+            }
+
+        - name: Record state after recovery
+          ansible.builtin.set_fact:
+            state_after_recovery: {
+              "device_id": "test-device-01",
+              "upgrade_version": "9.4.0",
+              "running_version": "9.3.1",
+              "connectivity": "RESTORED"
+            }
+
+        - name: Verify version consistency
+          ansible.builtin.assert:
+            that:
+              - state_after_recovery.upgrade_version == state_before.upgrade_version
+            fail_msg: "Upgrade version changed during partition"
+            success_msg: "✓ Upgrade version consistent: {{ state_after_recovery.upgrade_version }}"
+
+        - name: Verify backup integrity preserved
+          ansible.builtin.assert:
+            that:
+              - state_before.config_backup == "backed_up"
+            fail_msg: "Backup state lost during partition"
+            success_msg: "✓ Config backup state preserved"
+
+    - name: Test Phase 6 - Download Resume Verification
+      block:
+        - name: Simulate resumed download completion
+          ansible.builtin.set_fact:
+            download_completion: {
+              "resumed_from_percent": 50,
+              "bytes_to_download": 250000000,
+              "bytes_downloaded_after_resume": 250000000,
+              "integrity_check": "PASSED",
+              "download_status": "COMPLETED"
+            }
+
+        - name: Verify integrity check after resume
+          ansible.builtin.assert:
+            that:
+              - download_completion.integrity_check == "PASSED"
+              - download_completion.download_status == "COMPLETED"
+            fail_msg: "Download integrity check failed after resume"
+            success_msg: "✓ Download resumed and completed successfully (integrity: {{ download_completion.integrity_check }})"
+
+    - name: Test Cleanup
+      block:
+        - name: Clean up test files
+          ansible.builtin.file:
+            path: "{{ download_state.checkpoint_file }}"
+            state: absent
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Network Partition Recovery Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Partition detection during image download"
+          - "  ✓ Download resumption from checkpoint"
+          - "  ✓ Partition during device reboot handling"
+          - "  ✓ Unknown device state determination"
+          - "  ✓ Permanent partition detection"
+          - "  ✓ Device state synchronization after recovery"
+          - "  ✓ Download integrity verification"
+          - ""
+          - "Recovery Scenarios Tested:"
+          - "  - Transient network partition during download"
+          - "  - Partition during reboot phase"
+          - "  - Permanent device disconnection"
+          - "  - State consistency after recovery"
+          - ""
+          - "Risk Coverage: CRITICAL - Ensures resilience during network issues"

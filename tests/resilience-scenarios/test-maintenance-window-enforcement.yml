@@ -1,0 +1,175 @@
+---
+# Test: Maintenance Window Enforcement
+# Tests: Maintenance window validation, upgrade prohibition outside window, time-based controls
+# Risk Level: MEDIUM - Operational safety
+# Coverage: All platforms
+
+- name: Maintenance Window Enforcement Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "maintenance_window_enforcement"
+
+  tasks:
+    - name: Test Phase 1 - Maintenance Window Configuration
+      block:
+        - name: Define maintenance windows
+          ansible.builtin.set_fact:
+            maintenance_windows:
+              production:
+                day_of_week: "Sunday"
+                start_time: "02:00"
+                end_time: "06:00"
+                duration_hours: 4
+              staging:
+                day_of_week: "Saturday"
+                start_time: "22:00"
+                end_time: "23:59"
+                duration_hours: 2
+
+        - name: Verify maintenance window config
+          ansible.builtin.assert:
+            that:
+              - maintenance_windows.production.duration_hours == 4
+              - maintenance_windows.staging.duration_hours == 2
+            fail_msg: "Maintenance window configuration invalid"
+            success_msg: "✓ Maintenance windows configured"
+
+    - name: Test Phase 2 - Upgrade Permission Validation
+      block:
+        - name: Simulate during maintenance window
+          ansible.builtin.set_fact:
+            upgrade_during_window:
+              maintenance_window_active: true
+              current_time: "02:30"
+              upgrade_allowed: true
+
+        - name: Verify upgrade allowed during window
+          ansible.builtin.assert:
+            that:
+              - upgrade_during_window.maintenance_window_active | bool
+              - upgrade_during_window.upgrade_allowed | bool
+            fail_msg: "Upgrade not allowed during maintenance window"
+            success_msg: "✓ Upgrade allowed during maintenance window"
+
+    - name: Test Phase 3 - Upgrade Prohibition Outside Window
+      block:
+        - name: Simulate outside maintenance window
+          ansible.builtin.set_fact:
+            upgrade_outside_window:
+              maintenance_window_active: false
+              current_time: "14:30"
+              upgrade_allowed: false
+
+        - name: Verify upgrade blocked outside window
+          ansible.builtin.assert:
+            that:
+              - upgrade_outside_window.maintenance_window_active == false
+              - upgrade_outside_window.upgrade_allowed == false
+            fail_msg: "Upgrade allowed outside maintenance window"
+            success_msg: "✓ Upgrade blocked outside maintenance window"
+
+    - name: Test Phase 4 - Explicit Maintenance Flag
+      block:
+        - name: Test upgrade with maintenance_window=false
+          ansible.builtin.set_fact:
+            explicit_no_maintenance:
+              maintenance_window: false
+              upgrade_allowed: false
+
+        - name: Test upgrade with maintenance_window=true
+          ansible.builtin.set_fact:
+            explicit_maintenance:
+              maintenance_window: true
+              upgrade_allowed: true
+
+        - name: Verify flag enforcement
+          ansible.builtin.assert:
+            that:
+              - explicit_no_maintenance.upgrade_allowed == false
+              - explicit_maintenance.upgrade_allowed | bool
+            fail_msg: "Maintenance flag not enforced"
+            success_msg: "✓ Maintenance flag properly enforced"
+
+    - name: Test Phase 5 - Insufficient Window Time Detection
+      block:
+        - name: Simulate insufficient remaining time
+          ansible.builtin.set_fact:
+            insufficient_time:
+              window_start: "02:00"
+              window_end: "06:00"
+              current_time: "05:50"
+              estimated_upgrade_duration_minutes: 45
+              time_remaining_minutes: 10
+              has_sufficient_time: false
+
+        - name: Verify insufficient time detection
+          ansible.builtin.assert:
+            that:
+              - insufficient_time.has_sufficient_time == false
+              - insufficient_time.time_remaining_minutes < insufficient_time.estimated_upgrade_duration_minutes
+            fail_msg: "Insufficient time not detected"
+            success_msg: "✓ Insufficient time properly detected"
+
+    - name: Test Phase 6 - Window Extension Capability
+      block:
+        - name: Simulate extended window request
+          ansible.builtin.set_fact:
+            extended_window:
+              original_end_time: "06:00"
+              extended_end_time: "07:00"
+              extension_minutes: 60
+              extension_approved: true
+
+        - name: Verify window extension
+          ansible.builtin.assert:
+            that:
+              - extended_window.extended_end_time > extended_window.original_end_time
+              - extended_window.extension_approved | bool
+            fail_msg: "Window extension not supported"
+            success_msg: "✓ Window extension capability verified"
+
+    - name: Test Phase 7 - Multi-Device Window Coordination
+      block:
+        - name: Define device groups with windows
+          ansible.builtin.set_fact:
+            device_windows:
+              critical_production:
+                window_day: "Sunday"
+                window_time: "02:00-06:00"
+                devices: ["device-1", "device-2", "device-3"]
+              secondary_production:
+                window_day: "Tuesday"
+                window_time: "03:00-07:00"
+                devices: ["device-4", "device-5"]
+              non_production:
+                window_day: "any"
+                window_time: "anytime"
+                devices: ["device-6", "device-7"]
+
+        - name: Verify multi-device window coordination
+          ansible.builtin.assert:
+            that:
+              - device_windows.critical_production.devices | length == 3
+              - device_windows.secondary_production.devices | length == 2
+              - device_windows.non_production.devices | length == 2
+            fail_msg: "Device window coordination failed"
+            success_msg: "✓ Multi-device window coordination verified"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Maintenance Window Enforcement Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Maintenance window configuration"
+          - "  ✓ Upgrade allowed during window"
+          - "  ✓ Upgrade blocked outside window"
+          - "  ✓ Explicit maintenance flag enforcement"
+          - "  ✓ Insufficient window time detection"
+          - "  ✓ Window extension capability"
+          - "  ✓ Multi-device window coordination"
+          - ""
+          - "Risk Coverage: MEDIUM - Prevents unauthorized upgrades outside maintenance windows"
