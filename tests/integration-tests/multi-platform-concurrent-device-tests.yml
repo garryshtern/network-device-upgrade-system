@@ -6,6 +6,8 @@
 - name: Multi-Platform Concurrent Device Upgrade Testing
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     test_scenarios: []
     test_results: {}

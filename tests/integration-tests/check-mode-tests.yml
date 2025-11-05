@@ -5,6 +5,8 @@
 - name: Check Mode Integration Tests
   hosts: all
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   pre_tasks:
     - name: Load mock storage data for check mode testing
       ansible.builtin.include_vars: "{{ playbook_dir }}/../fixtures/mock-storage-data.yml"

@@ -5,6 +5,8 @@
 - name: Secure Image Transfer Integration Testing
   hosts: all
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     # Mock variables for testing
     local_firmware_path: "/tmp/mock-firmware.bin"

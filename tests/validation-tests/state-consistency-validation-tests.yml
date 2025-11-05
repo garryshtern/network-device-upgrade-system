@@ -6,6 +6,8 @@
 - name: State Consistency Validation Tests
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     test_results: []
     test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"

@@ -1,6 +1,7 @@
 ---
 # Scenario logic testing task file
 # Tests workflow logic for different operational scenarios
+# Note: This is an included task file, shared-test-vars loaded by parent playbook
 
 - name: "Set scenario variables: {{ test_scenario.name }}"
   set_fact:

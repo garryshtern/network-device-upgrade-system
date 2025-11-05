@@ -7,6 +7,8 @@
 - name: Opengear Multi-Architecture Test Suite
   hosts: localhost
   gather_facts: no
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     test_inventory:
       legacy_devices:

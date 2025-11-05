@@ -4,6 +4,8 @@
 - name: Test Network Validation Playbook
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../../shared-test-vars.yml
   vars:
     # Test configuration
     test_environment: true

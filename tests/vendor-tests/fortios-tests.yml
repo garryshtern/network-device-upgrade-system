@@ -5,6 +5,8 @@
 - name: FortiOS Platform Tests
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     role_path: "{{ playbook_dir }}/../../ansible-content/roles/fortios-upgrade"
     test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"

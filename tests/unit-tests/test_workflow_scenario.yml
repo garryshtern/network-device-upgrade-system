@@ -1,6 +1,7 @@
 ---
 # Workflow scenario test task file
 # Tests individual workflow decision paths
+# Note: This is an included task file, shared-test-vars loaded by parent playbook
 
 - name: "Set variables for: {{ workflow_test.name }}"
   set_fact:

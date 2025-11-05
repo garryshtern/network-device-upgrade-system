@@ -1,6 +1,7 @@
 ---
 # Error scenario test task file
 # Tests individual error handling scenarios
+# Note: This is an included task file, shared-test-vars loaded by parent playbook
 
 - name: "Set variables for: {{ error_test.name }}"
   set_fact:

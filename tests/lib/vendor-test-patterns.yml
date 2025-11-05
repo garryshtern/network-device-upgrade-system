@@ -2,6 +2,7 @@
 # Vendor-Specific Test Pattern Library
 # Centralized test patterns for NX-OS, IOS-XE, FortiOS, and Opengear
 # Eliminates test pattern duplication across vendor-specific test files
+# Note: This is a YAML data file (not a playbook), used by vendor test playbooks
 
 # NX-OS Test Pattern
 nxos_test_pattern:

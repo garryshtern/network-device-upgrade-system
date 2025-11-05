@@ -5,6 +5,8 @@
 - name: Comprehensive Platform Validation Test Suite
   hosts: localhost
   gather_facts: no
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     validation_test_matrix:
       cisco_nxos:

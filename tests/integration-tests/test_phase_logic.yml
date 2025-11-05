@@ -1,6 +1,7 @@
 ---
 # Phase logic testing task file
 # Tests workflow logic for different upgrade phases
+# Note: This is an included task file, shared-test-vars loaded by parent playbook
 
 - name: "Set phase variables: {{ test_phase.phase }}"
   set_fact:

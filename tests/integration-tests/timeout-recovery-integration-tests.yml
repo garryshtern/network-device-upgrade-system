@@ -6,6 +6,8 @@
 - name: Timeout and Recovery Integration Testing
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     test_results: []
     wait_timeout: 60

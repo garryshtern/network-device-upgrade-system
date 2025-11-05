@@ -1,6 +1,7 @@
 ---
 # Template scenario test task file
 # Tests individual template rendering scenarios
+# Note: This is an included task file, shared-test-vars loaded by parent playbook
 
 - name: "Set variables for: {{ template_test.name }}"
   set_fact:
