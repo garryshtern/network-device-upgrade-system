@@ -116,26 +116,34 @@ Examples of duplication found:
 - Cisco IOS-XE 17.9.1: 12 instances across 9 files
 ```
 
-### Phase 2: Consolidate Inventory Files (1 hour)
+### Phase 2: Document Device Registry Reference (30 minutes)
 
-**Objective**: Centralize all inventory definitions
+**Objective**: Create centralized device registry documentation for future consolidation
 
-**Files to Update**:
-- `tests/mock-inventories/all-platforms.yml`
-- `tests/mock-inventories/production.yml`
-- Device definitions in vendor-specific files
+**Files Created**:
+- `tests/mock-inventories/device-registry.yml` - Reference document mapping device models to configurations
 
 **Approach**:
-1. Create centralized device definitions in registry
-2. Update inventory files to reference registry
-3. Verify all 79 test files still access correct data
-4. Run affected tests to verify behavior unchanged
+1. Extract all device definitions and firmware pairs from inventory files
+2. Create comprehensive device-registry.yml with:
+   - All device models and their standard configurations
+   - Firmware upgrade paths for each platform
+   - Connection templates for each platform type
+3. Document in comments that this serves as reference for future consolidation
+
+**Key Learning**:
+- Ansible inventory files have limited Jinja2 templating during parsing
+- Inventory variable references (e.g., `{{ device_models[key] }}`) cannot be resolved at parse time
+- True consolidation must happen at playbook level (Phases 3-4), not inventory level
+- Device registry is valuable reference documentation for maintenance and future refactoring
 
 **Definition of Done**:
-- [ ] All device definitions in centralized registry
-- [ ] Inventory files updated to use registry
-- [ ] All tests still pass (23/23)
-- [ ] Duplication count reduced by ~40%
+- [ ] device-registry.yml created with complete device catalog
+- [ ] Registry documents all device models from all platforms
+- [ ] Registry documents all firmware pairs used in tests
+- [ ] Registry includes connection templates for reference
+- [ ] Inventory files remain unchanged (functional requirements)
+- [ ] Tests still pass (23/23)
 
 ### Phase 3: Consolidate Test Variables (30 minutes)
 
