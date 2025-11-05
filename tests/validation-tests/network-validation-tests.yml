@@ -5,6 +5,8 @@
 - name: Network Validation Component Tests
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     validation_role_path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation"
     test_results: {}

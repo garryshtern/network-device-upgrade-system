@@ -2,6 +2,11 @@
 # Test Device Registry
 # Centralized definitions for all test devices and firmware versions
 # Used to eliminate duplication across test files
+#
+# NOTE: This file now integrates with tests/shared-test-vars.yml
+# which provides comprehensive device configurations across all platforms.
+# For new test definitions, reference shared-test-vars.yml variables
+# which include complete device specifications, firmware paths, and configs.
 
 # Standard firmware version pairs (used across multiple tests)
 firmware_pairs:

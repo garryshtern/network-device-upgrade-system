@@ -6,6 +6,8 @@
 - name: Cisco NX-OS Platform Tests
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     role_path: >-
       {{ playbook_dir }}/../../ansible-content/roles/cisco-nxos-upgrade

@@ -5,6 +5,8 @@
 - name: Network Upgrade Workflow Integration Tests
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     ansible_content_dir: "{{ playbook_dir }}/../../ansible-content"
     mock_inventory:

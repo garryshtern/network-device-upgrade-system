@@ -5,6 +5,8 @@
 - name: Multi-Platform Integration Test Suite
   hosts: localhost
   gather_facts: no
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     # Project root directory - works regardless of execution context
     project_root: "{{ playbook_dir + '/../..' }}"
