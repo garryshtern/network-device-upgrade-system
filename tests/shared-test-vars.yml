@@ -1,0 +1,296 @@
+---
+# Shared Test Variables for Network Device Upgrade System
+# Consolidates duplicated test data across 79+ test files
+# Purpose: Single source of truth for device models, firmware versions, and test configs
+
+# Common Cisco NX-OS Device Configurations
+cisco_nxos_devices:
+  n9k_c93180yc_ex:
+    device_model: "N9K-C93180YC-EX"
+    firmware_version: "9.3.10"
+    target_version: "10.1.2"
+    issu_capable: true
+    epld_upgrade_required: true
+    current_epld_version: "1.2.3"
+    target_epld_version: "1.3.1"
+    epld_images:
+      - "n9000-epld.10.1.2.img"
+    nxapi_enabled: true
+    description: "Nexus 9300 with ISSU and EPLD support"
+
+  n9k_c9336c_fx2:
+    device_model: "N9K-C9336C-FX2"
+    firmware_version: "9.2.4"
+    target_version: "10.1.2"
+    issu_capable: false
+    epld_upgrade_required: false
+    current_epld_version: "1.3.0"
+    target_epld_version: "1.3.1"
+    epld_images: []
+    nxapi_enabled: false
+    description: "Nexus 9336 without ISSU capability"
+
+  n9k_c93240yc_fx2:
+    device_model: "N9K-C93240YC-FX2"
+    firmware_version: "10.0.1"
+    target_version: "10.2.3.M"
+    issu_capable: true
+    epld_upgrade_required: true
+    current_epld_version: "2.1.0"
+    target_epld_version: "2.2.1"
+    epld_images:
+      - "n9000-epld.10.2.3.M.img"
+      - "n9000-module-epld.10.2.3.M.img"
+    nxapi_enabled: true
+    description: "Nexus 9300 with multi-module EPLD"
+
+# Common Cisco IOS-XE Device Configurations
+cisco_iosxe_devices:
+  isr4431:
+    device_model: "ISR4431"
+    firmware_version: "16.12.07"
+    target_version: "17.06.04"
+    install_mode: true
+    description: "ISR 4400 series router"
+
+  c9300_48u:
+    device_model: "C9300-48U"
+    firmware_version: "16.12.08"
+    target_version: "17.06.04"
+    install_mode: false
+    description: "Catalyst 9300 switch"
+
+# Common FortiOS Device Configurations
+fortios_devices:
+  fortigate_600e_primary:
+    device_model: "FortiGate-600E"
+    firmware_version: "6.4.8"
+    target_version: "7.2.4"
+    ha_enabled: true
+    ha_role: "primary"
+    multi_step_upgrade_required: true
+    upgrade_path:
+      - "6.4.14"
+      - "7.0.12"
+      - "7.2.4"
+    vdom_enabled: true
+    vdom_count: 3
+    description: "FortiGate 600E HA primary"
+
+  fortigate_600e_secondary:
+    device_model: "FortiGate-600E"
+    firmware_version: "6.4.8"
+    target_version: "7.2.4"
+    ha_enabled: true
+    ha_role: "secondary"
+    multi_step_upgrade_required: true
+    upgrade_path:
+      - "6.4.14"
+      - "7.0.12"
+      - "7.2.4"
+    vdom_enabled: true
+    vdom_count: 3
+    description: "FortiGate 600E HA secondary"
+
+  fortigate_200f:
+    device_model: "FortiGate-200F"
+    firmware_version: "7.0.1"
+    target_version: "7.2.4"
+    ha_enabled: false
+    ha_role: "standalone"
+    multi_step_upgrade_required: true
+    upgrade_path:
+      - "7.0.12"
+      - "7.2.4"
+    vdom_enabled: false
+    vdom_count: 1
+    description: "FortiGate 200F standalone"
+
+  fortigate_100f:
+    device_model: "FortiGate-100F"
+    firmware_version: "7.2.1"
+    target_version: "7.2.4"
+    ha_enabled: false
+    ha_role: "standalone"
+    multi_step_upgrade_required: false
+    upgrade_path:
+      - "7.2.4"
+    vdom_enabled: false
+    vdom_count: 1
+    description: "FortiGate 100F direct upgrade"
+
+# Common Opengear Device Configurations
+opengear_devices:
+  cm7100_legacy:
+    device_model: "CM7100"
+    firmware_version: "5.16.8"
+    target_version: "5.18.2"
+    device_type: "console_server"
+    device_architecture: "legacy_cli"
+    upgrade_method: "cli"
+    upgrade_command: "netflash"
+    firmware_extension: ".flash"
+    storage_paths:
+      - "/var/mnt/storage.nvlog"
+      - "/var/mnt/storage.usb"
+    web_interface_enabled: false
+    description: "CM7100 legacy architecture"
+
+  om7200_legacy:
+    device_model: "OM7200"
+    firmware_version: "5.14.2"
+    target_version: "5.18.2"
+    device_type: "console_server"
+    device_architecture: "legacy_cli"
+    upgrade_method: "cli"
+    upgrade_command: "netflash"
+    firmware_extension: ".flash"
+    storage_paths:
+      - "/var/mnt/storage.nvlog"
+      - "/var/mnt/storage.usb"
+    web_interface_enabled: false
+    description: "OM7200 legacy architecture"
+
+  cm8100_modern:
+    device_model: "CM8100"
+    firmware_version: "24.11.0"
+    target_version: "25.07.0"
+    device_type: "console_server"
+    device_architecture: "current_cli"
+    upgrade_method: "cli"
+    upgrade_command: "puginstall"
+    firmware_extension: ".raucb"
+    storage_paths:
+      - "/tmp"
+    web_interface_enabled: true
+    description: "CM8100 modern architecture"
+
+  om2200_modern:
+    device_model: "OM2200"
+    firmware_version: "24.09.1"
+    target_version: "25.07.0"
+    device_type: "console_server"
+    device_architecture: "current_cli"
+    upgrade_method: "cli"
+    upgrade_command: "puginstall"
+    firmware_extension: ".raucb"
+    storage_paths:
+      - "/tmp"
+    web_interface_enabled: true
+    description: "OM2200 modern architecture"
+
+# Common Firmware Upgrade Scenarios
+firmware_upgrade_scenarios:
+  nxos_9310_to_10121:
+    platform: "cisco_nxos"
+    from_version: "9.3.10"
+    to_version: "10.1.2"
+    device_model: "N9K-C93180YC-EX"
+    issu_capable: true
+    expected_duration: "30-45 minutes"
+    requires_epld: true
+
+  nxos_10010_to_1023m:
+    platform: "cisco_nxos"
+    from_version: "10.0.1"
+    to_version: "10.2.3.M"
+    device_model: "N9K-C93240YC-FX2"
+    issu_capable: true
+    expected_duration: "30-45 minutes"
+    requires_epld: true
+
+  iosxe_1612_to_1706:
+    platform: "cisco_iosxe"
+    from_version: "16.12.07"
+    to_version: "17.06.04"
+    device_model: "ISR4431"
+    install_mode: true
+    expected_duration: "20-30 minutes"
+    requires_epld: false
+
+  fortios_648_to_724:
+    platform: "fortios"
+    from_version: "6.4.8"
+    to_version: "7.2.4"
+    device_model: "FortiGate-600E"
+    multi_step: true
+    upgrade_path:
+      - "6.4.14"
+      - "7.0.12"
+      - "7.2.4"
+    expected_duration: "45-60 minutes"
+    requires_ha_failover: true
+
+  fortios_701_to_724:
+    platform: "fortios"
+    from_version: "7.0.1"
+    to_version: "7.2.4"
+    device_model: "FortiGate-200F"
+    multi_step: true
+    upgrade_path:
+      - "7.0.12"
+      - "7.2.4"
+    expected_duration: "30-45 minutes"
+    requires_ha_failover: false
+
+  opengear_516_to_518:
+    platform: "opengear"
+    from_version: "5.16.8"
+    to_version: "5.18.2"
+    device_model: "CM7100"
+    architecture: "legacy_cli"
+    upgrade_command: "netflash"
+    expected_duration: "15-20 minutes"
+    requires_manual_intervention: true
+
+  opengear_24110_to_25070:
+    platform: "opengear"
+    from_version: "24.11.0"
+    to_version: "25.07.0"
+    device_model: "CM8100"
+    architecture: "current_cli"
+    upgrade_command: "puginstall"
+    expected_duration: "15-20 minutes"
+    requires_manual_intervention: false
+
+# Validation Baseline Patterns
+validation_baselines:
+  arp_table_baseline:
+    description: "ARP table validation baseline"
+    exclude_fields:
+      - "time_stamp"
+      - "age"
+    check_fields:
+      - "mac"
+      - "ip"
+      - "interface"
+
+  bgp_state_baseline:
+    description: "BGP routing state baseline"
+    exclude_fields:
+      - "uptime"
+      - "last_update"
+    check_fields:
+      - "neighbor"
+      - "state"
+      - "prefixes"
+
+  interface_status_baseline:
+    description: "Interface operational status baseline"
+    exclude_fields:
+      - "last_change_time"
+      - "rx_errors"
+      - "tx_errors"
+    check_fields:
+      - "interface"
+      - "status"
+      - "mtu"
+
+# Test Environment Settings
+test_environment:
+  base_firmware_path: "/opt/firmware"
+  base_backup_path: "/opt/backups"
+  base_baseline_path: "/opt/baselines"
+  mock_devices_ip_base: "127.0.0"
+  influxdb_bucket: "network_upgrades_test"
+  influxdb_token: "mock_token"
