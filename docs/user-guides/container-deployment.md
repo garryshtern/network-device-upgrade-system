@@ -1,5 +1,7 @@
 # Container Deployment Guide
 
+**Last Updated**: November 4, 2025
+
 This guide provides instructions for deploying the Network Device Upgrade System container with Docker or Podman.
 
 ## Quick Start

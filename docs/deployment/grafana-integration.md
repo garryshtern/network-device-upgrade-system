@@ -1,5 +1,7 @@
 # Grafana Integration Guide
 
+**Last Updated**: November 4, 2025
+
 Complete guide for deploying and configuring Grafana dashboards for the Network Device Upgrade Management System.
 
 ## Overview
@@ -252,6 +254,6 @@ Customize alert thresholds in dashboard JSON:
 
 ## Related Documentation
 
-- [Installation Guide](../user-guides/installation-guide.md)
-- [Testing Framework Guide](../testing/testing-framework-guide.md)
-- [Troubleshooting](../user-guides/troubleshooting.md)
+- [Container Deployment Guide](../user-guides/container-deployment.md) - Deploy with Docker/Podman
+- [Pre-Commit Setup](../testing/pre-commit-setup.md) - Quality assurance procedures
+- [CLAUDE.md](../../CLAUDE.md) - Comprehensive project guide with configuration and troubleshooting

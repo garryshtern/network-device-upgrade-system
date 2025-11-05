@@ -1,5 +1,7 @@
 # Storage Cleanup Guide
 
+**Last Updated**: November 4, 2025
+
 Automated cleanup workflows for managing GitHub Container Registry images and workflow artifacts.
 
 ## Container Package Cleanup

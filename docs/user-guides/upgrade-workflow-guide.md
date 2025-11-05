@@ -1,5 +1,7 @@
 # Network Device Upgrade Workflow Guide
 
+**Last Updated**: November 4, 2025
+
 This document provides comprehensive workflow diagrams and detailed explanations of the upgrade process architecture.
 
 ## Phase-Separated Upgrade Overview

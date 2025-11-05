@@ -1,5 +1,7 @@
 # Pre-commit Hooks Setup Guide
 
+**Last Updated**: November 4, 2025
+
 This project uses [pre-commit](https://pre-commit.com/) to enforce code quality standards automatically before commits.
 
 ---

@@ -44,9 +44,9 @@ System architecture and CI/CD pipeline design:
 
 Internal implementation notes and developer resources:
 
-- **[Deployment Guide](internal/deployment-guide.md)** - Deployment directory structure reference
-- **[Network Validation Data Types](internal/network-validation-data-types.md)** - Comprehensive validation data types and normalization rules
-- **[Baseline Comparison Examples](internal/baseline-comparison-examples.md)** - Example output from baseline comparison for all data types
+- **[Documentation Index](internal/INDEX.md)** - Index of active developer documentation and reference guides
+- **[Test Data Consolidation Reference](internal/test-data-consolidation-reference.md)** - Reference guide for shared test data patterns and consolidation
+- **[Mock Device Pattern Analysis](internal/MOCK_DEVICE_PATTERN_ANALYSIS.md)** - Mock device testing patterns and scenario implementation
 
 ### [GitHub Templates](github-templates/) - Repository Templates
 

@@ -1,5 +1,7 @@
 # GitHub Actions Workflow Architecture
 
+**Last Updated**: November 4, 2025
+
 ## Overview
 
 The network-device-upgrade-system uses a comprehensive GitHub Actions workflow architecture designed for high-performance CI/CD, comprehensive testing, and production deployment. This document outlines the complete workflow structure and recent optimizations.
