@@ -90,9 +90,10 @@
     - name: Mock workflow execution test (dry run)
       ansible.builtin.shell: |
         ansible-playbook --check --diff -i /dev/null {{ ansible_content_dir }}/playbooks/main-upgrade-workflow.yml \
-        --extra-vars="target_firmware=test-version target_hosts=localhost maintenance_window=true" || true
+        --extra-vars="target_firmware=test-version target_hosts=localhost maintenance_window=true"
       register: workflow_dry_run
       changed_when: false
+      failed_when: workflow_dry_run.rc != 0
 
     - name: Test AWX job template compatibility
       ansible.builtin.find:
@@ -174,19 +175,25 @@
       register: rollback_workflow_test
       failed_when: rollback_workflow_test.rc != 0
 
-    - name: Test batch operations workflow
+    - name: Test batch operations workflow (if file exists)
+      ansible.builtin.stat:
+        path: "{{ ansible_content_dir }}/playbooks/batch-operations.yml"
+      register: batch_operations_file
+
+    - name: Validate batch operations playbook syntax
       ansible.builtin.shell: |
-        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/batch-operations.yml -i /dev/null || echo "File may not exist yet"
+        ansible-playbook --syntax-check {{ ansible_content_dir }}/playbooks/batch-operations.yml -i /dev/null
       register: batch_workflow_test
       changed_when: false
-      failed_when: false
+      when: batch_operations_file.stat.exists
+      failed_when: batch_operations_file.stat.exists and batch_workflow_test.rc != 0
 
     - name: Test metrics and logging integration
       ansible.builtin.shell: |
-        grep -r "influxdb\|telegraf\|metrics" {{ ansible_content_dir }}/roles/common/tasks/ || echo "Metrics integration not found"
+        grep -r "influxdb\|telegraf\|metrics" {{ ansible_content_dir }}/roles/common/tasks/
       register: metrics_integration
       changed_when: false
-      failed_when: false
+      failed_when: metrics_integration.rc not in [0, 1]  # 0 = found, 1 = not found (both acceptable)
 
     - name: Generate workflow integration test report
       ansible.builtin.debug:

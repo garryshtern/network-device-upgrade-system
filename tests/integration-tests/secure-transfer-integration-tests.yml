@@ -45,9 +45,9 @@
           when: ansible_network_os == 'ios' or 'iosxe' in group_names
 
       rescue:
-        - name: Handle IOS-XE test errors gracefully
-          ansible.builtin.debug:
-            msg: "⚠️  IOS-XE test completed with expected check mode limitations"
+        - name: Fail on IOS-XE test errors
+          ansible.builtin.fail:
+            msg: "IOS-XE secure transfer test failed - check error details above"
 
     - name: Test Cisco NX-OS secure image loading
       block:
@@ -62,9 +62,9 @@
           when: ansible_network_os == 'nxos' or 'nxos' in group_names
 
       rescue:
-        - name: Handle NX-OS test errors gracefully
-          ansible.builtin.debug:
-            msg: "⚠️  NX-OS test completed with expected check mode limitations"
+        - name: Fail on NX-OS test errors
+          ansible.builtin.fail:
+            msg: "NX-OS secure transfer test failed - check error details above"
 
     - name: Test FortiOS secure image loading
       block:
@@ -82,9 +82,9 @@
           when: "'fortios' in group_names"
 
       rescue:
-        - name: Handle FortiOS test errors gracefully
-          ansible.builtin.debug:
-            msg: "⚠️  FortiOS test completed with expected check mode limitations"
+        - name: Fail on FortiOS test errors
+          ansible.builtin.fail:
+            msg: "FortiOS secure transfer test failed - check error details above"
 
     - name: Test Opengear secure image loading
       block:
@@ -102,9 +102,9 @@
           when: "'opengear' in group_names"
 
       rescue:
-        - name: Handle Opengear test errors gracefully
-          ansible.builtin.debug:
-            msg: "⚠️  Opengear test completed with expected check mode limitations"
+        - name: Fail on Opengear test errors
+          ansible.builtin.fail:
+            msg: "Opengear secure transfer test failed - check error details above"
 
     - name: Test SSH key authentication configuration
       block:
@@ -123,9 +123,9 @@
           when: ansible_connection != 'local'
 
       rescue:
-        - name: Handle authentication test errors
-          ansible.builtin.debug:
-            msg: "⚠️  Authentication test completed with limitations"
+        - name: Fail on authentication test errors
+          ansible.builtin.fail:
+            msg: "Authentication test failed - check error details above"
 
     - name: Validate secure transfer protocol usage
       block:
@@ -145,9 +145,9 @@
               {{ '✅ Secure transfer protocols configured' if secure_protocols_used else '⚠️  Verify secure protocol configuration' }}
 
       rescue:
-        - name: Handle protocol validation errors
-          ansible.builtin.debug:
-            msg: "⚠️  Protocol validation completed with limitations"
+        - name: Fail on protocol validation errors
+          ansible.builtin.fail:
+            msg: "Protocol validation test failed - check error details above"
 
     - name: Clean up mock files
       ansible.builtin.file:

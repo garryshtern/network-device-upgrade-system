@@ -169,7 +169,7 @@
                 timeout: 5
                 validate_certs: false
               register: mock_api_test
-              failed_when: false
+              failed_when: mock_api_test.rc is defined and mock_api_test.rc not in [0, 2]  # 0=success, 2=HTTP error (expected in mock)
 
             - name: Test Architecture Determination Logic
               set_fact:
@@ -288,7 +288,7 @@
             paths: "../integration/grafana/dashboards"
             patterns: "*.json"
           register: grafana_dashboards
-          failed_when: false
+          ignore_errors: true  # Directory may not exist in all deployments
 
         - name: Validate Dashboard Availability
           debug:
