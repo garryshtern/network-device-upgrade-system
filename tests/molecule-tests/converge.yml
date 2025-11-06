@@ -7,6 +7,7 @@
   gather_facts: false
   vars:
     # Test configuration
+    platform_type: "cisco_nxos"
     firmware_version: "9.3.10"
     target_version: "10.1.2"
     upgrade_phase: "loading"

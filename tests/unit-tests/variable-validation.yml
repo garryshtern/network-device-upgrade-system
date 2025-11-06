@@ -10,6 +10,7 @@
     test_scenarios:
       - name: "Valid NX-OS Variables"
         vars:
+          platform_type: "cisco_nxos"
           firmware_version: "9.3.10"
           target_version: "10.1.2"
           upgrade_phase: "loading"
@@ -18,6 +19,7 @@
 
       - name: "Valid IOS-XE Variables"
         vars:
+          platform_type: "cisco_iosxe"
           firmware_version: "16.12.07"
           target_version: "17.06.04"
           upgrade_phase: "installation"
@@ -26,6 +28,7 @@
 
       - name: "Invalid Platform Type"
         vars:
+          platform_type: "invalid_platform"
           firmware_version: "1.0.0"
           target_version: "2.0.0"
           upgrade_phase: "loading"
@@ -33,11 +36,13 @@
 
       - name: "Missing Required Variables"
         vars:
+          platform_type: "cisco_nxos"
           # Missing firmware_version and target_version
         should_pass: false
 
       - name: "Invalid Upgrade Phase"
         vars:
+          platform_type: "fortios"
           firmware_version: "7.0.8"
           target_version: "7.2.4"
           upgrade_phase: "invalid_phase"

@@ -38,4 +38,5 @@ runs:
       shell: bash
       run: |
         ansible-playbook --syntax-check \
+          --extra-vars "target_hosts=localhost target_firmware=test.bin upgrade_phase=validation max_concurrent=1" \
           ansible-content/playbooks/main-upgrade-workflow.yml

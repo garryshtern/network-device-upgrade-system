@@ -40,8 +40,7 @@ runs:
                 'cisco_nxos': 'show version',
                 'cisco_iosxe': 'show version',
                 'fortios': 'get system status',
-                'opengear': 'config -g config.system.version',
-                : 'mdk-version'
+                'opengear': 'config -g config.system.version'
             }
 
             for platform in platform_commands.keys():
@@ -68,9 +67,6 @@ runs:
                 elif platform == 'opengear':
                     resp = device.process_command('config -g config.system.model')
                     assert resp['status'] == 'success', f'{platform} get model failed'
-                elif platform == :
-                    resp = device.process_command('application status')
-                    assert resp['status'] == 'success', f'{platform} application status failed'
 
                 print(f"    ✅ {platform} basic operations: PASSED")
 
@@ -188,8 +184,7 @@ runs:
                 'cisco_nxos': 'show version',
                 'cisco_iosxe': 'show version',
                 'fortios': 'get system status',
-                'opengear': 'config -g config.system.version',
-                : 'mdk-version'
+                'opengear': 'config -g config.system.version'
             }
 
             devices = []
@@ -232,8 +227,7 @@ runs:
                 'cisco_nxos': '10.3.1',
                 'cisco_iosxe': '17.12.01',
                 'fortios': '7.4.2',
-                'opengear': '4.2.1',
-                : '2.4.3'
+                'opengear': '4.2.1'
             }
 
             for platform in platforms:
@@ -369,7 +363,7 @@ runs:
       run: |
         echo "📊 Mock Device Framework Test Summary"
         echo "======================================"
-        echo "✅ Platform Support: 5 platforms (Cisco NX-OS, IOS-XE, FortiOS, Opengear, Metamako MOS)"
+        echo "✅ Platform Support: 4 platforms (Cisco NX-OS, IOS-XE, FortiOS, Opengear)"
         echo "✅ Device Operations: Command execution, state management, upgrade simulation"
         echo "✅ Error Handling: Error scenarios, recovery mechanisms, fault tolerance"
         echo "✅ Concurrency: Multiple device operations, resource management"
