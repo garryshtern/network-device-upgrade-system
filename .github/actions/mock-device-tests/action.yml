@@ -19,7 +19,7 @@ runs:
     - name: Install additional test dependencies
       shell: bash
       run: |
-        pip install paramiko psutil
+        uv pip install paramiko psutil
 
     - name: Test mock device engine comprehensive functionality
       shell: bash

@@ -22,28 +22,31 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Cache pip dependencies
+    - name: Cache uv dependencies
       uses: actions/cache@v4
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ inputs.cache-key-suffix }}-${{ inputs.install-molecule }}-${{ hashFiles('**/requirements*.txt', 'ansible-content/collections/requirements.yml') }}
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ inputs.cache-key-suffix }}-${{ inputs.install-molecule }}-${{ hashFiles('**/requirements*.txt', 'ansible-content/collections/requirements.yml') }}
         restore-keys: |
-          ${{ runner.os }}-pip-${{ inputs.cache-key-suffix }}-${{ inputs.install-molecule }}-
-          ${{ runner.os }}-pip-${{ inputs.cache-key-suffix }}-
-          ${{ runner.os }}-pip-
+          ${{ runner.os }}-uv-${{ inputs.cache-key-suffix }}-${{ inputs.install-molecule }}-
+          ${{ runner.os }}-uv-${{ inputs.cache-key-suffix }}-
+          ${{ runner.os }}-uv-
+
+    - name: Install uv package manager
+      shell: bash
+      run: |
+        python -m pip install --upgrade uv
 
     - name: Install Ansible and basic dependencies
       shell: bash
       run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade ansible
-        pip install yamllint ansible-lint
+        uv pip install --upgrade ansible yamllint ansible-lint
 
     - name: Install molecule (if requested)
       if: inputs.install-molecule == 'true'
       shell: bash
       run: |
-        pip install molecule molecule-plugins[docker] docker
+        uv pip install molecule molecule-plugins[docker] docker
 
     - name: Cache Ansible collections
       uses: actions/cache@v4

@@ -216,7 +216,7 @@ jobs:
 
       - name: Install additional test dependencies
         run: |
-          pip install psutil
+          uv pip install psutil
 
       - name: Create reports directory
         run: mkdir -p tests/reports
@@ -281,7 +281,7 @@ jobs:
 
       - name: Install additional test dependencies
         run: |
-          pip install psutil
+          uv pip install psutil
 
       - name: Create results directory
         run: mkdir -p tests/results

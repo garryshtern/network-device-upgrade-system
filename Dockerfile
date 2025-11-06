@@ -50,12 +50,14 @@ COPY ansible-content/collections/requirements.yml ./ansible-content/collections/
 # Install Ansible and Python dependencies as non-root user
 USER ansible
 
-# Set PATH to include user pip binaries
+# Install uv for fast Python package management
+RUN pip install uv
+
+# Set PATH to include user binaries
 ENV PATH="/home/ansible/.local/bin:${PATH}"
 
-# Upgrade pip and install Ansible 11.0.0 (includes ansible-core 2.18.10)
-RUN pip install --user --no-cache-dir --upgrade pip \
-    && pip install --user --no-cache-dir \
+# Install Ansible 11.0.0 (includes ansible-core 2.18.10) and dependencies using uv
+RUN uv pip install --user --no-cache-dir \
         ansible==11.0.0 \
         ansible-pylibssh \
         paramiko \
