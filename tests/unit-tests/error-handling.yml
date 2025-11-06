@@ -10,12 +10,14 @@
     error_scenarios:
       - name: "Missing Required Variables"
         test_vars:
+          platform_type: "cisco_nxos"
           # Missing firmware_version intentionally
         should_fail: true
         error_type: "missing_variables"
 
       - name: "Invalid Platform Type"
         test_vars:
+          platform_type: "invalid_platform"
           firmware_version: "1.0.0"
           target_version: "2.0.0"
         should_fail: true
@@ -23,6 +25,7 @@
 
       - name: "Version Downgrade Attempt"
         test_vars:
+          platform_type: "cisco_iosxe"
           firmware_version: "10.1.2"
           target_version: "9.3.10"  # Downgrade
         should_fail: true
@@ -30,6 +33,7 @@
 
       - name: "Same Version Upgrade"
         test_vars:
+          platform_type: "fortios"
           firmware_version: "17.06.04"
           target_version: "17.06.04"  # Same version
         should_fail: true
@@ -37,6 +41,7 @@
 
       - name: "Valid Configuration"
         test_vars:
+          platform_type: "opengear"
           firmware_version: "7.0.8"
           target_version: "7.2.4"
         should_fail: false

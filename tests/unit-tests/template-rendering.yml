@@ -10,6 +10,7 @@
     test_templates:
       - name: "NX-OS Upgrade Command Template"
         template_vars:
+          platform_type: "cisco_nxos"
           firmware_version: "9.3.10"
           target_version: "10.1.2"
           device_model: "N9K-C93180YC-EX"
@@ -20,6 +21,7 @@
 
       - name: "IOS-XE Install Mode Template"
         template_vars:
+          platform_type: "cisco_iosxe"
           firmware_version: "16.12.07"
           target_version: "17.06.04"
           device_model: "ISR4431"
@@ -30,6 +32,7 @@
 
       - name: "FortiOS HA Template"
         template_vars:
+          platform_type: "fortios"
           firmware_version: "7.0.8"
           target_version: "7.2.4"
           ha_enabled: true
