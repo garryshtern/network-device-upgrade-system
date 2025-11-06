@@ -7,15 +7,14 @@ concurrency:
   cancel-in-progress: true
 
 "on":
-  # TEMPORARILY DISABLED - Manual trigger only during refactoring
-  # pull_request:
-  #   types: [opened, synchronize]
-  #   # Optional: Only run on specific file changes
-  #   # paths:
-  #   #   - "src/**/*.ts"
-  #   #   - "src/**/*.tsx"
-  #   #   - "src/**/*.js"
-  #   #   - "src/**/*.jsx"
+  pull_request:
+    types: [opened, synchronize]
+    # Optional: Only run on specific file changes
+    # paths:
+    #   - "src/**/*.ts"
+    #   - "src/**/*.tsx"
+    #   - "src/**/*.js"
+    #   - "src/**/*.jsx"
   workflow_dispatch:
 
 jobs:

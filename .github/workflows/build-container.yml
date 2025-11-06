@@ -24,9 +24,8 @@ on:
       - '**.md'
       - 'docs/**'
 
-  # TEMPORARILY DISABLED - Manual trigger only during refactoring
-  # release:
-  #   types: [published]
+  release:
+    types: [published]
 
   workflow_dispatch:
     inputs:
