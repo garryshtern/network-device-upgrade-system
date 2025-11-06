@@ -1,6 +1,6 @@
 # Network Device Upgrade System - Production Container
 # Optimized for RHEL8/9 podman compatibility with non-root execution
-FROM python:3.13-alpine
+FROM python:3.14-alpine
 
 # Metadata labels for GitHub Container Registry
 LABEL org.opencontainers.image.title="Network Device Upgrade System"
