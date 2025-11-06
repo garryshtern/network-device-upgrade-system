@@ -51,7 +51,7 @@ COPY ansible-content/collections/requirements.yml ./ansible-content/collections/
 USER ansible
 
 # Install uv for fast Python package management
-RUN pip install uv
+RUN python -m pip install uv
 
 # Set PATH to include user binaries
 ENV PATH="/home/ansible/.local/bin:${PATH}"

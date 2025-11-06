@@ -40,13 +40,13 @@ runs:
     - name: Install Ansible and basic dependencies
       shell: bash
       run: |
-        uv pip install --upgrade ansible yamllint ansible-lint
+        uv pip install --system --upgrade ansible yamllint ansible-lint
 
     - name: Install molecule (if requested)
       if: inputs.install-molecule == 'true'
       shell: bash
       run: |
-        uv pip install molecule molecule-plugins[docker] docker
+        uv pip install --system molecule molecule-plugins[docker] docker
 
     - name: Cache Ansible collections
       uses: actions/cache@v4
