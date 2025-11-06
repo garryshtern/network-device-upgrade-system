@@ -11,7 +11,7 @@ driver:
 
 platforms:
   - name: fortios-primary
-    image: python:3.13-slim
+    image: python:3.14-slim
     pre_build_image: true
     volumes:
       - ${PWD}:/opt/network-upgrade:rw
@@ -19,7 +19,7 @@ platforms:
     command: sleep infinity
 
   - name: fortios-secondary
-    image: python:3.13-slim
+    image: python:3.14-slim
     pre_build_image: true
     volumes:
       - ${PWD}:/opt/network-upgrade:rw

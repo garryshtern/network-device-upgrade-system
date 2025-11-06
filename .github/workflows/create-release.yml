@@ -50,7 +50,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13.6'
+          python-version: '3.14.0'
 
       - name: Install dependencies
         run: |
@@ -149,13 +149,13 @@ jobs:
           - ✅ Alpine-based (minimal ~200MB)
           - ✅ Non-root execution (UID 1000)
           - ✅ RHEL8/9 podman compatible
-          - ✅ Latest Ansible 12.0.0 & Python 3.13.6
+          - ✅ Latest Ansible 12.0.0 & Python 3.14.0
           - ✅ Multi-architecture (amd64/arm64)
           
           ### 📋 System Requirements
           
           - **Ansible**: 12.0.0+ (ansible-core 2.19.2+)
-          - **Python**: 3.13.6+
+          - **Python**: 3.14.0+
           - **Platform Support**: Cisco NX-OS, IOS-XE, FortiOS, Opengear, Metamako MOS
           
           ### 📦 Installation Options

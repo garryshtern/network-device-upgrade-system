@@ -12,7 +12,7 @@ driver:
 
 platforms:
   - name: common-role-test-instance
-    image: python:3.13-slim
+    image: python:3.14-slim
     pre_build_image: true
     volumes:
       - ${PWD}:/opt/network-upgrade:rw

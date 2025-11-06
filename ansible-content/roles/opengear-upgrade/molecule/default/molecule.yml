@@ -12,7 +12,7 @@ driver:
 
 platforms:
   - name: opengear-x86
-    image: python:3.13-slim
+    image: python:3.14-slim
     pre_build_image: true
     volumes:
       - ${PWD}:/opt/network-upgrade:rw
@@ -20,7 +20,7 @@ platforms:
     command: sleep infinity
 
   - name: opengear-arm64
-    image: python:3.13-slim
+    image: python:3.14-slim
     pre_build_image: true
     volumes:
       - ${PWD}:/opt/network-upgrade:rw

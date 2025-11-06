@@ -38,7 +38,7 @@
 - **Result:** Single production build
 
 ### 4. Molecule Tests
-- **Container Builds:** ❌ Uses pre-built `python:3.13-slim` image
+- **Container Builds:** ❌ Uses pre-built `python:3.14-slim` image
 - **No Custom Builds:** Uses `pre_build_image: true`
 - **Result:** Zero additional container builds
 

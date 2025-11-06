@@ -284,7 +284,7 @@ flowchart TD
 - **Network**: Reliable connectivity to all managed devices
 
 ### Software Requirements
-- **Python**: 3.13 with pip
+- **Python**: 3.14.0 with pip - *Latest stable version (released Oct 7, 2025)*
 - **Ansible**: 11.0.0 (ansible-core 2.18.10) - *Latest stable version*
 - **Git**: Latest stable version
 

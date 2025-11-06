@@ -46,7 +46,7 @@ graph TD
 **Architecture**: Dual-trigger design for flexibility  
 
 **Key Features**:
-- **Base Image**: `python:3.13-alpine` (latest stable)
+- **Base Image**: `python:3.14-alpine` (latest stable)
 - **Build Dependencies**: gcc, musl-dev, libffi-dev, openssl-dev, cargo, rust
 - **Target Platform**: linux/amd64 (optimized for reliability)
 - **Registry**: GitHub Container Registry (ghcr.io)
@@ -54,7 +54,7 @@ graph TD
 - **Configurable**: Platform selection and push options
 
 **Recent Fixes**:
-- Fixed non-existent Python version (`python:3.13.6-alpine3.20` → `python:3.13-alpine`)
+- Fixed non-existent Python version (`python:3.14.0-alpine3.20` → `python:3.14-alpine`)
 - Added cryptography build dependencies for Alpine Linux
 - Simplified from multi-arch to single-arch for stability
 - Separated from main workflow for better maintainability
@@ -141,7 +141,7 @@ graph TD
 
 ### Core Technologies
 - **Ansible**: 12.0.0 with ansible-core 2.19.2 (October 2025 latest)
-- **Python**: 3.13.6 (latest stable)
+- **Python**: 3.14.0 (latest stable)
 - **GitHub Actions**: Latest action versions (v4/v5)
 - **Docker**: Alpine-based containers for production deployment
 
@@ -195,7 +195,7 @@ PR Creation → claude-code-review.yml
 - **Documentation**: Comprehensive release notes and assets
 
 ### 4. Technology Updates
-- **Latest Versions**: Updated to Ansible 12.0.0, Python 3.13.6
+- **Latest Versions**: Updated to Ansible 12.0.0, Python 3.14.0
 - **Collection Updates**: All collections updated to October 2025 versions
 - **Compatibility**: Enhanced support for latest network device firmware
 
