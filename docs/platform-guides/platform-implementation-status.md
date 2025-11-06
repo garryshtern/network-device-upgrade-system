@@ -166,7 +166,7 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
 - ✅ Alpine-based minimal image (~200MB)
 - ✅ Non-root execution (UID 1000)
 - ✅ Multi-architecture support (amd64/arm64)
-- ✅ Pre-installed Ansible 12.0.0 + Python 3.13.7
+- ✅ Pre-installed Ansible 12.0.0 + Python 3.13.6
 - ✅ Complete testing framework included
 
 ---

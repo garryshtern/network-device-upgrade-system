@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.13.7"]
+        python-version: ["3.13.6"]
 
     steps:
       - name: Checkout code
@@ -173,7 +173,7 @@ jobs:
       - name: Setup Ansible Environment with Molecule
         uses: ./.github/actions/setup-ansible
         with:
-          python-version: '3.13.7'
+          python-version: '3.13.6'
           install-molecule: 'true'
           cache-key-suffix: 'molecule-tests'
 
@@ -202,7 +202,7 @@ jobs:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.test_level == 'critical-gaps-only' || inputs.test_level == 'comprehensive'))
     strategy:
       matrix:
-        python-version: ["3.13.7"]
+        python-version: ["3.13.6"]
 
     steps:
       - name: Checkout code
@@ -276,7 +276,7 @@ jobs:
       - name: Setup Ansible Environment
         uses: ./.github/actions/setup-ansible
         with:
-          python-version: '3.13.7'
+          python-version: '3.13.6'
           cache-key-suffix: 'comprehensive-tests'
 
       - name: Install additional test dependencies
