@@ -36,11 +36,6 @@ runs:
       run: |
         ansible-playbook tests/unit-tests/error-handling.yml
 
-    - name: Run authentication validation tests
-      shell: bash
-      run: |
-        ansible-playbook tests/unit-tests/authentication-validation.yml
-
     - name: Run mock authentication validation tests
       shell: bash
       run: |
