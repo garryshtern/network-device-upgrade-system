@@ -4,7 +4,6 @@ ansible_connection: local
 ansible_python_interpreter: "{{ ansible_playbook_python }}"
 
 # Mock test variables
-target_firmware_version: "test-firmware-v1.0"
 target_firmware: "test-firmware.bin"
 firmware_base_path: "/tmp/firmware-test"
 
@@ -18,8 +17,6 @@ vault_fortios_password: "mock-fortios-password"
 vault_opengear_ssh_key: "/tmp/mock-opengear-key"
 vault_opengear_api_token: "mock-api-token-opengear-67890"
 vault_opengear_password: "mock-opengear-password"
-vault_metamako_ssh_key: "/tmp/mock-metamako-key"
-vault_metamako_password: "mock-metamako-password"
 
 # Legacy variables for backward compatibility
 cisco_nxos_username: "admin"
@@ -30,8 +27,6 @@ opengear_username: "admin"
 opengear_password: "test-password"
 fortios_username: "admin"
 fortios_password: "test-password"
-metamako_username: "admin"
-metamako_password: "test-password"
 
 # Test settings
 skip_actual_device_operations: true

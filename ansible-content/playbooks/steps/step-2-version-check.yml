@@ -1,0 +1,99 @@
+---
+# STEP 2: Version Check and Image Verification
+# Check if upgrade needed and verify local image file exists
+# MUST PASS or workflow STOPS
+# Dependencies: STEP 1 (managed by main workflow tags)
+
+- name: Check current running version (non-Cisco platforms)
+  ansible.builtin.include_role:
+    name: image-validation
+    tasks_from: version-verification
+  when: platform not in ['nxos', 'ios']
+
+- name: Compare current image to target firmware (Cisco platforms)
+  ansible.builtin.set_fact:
+    already_running_target_version: "{{ current_firmware_image_filename == target_firmware }}"
+  when: platform in ['nxos', 'ios']
+
+- name: Compare current version to target firmware (non-Cisco platforms)
+  ansible.builtin.set_fact:
+    already_running_target_version: "{{ current_firmware_version == target_firmware }}"
+  when: platform not in ['nxos', 'ios']
+
+- name: Report if already running target firmware (Cisco platforms)
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "ALREADY RUNNING TARGET FIRMWARE"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Current Image: {{ current_firmware_image }}"
+      - "Image Filename: {{ current_firmware_image_filename }}"
+      - "Target Firmware: {{ target_firmware }}"
+      - "Status: NO UPGRADE NEEDED ({{ current_firmware_image_filename }} == {{ target_firmware }})"
+      - "Action: Skipping upgrade for this device"
+      - "=========================================="
+  when:
+    - already_running_target_version | bool
+    - platform in ['nxos', 'ios']
+
+- name: Report if already running target firmware (non-Cisco platforms)
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "ALREADY RUNNING TARGET FIRMWARE"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Current Version: {{ current_firmware_version }}"
+      - "Target Firmware: {{ target_firmware }}"
+      - "Status: NO UPGRADE NEEDED"
+      - "Action: Skipping upgrade for this device"
+      - "=========================================="
+  when:
+    - already_running_target_version | bool
+    - platform not in ['nxos', 'ios']
+
+- name: End upgrade for this host if already running target firmware
+  ansible.builtin.meta: end_host
+  when: already_running_target_version | bool
+
+- name: Report upgrade needed (Cisco platforms)
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "UPGRADE REQUIRED"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Current Image: {{ current_firmware_image }}"
+      - "Image Filename: {{ current_firmware_image_filename }}"
+      - "Target Firmware: {{ target_firmware }}"
+      - "Status: PROCEEDING WITH UPGRADE ({{ current_firmware_image_filename }} != {{ target_firmware }})"
+      - "=========================================="
+  when:
+    - not already_running_target_version | bool
+    - platform in ['nxos', 'ios']
+
+- name: Report upgrade needed (non-Cisco platforms)
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "UPGRADE REQUIRED"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Current Version: {{ current_firmware_version }}"
+      - "Target Firmware: {{ target_firmware }}"
+      - "Status: PROCEEDING WITH UPGRADE"
+      - "=========================================="
+  when:
+    - not already_running_target_version | bool
+    - platform not in ['nxos', 'ios']
+
+- name: Verify firmware image availability (local file check)
+  ansible.builtin.include_role:
+    name: image-validation
+    tasks_from: integrity-audit
+
+- name: Verify firmware SHA512 hash (MANDATORY)
+  ansible.builtin.include_role:
+    name: image-validation
+    tasks_from: hash-verification

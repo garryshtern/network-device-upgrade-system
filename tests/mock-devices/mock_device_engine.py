@@ -122,18 +122,32 @@ class MockDeviceEngine:
     
     def _load_device_behavior(self) -> 'DeviceBehavior':
         """Load platform-specific behavior"""
+        # Platform name mapping: Support both standardized names (nxos, ios)
+        # and legacy names (cisco_nxos, cisco_iosxe) for backward compatibility
+        platform_aliases = {
+            'nxos': 'cisco_nxos',
+            'ios': 'cisco_iosxe',
+            'iosxe': 'cisco_iosxe',
+            'cisco_nxos': 'cisco_nxos',
+            'cisco_iosxe': 'cisco_iosxe',
+            'fortios': 'fortios',
+            'opengear': 'opengear',
+        }
+
         behavior_map = {
             'cisco_nxos': CiscoNXOSBehavior,
             'cisco_iosxe': CiscoIOSXEBehavior,
             'fortios': FortiOSBehavior,
             'opengear': OpengearBehavior,
-            'metamako_mos': MetamakoMOSBehavior
         }
-        
-        behavior_class = behavior_map.get(self.config.platform_type)
+
+        # Normalize platform name using aliases
+        normalized_platform = platform_aliases.get(self.config.platform_type, self.config.platform_type)
+
+        behavior_class = behavior_map.get(normalized_platform)
         if not behavior_class:
-            raise ValueError(f"Unsupported platform: {self.config.platform_type}")
-        
+            raise ValueError(f"Unsupported platform: {self.config.platform_type} (normalized: {normalized_platform})")
+
         return behavior_class(self)
     
     def process_command(self, command: str, **kwargs) -> Dict[str, Any]:
@@ -887,39 +901,6 @@ class OpengearBehavior(DeviceBehavior):
         return {"status": "error", "message": "Upgrade in progress"}
 
 
-class MetamakoMOSBehavior(DeviceBehavior):
-    """Metamako MOS behavior simulation"""
-    
-    def _build_command_map(self) -> Dict[str, Callable]:
-        return {
-            "mdk-version": self._mdk_version,
-            "upgrade *": self._upgrade_mos,
-            "application status": self._application_status
-        }
-    
-    def _mdk_version(self, **kwargs) -> Dict[str, Any]:
-        return {
-            "status": "success",
-            "output": f"MOS Version: {self.device.config.firmware_version}\nDevice: {self.device.config.model}"
-        }
-    
-    def handle_upgrade_phase(self, phase: UpgradePhase):
-        # Handle MetaWatch/MetaMux application management
-        if phase == UpgradePhase.POST_VALIDATION:
-            # Simulate application installation
-            if self.device.config.custom_behaviors.get('manage_applications'):
-                time.sleep(15)  # App installation time
-    
-    def _upgrade_mos(self, command: str = "", **kwargs) -> Dict[str, Any]:
-        return {"status": "success", "output": "MOS upgrade initiated"}
-    
-    def _application_status(self, **kwargs) -> Dict[str, Any]:
-        return {
-            "status": "success", 
-            "output": "MetaWatch: running\nMetaMux: stopped"
-        }
-
-
 # Device Manager for orchestrating multiple mock devices
 class MockDeviceManager:
     """Manager for multiple mock devices"""
@@ -1233,8 +1214,9 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Mock Network Device Engine')
     parser.add_argument('--test-platform', default='cisco_nxos',
-                        choices=['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos'],
-                        help='Platform to test')
+                        choices=['cisco_nxos', 'cisco_iosxe', 'nxos', 'ios', 'iosxe',
+                                'fortios', 'opengear'],
+                        help='Platform to test (supports both standardized and legacy names)')
     parser.add_argument('--interactive', action='store_true',
                         help='Run interactive test mode')
     parser.add_argument('--port', type=int, default=2222,

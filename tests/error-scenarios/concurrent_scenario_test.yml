@@ -21,7 +21,7 @@
   block:
     - name: Record scenario start time
       ansible.builtin.set_fact:
-        scenario_start_time: "{{ ansible_date_time.epoch }}"
+        scenario_start_time: "{{ now(utc=True).strftime('%s') }}"
 
     - name: Run concurrent upgrade simulation
       ansible.builtin.shell: |
@@ -88,8 +88,8 @@
 
     - name: Record scenario completion time
       ansible.builtin.set_fact:
-        scenario_end_time: "{{ ansible_date_time.epoch }}"
-        scenario_duration: "{{ ansible_date_time.epoch | int - scenario_start_time | int }}"
+        scenario_end_time: "{{ now(utc=True).strftime('%s') }}"
+        scenario_duration: "{{ now(utc=True).strftime('%s') | int - scenario_start_time | int }}"
 
     - name: Record test result
       ansible.builtin.set_fact:

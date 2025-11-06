@@ -46,11 +46,10 @@
         that:
           - device_model is defined
           - device_model != ""
-          - platform_type == "cisco_nxos"
           - firmware_version is defined
           - target_version is defined
           - device_model is match("N[0-9]+K-.*")
-        fail_msg: "Device model or platform validation failed"
+        fail_msg: "Device model validation failed"
         success_msg: "✓ Device compatibility validated for {{ nxos_scenario.name }}"
 
     - name: Validate EPLD image consistency when required

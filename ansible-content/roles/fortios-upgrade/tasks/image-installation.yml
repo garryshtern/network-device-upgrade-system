@@ -122,9 +122,7 @@
           - >-
             fortios_upgrade_state.target_version in
             post_install_system_status.meta.results.version
-        fail_msg: >-
-          Installation completed but target version not active:
-          {{ post_install_system_status.meta.results.version }}
+        fail_msg: "Installation completed but target version not active: {{ post_install_system_status.meta.results.version }}"
 
     - name: Verify system health post-installation
       fortinet.fortios.fortios_monitor_fact:
@@ -141,7 +139,7 @@
 
     - name: Log performance check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check system performance: {{ post_install_performance.msg | default('Unknown error') }}"
+        msg: "Warning: Failed to check system performance: {{ post_install_performance.msg if post_install_performance.msg is defined else default_error_message }}"
       when:
         - post_install_performance is defined
         - post_install_performance.failed is defined
@@ -170,7 +168,7 @@
 
     - name: Log VPN status check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check VPN tunnel status: {{ post_install_vpn.msg | default('Unknown error') }}"
+        msg: "Warning: Failed to check VPN tunnel status: {{ post_install_vpn.msg if post_install_vpn.msg is defined else default_error_message }}"
       when:
         - post_install_vpn is defined
         - post_install_vpn.failed is defined
@@ -185,7 +183,7 @@
 
     - name: Log routing table check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to verify routing table: {{ post_install_routing.msg | default('Unknown error') }}"
+        msg: "Warning: Failed to verify routing table: {{ post_install_routing.msg if post_install_routing.msg is defined else default_error_message }}"
       when:
         - post_install_routing is defined
         - post_install_routing.failed is defined
@@ -205,9 +203,9 @@
         that:
           - post_install_ha_status.meta.results.sync_status == "synchronized"
         fail_msg: "HA cluster not synchronized after installation"
-      when: >-
-        fortios_upgrade_state.ha_mode != "standalone" and
-        post_install_ha_status is defined
+      when:
+        - fortios_upgrade_state.ha_mode != "standalone"
+        - post_install_ha_status is defined
 
     - name: Check HA peer status
       fortinet.fortios.fortios_monitor_fact:
@@ -219,7 +217,7 @@
 
     - name: Log HA peer check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check HA peer status: {{ post_install_ha_peers.msg | default('Unknown error') }}"
+        msg: "Warning: Failed to check HA peer status: {{ post_install_ha_peers.msg if post_install_ha_peers.msg is defined else default_error_message }}"
       when:
         - post_install_ha_peers is defined
         - post_install_ha_peers.failed is defined
@@ -242,26 +240,16 @@
 
 - name: Installation completion logging
   ansible.builtin.debug:
-    msg: |-
-      FortiOS Installation Completed Successfully:
-      - Device Type: >-
-          {{ 'HA Cluster' if fortios_upgrade_state.ha_mode != 'standalone'
-          else 'Standalone' }}
-      - Previous Version: {{ fortios_upgrade_state.current_version }}
-      - New Version: {{ post_install_system_status.meta.results.version }}
-      - HA Mode: {{ fortios_upgrade_state.ha_mode }}
-      - System Health: >-
-          {{ 'OK' if post_install_health.meta.results.cpu_usage | int < 50
-          else 'High Load' }}
-      - Active Policies: >-
-          {{ post_install_policies.meta.results.total_policies | default(0) }}
-      - Interface Status: >-
-          {{ post_install_interfaces.meta.results |
-          selectattr('status', 'equalto', 'up') | list | length }} up
-      - VPN Tunnels: >-
-          {{ post_install_vpn.meta.results.active_sessions | default('N/A') }}
-      - HA Sync Status: >-
-          {{ post_install_ha_status.meta.results.sync_status | default('N/A') }}
-      - License Status: >-
-          {{ post_install_license.meta.results.status | default('Unknown') }}
-      - Status: SUCCESS
+    msg:
+      - "FortiOS Installation Completed Successfully:"
+      - "- Device Type: {{ 'HA Cluster' if fortios_upgrade_state.ha_mode != 'standalone' else 'Standalone' }}"
+      - "- Previous Version: {{ fortios_upgrade_state.current_version }}"
+      - "- New Version: {{ post_install_system_status.meta.results.version }}"
+      - "- HA Mode: {{ fortios_upgrade_state.ha_mode }}"
+      - "- System Health: {{ 'OK' if post_install_health.meta.results.cpu_usage | int < 50 else 'High Load' }}"
+      - "- Active Policies: {{ post_install_policies.meta.results.total_policies }}"
+      - "- Interface Status: {{ post_install_interfaces.meta.results | selectattr('status', 'equalto', 'up') | list | length }} up"
+      - "- VPN Tunnels: {{ post_install_vpn.meta.results.active_sessions }}"
+      - "- HA Sync Status: {{ post_install_ha_status.meta.results.sync_status }}"
+      - "- License Status: {{ post_install_license.meta.results.status }}"
+      - "- Status: SUCCESS"

@@ -1,0 +1,229 @@
+---
+# Metrics Export Configuration Validation Tests
+# Tests guard rails for metrics export configuration
+# Validates: fail-fast on misconfiguration, silent skip on disabled metrics
+
+- name: Metrics Export Validation Tests
+  hosts: localhost
+  gather_facts: false
+  vars:
+    test_results: []
+    test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"
+
+  tasks:
+    - name: Test Group 1 - Metrics Disabled (Default State)
+      block:
+        - name: Initialize test 1 - metrics disabled
+          set_fact:
+            test_1_config:
+              export_metrics: false
+              influxdb_url: ""
+              influxdb_token: ""
+              influxdb_bucket: "network_upgrades"
+              metric_type: "test_metric"
+              platform: "nxos"
+              metric_data:
+                test_field: "test_value"
+
+        - name: Simulate metrics-export.yml with disabled metrics
+          block:
+            - name: Skip metrics export if no data
+              set_fact:
+                validation_1_result: "skipped_empty_check"
+              when: test_1_config.metric_data | length == 0
+
+            - name: Validate InfluxDB configuration if metrics enabled (SHOULD BE SKIPPED)
+              set_fact:
+                validation_1_result: "validation_executed"
+              when: test_1_config.export_metrics | bool
+
+            # If we reach here without setting validation_1_result, the validation was skipped
+            - name: Set result if validation was skipped (expected)
+              set_fact:
+                validation_1_result: "validation_skipped_correctly"
+              when: validation_1_result is not defined
+
+        - name: Validate metrics disabled means no configuration check
+          assert:
+            that:
+              - validation_1_result == "validation_skipped_correctly"
+              - test_1_config.export_metrics == false
+            fail_msg:
+              - "TEST 1 FAILED"
+              - "Expected: Validation skipped when export_metrics disabled"
+              - "Actual: {{ validation_1_result }}"
+              - "When metrics disabled, empty InfluxDB config should NOT cause errors"
+
+        - name: Record test 1 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Metrics Disabled - Validation Skipped', 'status': 'PASS', 'config': 'metrics_disabled'}] }}"
+
+      rescue:
+        - name: Record test 1 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Metrics Disabled - Validation Skipped', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 2 - Metrics Enabled with Empty Configuration (Should Fail)
+      block:
+        - name: Initialize test 2 - metrics enabled but not configured
+          set_fact:
+            test_2_config:
+              export_metrics: true
+              influxdb_url: ""
+              influxdb_token: ""
+              influxdb_bucket: "network_upgrades"
+
+        - name: Attempt validation with misconfigured metrics (SHOULD FAIL)
+          block:
+            - name: Validate InfluxDB configuration if metrics enabled
+              assert:
+                that:
+                  - test_2_config.influxdb_url is defined and test_2_config.influxdb_url | length > 0
+                  - test_2_config.influxdb_token is defined and test_2_config.influxdb_token | length > 0
+                  - test_2_config.influxdb_bucket is defined and test_2_config.influxdb_bucket | length > 0
+                fail_msg:
+                  - "METRICS EXPORT CONFIGURATION ERROR"
+                  - "Metrics export enabled (export_metrics: true) but InfluxDB not configured"
+                  - "Required environment variables:"
+                  - "  - influxdb_url: {{ test_2_config.influxdb_url | default('NOT SET') }}"
+                  - "  - influxdb_token: {{ 'SET' if (test_2_config.influxdb_token is defined and test_2_config.influxdb_token | length > 0) else 'NOT SET' }}"
+                  - "  - influxdb_bucket: {{ test_2_config.influxdb_bucket | default('NOT SET') }}"
+                  - ""
+                  - "Fix: Either configure InfluxDB or set 'export_metrics: false' to disable metrics"
+              when: test_2_config.export_metrics | bool
+
+          rescue:
+            - name: Validation failed as expected - this is correct behavior
+              set_fact:
+                validation_2_passed: true
+                validation_2_error_message: "{{ ansible_failed_result.msg[0] if ansible_failed_result.msg is defined else 'Unknown error' }}"
+
+        - name: Verify validation failed with correct error message
+          assert:
+            that:
+              - validation_2_passed == true
+              - "'METRICS EXPORT CONFIGURATION ERROR' in validation_2_error_message"
+            fail_msg:
+              - "TEST 2 FAILED"
+              - "Expected: Validation failure with clear error message"
+              - "Actual: validation_2_passed={{ validation_2_passed | default(false) }}"
+              - "When metrics enabled but not configured, system SHOULD fail with guidance"
+
+        - name: Record test 2 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Metrics Enabled - Configuration Validation Fails Correctly', 'status': 'PASS', 'behavior': 'fail_fast_with_error_message'}] }}"
+
+      rescue:
+        - name: Record test 2 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Metrics Enabled - Configuration Validation Fails Correctly', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 3 - Metrics Enabled with Proper Configuration (Should Succeed)
+      block:
+        - name: Initialize test 3 - metrics enabled and properly configured
+          set_fact:
+            test_3_config:
+              export_metrics: true
+              influxdb_url: "http://localhost:8086"
+              influxdb_token: "test_token_abc123"
+              influxdb_bucket: "network_upgrades"
+
+        - name: Validate InfluxDB configuration with proper values
+          assert:
+            that:
+              - test_3_config.influxdb_url is defined and test_3_config.influxdb_url | length > 0
+              - test_3_config.influxdb_token is defined and test_3_config.influxdb_token | length > 0
+              - test_3_config.influxdb_bucket is defined and test_3_config.influxdb_bucket | length > 0
+            fail_msg:
+              - "TEST 3 FAILED"
+              - "Expected: Validation succeeds with proper configuration"
+
+        - name: Record test 3 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Metrics Enabled with Proper Config - Validation Passes', 'status': 'PASS', 'config': 'influxdb_configured'}] }}"
+
+      rescue:
+        - name: Record test 3 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Metrics Enabled with Proper Config - Validation Passes', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 4 - Webhook Validation (Paired URL and Token)
+      block:
+        - name: Initialize test 4a - webhook URL without token
+          set_fact:
+            test_4a_config:
+              metrics_webhook_url: "https://example.com/metrics"
+              metrics_webhook_token: ""
+
+        - name: Webhook should skip if token missing (even if URL present)
+          set_fact:
+            webhook_4a_executed: false
+          when:
+            - test_4a_config.metrics_webhook_url is defined and test_4a_config.metrics_webhook_url | length > 0
+            - test_4a_config.metrics_webhook_token is defined and test_4a_config.metrics_webhook_token | length > 0
+
+        - name: Verify webhook was skipped (token validation)
+          assert:
+            that:
+              - webhook_4a_executed is not defined or webhook_4a_executed == false
+            fail_msg:
+              - "TEST 4a FAILED"
+              - "Expected: Webhook skipped when token missing"
+              - "Both URL and token required if either specified"
+
+        - name: Initialize test 4b - both webhook URL and token present
+          set_fact:
+            test_4b_config:
+              metrics_webhook_url: "https://example.com/metrics"
+              metrics_webhook_token: "webhook_token_xyz"
+
+        - name: Webhook should execute when both URL and token present
+          set_fact:
+            webhook_4b_executed: true
+          when:
+            - test_4b_config.metrics_webhook_url is defined and test_4b_config.metrics_webhook_url | length > 0
+            - test_4b_config.metrics_webhook_token is defined and test_4b_config.metrics_webhook_token | length > 0
+
+        - name: Verify webhook was marked for execution (both present)
+          assert:
+            that:
+              - webhook_4b_executed == true
+            fail_msg:
+              - "TEST 4b FAILED"
+              - "Expected: Webhook marked for execution when both URL and token present"
+
+        - name: Record test 4 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Webhook Paired Validation (URL + Token)', 'status': 'PASS', 'validation': 'paired_requirement'}] }}"
+
+      rescue:
+        - name: Record test 4 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Webhook Paired Validation (URL + Token)', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Display metrics export validation test results
+      debug:
+        msg:
+          - "==========================================="
+          - "METRICS EXPORT VALIDATION TEST RESULTS"
+          - "==========================================="
+          - "{% for result in test_results %}{{ result.test }}: {{ result.status }}{% endfor %}"
+          - "==========================================="
+          - "Total Tests: {{ test_results | length }}"
+          - "Passed: {{ test_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+          - "Failed: {{ test_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+          - "==========================================="
+          - ""
+          - "Guard Rails Validated:"
+          - "✓ Metrics disabled (default) - validation skipped, no errors"
+          - "✓ Metrics enabled without config - fails with clear error message"
+          - "✓ Metrics enabled with config - passes validation"
+          - "✓ Webhook requires both URL and token - paired validation"
+          - "==========================================="
+
+    - name: Fail if any metrics export validation tests failed
+      fail:
+        msg:
+          - "METRICS EXPORT VALIDATION TESTS FAILED"
+          - "Failed tests: {{ test_results | selectattr('status', 'equalto', 'FAIL') | map(attribute='test') | list }}"
+      when: test_results | selectattr('status', 'equalto', 'FAIL') | list | length > 0

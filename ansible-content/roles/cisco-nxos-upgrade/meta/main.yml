@@ -18,8 +18,4 @@ galaxy_info:
     - firmware
     - upgrade
 
-dependencies:
-  - role: common
-  - role: network-validation
-  - role: image-validation
-  - role: space-management
+dependencies: []

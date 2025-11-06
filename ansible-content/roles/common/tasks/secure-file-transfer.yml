@@ -1,0 +1,91 @@
+---
+# Secure File Transfer - Generic Handler for All Platforms
+# Reduces duplication across platform-specific image-loading tasks
+#
+# Required variables:
+#   local_file_path: Path to local file to transfer
+#   transfer_handler_task: Task file containing platform-specific transfer logic
+#                        Expected to set: transfer_result, transferred_file_hash (if applicable)
+#
+# Optional variables:
+#   file_description: Description for logging (default: "File")
+#   enable_hash_verification: Whether to verify file hash (default: true)
+#   hash_algorithm: Algorithm for verification - handled by platform-specific task
+
+- name: Initialize secure file transfer
+  block:
+    - name: Initialize transfer status
+      ansible.builtin.set_fact:
+        transfer_status: "NOT_STARTED"
+        file_transfer_error: null
+
+    - name: Validate local file exists
+      ansible.builtin.stat:
+        path: "{{ local_file_path }}"
+      register: local_file_stat
+      delegate_to: localhost
+
+    - name: Fail if local file missing
+      ansible.builtin.fail:
+        msg:
+          - "Local file not found: {{ local_file_path }}"
+          - "Cannot proceed with secure file transfer"
+      when: not local_file_stat.stat.exists
+
+    - name: Store file metadata
+      ansible.builtin.set_fact:
+        file_size_bytes: "{{ local_file_stat.stat.size }}"
+        file_size_mb: "{{ (local_file_stat.stat.size | int / 1024 / 1024) | round(2) }}"
+
+    - name: Display file transfer starting
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "SECURE FILE TRANSFER STARTING"
+          - "=========================================="
+          - "Local Source: {{ local_file_path }}"
+          - "File Size: {{ file_size_mb }}MB ({{ file_size_bytes }} bytes)"
+          - "Transfer Method: Server-Initiated PUSH"
+          - "Status: TRANSFERRING..."
+          - "=========================================="
+
+- name: Execute platform-specific file transfer
+  ansible.builtin.include_tasks:
+    file: "{{ transfer_handler_task }}"
+
+- name: Validate transfer completed
+  block:
+    - name: Verify transfer result exists
+      ansible.builtin.assert:
+        that:
+          - transfer_result is defined
+        fail_msg:
+          - "Platform-specific transfer handler did not set transfer_result"
+          - "Task: {{ transfer_handler_task }}"
+          - "Contact developer to ensure proper task implementation"
+
+    - name: Verify transfer succeeded
+      ansible.builtin.assert:
+        that:
+          - transfer_result.succeeded | bool
+        fail_msg:
+          - "Secure file transfer failed"
+          - "Error: {{ transfer_result.error_message if transfer_result.error_message is defined else 'Unknown error' }}"
+          - "Device: {{ inventory_hostname }}"
+
+- name: Display file transfer completion
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "SECURE FILE TRANSFER COMPLETED"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "File Size: {{ file_size_mb }}MB"
+      - "Transfer Method: {{ transfer_result.method if transfer_result.method is defined else 'Server-Initiated PUSH' }}"
+      - "Hash Verified: {{ 'Yes' if transferred_file_hash is defined else 'Skipped' }}"
+      - "Status: SUCCESS"
+      - "=========================================="
+
+- name: Set final transfer status
+  ansible.builtin.set_fact:
+    transfer_status: "COMPLETED"

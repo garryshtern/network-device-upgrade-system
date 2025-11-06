@@ -10,7 +10,7 @@
     workflow_test_scenarios:
       - name: "cisco_nxos_standard_upgrade"
         device_type: "cisco_nxos"
-        target_firmware: "nxos.10.1.2.bin"
+        target_firmware: "nxos64-cs.10.1.2.M.bin"
         expected_result: "success"
         expected_phases_completed: 6
         rollback_enabled: true
@@ -18,7 +18,7 @@
 
       - name: "cisco_nxos_issu_upgrade"
         device_type: "cisco_nxos"
-        target_firmware: "nxos.10.1.2.bin"
+        target_firmware: "nxos64-cs.10.1.2.M.bin"
         expected_result: "success"
         expected_phases_completed: 7
         rollback_enabled: true

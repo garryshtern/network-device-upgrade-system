@@ -4,20 +4,16 @@
 # Validates security configurations and regulatory requirements
 
 - name: Compliance Audit and Verification
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
   connection: network_cli
   vars:
-    audit_timestamp: "{{ ansible_date_time.iso8601 }}"
-    audit_results_path: "/var/lib/network-upgrade/compliance"
-    compliance_standards: >
-      {{ compliance_standards |
-        default(['security_baseline', 'network_hardening']) }}
-    generate_report: "{{ generate_report | default(true) }}"
+    audit_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+    # compliance_standards and generate_report inherited from group_vars
   pre_tasks:
     - name: Create compliance audit directory
       ansible.builtin.file:
-        path: "{{ audit_results_path }}/{{ inventory_hostname }}"
+        path: "{{ compliance_results_path }}/{{ inventory_hostname }}"
         state: directory
         mode: "0755"
       delegate_to: localhost
@@ -27,10 +23,10 @@
       ansible.builtin.set_fact:
         compliance_results:
           device_name: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform }}"
           audit_timestamp: "{{ audit_timestamp }}"
           firmware_version: >
-            {{ current_firmware_version | default('unknown') }}
+            {{ current_firmware_version  }}
           standards_tested: []
           compliance_checks:
             passed: []
@@ -50,6 +46,19 @@
             audit_output: >
               {{ audit_results_path }}/{{ inventory_hostname
                 }}/security_baseline_{{ audit_timestamp }}.json
+
+        - name: Verify security baseline audit results
+          ansible.builtin.assert:
+            that:
+              - security_baseline_results is defined
+              - security_baseline_results.passed is defined
+              - security_baseline_results.failed is defined
+            fail_msg:
+              - "CRITICAL: Security baseline audit failed or returned invalid results"
+              - "Device: {{ inventory_hostname }}"
+              - "Expected security baseline results but audit did not complete properly"
+              - "This indicates a critical security compliance failure"
+              - "Manual investigation required before proceeding"
 
         - name: Update compliance results - security baseline
           ansible.builtin.set_fact:
@@ -74,20 +83,6 @@
                   }
                 })
               }}
-
-      rescue:
-        - name: Handle security baseline audit failure
-          ansible.builtin.set_fact:
-            compliance_results: >
-              {{
-                compliance_results | combine({
-                  'compliance_checks': {
-                    'failed': >
-                      compliance_results.compliance_checks.failed +
-                        ['security_baseline_audit_error']
-                  }
-                })
-              }}
     - name: Network Hardening Compliance Check
       when: "'network_hardening' in compliance_standards"
       block:
@@ -99,6 +94,19 @@
             audit_output: >
               "{{ audit_results_path }}/{{ inventory_hostname
                 }}/network_hardening_{{ audit_timestamp }}.json"
+
+        - name: Verify network hardening audit results
+          ansible.builtin.assert:
+            that:
+              - network_hardening_results is defined
+              - network_hardening_results.passed is defined
+              - network_hardening_results.failed is defined
+            fail_msg:
+              - "CRITICAL: Network hardening audit failed or returned invalid results"
+              - "Device: {{ inventory_hostname }}"
+              - "Expected network hardening results but audit did not complete properly"
+              - "This indicates a critical network security hardening failure"
+              - "Manual investigation required before proceeding"
 
         - name: Update compliance results - network hardening
           ansible.builtin.set_fact:
@@ -123,76 +131,69 @@
                   }
                 })
               }}
-
-      rescue:
-        - name: Handle network hardening audit failure
-          ansible.builtin.set_fact:
-            compliance_results: >
-              {{
-                compliance_results | combine({
-                  'compliance_checks': {
-                    'failed': >
-                      compliance_results.compliance_checks.failed +
-                      ['network_hardening_audit_error']
-                  }
-                })
-              }}
     - name: Platform-Specific Compliance Checks
       block:
-        # Cisco NX-OS Compliance
-        - name: Cisco NX-OS compliance validation
-          ansible.builtin.include_role:
-            name: cisco-nxos-upgrade
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/nxos_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os == 'nxos'
+        - name: NX-OS Platform Block
+          when: platform == 'nxos'
+          block:
+            - name: Cisco NX-OS compliance validation
+              ansible.builtin.include_role:
+                name: cisco-nxos-upgrade
+                tasks_from: compliance-audit
+              vars:
+                audit_output: >
+                  "{{ audit_results_path }}/{{ inventory_hostname
+                    }}/nxos_compliance_{{ audit_timestamp }}.json"
 
-        # Cisco IOS-XE Compliance
-        - name: Cisco IOS-XE compliance validation
-          ansible.builtin.include_role:
-            name: cisco-iosxe-upgrade
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/iosxe_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os == 'ios'
+        - name: IOS-XE Platform Block
+          when: platform == 'ios'
+          block:
+            - name: Cisco IOS-XE compliance validation
+              ansible.builtin.include_role:
+                name: cisco-iosxe-upgrade
+                tasks_from: compliance-audit
+              vars:
+                audit_output: >
+                  "{{ audit_results_path }}/{{ inventory_hostname
+                    }}/iosxe_compliance_{{ audit_timestamp }}.json"
 
-        # Metamako MOS Compliance
-        - name: Metamako MOS compliance validation
-          ansible.builtin.include_role:
-            name: metamako-mos-upgrade
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/mos_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os == 'mos'
+        - name: Opengear Platform Block
+          when: platform == 'opengear'
+          block:
+            - name: Opengear compliance validation
+              ansible.builtin.include_role:
+                name: opengear-upgrade
+                tasks_from: compliance-audit
+              vars:
+                audit_output: >
+                  "{{ audit_results_path }}/{{ inventory_hostname
+                    }}/opengear_compliance_{{ audit_timestamp }}.json"
 
-        # Opengear Compliance
-        - name: Opengear compliance validation
-          ansible.builtin.include_role:
-            name: opengear-upgrade
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/opengear_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os == 'opengear'
+        - name: FortiOS Platform Block
+          when: platform == 'fortios'
+          block:
+            - name: FortiOS compliance validation
+              ansible.builtin.include_role:
+                name: fortios-upgrade
+                tasks_from: compliance-audit
+              vars:
+                audit_output: >
+                  "{{ audit_results_path }}/{{ inventory_hostname
+                    }}/fortios_compliance_{{ audit_timestamp }}.json"
 
-        # FortiOS Compliance
-        - name: FortiOS compliance validation
-          ansible.builtin.include_role:
-            name: fortios-upgrade
-            tasks_from: compliance-audit
-          vars:
-            audit_output: >
-              "{{ audit_results_path }}/{{ inventory_hostname
-                }}/fortios_compliance_{{ audit_timestamp }}.json"
-          when: ansible_network_os == 'fortios'
+        - name: Verify platform compliance audit results
+          ansible.builtin.assert:
+            that:
+              - platform_compliance_results is defined
+              - platform_compliance_results.passed is defined
+              - platform_compliance_results.failed is defined
+            fail_msg:
+              - "CRITICAL: Platform-specific compliance audit failed or returned invalid results"
+              - "Device: {{ inventory_hostname }}"
+              - "Platform: {{ platform }}"
+              - "Expected platform compliance results but audit did not complete properly"
+              - "This indicates a critical platform-specific compliance failure"
+              - "Manual investigation required before proceeding"
 
         - name: Update compliance results - platform specific
           ansible.builtin.set_fact:
@@ -219,20 +220,6 @@
               }}
           when: platform_compliance_results is defined
 
-      rescue:
-        - name: Handle platform compliance audit failure
-          ansible.builtin.set_fact:
-            compliance_results: >
-              {{
-                compliance_results | combine({
-                  'compliance_checks': {
-                    'failed': >
-                      compliance_results.compliance_checks.failed +
-                      ['platform_compliance_audit_error']
-                  }
-                })
-              }}
-
   post_tasks:
     - name: Calculate compliance metrics
       ansible.builtin.set_fact:
@@ -247,30 +234,14 @@
     - name: Generate compliance report
       ansible.builtin.template:
         src: "templates/compliance-report.j2"
-        dest: >
-          "{{ audit_results_path }}/{{ inventory_hostname
-            }}/compliance_report_{{ audit_timestamp }}.json"
+        dest: "{{ audit_results_path }}/{{ inventory_hostname }}/compliance_report_{{ audit_timestamp }}.json"
         mode: "0644"
       vars:
         report_data: "{{ compliance_results }}"
         compliance_score: "{{ compliance_percentage }}"
         total_checks_run: "{{ total_checks }}"
       delegate_to: localhost
-      when: generate_report
-
-    - name: Generate human-readable compliance report
-      ansible.builtin.template:
-        src: "templates/compliance-report.html.j2"
-        dest: >
-          "{{ audit_results_path }}/{{ inventory_hostname
-            }}/compliance_report_{{ audit_timestamp }}.html"
-        mode: "0644"
-      vars:
-        report_data: "{{ compliance_results }}"
-        compliance_score: "{{ compliance_percentage }}"
-        total_checks_run: "{{ total_checks }}"
-      delegate_to: localhost
-      when: generate_report
+      when: generate_report | bool
 
     - name: Record compliance metrics to InfluxDB
       ansible.builtin.uri:
@@ -282,10 +253,10 @@
           Authorization: "Token {{ influxdb_token }}"
         body: >-
           compliance_audit,device_id={{ inventory_hostname }},
-          device_type={{ ansible_network_os }},
-          site_location={{ site_name | default('unknown') }},
-          vendor={{ vendor | default('unknown') }},
-          platform={{ ansible_network_os }}
+          device_type={{ platform }},
+          site_location={{ site_name  }},
+          vendor={{ vendor  }},
+          platform={{ platform }}
           compliance_score={{ compliance_percentage }},
           checks_passed={{
             compliance_results.compliance_checks.passed | length }},
@@ -296,7 +267,7 @@
           {{ ansible_date_time.epoch }}000000000
       when:
         - influxdb_url is defined
-        - send_metrics | default(true)
+        - export_metrics | bool
       failed_when: false
 
     - name: Update NetBox with compliance status
@@ -325,7 +296,7 @@
         msg:
           - "=== Compliance Audit Results ==="
           - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
+          - "Platform: {{ platform }}"
           - "Firmware Version: {{ compliance_results.firmware_version }}"
           - "Audit Timestamp: {{ audit_timestamp }}"
           - >-
@@ -350,6 +321,4 @@
 
     - name: Compliance audit completion
       ansible.builtin.debug:
-        msg: >-
-          "Compliance audit completed for {{ inventory_hostname
-            }} - Score: {{ compliance_percentage }}%"
+        msg: "Compliance audit completed for {{ inventory_hostname }} - Score: {{ compliance_percentage }}%"

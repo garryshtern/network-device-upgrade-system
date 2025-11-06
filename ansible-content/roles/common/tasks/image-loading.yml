@@ -3,102 +3,61 @@
 # Extracted from image-loading.yml playbook for task inclusion
 # Downloads and stages firmware images on network devices
 
+- name: Display image loading entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "ENTERING IMAGE LOADING TASK"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "=========================================="
+
 - name: Set image loading variables
   ansible.builtin.set_fact:
-    firmware_source_path: "{{ firmware_base_path }}/{{ ansible_network_os }}"
+    firmware_source_path: "{{ firmware_base_path }}"
     device_storage_path: "/var/lib/firmware"
     integrity_check_required: true
     cleanup_old_images: true
 
-- name: Validate firmware file exists locally
-  ansible.builtin.stat:
-    path: "{{ firmware_source_path }}/{{ firmware_version }}"
-  register: firmware_file
-  delegate_to: localhost
-  when: not ansible_check_mode
+# NOTE: Image integrity is already validated in main-upgrade-workflow STEP 3
+# before calling this task. No need to validate again here.
 
-- name: Simulate firmware file validation in check mode
-  ansible.builtin.set_fact:
-    firmware_file:
-      stat:
-        exists: true
-  when: ansible_check_mode
-
-- name: Fail if firmware file not found
-  ansible.builtin.fail:
-    msg: >-
-      Firmware file not found:
-      {{ firmware_source_path }}/{{ firmware_version }}
-  when:
-    - not ansible_check_mode
-    - not firmware_file.stat.exists
-
-- name: Check device storage capacity
-  ansible.builtin.include_tasks:
-    ../roles/space-management/tasks/space-check.yml
-  vars:
-    required_space_gb: "{{ firmware_size_gb | default(2) }}"
+# NOTE: Storage capacity is already checked in main-upgrade-workflow STEP 2
+# with automatic cleanup. No need to check again here.
 
 - name: Platform-specific image loading
   block:
-    # Cisco NX-OS Image Loading
-    - name: Load Cisco NX-OS image
+    - name: Load firmware image (platform-specific)
       ansible.builtin.include_role:
-        name: cisco-nxos-upgrade
-        tasks_from: image-loading
-      when: ansible_network_os == 'cisco.nxos.nxos'
-
-    # Cisco IOS-XE Image Loading
-    - name: Load Cisco IOS-XE image
-      ansible.builtin.include_role:
-        name: cisco-iosxe-upgrade
-        tasks_from: image-loading
-      when: ansible_network_os == 'cisco.ios.ios'
-
-    # Metamako MOS Image Loading
-    - name: Load Metamako MOS image
-      ansible.builtin.include_role:
-        name: metamako-mos-upgrade
-        tasks_from: image-loading
-      when: ansible_network_os == 'metamako.mos'
-
-    # Opengear Image Loading
-    - name: Load Opengear image
-      ansible.builtin.include_role:
-        name: opengear-upgrade
-        tasks_from: image-loading
-      when: ansible_network_os == 'opengear'
-
-    # FortiOS Image Loading
-    - name: Load FortiOS image
-      ansible.builtin.include_role:
-        name: fortios-upgrade
+        name: "{{ platform_role_map[platform] }}"
         tasks_from: image-loading
       when:
-        - ansible_network_os == 'fortinet.fortios.fortios'
-        - not ansible_check_mode
-
-- name: Verify image integrity
-  ansible.builtin.include_tasks:
-    ../roles/image-validation/tasks/hash-verification.yml
+        - platform is defined
+        - platform in platform_role_map
+        - not (platform == 'fortios' and ansible_check_mode)
 
 - name: Record image loading completion
-  ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: metrics-export
   vars:
     metric_type: "image_loading"
     metric_data:
       device_id: "{{ inventory_hostname }}"
       firmware_version: "{{ firmware_version }}"
-      platform: "{{ ansible_network_os }}"
+      platform: "{{ platform }}"
       status: "success"
-      timestamp: "{{ ansible_date_time.iso8601 | default(lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ')) }}"
+      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+  when:
+    - export_metrics | bool
 
 - name: Display loading results
   ansible.builtin.debug:
     msg:
       - "=== Image Loading Complete ==="
       - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ ansible_network_os }}"
+      - "Platform: {{ platform }}"
       - "Firmware: {{ firmware_version }}"
       - "Status: LOADED"
       - "=============================="

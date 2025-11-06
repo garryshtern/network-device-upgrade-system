@@ -3,24 +3,7 @@
 
 - name: Determine firmware filename for validation
   ansible.builtin.set_fact:
-    firmware_filename_for_validation: >-
-      {%- if target_firmware.endswith(('.bin', '.nxos', '.spa', '.pkg', '.out', '.mos', '.tar.gz', '.dgz')) -%}
-        {{ target_firmware }}
-      {%- else -%}
-        {%- if ansible_network_os in ['cisco.nxos.nxos', 'nxos'] -%}
-          nxos-{{ target_firmware }}.bin
-        {%- elif ansible_network_os in ['cisco.ios.ios', 'ios'] -%}
-          iosxe-{{ target_firmware }}.bin
-        {%- elif ansible_network_os in ['fortinet.fortios.fortios', 'fortios'] -%}
-          fortios-{{ target_firmware }}.out
-        {%- elif ansible_network_os in ['metamako.mos', 'mos'] -%}
-          mos-{{ target_firmware }}.mos
-        {%- elif ansible_network_os == 'opengear' -%}
-          opengear-{{ target_firmware }}.dgz
-        {%- else -%}
-          {{ target_firmware }}
-        {%- endif -%}
-      {%- endif -%}
+    firmware_filename_for_validation: "{{ target_firmware }}"
 
 - name: Check if firmware image file exists
   ansible.builtin.stat:
@@ -34,25 +17,16 @@
     that:
       - firmware_file_stat.stat.exists
       - firmware_file_stat.stat.isreg
-    fail_msg: >-
-      Firmware file {{ firmware_base_path }}/{{ firmware_filename_for_validation }}
-      does not exist or
-        is not a regular file
-    success_msg: >
-      "Firmware file found: {{ firmware_base_path }}/{{ firmware_filename_for_validation }}"
+    fail_msg: "Firmware file {{ firmware_base_path }}/{{ firmware_filename_for_validation }} does not exist or is not a regular file"
+    success_msg: "Firmware file found: {{ firmware_base_path }}/{{ firmware_filename_for_validation }}"
   when: not ansible_check_mode
 
 - name: Check minimum file size (prevent empty/corrupt files)
   ansible.builtin.assert:
     that:
       - firmware_file_stat.stat.size > 1048576  # 1MB minimum
-    fail_msg: >
-      "Firmware file {{ firmware_filename_for_validation }} is too small ({{
-        firmware_file_stat.stat.size }} bytes). Minimum 1MB required."
-    success_msg: >-
-      Firmware file size validation passed:
-      {{ (firmware_file_stat.stat.size / 1024 / 1024) |
-        round(2) }} MB
+    fail_msg: "Firmware file {{ firmware_filename_for_validation }} is too small ({{ firmware_file_stat.stat.size }} bytes). Minimum 1MB required."
+    success_msg: "Firmware file size validation passed: {{ (firmware_file_stat.stat.size / 1024 / 1024) | round(2) }} MB"
   when: not ansible_check_mode
 
 - name: Check file permissions are readable
@@ -67,21 +41,32 @@
   ansible.builtin.assert:
     that:
       - >
-        ((ansible_network_os == 'cisco.nxos.nxos' or ansible_network_os == 'nxos') and
-          firmware_filename_for_validation.endswith(('.bin', '.nxos'))) or
-        ((ansible_network_os == 'cisco.ios.ios' or ansible_network_os == 'ios') and
-          firmware_filename_for_validation.endswith(('.bin', '.spa', '.pkg'))) or
-        ((ansible_network_os == 'fortinet.fortios.fortios' or ansible_network_os == 'fortios') and
+        (platform == 'nxos' and
+          (firmware_filename_for_validation.endswith('.bin') or
+           firmware_filename_for_validation.endswith('.img'))) or
+        (platform == 'ios' and
+          (firmware_filename_for_validation.endswith('.bin') or
+           firmware_filename_for_validation.endswith('.SPA.bin'))) or
+        (platform == 'fortios' and
           firmware_filename_for_validation.endswith('.out')) or
-        ((ansible_network_os == 'metamako.mos' or ansible_network_os == 'mos') and
-          firmware_filename_for_validation.endswith(('.mos', '.tar.gz'))) or
-        (ansible_network_os == 'opengear' and
-          firmware_filename_for_validation.endswith(('.dgz', '.bin')))
-    fail_msg: >
-      "Firmware file extension not valid for platform: >-
-          {{ ansible_network_os }}: {{ firmware_filename_for_validation }}"
-    success_msg: >
-      "Firmware file extension validation passed for {{ ansible_network_os }}"
+        (platform ==  and
+          (firmware_filename_for_validation.endswith('.iso') or
+           firmware_filename_for_validation.endswith('.swix'))) or
+        (platform == 'opengear' and
+          (firmware_filename_for_validation.endswith('.flash') or
+           firmware_filename_for_validation.endswith('.raucb')))
+    fail_msg: "Firmware file extension not valid for platform {{ platform }}: {{ firmware_filename_for_validation }} - See docs/firmware-naming-standards.md for MANDATORY naming requirements"
+    success_msg: "Firmware file extension validation passed for {{ platform }}: {{ firmware_filename_for_validation }}"
+
+- name: Check if EPLD image file exists (if EPLD upgrade enabled)
+  ansible.builtin.stat:
+    path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
+  register: epld_file_stat
+  delegate_to: localhost
+  when:
+    - enable_epld_upgrade | bool
+    - target_epld_firmware is defined
+    - not ansible_check_mode
 
 - name: Set integrity check result
   ansible.builtin.set_fact:
@@ -91,4 +76,10 @@
       size_bytes: "{{ firmware_file_stat.stat.size if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 0 }}"
       size_mb: "{{ ((firmware_file_stat.stat.size / 1024 / 1024) | round(2)) if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 0 }}"
       modified_time: "{{ firmware_file_stat.stat.mtime if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 'unknown' }}"
-      checksum: "{{ firmware_file_stat.stat.checksum | default('unknown') if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 'unknown' }}"
+      checksum: "{{ firmware_file_stat.stat.checksum if (firmware_file_stat is defined and firmware_file_stat.stat is defined) else 'unknown' }}"
+    epld_file_info:
+      path: "{{ firmware_base_path }}/{{ target_epld_firmware if (enable_epld_upgrade | bool and target_epld_firmware is defined) else '' }}"
+      size_bytes: "{{ epld_file_stat.stat.size if (enable_epld_upgrade | bool and epld_file_stat is defined and epld_file_stat.stat is defined) else 0 }}"
+      size_mb: "{{ ((epld_file_stat.stat.size / 1024 / 1024) | round(2)) if (enable_epld_upgrade | bool and epld_file_stat is defined and epld_file_stat.stat is defined) else 0 }}"
+      modified_time: "{{ epld_file_stat.stat.mtime if (enable_epld_upgrade | bool and epld_file_stat is defined and epld_file_stat.stat is defined) else 'unknown' }}"
+      checksum: "{{ epld_file_stat.stat.checksum if (enable_epld_upgrade | bool and epld_file_stat is defined and epld_file_stat.stat is defined) else 'unknown' }}"

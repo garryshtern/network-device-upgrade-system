@@ -8,9 +8,8 @@ all:
       hosts:
         nxos-switch-01:
           ansible_host: 127.0.0.1
-          ansible_network_os: nxos
+          ansible_network_os: cisco.nxos.nxos
           ansible_connection: network_cli
-          platform_type: cisco_nxos
           firmware_version: "9.3.10"
           target_version: "10.1.2"
           device_model: "N9K-C93180YC-EX"
@@ -23,9 +22,8 @@ all:
           nxapi_enabled: true
         nxos-switch-02:
           ansible_host: 127.0.0.2
-          ansible_network_os: nxos
+          ansible_network_os: cisco.nxos.nxos
           ansible_connection: network_cli
-          platform_type: cisco_nxos
           firmware_version: "9.2.4"
           target_version: "10.1.2"
           device_model: "N9K-C9336C-FX2"
@@ -37,19 +35,18 @@ all:
           nxapi_enabled: false
         nxos-switch-03:
           ansible_host: 127.0.0.3
-          ansible_network_os: nxos
+          ansible_network_os: cisco.nxos.nxos
           ansible_connection: network_cli
-          platform_type: cisco_nxos
           firmware_version: "10.0.1"
-          target_version: "10.2.3"
+          target_version: "10.2.3.M"
           device_model: "N9K-C93240YC-FX2"
           issu_capable: true
           epld_upgrade_required: true
           current_epld_version: "2.1.0"
           target_epld_version: "2.2.1"
           epld_images:
-            - "n9000-epld.10.2.3.img"
-            - "n9000-module-epld.10.2.3.img"
+            - "n9000-epld.10.2.3.M.img"
+            - "n9000-module-epld.10.2.3.M.img"
           nxapi_enabled: true
       vars:
         ansible_user: admin
@@ -65,18 +62,16 @@ all:
       hosts:
         iosxe-router-01:
           ansible_host: 127.0.0.3
-          ansible_network_os: ios
+          ansible_network_os: cisco.ios.ios
           ansible_connection: network_cli
-          platform_type: cisco_iosxe
           firmware_version: "16.12.07"
           target_version: "17.06.04"
           device_model: "ISR4431"
           install_mode: true
         iosxe-switch-01:
           ansible_host: 127.0.0.4
-          ansible_network_os: ios
+          ansible_network_os: cisco.ios.ios
           ansible_connection: network_cli
-          platform_type: cisco_iosxe
           firmware_version: "16.12.08"
           target_version: "17.06.04"
           device_model: "C9300-48U"
@@ -95,9 +90,8 @@ all:
       hosts:
         fortigate-fw-01:
           ansible_host: 127.0.0.5
-          ansible_network_os: fortios
+          ansible_network_os: fortinet.fortios.fortios
           ansible_connection: httpapi
-          platform_type: fortios
           firmware_version: "6.4.8"
           target_version: "7.2.4"
           device_model: "FortiGate-600E"
@@ -113,9 +107,8 @@ all:
           vdom_count: 3
         fortigate-fw-02:
           ansible_host: 127.0.0.6
-          ansible_network_os: fortios
+          ansible_network_os: fortinet.fortios.fortios
           ansible_connection: httpapi
-          platform_type: fortios
           firmware_version: "6.4.8"
           target_version: "7.2.4"
           device_model: "FortiGate-600E"
@@ -131,9 +124,8 @@ all:
           vdom_count: 3
         fortigate-fw-standalone:
           ansible_host: 127.0.0.7
-          ansible_network_os: fortios
+          ansible_network_os: fortinet.fortios.fortios
           ansible_connection: httpapi
-          platform_type: fortios
           firmware_version: "7.0.1"
           target_version: "7.2.4"
           device_model: "FortiGate-200F"
@@ -148,9 +140,8 @@ all:
           vdom_count: 1
         fortigate-fw-direct:
           ansible_host: 127.0.0.8
-          ansible_network_os: fortios
+          ansible_network_os: fortinet.fortios.fortios
           ansible_connection: httpapi
-          platform_type: fortios
           firmware_version: "7.2.1"
           target_version: "7.2.4"
           device_model: "FortiGate-100F"
@@ -175,7 +166,6 @@ all:
           ansible_host: 127.0.0.7
           ansible_connection: ssh
           ansible_network_os: opengear
-          platform_type: opengear
           firmware_version: "5.16.8"
           target_version: "5.18.2"
           device_model: "CM7100"
@@ -190,7 +180,6 @@ all:
           ansible_host: 127.0.0.8
           ansible_connection: ssh
           ansible_network_os: opengear
-          platform_type: opengear
           firmware_version: "5.14.2"
           target_version: "5.18.2"
           device_model: "OM7200"
@@ -205,7 +194,6 @@ all:
           ansible_host: 127.0.0.9
           ansible_connection: ssh
           ansible_network_os: opengear
-          platform_type: opengear
           firmware_version: "24.11.0"
           target_version: "25.07.0"
           device_model: "CM8100"
@@ -220,7 +208,6 @@ all:
           ansible_host: 127.0.0.10
           ansible_connection: ssh
           ansible_network_os: opengear
-          platform_type: opengear
           firmware_version: "24.09.1"
           target_version: "25.07.0"
           device_model: "OM2200"
@@ -243,108 +230,6 @@ all:
           -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
           -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 
-    metamako:
-      hosts:
-        metamako-mc48-metawatch:
-          ansible_host: 127.0.0.11
-          ansible_connection: ssh
-          ansible_network_os: mos
-          platform_type: metamako_mos
-          firmware_version: "0.39.1"
-          target_version: "0.39.11"
-          device_model: "MetaConnect-48"
-          latency_critical: true
-          metawatch_enabled: true
-          metamux_enabled: false
-          metawatch_version: "4.2.0"
-          metamux_version: null
-          metawatch_telemetry_enabled: true  # Telemetry is built into MetaWatch
-          latency_threshold_ns: 50
-          ultra_low_latency: true
-          # MetaWatch 4.2.0 installation POST MOS upgrade
-          manage_applications: true
-          application_action: "install"
-          application_name: "metawatch"
-          application_source: "https://firmware.metamako.com/metawatch/metawatch-4.2.0.tar.gz"
-          application_filename: "metawatch-4.2.0.tar.gz"
-          applications_to_enable: ["metawatch"]
-          applications_to_disable: ["metamux"]  # Ensure mutual exclusivity
-        metamako-mc24-metamux:
-          ansible_host: 127.0.0.12
-          ansible_connection: ssh
-          ansible_network_os: mos
-          platform_type: metamako_mos
-          firmware_version: "0.39.5"
-          target_version: "0.39.11"
-          device_model: "MetaConnect-24"
-          latency_critical: true
-          metawatch_enabled: false
-          metamux_enabled: true
-          metawatch_version: null
-          metamux_version: "3.8.0"
-          metamux_telemetry_enabled: false  # MetaMux doesn't have telemetry like MetaWatch
-          latency_threshold_ns: 100
-          ultra_low_latency: true
-          # MetaMux 3.8.0 installation POST MOS upgrade
-          manage_applications: true
-          application_action: "install"
-          application_name: "metamux"
-          application_source: "https://firmware.metamako.com/metamux/metamux-3.8.0.tar.gz"
-          application_filename: "metamux-3.8.0.tar.gz"
-          applications_to_enable: ["metamux"]
-          applications_to_disable: ["metawatch"]  # Ensure mutual exclusivity
-        metamako-mc12-basic:
-          ansible_host: 127.0.0.13
-          ansible_connection: ssh
-          ansible_network_os: mos
-          platform_type: metamako_mos
-          firmware_version: "0.39.8"
-          target_version: "0.39.11"
-          device_model: "MetaConnect-12"
-          latency_critical: false
-          metawatch_enabled: false
-          metamux_enabled: false
-          metawatch_version: null
-          metamux_version: null
-          metawatch_telemetry_enabled: false  # No MetaWatch = no telemetry
-          latency_threshold_ns: 500
-          ultra_low_latency: false
-          # No application management (default disabled)
-          manage_applications: false
-        metamako-mc64-switch-apps:
-          ansible_host: 127.0.0.14
-          ansible_connection: ssh
-          ansible_network_os: mos
-          platform_type: metamako_mos
-          firmware_version: "0.39.3"
-          target_version: "0.39.11"
-          device_model: "MetaConnect-64"
-          latency_critical: true
-          metawatch_enabled: true
-          metamux_enabled: false
-          metawatch_version: "4.2.0"
-          metamux_version: null
-          metawatch_telemetry_enabled: true  # Telemetry enabled with MetaWatch
-          latency_threshold_ns: 25
-          ultra_low_latency: true
-          # Application switching scenario - MetaMux to MetaWatch POST upgrade
-          manage_applications: true
-          application_action: "install"
-          application_name: "metawatch"
-          application_source: "https://firmware.metamako.com/metawatch/metawatch-4.2.0.tar.gz"
-          application_filename: "metawatch-4.2.0.tar.gz"
-          applications_to_force_shutdown: ["metamux"]  # Force stop before switch
-          applications_to_enable: ["metawatch"]
-          applications_to_disable: ["metamux"]
-      vars:
-        ansible_user: admin
-        # SSH key authentication (preferred)
-        ansible_ssh_private_key_file: "{{ vault_metamako_ssh_key | default('/tmp/mock-metamako-key') }}"
-        # Password authentication (fallback)
-        ansible_password: "{{ vault_metamako_password | default('mock_password') }}"
-        ansible_ssh_common_args: >
-          -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-          -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
 
   vars:
     # Global test variables

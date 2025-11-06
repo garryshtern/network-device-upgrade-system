@@ -21,7 +21,6 @@
         target_devices: 200
         expected_duration: "4 hours"
         rollback_threshold: "5% failure rate"
-        platforms: ["cisco_nxos", "cisco_iosxe", "opengear", "fortios", "metamako"]
 
       rolling_upgrade_deployment:
         name: "Rolling Upgrade Deployment"
@@ -173,13 +172,11 @@
               cisco_iosxe: 40
               opengear: 30  # Slower due to architecture detection
               fortios: 35   # HA coordination overhead
-              metamako: 20  # Ultra-low latency requirements
 
         - name: Validate Batch Size Optimization
           assert:
             that:
               - batch_sizes.opengear <= batch_sizes.cisco_nxos  # Account for dual architecture
-              - batch_sizes.metamako <= batch_sizes.fortios     # Ultra-low latency constraints
             success_msg: "✓ Batch size optimization appropriate"
             fail_msg: "Batch size optimization needs review"
 

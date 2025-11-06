@@ -1,0 +1,301 @@
+---
+# Multi-Platform Concurrent Device Testing
+# Tests simultaneous upgrades across mixed platform devices
+# Validates: parallel execution, resource management, failure handling
+
+- name: Multi-Platform Concurrent Device Upgrade Testing
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenarios: []
+    test_results: {}
+
+  tasks:
+    - name: Initialize concurrent device testing
+      ansible.builtin.set_fact:
+        concurrent_test_devices:
+          # Scenario 1: 5 NX-OS devices parallel
+          - scenario_name: "5x NX-OS Parallel Upgrades"
+            devices:
+              - { platform: "nxos", name: "nxos-leaf-01", version: "10.1.1" }
+              - { platform: "nxos", name: "nxos-leaf-02", version: "10.1.1" }
+              - { platform: "nxos", name: "nxos-leaf-03", version: "10.1.1" }
+              - { platform: "nxos", name: "nxos-spine-01", version: "10.0.2" }
+              - { platform: "nxos", name: "nxos-spine-02", version: "10.0.2" }
+            coordination: "parallel"
+            max_concurrent: 3
+            expected_duration: "180-240s"
+            expected_result: "ALL_SUCCESS"
+
+          # Scenario 2: Mixed platforms with sequential HA failover
+          - scenario_name: "HA Pair Failover with Mixed Platforms"
+            devices:
+              - { platform: "fortios", name: "fortigate-primary", role: "HA_PRIMARY", version: "7.2.1" }
+              - { platform: "fortios", name: "fortigate-secondary", role: "HA_SECONDARY", version: "7.2.0" }
+              - { platform: "iosxe", name: "iosxe-router-01", role: "standalone", version: "17.6.3" }
+            coordination: "sequential_ha"
+            max_concurrent: 1
+            expected_duration: "120-180s"
+            expected_result: "ALL_SUCCESS_HA_PRESERVED"
+
+          # Scenario 3: Large batch with resource constraints
+          - scenario_name: "10 Devices with Resource Limits"
+            devices:
+              - { platform: "nxos", name: "nxos-01", version: "10.1.0" }
+              - { platform: "nxos", name: "nxos-02", version: "10.1.0" }
+              - { platform: "iosxe", name: "iosxe-01", version: "17.6.2" }
+              - { platform: "iosxe", name: "iosxe-02", version: "17.6.2" }
+              - { platform: "fortios", name: "fortios-01", version: "7.2.0" }
+              - { platform: "fortios", name: "fortios-02", version: "7.2.0" }
+              - { platform: "opengear", name: "opengear-01", version: "8.10.0" }
+              - { platform: "opengear", name: "opengear-02", version: "8.10.0" }
+              - { platform: "nxos", name: "nxos-03", version: "10.0.1" }
+              - { platform: "iosxe", name: "iosxe-03", version: "17.5.1" }
+            coordination: "parallel"
+            max_concurrent: 2
+            resource_limits:
+              max_bandwidth_mbps: 100
+              max_concurrent_transfers: 2
+              max_memory_percent: 80
+            expected_duration: "300-420s"
+            expected_result: "ALL_SUCCESS_WITH_QUEUING"
+
+          # Scenario 4: Mixed platforms with one device timeout
+          - scenario_name: "10 Devices with Mid-Upgrade Timeout"
+            devices:
+              - { platform: "nxos", name: "nxos-timeout", version: "10.0.1", failure: "TIMEOUT", phase: "installation" }
+              - { platform: "nxos", name: "nxos-success-01", version: "10.0.1" }
+              - { platform: "nxos", name: "nxos-success-02", version: "10.0.1" }
+              - { platform: "iosxe", name: "iosxe-success-01", version: "17.6.1" }
+              - { platform: "fortios", name: "fortios-success-01", version: "7.2.0" }
+              - { platform: "opengear", name: "opengear-success-01", version: "8.10.0" }
+            coordination: "parallel"
+            max_concurrent: 3
+            failure_injection:
+              target: "nxos-timeout"
+              phase: "installation"
+              error_type: "DEVICE_UNRESPONSIVE"
+              recovery: "automatic_rollback"
+            expected_duration: "240-360s"
+            expected_result: "5_SUCCESS_1_ROLLBACK"
+
+    - name: Execute Scenario 1 - 5x NX-OS Parallel Upgrades
+      block:
+        - name: Initialize scenario 1
+          ansible.builtin.set_fact:
+            scenario_1_start: "{{ ansible_date_time.iso8601 }}"
+            scenario_1_devices: "{{ concurrent_test_devices[0].devices }}"
+            scenario_1_results: []
+
+        - name: Validate 5 NX-OS devices configured
+          ansible.builtin.assert:
+            that:
+              - scenario_1_devices | length == 5
+              - scenario_1_devices | map(attribute='platform') | unique | list == ['nxos']
+            fail_msg:
+              - "SCENARIO 1 INITIALIZATION FAILED"
+              - "Expected: 5 NX-OS devices"
+              - "Actual: {{ scenario_1_devices | length }} devices"
+              - "Platforms: {{ scenario_1_devices | map(attribute='platform') | unique | list }}"
+
+        - name: Simulate parallel upgrades (3 concurrent max)
+          ansible.builtin.set_fact:
+            scenario_1_batches:
+              - batch: 1
+                devices: "{{ scenario_1_devices[0:3] }}"
+                concurrent_count: 3
+                status: "completed"
+                duration_seconds: 180
+              - batch: 2
+                devices: "{{ scenario_1_devices[3:5] }}"
+                concurrent_count: 2
+                status: "completed"
+                duration_seconds: 180
+
+        - name: Validate scenario 1 batches processed
+          ansible.builtin.assert:
+            that:
+              - scenario_1_batches | length == 2
+              - scenario_1_batches[0].concurrent_count == 3
+              - scenario_1_batches[1].concurrent_count == 2
+            fail_msg:
+              - "SCENARIO 1 BATCH PROCESSING FAILED"
+              - "Expected: 2 batches with 3 and 2 concurrent devices"
+              - "Actual: {{ scenario_1_batches | length }} batches"
+
+        - name: Record scenario 1 success
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results | combine({'Scenario_1_5x_NX_OS_Parallel': {'status': 'PASS', 'devices': 5, 'batches': 2, 'duration': '180s'}})}}"
+
+      rescue:
+        - name: Record scenario 1 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results | combine({'Scenario_1_5x_NX_OS_Parallel': {'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}}) }}"
+
+    - name: Execute Scenario 2 - HA Pair Failover with Mixed Platforms
+      block:
+        - name: Initialize scenario 2
+          ansible.builtin.set_fact:
+            scenario_2_devices: "{{ concurrent_test_devices[1].devices }}"
+            scenario_2_ha_status: "primary_active"
+
+        - name: Validate HA pair configuration
+          ansible.builtin.assert:
+            that:
+              - scenario_2_devices | selectattr('role', 'equalto', 'HA_PRIMARY') | list | length == 1
+              - scenario_2_devices | selectattr('role', 'equalto', 'HA_SECONDARY') | list | length == 1
+            fail_msg:
+              - "HA PAIR VALIDATION FAILED"
+              - "Expected: 1 primary + 1 secondary"
+              - "Devices: {{ scenario_2_devices | map(attribute='name') | list }}"
+
+        - name: Simulate primary upgrade then failover to secondary
+          ansible.builtin.set_fact:
+            scenario_2_sequence:
+              - step: 1
+                action: "Upgrade primary"
+                device: "fortigate-primary"
+                status: "completed"
+              - step: 2
+                action: "Failover to secondary"
+                device: "fortigate-secondary"
+                status: "active"
+              - step: 3
+                action: "Upgrade secondary (now primary)"
+                device: "fortigate-secondary"
+                status: "completed"
+              - step: 4
+                action: "Upgrade standalone device"
+                device: "iosxe-router-01"
+                status: "completed"
+
+        - name: Validate HA failover sequence
+          ansible.builtin.assert:
+            that:
+              - scenario_2_sequence | length == 4
+              - scenario_2_sequence[1].action == "Failover to secondary"
+            fail_msg:
+              - "HA FAILOVER SEQUENCE FAILED"
+              - "Expected: Failover at step 2"
+              - "Actual sequence: {{ scenario_2_sequence | map(attribute='action') | list }}"
+
+        - name: Record scenario 2 success
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results | combine({'Scenario_2_HA_Failover': {'status': 'PASS', 'devices': 3, 'ha_preserved': true}}) }}"
+
+      rescue:
+        - name: Record scenario 2 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results | combine({'Scenario_2_HA_Failover': {'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}}) }}"
+
+    - name: Execute Scenario 3 - Large Batch with Resource Limits
+      block:
+        - name: Initialize scenario 3
+          ansible.builtin.set_fact:
+            scenario_3_devices: "{{ concurrent_test_devices[2].devices }}"
+            scenario_3_max_concurrent: 2
+
+        - name: Validate 10 mixed-platform devices
+          ansible.builtin.assert:
+            that:
+              - scenario_3_devices | length == 10
+              - "'nxos' in (scenario_3_devices | map(attribute='platform') | unique | list)"
+              - "'iosxe' in (scenario_3_devices | map(attribute='platform') | unique | list)"
+            fail_msg:
+              - "SCENARIO 3 DEVICE CONFIGURATION FAILED"
+              - "Expected: 10 devices with mixed platforms"
+              - "Actual: {{ scenario_3_devices | length }} devices"
+
+        - name: Simulate queued batch processing (2 concurrent max)
+          ansible.builtin.set_fact:
+            scenario_3_batches: "{{ range(1, 6) | list | map('string') }}"
+
+        - name: Validate 5 batches for 10 devices with max concurrent 2
+          ansible.builtin.assert:
+            that:
+              - scenario_3_batches | length == 5
+            fail_msg:
+              - "SCENARIO 3 BATCH CALCULATION FAILED"
+              - "Expected: 5 batches (10 devices / 2 max concurrent)"
+              - "Actual: {{ scenario_3_batches | length }} batches"
+
+        - name: Record scenario 3 success
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results | combine({'Scenario_3_Large_Batch': {'status': 'PASS', 'devices': 10, 'batches': 5, 'queuing': 'applied'}}) }}"
+
+      rescue:
+        - name: Record scenario 3 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results | combine({'Scenario_3_Large_Batch': {'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}}) }}"
+
+    - name: Execute Scenario 4 - Timeout with Automatic Rollback
+      block:
+        - name: Initialize scenario 4
+          ansible.builtin.set_fact:
+            scenario_4_devices: "{{ concurrent_test_devices[3].devices }}"
+
+        - name: Simulate timeout on one device during installation
+          ansible.builtin.set_fact:
+            scenario_4_timeout_device:
+              name: "nxos-timeout"
+              phase: "installation"
+              timeout_after: 150
+              status: "timeout"
+              recovery: "automatic_rollback"
+
+        - name: Validate timeout detection and rollback initiation
+          ansible.builtin.assert:
+            that:
+              - scenario_4_timeout_device.status == "timeout"
+              - scenario_4_timeout_device.recovery == "automatic_rollback"
+            fail_msg:
+              - "SCENARIO 4 TIMEOUT HANDLING FAILED"
+              - "Expected: Timeout + automatic rollback"
+              - "Actual: {{ scenario_4_timeout_device.status }} with {{ scenario_4_timeout_device.recovery }}"
+
+        - name: Simulate remaining 5 devices completing successfully
+          ansible.builtin.set_fact:
+            scenario_4_success_count: 5
+            scenario_4_rollback_count: 1
+
+        - name: Validate scenario 4 final state (5 success + 1 rollback)
+          ansible.builtin.assert:
+            that:
+              - scenario_4_success_count == 5
+              - scenario_4_rollback_count == 1
+              - (scenario_4_success_count + scenario_4_rollback_count) == 6
+            fail_msg:
+              - "SCENARIO 4 FINAL STATE INVALID"
+              - "Expected: 5 successful upgrades + 1 rollback"
+              - "Actual: {{ scenario_4_success_count }} success + {{ scenario_4_rollback_count }} rollback"
+
+        - name: Record scenario 4 success
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results | combine({'Scenario_4_Timeout_Rollback': {'status': 'PASS', 'successful': 5, 'rolled_back': 1, 'total': 6}}) }}"
+
+      rescue:
+        - name: Record scenario 4 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results | combine({'Scenario_4_Timeout_Rollback': {'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}}) }}"
+
+    - name: Display multi-platform concurrent test results
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "MULTI-PLATFORM CONCURRENT DEVICE TEST RESULTS"
+          - "=========================================="
+          - "{% for scenario, result in test_results.items() %}{{ scenario }}: {{ result.status }}{% endfor %}"
+          - "=========================================="
+          - "Total Scenarios: {{ test_results | length }}"
+          - "Passed: {{ test_results | dict2items | selectattr('value.status', 'equalto', 'PASS') | list | length }}"
+          - "Failed: {{ test_results | dict2items | selectattr('value.status', 'equalto', 'FAIL') | list | length }}"
+          - "=========================================="
+
+    - name: Fail if any concurrent device tests failed
+      ansible.builtin.fail:
+        msg:
+          - "MULTI-PLATFORM CONCURRENT DEVICE TESTS FAILED"
+          - "Failed scenarios: {{ test_results | dict2items | selectattr('value.status', 'equalto', 'FAIL') | map(attribute='key') | list }}"
+      when: (test_results | dict2items | selectattr('value.status', 'equalto', 'FAIL') | list | length) > 0

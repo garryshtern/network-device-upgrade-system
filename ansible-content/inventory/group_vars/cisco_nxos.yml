@@ -5,17 +5,15 @@
 # Connection settings - SSH key authentication preferred over passwords
 ansible_network_os: cisco.nxos.nxos
 ansible_connection: ansible.netcommon.network_cli
-ansible_user: "{{ vault_cisco_nxos_username | default('admin') }}"
-# SSH key authentication (preferred)
-ansible_ssh_private_key_file: "{{ vault_cisco_nxos_ssh_key | default(omit) }}"
-# Password authentication (fallback)
-ansible_password: "{{ vault_cisco_nxos_password | default(omit) }}"
-ansible_ssh_common_args: >
-  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-  -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
+
+# Platform identifier (use this in playbooks, NOT ansible_network_os)
+platform: nxos
+
+# Credentials are dynamically mapped in group_vars/all.yml based on platform
+# ansible_user, ansible_password, ansible_ssh_private_key_file set in all.yml
+# SSH connection options configured globally in ansible.cfg
 
 # Platform specific settings
-platform_type: "cisco_nxos"
 vendor: "cisco"
 device_family: "nexus"
 
@@ -42,6 +40,18 @@ nxos_copy_timeout: 1800
 min_free_space_mb: 2000
 cleanup_old_images: true
 keep_image_count: 2
+
+# Device model patterns for platform identification
+device_model_patterns:
+  - regex: "N9K-C92.*"
+    platform: "nexus_9000"
+    model_prefix: "N9K-C92"
+  - regex: "N9K-C93.*"
+    platform: "nexus_9000"
+    model_prefix: "N9K-C93"
+  - regex: "N3K-C354.*"
+    platform: "nexus_3548"
+    model_prefix: "N3K-C354"
 
 # Validation specific to NX-OS
 validate_vdc_mode: true
@@ -72,8 +82,9 @@ vdc_mode: false
 target_vdc: "{{ ansible_host }}-vdc"
 
 # Boot variables
-primary_boot_image: "bootflash:///nxos.{{ target_firmware_version }}.bin"
-secondary_boot_image: "bootflash:///nxos.backup.bin"
+# NOTE: target_firmware is the complete firmware filename (e.g., "nxos.10.3.1.bin")
+primary_boot_image: "bootflash:///{{ target_firmware }}"
+secondary_boot_image: "bootflash:///nxos64-cs.backup.bin"
 
 # Feature validation
 required_features:
@@ -88,3 +99,9 @@ required_features:
 max_interface_errors: 100
 max_crc_errors: 50
 max_late_collisions: 10
+
+# NX-OS file transfer globals
+# Valid transfer_status values from cisco.nxos.nxos_file_copy module
+nxos_valid_transfer_statuses:
+  - "No Transfer: File already copied to remote device."
+  - "Sent: File copied to remote device."

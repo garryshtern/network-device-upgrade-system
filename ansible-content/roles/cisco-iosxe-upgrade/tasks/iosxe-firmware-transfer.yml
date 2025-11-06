@@ -1,0 +1,97 @@
+---
+# IOS-XE Specific Firmware Transfer Handler
+# Called by secure-file-transfer.yml
+# Sets: transfer_result, transferred_file_hash
+
+- name: IOS-XE firmware transfer block
+  block:
+    - name: Enable SCP server on device (if not already enabled)
+      cisco.ios.ios_config:
+        lines:
+          - ip scp server enable
+      register: scp_enable_result
+      failed_when: false  # May already be enabled
+
+    - name: Log SCP server enable failures
+      ansible.builtin.debug:
+        msg: "Warning: Failed to enable SCP server: {{ scp_enable_result.msg if scp_enable_result.msg is defined else 'Unknown error' }}"
+      when:
+        - scp_enable_result is defined
+        - scp_enable_result.failed is defined
+        - scp_enable_result.failed | bool
+
+    - name: Push image from server to device via SCP
+      ansible.posix.synchronize:
+        src: "{{ local_file_path }}"
+        dest: "{{ ansible_host }}:{{ target_image_filename }}"
+        mode: push
+        rsync_opts:
+          - "--timeout=3600"
+          - "--progress"
+        delegate_to: localhost
+      register: scp_result
+      vars:
+        ansible_ssh_pipelining: false
+
+    - name: Alternative SCP transfer method (if synchronize fails)
+      ansible.builtin.command:
+        cmd: >-
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          {{
+            '-i ' + ansible_ssh_private_key_file
+            if ansible_ssh_private_key_file is defined else ''
+          }}
+          "{{ local_file_path }}"
+          "{{ ansible_user }}@{{ ansible_host }}:{{ target_image_filename }}"
+        timeout: 3600
+      delegate_to: localhost
+      when: scp_result is failed
+      register: scp_fallback_result
+
+    - name: Verify file transfer completion
+      cisco.ios.ios_command:
+        commands:
+          - "dir bootflash:{{ target_image_filename }}"
+      register: file_verification
+
+    - name: Confirm file exists and size matches
+      ansible.builtin.assert:
+        that:
+          - target_image_filename in file_verification.stdout[0]
+          - target_image_size | string in file_verification.stdout[0]
+        fail_msg: "File transfer verification failed"
+
+    - name: Calculate MD5 hash of transferred file
+      cisco.ios.ios_command:
+        commands:
+          - "verify /md5 bootflash:{{ target_image_filename }}"
+      register: md5_verification
+      when: expected_md5_hash is defined
+
+    - name: Verify MD5 hash matches expected
+      ansible.builtin.assert:
+        that:
+          - expected_md5_hash in md5_verification.stdout[0]
+        fail_msg: "MD5 hash verification failed"
+      when: expected_md5_hash is defined
+
+    - name: Set transfer result (success)
+      ansible.builtin.set_fact:
+        transfer_result:
+          succeeded: true
+          method: "{{ 'SCP (synchronize)' if scp_result is succeeded else 'SCP (fallback)' }}"
+          error_message: null
+        transferred_file_hash: "{{ expected_md5_hash if expected_md5_hash is defined else 'not_verified' }}"
+
+  rescue:
+    - name: Set transfer result (failure)
+      ansible.builtin.set_fact:
+        transfer_result:
+          succeeded: false
+          method: "SCP (Server-Initiated PUSH)"
+          error_message: "{{ ansible_failed_result.msg | default('Unknown transfer error') }}"
+      ignore_errors: true
+
+    - name: Re-raise the error
+      ansible.builtin.fail:
+        msg: "{{ transfer_result.error_message }}"

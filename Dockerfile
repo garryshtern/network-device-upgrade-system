@@ -4,7 +4,7 @@ FROM python:3.13-alpine
 
 # Metadata labels for GitHub Container Registry
 LABEL org.opencontainers.image.title="Network Device Upgrade System"
-LABEL org.opencontainers.image.description="Automated network device firmware upgrade system using Ansible. Supports Cisco NX-OS/IOS-XE, FortiOS, Opengear, and Metamako with comprehensive validation and rollback."
+LABEL org.opencontainers.canimage.description="Automated network device firmware upgrade system using Ansible. Supports Cisco NX-OS/IOS-XE, FortiOS, and Opengear with comprehensive validation and rollback."
 LABEL org.opencontainers.image.vendor="Network Operations"
 LABEL org.opencontainers.image.version="1.4.0"
 LABEL org.opencontainers.image.source="https://github.com/garryshtern/network-device-upgrade-system"
@@ -26,6 +26,7 @@ RUN apk add --no-cache \
     musl-dev \
     libffi-dev \
     openssl-dev \
+    libssh-dev \
     cargo \
     rust \
     && rm -rf /var/cache/apk/*
@@ -34,6 +35,11 @@ RUN apk add --no-cache \
 RUN addgroup -g 1000 ansible \
     && adduser -D -u 1000 -G ansible -s /bin/bash ansible \
     && echo 'ansible ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/ansible
+
+# Create runtime directory with proper permissions for ansible user
+RUN mkdir -p /var/lib/network-upgrade \
+    && chown -R ansible:ansible /var/lib/network-upgrade \
+    && chmod 755 /var/lib/network-upgrade
 
 # Set working directory
 WORKDIR /opt/network-upgrade
@@ -47,10 +53,11 @@ USER ansible
 # Set PATH to include user pip binaries
 ENV PATH="/home/ansible/.local/bin:${PATH}"
 
-# Upgrade pip and install Ansible with latest versions
+# Upgrade pip and install Ansible 11.0.0 (includes ansible-core 2.18.10)
 RUN pip install --user --no-cache-dir --upgrade pip \
     && pip install --user --no-cache-dir \
-        ansible \
+        ansible==11.0.0 \
+        ansible-pylibssh \
         paramiko \
         netaddr \
         jinja2 \

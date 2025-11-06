@@ -5,6 +5,8 @@
 - name: Network Validation Component Tests
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     validation_role_path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation"
     test_results: {}
@@ -15,12 +17,11 @@
         path: "{{ validation_role_path }}/tasks/{{ item }}"
       register: validation_structure_check
       loop:
-        - "bgp-validation.yml"
-        - "interface-validation.yml"
+        - "network-resource-validation.yml"
         - "routing-validation.yml"
         - "multicast-validation.yml"
         - "arp-validation.yml"
-        - "protocol-convergence.yml"
+        - "bfd-validation.yml"
 
     - name: Verify all validation tasks exist
       ansible.builtin.assert:
@@ -34,22 +35,21 @@
         python -c "import yaml; yaml.safe_load(open('{{ validation_role_path }}/tasks/{{ item }}'))"
       register: validation_task_syntax
       loop:
-        - "bgp-validation.yml"
-        - "interface-validation.yml"
+        - "network-resource-validation.yml"
         - "multicast-validation.yml"
         - "routing-validation.yml"
         - "arp-validation.yml"
-        - "protocol-convergence.yml"
+        - "bfd-validation.yml"
       failed_when: validation_task_syntax.rc != 0
 
     - name: Check validation template directory
       ansible.builtin.stat:
-        path: "{{ playbook_dir }}/../../ansible-content/validation-templates"
+        path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/templates"
       register: validation_templates_dir
 
     - name: Find validation templates
       ansible.builtin.find:
-        paths: "{{ playbook_dir }}/../../ansible-content/validation-templates"
+        paths: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/templates"
         patterns: "*.j2"
       register: validation_templates
       when: validation_templates_dir.stat.exists
@@ -155,22 +155,6 @@
           - mock_arp_data.arp_entries | selectattr('type', 'equalto', 'dynamic') | list | length == 1
         fail_msg: "ARP validation logic test failed"
 
-    - name: Test protocol convergence logic
-      ansible.builtin.set_fact:
-        mock_convergence_data:
-          bgp_convergence_time: 45
-          ospf_convergence_time: 30
-          interface_recovery_time: 15
-          total_convergence_time: 60
-
-    - name: Validate convergence timing logic
-      ansible.builtin.assert:
-        that:
-          - mock_convergence_data.bgp_convergence_time | int > 0
-          - mock_convergence_data.ospf_convergence_time | int > 0
-          - mock_convergence_data.total_convergence_time | int > 0
-        fail_msg: "Protocol convergence logic test failed"
-
     - name: Test baseline comparison functionality
       ansible.builtin.set_fact:
         baseline_data:
@@ -219,7 +203,6 @@
           - Interface processing: {{ 'PASS' if mock_interface_data.up_count == 3 else 'FAIL' }}
           - Multicast processing: {{ 'PASS' if mock_multicast_data.pim_neighbors is defined else 'FAIL' }}
           - ARP processing: {{ 'PASS' if mock_arp_data.total_entries == 2 else 'FAIL' }}
-          - Convergence timing: {{ 'PASS' if mock_convergence_data.total_convergence_time > 0 else 'FAIL' }}
           - Baseline comparison: {{ 'PASS' if comparison_result.arp_variance is defined else 'FAIL' }}
 
           Overall Status: {{ 'PASS' if (validation_task_syntax.results | selectattr('rc', 'ne', 0) | list | length == 0) else 'ISSUES FOUND' }}

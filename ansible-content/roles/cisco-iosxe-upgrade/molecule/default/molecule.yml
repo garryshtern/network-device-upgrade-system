@@ -5,8 +5,7 @@
 dependency:
   name: galaxy
   options:
-    requirements-file: >
-      ../../../../../ansible-content/collections/requirements.yml
+    requirements-file: ${PWD}/ansible-content/collections/requirements.yml
 
 driver:
   name: docker
@@ -38,7 +37,7 @@ provisioner:
     host_vars:
       iosxe-install-mode:
         ansible_connection: local
-        platform_type: "cisco_iosxe"
+        platform: "ios"
         boot_mode: "install"
         current_version: "17.06.04"
         target_version: "17.09.02"
@@ -46,7 +45,7 @@ provisioner:
 
       iosxe-bundle-mode:
         ansible_connection: local
-        platform_type: "cisco_iosxe"
+        platform: "ios"
         boot_mode: "bundle"
         current_version: "16.12.07"
         target_version: "17.06.04"
@@ -54,3 +53,18 @@ provisioner:
 
 verifier:
   name: ansible
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

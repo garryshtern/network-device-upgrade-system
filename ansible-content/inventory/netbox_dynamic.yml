@@ -30,7 +30,6 @@ query_filters:
       - cisco-iosxe
       - fortios
       - opengear
-      - metamako-mos
 
 # Device composition - how inventory variables are built
 compose:
@@ -109,8 +108,6 @@ compose:
   # Upgrade and maintenance metadata
   current_firmware_version: >
     {{ custom_fields.current_firmware | default('unknown') }}
-  target_firmware_version: >
-    {{ custom_fields.target_firmware | default('') }}
   last_upgrade_date: >
     {{ custom_fields.last_upgrade_date | default('never') }}
   upgrade_status: >

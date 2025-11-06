@@ -13,7 +13,6 @@
 
     # Mock device configuration
     ansible_network_os: "cisco.nxos.nxos"
-    device_platform: "cisco_nxos"
 
     # Test image loading parameters
     image_results_path: "/tmp/image-loading-test"
@@ -67,17 +66,17 @@
       vars:
         mock_images:
           - type: "primary"
-            filename: "nxos.9.3.7.bin"
+            filename: "nxos64-cs.9.3.7.M.bin"
             version: "9.3.7"
             size_mb: 1450
             checksum: "sha512:abc123def456"
           - type: "backup"
-            filename: "nxos.9.3.6.bin"
+            filename: "nxos64-cs.9.3.6.M.bin"
             version: "9.3.6"
             size_mb: 1420
             checksum: "sha512:def789abc012"
           - type: "bootloader"
-            filename: "n9000-epld.9.3.7.img"
+            filename: "n9000-epld.9.3.7.M.img"
             version: "9.3.7"
             size_mb: 75
             checksum: "sha512:fed321cba987"
@@ -90,19 +89,19 @@
           # Generated for testing purposes
 
           # Primary Images
-          sha512:abc123def456  nxos.9.3.7.bin
-          sha256:1a2b3c4d5e6f  nxos.9.3.7.bin
-          md5:9f8e7d6c5b4a    nxos.9.3.7.bin
+          sha512:abc123def456  nxos64-cs.9.3.7.M.bin
+          sha256:1a2b3c4d5e6f  nxos64-cs.9.3.7.M.bin
+          md5:9f8e7d6c5b4a    nxos64-cs.9.3.7.M.bin
 
           # Backup Images
-          sha512:def789abc012  nxos.9.3.6.bin
-          sha256:2b3c4d5e6f7g  nxos.9.3.6.bin
-          md5:8e7d6c5b4a39    nxos.9.3.6.bin
+          sha512:def789abc012  nxos64-cs.9.3.6.M.bin
+          sha256:2b3c4d5e6f7g  nxos64-cs.9.3.6.M.bin
+          md5:8e7d6c5b4a39    nxos64-cs.9.3.6.M.bin
 
           # Bootloader Images
-          sha512:fed321cba987  n9000-epld.9.3.7.img
-          sha256:3c4d5e6f7g8h  n9000-epld.9.3.7.img
-          md5:7d6c5b4a3928    n9000-epld.9.3.7.img
+          sha512:fed321cba987  n9000-epld.9.3.7.M.img
+          sha256:3c4d5e6f7g8h  n9000-epld.9.3.7.M.img
+          md5:7d6c5b4a3928    n9000-epld.9.3.7.M.img
         dest: "{{ image_results_path }}/checksums/image-checksums.txt"
         mode: '0644'
 
@@ -143,7 +142,7 @@
       ansible.builtin.set_fact:
         image_loading_state:
           device_name: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: nxos
           loading_timestamp: >-
             {{ ansible_date_time.epoch | default('1695340800') }}
           image_types: "{{ image_types }}"
@@ -377,9 +376,9 @@
         path: "{{ image_results_path }}/images/{{ item }}"
       register: image_file_stats
       loop:
-        - "nxos.9.3.7.bin"
-        - "nxos.9.3.6.bin"
-        - "n9000-epld.9.3.7.img"
+        - "nxos64-cs.9.3.7.M.bin"
+        - "nxos64-cs.9.3.6.M.bin"
+        - "n9000-epld.9.3.7.M.img"
 
     - name: Validate mock image files were created
       ansible.builtin.assert:

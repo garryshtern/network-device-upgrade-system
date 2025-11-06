@@ -22,9 +22,7 @@
       ansible.builtin.assert:
         that:
           - device_architecture != 'unknown'
-        fail_msg: >
-          Unsupported Opengear device model:
-          {{ opengear_upgrade_state.device_model }}
+        fail_msg: "Unsupported Opengear device model: {{ opengear_upgrade_state.device_model }}"
 
     - name: Set upgrade method configuration
       ansible.builtin.set_fact:
@@ -45,11 +43,7 @@
           - >
             opengear_upgrade_state.target_version is
             match(version_pattern.pattern)
-        fail_msg: >
-          Version format mismatch for {{ device_architecture }} devices.
-          Expected: {{ version_pattern.description }}
-          Example: {{ version_pattern.example }}
-          Provided: {{ opengear_upgrade_state.target_version }}
+        fail_msg: "Version format mismatch for {{ device_architecture }} devices. Expected: {{ version_pattern.description }}, Example: {{ version_pattern.example }}, Provided: {{ opengear_upgrade_state.target_version }}"
 
     - name: Generate target firmware filename
       ansible.builtin.set_fact:
@@ -83,9 +77,7 @@
       ansible.builtin.assert:
         that:
           - opengear_storage_path | length > 0
-        fail_msg: >
-          No valid storage path found from:
-          {{ upgrade_config.storage_paths }}
+        fail_msg: "No valid storage path found from: {{ upgrade_config.storage_paths }}"
 
     - name: Check available storage space in detected mount
       ansible.builtin.raw: |
@@ -108,16 +100,13 @@
              float / 1024) | int }}
           {%- endif %}
         required_space_mb: >
-          {{ target_firmware_size_mb | default(100) | int + 50 }}
+          {{ target_firmware_size_mb | int + 50 }}
 
     - name: Validate sufficient storage space
       ansible.builtin.assert:
         that:
           - available_space_mb | int > required_space_mb | int
-        fail_msg: >
-          Insufficient storage space.
-          Available: {{ available_space_mb }}MB,
-          Required: {{ required_space_mb }}MB
+        fail_msg: "Insufficient storage space. Available: {{ available_space_mb }}MB, Required: {{ required_space_mb }}MB"
 
     - name: Validate firmware file extension for device architecture
       ansible.builtin.assert:
@@ -127,10 +116,7 @@
              target_firmware_filename.endswith('.flash')) or
             (device_architecture == 'current_cli' and
              target_firmware_filename.endswith('.raucb'))
-        fail_msg: >
-          Firmware file extension mismatch for
-          {{ device_architecture }} devices:
-          {{ target_firmware_filename }}
+        fail_msg: "Firmware file extension mismatch for {{ device_architecture }} devices: {{ target_firmware_filename }}"
 
 - name: Firmware transfer preparation
   block:
@@ -144,7 +130,7 @@
 
     - name: Log existing firmware check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check for existing firmware: {{ existing_firmware.stderr | default(existing_firmware.stdout) | default('Unknown error') }}"
+        msg: "Warning: Failed to check for existing firmware: {{ existing_firmware.stderr if existing_firmware.stderr is defined else (existing_firmware.stdout if existing_firmware.stdout is defined else default_error_message) }}"
       when:
         - existing_firmware is defined
         - existing_firmware.rc is defined
@@ -163,25 +149,18 @@
     - name: Start firmware transfer to storage location
       ansible.builtin.copy:
         src: "{{ local_firmware_path }}"
-        dest: >
-          {{ opengear_storage_path }}/{{ target_firmware_filename }}
+        dest: "{{ opengear_storage_path }}/{{ target_firmware_filename }}"
         mode: '0644'
       register: firmware_transfer
 
     - name: Log transfer completion
       ansible.builtin.debug:
-        msg: |
-          Firmware transfer completed:
-          - Source: {{ local_firmware_path }}
-          - Destination:
-            {{ opengear_storage_path }}/{{ target_firmware_filename }}
-          - Storage Mount: {{ opengear_storage_path }}
-          - Size:
-            {{
-              firmware_transfer.size if
-              firmware_transfer.size is defined else
-              'Unknown'
-            }} bytes
+        msg:
+          - "Firmware transfer completed:"
+          - "- Source: {{ local_firmware_path }}"
+          - "- Destination: {{ opengear_storage_path }}/{{ target_firmware_filename }}"
+          - "- Storage Mount: {{ opengear_storage_path }}"
+          - "- Size: {{ firmware_transfer.size if firmware_transfer.size is defined else 'Unknown' }} bytes"
 
 - name: Verify firmware integrity
   block:
@@ -209,18 +188,18 @@
       ansible.builtin.assert:
         that:
           - expected_checksum == device_calculated_checksum
-        fail_msg: |
-          Checksum verification failed!
-          Expected: {{ expected_checksum }}
-          Calculated: {{ device_calculated_checksum }}
+        fail_msg:
+          - "Checksum verification failed!"
+          - "Expected: {{ expected_checksum }}"
+          - "Calculated: {{ device_calculated_checksum }}"
 
     - name: Log successful checksum verification
       ansible.builtin.debug:
-        msg: |
-          Firmware integrity verified successfully:
-          - Expected MD5: {{ expected_checksum }}
-          - Device MD5: {{ device_calculated_checksum }}
-          - Status: VERIFIED
+        msg:
+          - "Firmware integrity verified successfully:"
+          - "- Expected MD5: {{ expected_checksum }}"
+          - "- Device MD5: {{ device_calculated_checksum }}"
+          - "- Status: VERIFIED"
 
 - name: Prepare firmware for upgrade installation
   block:
@@ -265,25 +244,22 @@
 
     - name: Log backup completion
       ansible.builtin.debug:
-        msg: |
-          Configuration backup completed:
-          - Backup Location: {{ opengear_storage_path }}/
-          - Backup Time:
-            {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-          - CLI Result:
-            {{ config_backup_result.stdout | default('Success') }}
-
+        msg:
+          - "Configuration backup completed:"
+          - "- Backup Location: {{ opengear_storage_path }}/"
+          - "- Backup Time: {{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          - "- CLI Result: {{ config_backup_result.stdout }}"
 
 - name: Log image loading completion
   ansible.builtin.debug:
-    msg: |-
-      Opengear Image Loading Completed:
-      - Device: {{ inventory_hostname }}
-      - Model: {{ opengear_upgrade_state.device_model }}
-      - Architecture: {{ device_architecture | title }}
-      - Firmware File: {{ target_firmware_filename }}
-      - Storage Mount: {{ opengear_storage_path }}
-      - Firmware Path: {{ opengear_firmware_ready_path }}
-      - Transfer Method: SCP
-      - Checksum Status: VERIFIED
-      - Ready for {{ upgrade_config.command }}: YES
+    msg:
+      - "Opengear Image Loading Completed:"
+      - "- Device: {{ inventory_hostname }}"
+      - "- Model: {{ opengear_upgrade_state.device_model }}"
+      - "- Architecture: {{ device_architecture | title }}"
+      - "- Firmware File: {{ target_firmware_filename }}"
+      - "- Storage Mount: {{ opengear_storage_path }}"
+      - "- Firmware Path: {{ opengear_firmware_ready_path }}"
+      - "- Transfer Method: SCP"
+      - "- Checksum Status: VERIFIED"
+      - "- Ready for {{ upgrade_config.command }}: YES"

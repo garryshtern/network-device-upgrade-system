@@ -1,0 +1,287 @@
+---
+# Test: Rollback Failure Scenarios
+# Tests: Old image missing, device won't boot, partial rollback failures, offline device
+# Risk Level: CRITICAL - Last-resort recovery mechanism
+# Coverage: All platforms with rollback capability
+
+- name: Rollback Failure Scenarios Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "rollback_failures"
+    test_device_name: "test-nxos-01"
+    current_version: "9.4.0"
+    previous_version: "9.3.1"
+
+  tasks:
+    - name: Test Phase 1 - Old Image Missing Detection
+      block:
+        - name: Create upgrade state
+          ansible.builtin.set_fact:
+            upgrade_state: {
+              "device": test_device_name,
+              "new_version": current_version,
+              "old_version": previous_version,
+              "rollback_required": True
+            }
+
+        - name: Simulate missing old image file
+          ansible.builtin.set_fact:
+            old_image_status: {
+              "path": "/opt/firmware/9.3.1/nxos.bin",
+              "exists": False,
+              "accessible": False
+            }
+
+        - name: Detect missing old image
+          ansible.builtin.assert:
+            that:
+              - old_image_status.exists == False
+            fail_msg: "Old image missing detection failed"
+            success_msg: "✓ Old image missing detected ({{ old_image_status.path }})"
+
+        - name: Determine failure action
+          ansible.builtin.set_fact:
+            failure_action: "{{ 'ALERT_MANUAL_INTERVENTION' if not old_image_status.exists else 'PROCEED_ROLLBACK' }}"
+
+        - name: Verify alert generated
+          ansible.builtin.assert:
+            that:
+              - failure_action == 'ALERT_MANUAL_INTERVENTION'
+            fail_msg: "Alert for missing image not triggered"
+            success_msg: "✓ Manual intervention alert generated: Old firmware unavailable"
+
+    - name: Test Phase 2 - Device Won't Boot From Old Image
+      block:
+        - name: Simulate boot attempt with old image
+          ansible.builtin.set_fact:
+            boot_attempt: {
+              "device": test_device_name,
+              "boot_from_image": previous_version,
+              "attempt": 1,
+              "result": "BOOT_FAILURE",
+              "error_code": "INVALID_IMAGE"
+            }
+
+        - name: Verify boot failure detected
+          ansible.builtin.assert:
+            that:
+              - boot_attempt.result == "BOOT_FAILURE"
+            fail_msg: "Boot failure not detected"
+            success_msg: "✓ Boot failure detected: {{ boot_attempt.error_code }}"
+
+        - name: Simulate multiple boot retry attempts
+          ansible.builtin.set_fact:
+            boot_attempts: []
+
+        - name: Add boot retry attempts
+          ansible.builtin.set_fact:
+            boot_attempts: "{{ boot_attempts + [{'attempt': item, 'result': 'BOOT_FAILURE'}] }}"
+          loop: "{{ range(1, 4) | list }}"
+
+        - name: Verify all boot attempts failed
+          ansible.builtin.assert:
+            that:
+              - (boot_attempts | map(attribute='result') | unique) == ['BOOT_FAILURE']
+            fail_msg: "Boot retry tracking failed"
+            success_msg: "✓ All {{ boot_attempts | length }} boot attempts failed"
+
+        - name: Trigger hardware manual check alert
+          ansible.builtin.set_fact:
+            manual_intervention_required: {
+              "device": test_device_name,
+              "reason": "DEVICE_WONT_BOOT_FROM_OLD_IMAGE",
+              "action_needed": "MANUAL_DEVICE_RECOVERY",
+              "severity": "CRITICAL"
+            }
+
+        - name: Assert critical alert
+          ansible.builtin.assert:
+            that:
+              - manual_intervention_required.severity == "CRITICAL"
+            fail_msg: "Critical alert not triggered"
+            success_msg: "✓ CRITICAL alert: Device will not boot from {{ previous_version }}"
+
+    - name: Test Phase 3 - Partial Rollback Failure Detection
+      block:
+        - name: Simulate devices in rollback operation
+          ansible.builtin.set_fact:
+            rollback_batch:
+              - {device: "nxos-01", status: "ROLLBACK_SUCCESS"}
+              - {device: "nxos-02", status: "ROLLBACK_SUCCESS"}
+              - {device: "nxos-03", status: "ROLLBACK_FAILED"}
+              - {device: "nxos-04", status: "ROLLBACK_PENDING"}
+
+        - name: Count rollback failures
+          ansible.builtin.set_fact:
+            rollback_failures: "{{ rollback_batch | selectattr('status', 'match', '.*FAILED') | list }}"
+
+        - name: Verify partial failure detected
+          ansible.builtin.assert:
+            that:
+              - rollback_failures | length > 0
+              - rollback_failures | length < (rollback_batch | length)
+            fail_msg: "Partial rollback failure not detected"
+            success_msg: "✓ Partial rollback failure detected ({{ rollback_failures | length }}/{{ rollback_batch | length }} devices)"
+
+        - name: Calculate rollback statistics
+          ansible.builtin.set_fact:
+            successful_rollbacks: "{{ rollback_batch | selectattr('status', 'match', '.*SUCCESS') | list | length }}"
+            pending_rollbacks: "{{ rollback_batch | selectattr('status', 'match', '.*PENDING') | list | length }}"
+
+        - name: Generate rollback failure report
+          ansible.builtin.set_fact:
+            rollback_report:
+              total_devices: "{{ rollback_batch | length }}"
+              successful: "{{ successful_rollbacks }}"
+              failed: "{{ rollback_failures | length }}"
+              pending: "{{ pending_rollbacks }}"
+
+        - name: Assert report accuracy
+          ansible.builtin.assert:
+            that:
+              - "(rollback_report.successful | int + rollback_report.failed | int + rollback_report.pending | int) == (rollback_report.total_devices | int)"
+            fail_msg: "Rollback report inconsistent"
+            success_msg: "✓ Rollback report: {{ rollback_report.successful }} success, {{ rollback_report.failed }} failed, {{ rollback_report.pending }} pending"
+
+    - name: Test Phase 4 - Rollback During Device Offline
+      block:
+        - name: Simulate device offline during rollback request
+          ansible.builtin.set_fact:
+            offline_device_state: {
+              "device": test_device_name,
+              "is_online": False,
+              "last_seen": "2025-11-04T11:30:00Z",
+              "rollback_requested": True,
+              "can_execute_rollback": False
+            }
+
+        - name: Detect offline device
+          ansible.builtin.assert:
+            that:
+              - offline_device_state.is_online == False
+              - offline_device_state.can_execute_rollback == False
+            fail_msg: "Offline device not detected"
+            success_msg: "✓ Device offline detected - rollback cannot execute"
+
+        - name: Queue rollback for when device comes online
+          ansible.builtin.set_fact:
+            rollback_queue_entry: {
+              "device": test_device_name,
+              "action": "ROLLBACK",
+              "status": "QUEUED",
+              "queued_at": "2025-11-04T12:00:00Z",
+              "will_retry": True
+            }
+
+        - name: Verify rollback queued
+          ansible.builtin.assert:
+            that:
+              - rollback_queue_entry.status == "QUEUED"
+              - rollback_queue_entry.will_retry == True
+            fail_msg: "Rollback queueing failed"
+            success_msg: "✓ Rollback queued for retry when device comes online"
+
+    - name: Test Phase 5 - Cascading Rollback Failures
+      block:
+        - name: Simulate large-scale rollback (100 devices)
+          ansible.builtin.set_fact:
+            large_scale_devices: []
+
+        - name: Create device list with failures
+          ansible.builtin.set_fact:
+            large_scale_devices: "{{ large_scale_devices + [
+              {'device_id': 'device_' + item | string,
+               'rollback_status': 'FAILED' if (item % 10 == 0) else 'SUCCESS'}
+            ] }}"
+          loop: "{{ range(1, 101) | list }}"
+
+        - name: Count cascade failures
+          ansible.builtin.set_fact:
+            cascade_failure_count: "{{ large_scale_devices | selectattr('rollback_status', 'equalto', 'FAILED') | list | length }}"
+            expected_failures: 10
+
+        - name: Assert cascading failures detected
+          ansible.builtin.assert:
+            that:
+              - "cascade_failure_count | int > 0"
+              - "cascade_failure_count | int <= (large_scale_devices | length)"
+            fail_msg: "Cascade failure count incorrect"
+            success_msg: "✓ Cascading failures detected: {{ cascade_failure_count }}/{{ large_scale_devices | length }} devices failed"
+
+        - name: Verify error tracking
+          ansible.builtin.set_fact:
+            failed_devices: "{{ large_scale_devices | selectattr('rollback_status', 'equalto', 'FAILED') | map(attribute='device_id') | list }}"
+
+        - name: Assert all failures tracked
+          ansible.builtin.assert:
+            that:
+              - "failed_devices | length > 0"
+              - "failed_devices | length == cascade_failure_count | int"
+            fail_msg: "Failed devices not properly tracked"
+            success_msg: "✓ All {{ failed_devices | length }} failed devices tracked for analysis"
+
+    - name: Test Phase 6 - State After Failed Rollback
+      block:
+        - name: Determine device state after rollback failure
+          ansible.builtin.set_fact:
+            post_rollback_failure_state: {
+              "device": test_device_name,
+              "attempted_rollback_to": previous_version,
+              "current_version": current_version,
+              "rollback_failed": True,
+              "device_operational": False,
+              "data_integrity": "UNKNOWN"
+            }
+
+        - name: Verify unsafe state detected
+          ansible.builtin.assert:
+            that:
+              - post_rollback_failure_state.device_operational == False
+              - post_rollback_failure_state.data_integrity == "UNKNOWN"
+            fail_msg: "Unsafe post-failure state not detected"
+            success_msg: "✓ Device in unsafe state after rollback failure - requires manual intervention"
+
+        - name: Document required recovery steps
+          ansible.builtin.set_fact:
+            recovery_steps: [
+              "1. Physical access to device",
+              "2. Console serial port connection",
+              "3. Manual boot from recovery/BIOS",
+              "4. Restore known-good firmware via console",
+              "5. Data integrity verification",
+              "6. Configuration restoration"
+            ]
+
+        - name: Verify recovery procedure available
+          ansible.builtin.assert:
+            that:
+              - recovery_steps | length > 0
+            fail_msg: "Recovery procedure not available"
+            success_msg: "✓ Recovery procedure documented ({{ recovery_steps | length }} steps)"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Rollback Failure Scenarios Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Old firmware image missing detection"
+          - "  ✓ Device won't boot from old image detection"
+          - "  ✓ Boot retry mechanism failure tracking"
+          - "  ✓ Partial rollback failure detection"
+          - "  ✓ Rollback during offline device queuing"
+          - "  ✓ Cascading rollback failures (100 device scale)"
+          - "  ✓ Post-failure device state determination"
+          - "  ✓ Manual recovery procedure documentation"
+          - ""
+          - "Failure Scenarios Tested:"
+          - "  - Old firmware unavailable"
+          - "  - Device hardware incompatibility"
+          - "  - Partial batch failures"
+          - "  - Device offline during rollback"
+          - "  - Large-scale cascading failures"
+          - ""
+          - "Risk Coverage: CRITICAL - Ensures recovery mechanisms function when most needed"

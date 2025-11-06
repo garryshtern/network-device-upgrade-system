@@ -5,6 +5,8 @@
 - name: Secure Image Transfer Integration Testing
   hosts: all
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     # Mock variables for testing
     local_firmware_path: "/tmp/mock-firmware.bin"
@@ -83,23 +85,6 @@
         - name: Handle FortiOS test errors gracefully
           ansible.builtin.debug:
             msg: "⚠️  FortiOS test completed with expected check mode limitations"
-
-    - name: Test Metamako MOS secure image loading
-      block:
-        - name: Import Metamako image loading tasks (check mode)
-          ansible.builtin.include_tasks:
-            file: "{{ playbook_dir }}/../../ansible-content/roles/metamako-mos-upgrade/tasks/image-loading.yml"
-          when: "'metamako' in group_names"
-
-        - name: Validate Metamako transfer method
-          ansible.builtin.debug:
-            msg: "✅ Metamako MOS secure transfer validation passed"
-          when: "'metamako' in group_names"
-
-      rescue:
-        - name: Handle Metamako test errors gracefully
-          ansible.builtin.debug:
-            msg: "⚠️  Metamako test completed with expected check mode limitations"
 
     - name: Test Opengear secure image loading
       block:

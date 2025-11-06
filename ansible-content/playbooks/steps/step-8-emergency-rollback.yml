@@ -1,0 +1,31 @@
+---
+# STEP 8: Emergency Rollback
+# Restores device to previous firmware and configuration
+# Triggered only when explicitly enabled or if STEP 7 validation fails
+# Dependencies: STEP 1 (directly); rollback triggers from STEP 7 rescue block
+
+- name: Display STEP 8 entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "STEP 8: EMERGENCY ROLLBACK"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "Initiating rollback procedure..."
+      - "=========================================="
+
+- name: Execute emergency rollback
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: emergency-rollback
+
+- name: Display rollback completion
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "EMERGENCY ROLLBACK COMPLETED"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Status: Rollback procedure finished"
+      - "=========================================="

@@ -26,6 +26,17 @@ validation_timeout: 300  # Timeout for validation tasks (seconds)
 reboot_timeout: 900  # Timeout for device reboot (seconds)
 convergence_wait: 120  # Wait time for protocol convergence (seconds)
 
-# File paths
-validation_output_dir: "/tmp"
-baseline_storage_dir: "/tmp/baselines"
+# File paths (use centralized variables from group_vars/all.yml)
+validation_output_dir: "{{ validation_results_path }}"
+
+# Upgrade state initialization (extends common_upgrade_state from group_vars)
+iosxe_upgrade_state: "{{ common_upgrade_state | combine({'install_mode': false, 'boot_mode': 'bundle', 'available_space': 0, 'required_space': 0}) }}"
+
+# Reboot tracking
+bundle_mode_reboot_required: false
+
+# Image transfer settings
+target_image_size: 1000000000  # Default expected image size (1GB) in bytes
+
+# Platform detection
+device_platform: "generic"  # Platform family (detected at runtime)

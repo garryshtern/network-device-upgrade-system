@@ -1,0 +1,120 @@
+---
+# Vendor-Specific Test Pattern Library
+# Centralized test patterns for NX-OS, IOS-XE, FortiOS, and Opengear
+# Eliminates test pattern duplication across vendor-specific test files
+# Note: This is a YAML data file (not a playbook), used by vendor test playbooks
+
+# NX-OS Test Pattern
+nxos_test_pattern:
+  validation_checks:
+    - name: "ISSU Capability Validation"
+      checks:
+        - field: "issu_capable"
+          required: true
+        - field: "device_model"
+          required: true
+        - field: "firmware_version"
+          required: true
+        - field: "target_version"
+          required: true
+    - name: "EPLD Validation"
+      checks:
+        - field: "epld_upgrade_required"
+          conditional: "issu_capable"
+        - field: "epld_images"
+          when_epld_required: true
+        - field: "current_epld_version"
+          when_epld_required: true
+        - field: "target_epld_version"
+          when_epld_required: true
+  upgrade_paths:
+    issu_capable: "perform_issu_upgrade"
+    non_issu: "perform_standard_upgrade"
+
+# IOS-XE Test Pattern
+iosxe_test_pattern:
+  validation_checks:
+    - name: "Install Mode Capability"
+      checks:
+        - field: "install_mode"
+          required: true
+        - field: "device_model"
+          required: true
+        - field: "firmware_version"
+          required: true
+        - field: "target_version"
+          required: true
+    - name: "Boot Mode Validation"
+      checks:
+        - field: "boot_mode"
+          valid_values: ["install", "bundle"]
+        - field: "install_mode"
+          conditional_on: "boot_mode"
+  upgrade_paths:
+    install_mode_capable: "perform_install_mode_upgrade"
+    bundle_mode_only: "perform_bundle_mode_upgrade"
+
+# FortiOS Test Pattern
+fortios_test_pattern:
+  validation_checks:
+    - name: "HA Configuration Validation"
+      checks:
+        - field: "ha_enabled"
+          required: true
+        - field: "ha_role"
+          when_ha_enabled: true
+          valid_values: ["primary", "secondary", "standalone"]
+        - field: "device_model"
+          required: true
+        - field: "firmware_version"
+          required: true
+        - field: "target_version"
+          required: true
+    - name: "VDOM Validation"
+      checks:
+        - field: "vdom_enabled"
+          required: true
+  upgrade_paths:
+    ha_primary: "perform_ha_primary_upgrade"
+    ha_secondary: "perform_ha_secondary_upgrade"
+    standalone: "perform_standalone_upgrade"
+
+# Opengear Test Pattern
+opengear_test_pattern:
+  validation_checks:
+    - name: "Device Architecture Detection"
+      checks:
+        - field: "device_model"
+          required: true
+        - field: "generation"
+          valid_values: ["legacy", "modern"]
+        - field: "architecture_detection"
+          when_legacy: "legacy_cli"
+          when_modern: "current_cli"
+    - name: "Opengear Specific Validation"
+      checks:
+        - field: "firmware_version"
+          required: true
+        - field: "target_version"
+          required: true
+  upgrade_paths:
+    legacy_cli: "perform_legacy_upgrade"
+    current_cli: "perform_modern_upgrade"
+
+# Common Vendor Test Properties
+common_test_properties:
+  required_fields:
+    - "device_model"
+    - "firmware_version"
+    - "target_version"
+
+  standard_error_messages:
+    device_not_found: "Device model not found in registry"
+    invalid_firmware_version: "Invalid firmware version format"
+    target_version_unsupported: "Target version not supported by device"
+    missing_required_field: "Required field missing from device configuration"
+
+  recovery_actions:
+    validation_failure: "Skip device and continue with next"
+    upgrade_failure: "Attempt automatic rollback"
+    timeout: "Manual intervention required"

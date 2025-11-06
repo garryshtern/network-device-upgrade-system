@@ -1,0 +1,61 @@
+---
+# Reusable task to get storage output from devices
+# Can be included multiple times (initial check, post-cleanup re-check)
+
+- name: Get storage directory information
+  when:
+    - not ansible_check_mode
+    - inventory_hostname != 'localhost'
+  block:
+    - name: NX-OS Platform Block
+      when: platform == 'nxos'
+      block:
+        - name: Get Cisco NX-OS storage information
+          cisco.nxos.nxos_command:
+            commands:
+              - "dir bootflash:"
+          register: nxos_result
+          changed_when: false
+
+        - name: Set storage output from NX-OS result
+          ansible.builtin.set_fact:
+            storage_output: "{{ nxos_result }}"
+
+    - name: IOS-XE Platform Block
+      when: platform == 'ios'
+      block:
+        - name: Get Cisco IOS-XE storage information
+          cisco.ios.ios_command:
+            commands:
+              - "dir bootflash:"
+          register: ios_result
+          changed_when: false
+
+        - name: Set storage output from IOS-XE result
+          ansible.builtin.set_fact:
+            storage_output: "{{ ios_result }}"
+
+    - name: FortiOS Platform Block
+      when: platform == 'fortios'
+      block:
+        - name: Get FortiOS storage information
+          fortinet.fortios.fortios_monitor_fact:
+            vdom: "{{ vdom }}"
+            selector: "system_status"
+          register: fortios_result
+
+        - name: Set storage output from FortiOS result
+          ansible.builtin.set_fact:
+            storage_output: "{{ fortios_result }}"
+
+    - name: Opengear Platform Block
+      when: platform == 'opengear'
+      block:
+        - name: Get Opengear storage information
+          ansible.builtin.raw: "df -h /data"
+          register: opengear_result
+          changed_when: false
+
+        - name: Set storage output from Opengear result
+          ansible.builtin.set_fact:
+            storage_output: "{{ opengear_result }}"

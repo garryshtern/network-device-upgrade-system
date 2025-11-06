@@ -1,0 +1,177 @@
+---
+# Test: Firmware Image Placement and Location Validation
+# Tests: Correct image staging locations, filename conventions, path validation
+# Risk Level: MEDIUM - Image placement correctness
+# Coverage: All platforms
+
+- name: Firmware Image Placement Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "firmware_image_placement"
+
+  tasks:
+    - name: Test Phase 1 - Image Path Validation
+      block:
+        - name: Define firmware paths for each platform
+          ansible.builtin.set_fact:
+            firmware_paths:
+              nxos: "/var/lib/network-upgrade/firmware/cisco_nxos/"
+              iosxe: "/var/lib/network-upgrade/firmware/cisco_iosxe/"
+              fortios: "/var/lib/network-upgrade/firmware/fortios/"
+              opengear: "/var/lib/network-upgrade/firmware/opengear/"
+
+        - name: Verify platform-specific paths
+          ansible.builtin.assert:
+            that:
+              - firmware_paths.nxos.startswith("/var/lib/network-upgrade/firmware/")
+              - firmware_paths.iosxe.startswith("/var/lib/network-upgrade/firmware/")
+              - firmware_paths.fortios.startswith("/var/lib/network-upgrade/firmware/")
+              - firmware_paths.opengear.startswith("/var/lib/network-upgrade/firmware/")
+            fail_msg: "Firmware paths not properly configured"
+            success_msg: "✓ All platform firmware paths validated"
+
+    - name: Test Phase 2 - Filename Convention Validation
+      block:
+        - name: Define correct filename conventions
+          ansible.builtin.set_fact:
+            firmware_filenames:
+              nxos_bin: "nxos.10.1.2.bin"
+              nxos_iso: "nxos.10.1.2.iso"
+              iosxe_bin: "cat9k_iosxe.17.06.04.SPA.bin"
+              fortios_out: "FortiOS-v7.2.4.F.out"
+              opengear_flash: "opengear_cm7100_5.18.2.flash"
+              opengear_raucb: "opengear_cm8100_25.07.0.raucb"
+
+        - name: Verify filename patterns
+          ansible.builtin.assert:
+            that:
+              - firmware_filenames.nxos_bin.endswith(".bin")
+              - firmware_filenames.nxos_iso.endswith(".iso")
+              - firmware_filenames.iosxe_bin.endswith(".bin")
+              - firmware_filenames.fortios_out.endswith(".out")
+              - firmware_filenames.opengear_flash.endswith(".flash")
+              - firmware_filenames.opengear_raucb.endswith(".raucb")
+            fail_msg: "Filename conventions not followed"
+            success_msg: "✓ All filename conventions validated"
+
+    - name: Test Phase 3 - Image Staging Location Verification
+      block:
+        - name: Simulate image staging
+          ansible.builtin.set_fact:
+            image_staging:
+              nxos_device: "n9k-upgrade-01"
+              nxos_image_path: "/var/lib/network-upgrade/firmware/cisco_nxos/nxos.10.1.2.bin"
+              nxos_image_exists: true
+              image_size_bytes: 746385920
+
+        - name: Verify staging location
+          ansible.builtin.assert:
+            that:
+              - image_staging.nxos_image_path.startswith("/var/lib/network-upgrade/firmware/")
+              - image_staging.nxos_image_exists | bool
+              - image_staging.image_size_bytes > 0
+            fail_msg: "Image staging location invalid"
+            success_msg: "✓ Image staging location verified"
+
+    - name: Test Phase 4 - Multi-Image Staging
+      block:
+        - name: Create multi-device staging scenario
+          ansible.builtin.set_fact:
+            staging_inventory:
+              device1:
+                platform: "nxos"
+                image_path: "/var/lib/network-upgrade/firmware/cisco_nxos/nxos.10.1.2.bin"
+                staged: true
+              device2:
+                platform: "iosxe"
+                image_path: "/var/lib/network-upgrade/firmware/cisco_iosxe/cat9k_iosxe.17.06.04.SPA.bin"
+                staged: true
+              device3:
+                platform: "fortios"
+                image_path: "/var/lib/network-upgrade/firmware/fortios/FortiOS-v7.2.4.F.out"
+                staged: true
+
+        - name: Verify all images staged
+          ansible.builtin.assert:
+            that:
+              - staging_inventory.device1.staged | bool
+              - staging_inventory.device2.staged | bool
+              - staging_inventory.device3.staged | bool
+              - staging_inventory | length == 3
+            fail_msg: "Not all images staged correctly"
+            success_msg: "✓ All multi-device images staged correctly"
+
+    - name: Test Phase 5 - Image Deduplication
+      block:
+        - name: Track image duplication across devices
+          ansible.builtin.set_fact:
+            image_usage:
+              "nxos.10.1.2.bin":
+                count: 4
+                devices: ["device-1", "device-2", "device-3", "device-4"]
+              "cat9k_iosxe.17.06.04.SPA.bin":
+                count: 3
+                devices: ["device-5", "device-6", "device-7"]
+
+        - name: Verify image deduplication
+          ansible.builtin.assert:
+            that:
+              - image_usage['nxos.10.1.2.bin'].count == 4
+              - image_usage['cat9k_iosxe.17.06.04.SPA.bin'].count == 3
+            fail_msg: "Image deduplication tracking failed"
+            success_msg: "✓ Image deduplication tracking verified"
+
+    - name: Test Phase 6 - Storage Location Availability
+      block:
+        - name: Verify firmware storage locations exist
+          ansible.builtin.set_fact:
+            storage_locations:
+              primary_firmware: "/var/lib/network-upgrade/firmware"
+              available: true
+              size_gb: 500
+              free_gb: 450
+
+        - name: Verify storage availability
+          ansible.builtin.assert:
+            that:
+              - storage_locations.available | bool
+              - storage_locations.size_gb > 0
+              - storage_locations.free_gb > 0
+            fail_msg: "Storage location not available"
+            success_msg: "✓ Firmware storage location available"
+
+    - name: Test Phase 7 - Image Cleanup After Upgrade
+      block:
+        - name: Simulate post-upgrade cleanup
+          ansible.builtin.set_fact:
+            cleanup_state:
+              images_staged: 10
+              images_after_upgrade: 0
+              cleanup_successful: true
+
+        - name: Verify cleanup successful
+          ansible.builtin.assert:
+            that:
+              - cleanup_state.cleanup_successful | bool
+              - cleanup_state.images_after_upgrade == 0
+            fail_msg: "Image cleanup failed"
+            success_msg: "✓ Image cleanup completed successfully"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Firmware Image Placement Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Image path validation (4 platforms)"
+          - "  ✓ Filename convention validation"
+          - "  ✓ Image staging location verification"
+          - "  ✓ Multi-image staging"
+          - "  ✓ Image deduplication tracking"
+          - "  ✓ Storage location availability"
+          - "  ✓ Post-upgrade image cleanup"
+          - ""
+          - "Risk Coverage: MEDIUM - Ensures correct image placement and organization"

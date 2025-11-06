@@ -1,310 +1,453 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with this repository.
+Project guidance for developers and automation systems working with the Network Device Upgrade Management System.
+
+---
 
 ## Project Overview
 
-Network device upgrade management system for 1000+ heterogeneous network devices. Automates firmware upgrades across multiple vendor platforms using Ansible with AWX and NetBox as native systemd services.
+**Network device upgrade management system** for 1000+ heterogeneous network devices. Automates firmware upgrades across multiple vendor platforms using Ansible with AWX and NetBox as native systemd services.
 
-### **Claude Code Operating Standards**
+**Key Technologies**: Ansible 11.0.0, AWX, NetBox, Grafana, InfluxDB v2, Redis
+**Supported Platforms**: Cisco NX-OS, Cisco IOS-XE, FortiOS, Opengear
+**Main Workflow**: `ansible-content/playbooks/main-upgrade-workflow.yml` (8-step tag-based execution)
 
-**CRITICAL: These standards override any default behavior and MUST be followed exactly.**
+---
 
-1. **Code Generation Requirements**:
-   - Generate ONLY error-free, syntactically correct, and functionally working code
-   - ALL code MUST pass ansible-lint and yamllint validation on first generation
-   - NO syntax errors, linting warnings, or logical errors are acceptable
-   - Code MUST be tested and verified before presenting to user
+## Critical Standards (Zero Tolerance - No Exceptions)
 
-2. **Quality Validation Process**:
-   - Run syntax checks on ALL generated Ansible files
-   - Verify proper YAML formatting and structure
-   - Test functionality in check mode before deployment
-   - Ensure all test suites pass
+### 1. Code Quality
 
-3. **Error Prevention**:
-   - Never use folded scalars in functional contexts (conditionals, paths, logic)
-   - Implement comprehensive error handling with block/rescue patterns
-   - Validate all Ansible task syntax against current best practices
+- **Generate error-free code**: ALL code MUST be syntactically correct and functionally working on first generation
+- **Pass linting**: ALL code MUST pass `ansible-lint` and `yamllint` with 0 errors/warnings
+- **Pass tests**: ALL code MUST pass full test suite (22 tests)
+- **Test updates**: Code changes MUST include test file updates
+- **Exit code 0**: All validation steps MUST return exit code 0
 
-4. **Testing Integration**:
-   - Run relevant tests after any code changes
-   - Verify that changes don't break existing functionality
-   - Maintain or improve overall system reliability
-   - Document any test impacts or requirements
+### 2. YAML Formatting (MANDATORY)
+
+- ❌ **NEVER** use folded scalars (`|`, `>`, `>-`) in: conditionals, paths, when clauses, debug messages
+- ✅ **ALWAYS** use YAML list syntax for messages:
+  ```yaml
+  # CORRECT
+  - name: Display results
+    debug:
+      msg:
+        - "Line 1"
+        - "Line 2: {{ variable }}"
+
+  # WRONG
+  - name: Display results
+    debug:
+      msg: |
+        Line 1
+        Line 2: {{ variable }}
+  ```
+
+### 3. Variable Management (MANDATORY)
+
+- ❌ **NEVER** use `| default()` in playbooks, tasks, or when conditionals
+- ✅ Variables MUST be defined in `group_vars/all.yml` or `roles/*/defaults/main.yml`
+- Exception: `| default(omit)` allowed for optional Ansible module parameters only
+- Exception: `| default()` allowed ONLY in `roles/*/defaults/main.yml`
+- ❌ **NEVER** use `and` in when conditionals - use YAML list syntax instead
+
+#### 3a. Variable Placement Strategy (MANDATORY)
+
+**Single Source of Truth**: All global variables are defined in `ansible-content/inventory/group_vars/all.yml`
+
+**Key Fact:** Ansible only loads `group_vars` from directories relative to the inventory path. The `ansible-content/group_vars/` directory is NOT loaded by Ansible during playbook execution. All variables must be in `ansible-content/inventory/group_vars/all.yml` to be available to playbooks.
+
+**File Location and Purpose:**
+- **Inventory-Level** (`ansible-content/inventory/group_vars/all.yml`) - **SINGLE SOURCE OF TRUTH**
+  - ✅ ALL global defaults for all playbooks and roles
+  - ✅ Applied to all devices when running playbooks
+  - ✅ Override via command line (`-e "var=value"`)
+  - ✅ Contains platform-aware dynamic logic (jinja2 for credential lookup)
+  - ✅ Contains site-specific customizations (paths, credentials)
+
+**Ansible Variable Precedence (last wins):**
+```
+1. Inventory-level group_vars → base defaults (loaded by Ansible)
+2. Command line (-e "var=value") → highest priority (always wins)
+3. Role defaults → only for role-specific variables
+```
+
+**When Adding New Variables:**
+- **Global variable?** → Define in `ansible-content/inventory/group_vars/all.yml`
+- **Site-specific?** → Define in inventory-level (it serves both purposes)
+- **Platform-aware?** → Use jinja2 logic in inventory-level group_vars
+- **Role-specific?** → Define in `roles/*/defaults/main.yml`
+
+**Example - Variable Definition:**
+```yaml
+# ALL variables in: ansible-content/inventory/group_vars/all.yml
+bgp_enabled: true                    # Global default: enable BGP validation
+backup_type: "pre_upgrade"           # Global default: pre-upgrade backups
+show_debug: false                    # Global default: quiet output
+max_concurrent: 5                    # Default concurrency (override: -e "max_concurrent=10")
+ansible_user: >-                     # ✅ Platform-aware credential selection
+  {{ (platform == 'nxos' and vault_cisco_nxos_username is defined)
+     | ternary(vault_cisco_nxos_username, '') or 'admin' }}
+network_upgrade_base_path: "/var/lib/network-upgrade"  # Site-specific path
+```
+
+**Variables Consolidated (Phase 5 - Nov 2025):**
+All global variables now in single location: `ansible-content/inventory/group_vars/all.yml`
+- Deleted: `ansible-content/group_vars/` directory (was not being loaded)
+- Consolidated: 50+ variables previously in playbook-level directory
+- Result: Single source of truth, variables load in ALL scenarios (including individual step execution)
+
+### 3b. Test Data Consolidation Pattern (MANDATORY for test files)
+
+**Single Source of Truth for Test Data**: All test playbooks MUST use `tests/shared-test-vars.yml`
+
+**Quick Pattern:**
+```yaml
+- name: My Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml    # Path depends on file location
+  vars:
+    # Playbook-specific variables only
+    test_environment: true
+```
+
+**Shared Variables Available:**
+- `cisco_nxos_devices` - NX-OS device configurations
+- `cisco_iosxe_devices` - IOS-XE device configurations
+- `fortios_devices` - FortiOS device configurations
+- `opengear_devices` - Opengear device configurations
+- `firmware_upgrade_scenarios` - 7 common upgrade paths
+- `test_environment` - Base paths for firmware, backups, baselines
+
+**Benefits:**
+- Eliminated 50+ duplications
+- Easier maintenance (update once, all tests use it)
+- Consistency across test suite
+
+**For Detailed Guidance:**
+→ See `docs/internal/test-data-consolidation-reference.md` for:
+- Complete pattern examples
+- Path reference rules for all test file locations
+- How to create new test files
+- Common patterns for accessing shared variables
+
+### 4. Platform-Specific Organization (MANDATORY)
+
+All platform-specific tasks MUST be organized under a single block with ONE when clause:
+
+```yaml
+# CORRECT: Single when clause
+- name: NX-OS Validation
+  when: platform == 'nxos'
+  block:
+    - name: Assert facts available
+      assert:
+        that:
+          - ansible_network_resources is defined
+
+    - name: BGP validation
+      when: bgp_enabled | bool  # Feature condition INSIDE block only
+      include_tasks: bgp-validation.yml
+
+    - name: Interface validation
+      include_tasks: interface-validation.yml
+```
+
+**Benefits**:
+- When condition evaluated once, not per task
+- Clear platform boundary
+- Single point to modify platform logic
+- Prevents accidental cross-platform execution
+
+### 5. Comprehensive Analysis (Required for any audit/review)
+
+When performing analysis (documentation audits, code reviews, refactoring):
+
+1. **Inventory Phase**: Document ALL files using multiple search methods (glob patterns, grep, ripgrep)
+   - State total count: "X files found"
+   - Document search patterns used
+
+2. **Analysis Phase**: Read and analyze each file
+   - Map to purpose/category
+   - Identify issues, stale content, relationships
+
+3. **Cross-Verification Phase**: Verify findings are complete
+   - Use MULTIPLE search tools
+   - Check for missing files
+   - Verify 100% coverage (not sampling)
+
+4. **Documentation Phase**: Report results
+   - Document ALL search patterns used
+   - List complete inventory with purposes
+   - State: "100% of X files analyzed"
+
+---
+
+## Deprecated Playbooks (Scheduled for Removal)
+
+The following playbooks are **deprecated** and will be removed in v5.0.0. Use `main-upgrade-workflow.yml` with tag-based execution instead:
+
+- `health-check.yml` → Use `main-upgrade-workflow.yml --tags step1`
+- `network-validation.yml` → Use `main-upgrade-workflow.yml --tags step5` or `--tags step7`
+- `image-loading.yml` → Use `main-upgrade-workflow.yml --tags step4`
+- `image-installation.yml` → Use `main-upgrade-workflow.yml --tags step6`
+- `emergency-rollback.yml` → Use `main-upgrade-workflow.yml --tags step8`
+
+**Active Playbooks** (still supported as separate operational tools):
+- `compliance-audit.yml` - Separate operational task
+- `config-backup.yml` - Useful for ad-hoc backups
+
+---
 
 ## Project Structure
 
-- **`ansible-content/`**: Core Ansible playbooks, roles, and templates
-  - `playbooks/`: Workflow orchestration including main-upgrade-workflow.yml
-  - `roles/`: Vendor-specific upgrade logic (cisco-nxos-upgrade, cisco-iosxe-upgrade, etc.)
-  - `collections/requirements.yml`: Ansible collection dependencies
-- **`awx-config/`**: AWX Configuration (YAML) - job templates, workflows, inventories
-- **`install/`**: Native service installation scripts and configurations
-- **`integration/`**: External system integration (NetBox, Grafana, InfluxDB)
-- **`tests/`**: Testing framework with comprehensive test runner
-- **`docs/`**: Documentation and vendor-specific guides
+```
+ansible-content/
+  playbooks/
+    main-upgrade-workflow.yml          # Master workflow (8 steps, tag-based)
+    health-check.yml                   # Deprecated
+    network-validation.yml             # Deprecated
+    config-backup.yml
+    compliance-audit.yml
+  roles/
+    network-validation/
+      tasks/
+        main.yml                       # Calls all validation tasks
+        arp-validation.yml             # Standardized validation pattern
+        routing-validation.yml
+        bfd-validation.yml
+        multicast-validation.yml       # Template for pattern
+        network-resource-validation.yml
+        bgp-validation.yml
+        interface-validation.yml
+      defaults/main.yml                # Excluded fields for normalization
 
-## Development Commands
+tests/
+  run-all-tests.sh                     # Run this before every commit
+  unit-tests/
+  integration-tests/
+  vendor-tests/
+  validation-tests/
 
-**Requires latest versions: Ansible 12.0.0 with ansible-core 2.19.2 and Python 3.13.7**.
-
-### Setup & Testing - QUALITY FIRST APPROACH
-
-**MANDATORY: ALL commands MUST return 0 exit code before proceeding**
-
-```bash
-# Install latest Ansible version (includes ansible-core 2.19.2)
-pip install --upgrade ansible
-
-# Install Ansible collections
-ansible-galaxy collection install -r ansible-content/collections/requirements.yml --force
-
-# CRITICAL: Run comprehensive test suite - MUST achieve 100% pass rate
-./tests/run-all-tests.sh
-
-# REQUIRED: Syntax validation - MUST pass without errors
-ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
-
-# REQUIRED: Check mode validation - MUST work without errors
-ansible-playbook --check ansible-content/playbooks/health-check.yml
-
-# CRITICAL: Linting validation - MUST return 0 errors/warnings
-ansible-lint ansible-content/playbooks/
-yamllint ansible-content/
-
-# QUALITY GATES: All commands above MUST succeed before code changes
+docs/
+  README.md                            # Documentation hub
+  user-guides/                         # User-facing documentation
+  platform-guides/                     # Platform-specific guides
+  deployment/                          # Deployment guides
+  testing/                             # Testing documentation
+  architecture/                        # Architecture documentation
+  internal/                            # Developer reference
+    network-validation-data-types.md   # All validation data types
+    baseline-comparison-examples.md    # Real examples
 ```
 
-### Pre-Commit Quality Checklist (MANDATORY)
+---
 
-**⚠️ ZERO TOLERANCE: Any failures below BLOCK all commits**
+## Essential References
+
+### For Development Setup
+→ See [Complete Project Guide](README.md) for installation and configuration
+
+### For Test Execution
+→ See [Pre-Commit Setup](docs/testing/pre-commit-setup.md) for quality gates
+
+### For Understanding Tag-Based Workflow
+→ See [Workflow Architecture](docs/architecture/workflow-architecture.md)
+
+### For Network Validation Implementation
+→ See internal documentation in `docs/internal/` for validation patterns and data types
+
+### For Platform-Specific Details
+→ See [Platform Implementation Status](docs/platform-guides/platform-implementation-status.md)
+
+---
+
+## Network Validation Pattern (Required for all validation tasks)
+
+All validation tasks follow this standardized structure:
+
+```yaml
+- name: Initialize status
+  set_fact:
+    comparison_status: NOT_RUN
+
+- name: Main Validation Block
+  block:
+    - name: Gather facts
+      # ... data collection, no conditionals ...
+
+    - name: Validate Data Type
+      when: feature_enabled | bool  # Optional: feature-specific condition
+      block:
+        - name: Normalize data (exclude time-sensitive fields)
+          set_fact:
+            normalized: "{{ data | dict2items | rejectattr('key', 'in', ['age', 'time_stamp']) | list | items2dict }}"
+
+        - name: Compare normalized data
+          set_fact:
+            diff: "{{ normalized | difference(baseline_normalized) }}"
+
+        - name: Report comparison results
+          debug:
+            msg:
+              - "Validation Results:"
+              - "Added: {{ diff | length }} items"
+
+- name: Set final comparison status
+  set_fact:
+    comparison_status: "{{ 'PASS' if validation_passed else 'FAIL' }}"
+```
+
+**Key Principles**:
+- Empty data naturally returns empty difference() - DON'T create conditionals for empty data
+- Report results INSIDE the data-type blocks (not after)
+- Initialize status ONCE at start, set final status ONCE at end
+
+**Data Types Reference**:
+- **Normalize** (exclude time fields): BGP, ARP, Routing (RIB/FIB), BFD, Multicast (PIM/IGMP)
+- **Raw comparison**: Network Resources, MAC operational
+- See `docs/internal/network-validation-data-types.md` for all excluded fields
+
+---
+
+## Pre-Commit Quality Checklist (MANDATORY)
+
+**ALL items MUST pass with exit code 0. ZERO tolerance.**
 
 ```bash
-# 1. Syntax validation (exit code MUST be 0)
-find ansible-content -name "*.yml" -exec ansible-playbook --syntax-check {} \;
+# 1. Run all tests (must pass 100%)
+./tests/run-all-tests.sh
+# Expected: Passed: 22, Failed: 0
 
-# 2. Linting validation (exit code MUST be 0)
+# 2. Syntax validation (with required extra_vars)
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  --extra-vars="target_hosts=localhost target_firmware=test.bin maintenance_window=true max_concurrent=1"
+ansible-playbook --syntax-check ansible-content/playbooks/health-check.yml \
+  --extra-vars="target_hosts=localhost"
+ansible-playbook --syntax-check ansible-content/playbooks/config-backup.yml
+
+# 3. Linting validation (exit code 0)
 ansible-lint ansible-content/ --offline --parseable-severity
 yamllint ansible-content/
 
-# 3. Test suite validation (MUST achieve 100% pass rate)
-./tests/run-all-tests.sh | grep "Passed:" | grep "23"
-
-# 4. Check mode validation
-ansible-playbook --check --diff ansible-content/playbooks/main-upgrade-workflow.yml
-
-# ALL CHECKS MUST PASS BEFORE COMMIT
+# 4. Verify consistency
+# For any code change:
+# - Find ALL related instances (use grep, ripgrep, manual search)
+# - Apply changes everywhere consistently
+# - Document search patterns used
 ```
 
-### Troubleshooting
+---
 
-**Common Issue: `ModuleNotFoundError: No module named 'ansible.module_utils.six.moves'`**
+## Common Mistakes to Avoid
 
-This issue is resolved in modern Ansible versions. Update to latest:
+### Mistake 1: Empty Data Handling
+❌ **WRONG** - Creating conditions for empty data
+```yaml
+- when: data is defined and data | length > 0
+  set_fact: normalized: "{{ data | ... }}"
+```
+✅ **RIGHT** - Just normalize, let empty pass through naturally
+```yaml
+- set_fact: normalized: "{{ data | ... }}"
+```
+**Key**: Normalization of empty data returns empty naturally.
 
+### Mistake 2: Reporting Location
+❌ **WRONG** - Reporting separated from validation
+```yaml
+- block:
+    - normalize
+    - compare
+- name: Report  # Separated - WRONG
+```
+✅ **RIGHT** - Reporting inside the block
+```yaml
+- block:
+    - normalize
+    - compare
+    - report  # INSIDE block
+```
+
+### Mistake 3: Status Management
+❌ **WRONG** - Set multiple times
+```yaml
+- set_fact: status: NOT_RUN
+- when: condition
+  set_fact: status: PASS
+- when: not condition
+  set_fact: status: NOT_RUN  # Set AGAIN
+```
+✅ **RIGHT** - Set once at start, once at end
+```yaml
+- set_fact: status: NOT_RUN  # ONCE at start
+# ... all logic ...
+- set_fact: status: "{{ 'PASS' if ok else 'FAIL' }}"  # ONCE at end
+```
+
+### Mistake 4: Incomplete Analysis
+❌ **WRONG** - Claim comprehensive without evidence
+```
+"I reviewed all documentation files"
+(Actually sampled/missed some)
+```
+✅ **RIGHT** - Document search strategy and coverage
+```
+Search methods: glob "docs/**/*.md" → 28 files, grep "pattern" → 5 matches
+Coverage: 100% of 28 files analyzed
+Search patterns used: [list them]
+```
+
+### Mistake 5: Inconsistency Across Codebase
+❌ **WRONG** - Fix one task, ignore similar ones
+✅ **RIGHT** - Search ALL instances, fix ALL, verify ALL
+1. Find ALL instances: `grep -r "pattern" .`
+2. List all locations
+3. Apply change to every location
+4. Verify with re-search
+
+---
+
+## Test Suite
+
+**23 tests** covering:
+- Unit tests (variables, templates, workflow logic)
+- Integration tests (end-to-end workflows)
+- Vendor tests (platform-specific functionality)
+- Validation tests (comprehensive validation)
+- Playbook tests (operational playbooks)
+- Syntax validation (all Ansible files)
+- Linting (YAML, Ansible standards)
+
+Run before every commit:
 ```bash
-# Clean install latest versions
-pip uninstall ansible ansible-core ansible-base -y
-pip install --upgrade ansible
-
-# Install latest collection versions (as of September 11, 2025)
-ansible-galaxy collection install \
-  cisco.nxos:11.0.0 \
-  cisco.ios:11.0.0 \
-  fortinet.fortios:2.4.0 \
-  ansible.netcommon:8.1.0 \
-  community.general:11.3.0 \
-  ansible.utils:6.0.0 \
-  --force --upgrade --ignore-certs
+./tests/run-all-tests.sh
 ```
 
-## Container Deployment
+Expected result: `Passed: 23, Failed: 0`
 
-🐳 **Production-ready container available:**
+**Important**: All test playbooks MUST follow the shared test data pattern (section 3b above):
+- Add `vars_files: ../shared-test-vars.yml` to every test playbook
+- Use `cisco_nxos_devices`, `cisco_iosxe_devices`, etc. from shared-test-vars.yml
+- NO hardcoded device configurations in test playbooks
+- This reduces duplication and makes tests easier to maintain
 
-**Prerequisites:**
-- Docker 20.10+ OR Podman 3.0+
-- 2GB RAM, 1GB disk space
+---
 
-**Quick Start:**
-```bash
-# Docker
-docker pull ghcr.io/garryshtern/network-device-upgrade-system:latest
-docker run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
+## When You Need More Detail
 
-# Podman (RHEL8/9 compatible - recommended for enterprise)
-podman pull ghcr.io/garryshtern/network-device-upgrade-system:latest
-podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest help
-```
+- **Installation/Setup**: Read [README.md](README.md)
+- **Testing/Pre-Commit**: Read [Pre-Commit Setup](docs/testing/pre-commit-setup.md)
+- **Workflow Details**: Read [Workflow Architecture](docs/architecture/workflow-architecture.md)
+- **Validation Patterns**: Review validation task files in `roles/network-validation/tasks/`
+- **Platform Details**: Read [Platform Implementation Status](docs/platform-guides/platform-implementation-status.md)
+- **Deployment**: Read [Deployment Guides](docs/deployment/)
 
-**Container Features:**
-- Alpine-based (minimal ~200MB)
-- Non-root execution (UID 1000)
-- RHEL8/9 podman compatible
-- Multi-architecture (amd64/arm64)
-- Pre-installed Ansible 12.0.0 & Python 3.13.7
-- FortiOS multi-step upgrade support
+---
 
-**Installation:** See [Container Deployment Guide](docs/container-deployment.md) for complete Docker/Podman installation instructions and platform-specific setup.
-
-## Testing Framework
-
-Comprehensive testing for Mac/Linux development without physical devices:
-
-- Mock inventory testing with simulated devices
-- Variable validation and template rendering
-- Workflow logic and error handling validation
-- Integration testing with complete workflows
-- YAML/JSON validation and performance testing
-- Shell script and Python script testing
-- Linting and formatting checks
-- Container-based molecule testing
-- CI/CD integration
-
-**Main test runner:** `./tests/run-all-tests.sh`
-
-## Code Standards - ZERO TOLERANCE QUALITY POLICY
-
-**CRITICAL: ALL CODE MUST BE ERROR-FREE AND FUNCTIONAL**
-
-### **Absolute Requirements (NO EXCEPTIONS)**
-
-- **Code Quality**: Code MUST be 100% error-free with ZERO syntactical, logical, or runtime errors
-- **Linting Compliance**: Code MUST pass ALL ansible-lint and yamllint checks without warnings or errors
-- **Syntax Validation**: ALL Ansible playbooks, roles, and YAML files MUST pass syntax validation
-- **Functional Testing**: Code MUST pass ALL relevant test suites before deployment
-- **Test Pass Rate**: 100% test suite pass rate REQUIRED for any code changes
-- **Zero Tolerance**: Any syntax errors, linting failures, or test failures BLOCK all commits
-
-### **Quality Assurance Process (MANDATORY)**
-
-1. **Pre-Development Validation**:
-   - Verify existing code functionality before making changes
-   - Run baseline tests to establish current working state
-   - Document any pre-existing issues separately
-
-2. **Development Standards**:
-   - Write code that passes ALL linting rules on first attempt
-   - Use proper YAML syntax following established patterns
-   - Implement proper error handling with meaningful error messages
-   - Ensure idempotency for all Ansible tasks
-
-3. **Pre-Commit Validation (REQUIRED)**:
-   - Run `ansible-lint ansible-content/` - MUST return 0 errors
-   - Run `yamllint ansible-content/` - MUST return 0 errors
-   - Run `ansible-playbook --syntax-check` on all modified playbooks
-   - Run test suites - MUST achieve 100% pass rate
-   - Verify all changes work in check mode (`--check --diff`)
-
-4. **Code Review Requirements**:
-   - Systematic search for ALL instances of patterns being fixed
-   - Verify fixes across ENTIRE codebase, not just obvious instances
-   - Use multiple search methods (grep, ripgrep, manual review) for critical issues
-   - Document search patterns used and verify completeness
-   - Test edge cases and error conditions
-
-### **Specific Technical Standards**
-
-- **Ansible Best Practices**: Follow official Ansible guidelines strictly
-- **YAML Formatting**: Consistent indentation, proper quoting, no folded scalars in conditionals
-- **File Paths**: Use direct string concatenation, not folded scalars that insert spaces
-- **Boolean Expressions**: Never use folded scalars (`>-`) in `when` clauses or assertions
-- **Error Handling**: Implement comprehensive error handling with block/rescue patterns
-- **Idempotency**: All tasks MUST support check mode and be idempotent
-- **Security**: All sensitive data encrypted with Ansible Vault, no hardcoded secrets
-- **Performance**: Code MUST not introduce performance regressions
-- **Documentation**: ALL changes MUST include corresponding documentation updates
-
-### **Testing Standards**
-
-- **Unit Tests**: All new functionality MUST have corresponding unit tests
-- **Integration Tests**: Complex workflows MUST have integration test coverage
-- **Syntax Tests**: ALL Ansible files MUST pass syntax validation
-- **Linting Tests**: ALL files MUST pass ansible-lint and yamllint
-- **Functional Tests**: Code MUST demonstrate working functionality
-- **Error Scenarios**: Error handling MUST be tested with negative test cases
-
-### **Enforcement Mechanisms**
-
-- **Automated Validation**: CI/CD pipeline MUST block deployments with any failures
-- **Manual Verification**: Code reviewers MUST verify all quality standards
-- **Test Suite Integration**: All changes MUST maintain or improve test pass rates
-- **Documentation Updates**: Technical documentation MUST reflect all changes
-- **Quality Gates**: No commits allowed without passing ALL validation steps
-
-### **Systematic Code Review Process (MANDATORY)**
-
-- Use comprehensive search patterns to catch ALL variations of issues
-- Verify fixes across ENTIRE codebase, not just obvious instances
-- Use multiple search methods (grep, ripgrep, manual review) for critical issues
-- Document search patterns used and verify completeness
-- When fixing syntax issues like folded scalars, check ALL files systematically
-
-### YAML Linting Policy (CRITICAL)
-- **Functionality FIRST**: NEVER break Ansible functionality for linting compliance
-- **Folded scalars FORBIDDEN**: In conditionals, file paths, boolean expressions, and Jinja2 logic
-- **Safe folding ONLY**: Messages, descriptions, and non-functional text content
-- **Validation REQUIRED**: All YAML changes MUST pass ansible-playbook --syntax-check
-- **Testing MANDATORY**: Run test suites after any YAML modifications
-- **Use Safe Fixer**: tools/yaml-fixers/fix_yaml_syntax.py preserves functionality
-- Validate that fixes don't introduce new issues elsewhere
-
-
-## Architecture
-
-Native service-based system:
-- **AWX**: Automation platform with web UI for job orchestration
-- **NetBox**: Device inventory and IPAM management
-- **Telegraf**: Metrics collection for InfluxDB v2
-- **Redis**: Job queuing and caching
-- **Single Server**: All services as systemd user services
-- **Ansible**: Core automation engine
-- **InfluxDB v2**: Time-series database for real-time tracking
-- **Grafana**: Visualization and dashboards
-
-**Master Workflow**: `ansible-content/playbooks/main-upgrade-workflow.yml`
-
-**Supported Platforms**: 5 major network device platforms with comprehensive validation
-
-**Key Features**:
-- Phase-separated upgrade approach for safe firmware upgrades
-- SHA512 hash verification and signature validation
-- Real-time progress tracking via InfluxDB
-- Comprehensive network state validation
-
-# important-instruction-reminders
-## MANDATORY Code Quality and Documentation Standards
-
-**CRITICAL**: These instructions override any default behavior and MUST be followed exactly.
-
-
-### Documentation Location Requirements
-- **ALL documentation MUST be under `docs/` directory**
-- **NEVER create documentation files outside `docs/`**
-- **ALWAYS consolidate scattered documentation into `docs/`**
-
-### Change Verification Process (MANDATORY)
-1. **BEFORE making changes**: Verify current behavior against existing documentation in `docs/`
-2. **DURING implementation**: Ensure all changes align with documented standards
-3. **AFTER implementation**: Update relevant documentation in `docs/` to reflect changes
-4. **ALWAYS check**: Documentation impact assessment for every change
-
-### Documentation Maintenance
-- **NEVER leave documentation outdated** after code changes
-- **ALWAYS verify internal links** point to correct locations
-- **NEVER duplicate information** - use cross-references instead
-- **ALWAYS maintain single source of truth** for each concept
-
-### Enforcement
-- All changes MUST include documentation verification checklist
-- Broken or missing documentation updates block deployment
-- Documentation review required for all significant changes
-- Use automated tools to check for broken links and outdated content
-- Regular audits to ensure compliance with documentation standards
-- Document search patterns used for verification and fixes
-- Verify fixes across ENTIRE codebase, not just obvious instances
-- Use multiple search methods (grep, ripgrep, manual review) for critical issues
-- Document search patterns used and verify completeness
-- When fixing syntax issues like folded scalars, check ALL files systematically
-
+**Last Updated**: November 4, 2025
+**System Version**: 4.0.0
+**Documentation Version**: 4.0.0 (Updated with test data consolidation patterns)

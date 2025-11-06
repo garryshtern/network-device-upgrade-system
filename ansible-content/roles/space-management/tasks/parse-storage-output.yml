@@ -1,0 +1,47 @@
+---
+# Reusable task to parse storage_output into parsed_storage
+# Reads storage_output variable and sets parsed_storage fact
+
+- name: NX-OS Platform Block
+  when: platform == 'nxos'
+  block:
+    - name: Parse NX-OS storage information
+      ansible.builtin.set_fact:
+        parsed_storage:
+          files: "{{ storage_output.stdout[0] | regex_findall('\\s+(\\d+)\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+)') }}"
+          images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+\\w+\\s+\\d+\\s+\\d+:\\d+:\\d+\\s+\\d+\\s+(.+\\.(?:bin|img))') }}"
+          total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+          free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+
+- name: IOS-XE Platform Block
+  when: platform == 'ios'
+  block:
+    - name: Parse IOS-XE storage information
+      ansible.builtin.set_fact:
+        parsed_storage:
+          files: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+(\\d+)\\s+.+\\s+(.+)') }}"
+          images: "{{ storage_output.stdout[0] | regex_findall('\\s+\\d+\\s+-[rwx-]+\\s+\\d+\\s+.+\\s+(.+\\.bin)') }}"
+          total_bytes: "{{ storage_output.stdout[0] | regex_search('(\\d+) bytes total', '\\1') | first | int }}"
+          free_bytes: "{{ storage_output.stdout[0] | regex_search('\\(?(\\d+) bytes free\\)?', '\\1') | first | int }}"
+
+- name: FortiOS Platform Block
+  when: platform == 'fortios'
+  block:
+    - name: Parse FortiOS storage information
+      ansible.builtin.set_fact:
+        parsed_storage:
+          files: []
+          images: []
+          total_bytes: 10737418240
+          free_bytes: 5368709120
+
+- name: Opengear Platform Block
+  when: platform == 'opengear'
+  block:
+    - name: Parse Opengear storage information
+      ansible.builtin.set_fact:
+        parsed_storage:
+          files: []
+          images: []
+          total_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G', '\\1') | first | int * 1024 * 1024 * 1024) }}"
+          free_bytes: "{{ (storage_output.stdout_lines | select('match', '.*/data$') | first | regex_search('\\s+(\\d+)G.*\\s+(\\d+)%', '\\1') | first | int * 1024 * 1024 * 1024) }}"

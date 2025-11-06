@@ -4,7 +4,9 @@
 
 - name: Multi-Platform Integration Test Suite
   hosts: localhost
-  gather_facts: yes
+  gather_facts: no
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     # Project root directory - works regardless of execution context
     project_root: "{{ playbook_dir + '/../..' }}"
@@ -13,9 +15,10 @@
         name: "Phase-Separated Upgrade Process"
         description: "Test complete 3-phase upgrade workflow"
         phases:
-          - "Phase 1: Image Loading"
-          - "Phase 2: Image Installation"
-          - "Phase 3: Validation and Rollback"
+          - "STEP 1: Connectivity Check"
+          - "STEP 3: Image Upload"
+          - "STEP 5: Firmware Installation"
+          - "STEP 6: Post-Upgrade Validation"
       multi_platform_test:
         name: "Multi-Platform Deployment"
         description: "Test simultaneous upgrades across platforms"
@@ -24,7 +27,6 @@
           - "cisco-iosxe"
           - "opengear"
           - "fortios"
-          - "metamako-mos"
       architecture_detection_test:
         name: "Architecture Detection"
         description: "Test automatic platform and architecture detection"
@@ -89,12 +91,12 @@
         - name: Validate Phase Separation in Main Workflow
           assert:
             that:
-              - "'Phase 1' in (main_workflow.content | b64decode)"
-              - "'Phase 2' in (main_workflow.content | b64decode)"
-              - "'Phase 3' in (main_workflow.content | b64decode)"
-              - "'image-loading.yml' in (main_workflow.content | b64decode)"
-              - "'tasks_from: image-installation' in (main_workflow.content | b64decode)"
-              - "'network-validation' in (main_workflow.content | b64decode)"
+              - "'STEP 1' in (main_workflow.content | b64decode)"
+              - "'STEP 3' in (main_workflow.content | b64decode)"
+              - "'STEP 5' in (main_workflow.content | b64decode)"
+              - "'STEP 6' in (main_workflow.content | b64decode)"
+              - "'STEP 7' in (main_workflow.content | b64decode)"
+              - "'include_tasks:' in (main_workflow.content | b64decode)"
             success_msg: "✓ Phase separation properly implemented in main workflow"
             fail_msg: "Phase separation not properly implemented"
 
@@ -416,7 +418,6 @@
           • Cisco IOS-XE: 95% - Complete validation suite
           • Opengear: 95% - Multi-architecture support
           • FortiOS: 90% - HA coordination ready
-          • Metamako MOS: 85% - Ultra-low latency support
 
           Overall System Integration: 97% COMPLETE
           Status: PRODUCTION READY FOR ENTERPRISE DEPLOYMENT

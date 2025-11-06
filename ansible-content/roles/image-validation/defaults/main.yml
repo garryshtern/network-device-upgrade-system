@@ -1,0 +1,13 @@
+---
+# Image Validation Role Defaults
+
+# Version verification mode
+# When true, firmware version mismatches will fail the upgrade
+# When false, mismatches will only generate warnings
+strict_version_check: true
+
+# Version check results (initialized)
+version_verification_passed: false
+expected_version: ""
+actual_version: ""
+version_check_mode: "strict"

@@ -69,7 +69,7 @@ run_comprehensive_container_test() {
         -v "$MOCKUP_DIR/keys:/opt/keys:ro"
         -v "$MOCKUP_DIR/firmware:/opt/firmware:ro"
         -v "$PROJECT_ROOT/ansible-content:/opt/network-upgrade/ansible-content:ro"
-        -e ANSIBLE_INVENTORY="/opt/inventory/production.yml"
+        -e INVENTORY_FILE="/opt/inventory/production.yml"
         -e ANSIBLE_CONFIG="/opt/network-upgrade/ansible-content/ansible.cfg"
     )
 
@@ -132,7 +132,6 @@ setup_firmware_files() {
     mkdir -p "$MOCKUP_DIR/firmware/cisco.ios"
     mkdir -p "$MOCKUP_DIR/firmware/fortios"
     mkdir -p "$MOCKUP_DIR/firmware/opengear"
-    mkdir -p "$MOCKUP_DIR/firmware/metamako"
     mkdir -p "$MOCKUP_DIR/backups"
 
     # Create mock firmware files (small empty files for testing)
@@ -142,7 +141,6 @@ setup_firmware_files() {
     echo "mock-opengear-firmware" > "$MOCKUP_DIR/firmware/opengear/cm71xx-5.2.4.flash"
     echo "mock-opengear-firmware-22.1.3-im" > "$MOCKUP_DIR/firmware/opengear/im72xx-22.1.3.flash"
     echo "mock-opengear-firmware-22.1.3-ops" > "$MOCKUP_DIR/firmware/opengear/operations_manager-22.1.3-production-signed.raucb"
-    echo "mock-metamako-firmware" > "$MOCKUP_DIR/firmware/metamako/mos-0.39.9.iso"
 
     # Set permissions for container access
     chmod -R 644 "$MOCKUP_DIR/firmware" 2>/dev/null || true
@@ -195,7 +193,7 @@ test_target_hosts_validation() {
 
     # Test TARGET_HOSTS without inventory (should fail)
     run_comprehensive_container_test "TARGET_HOSTS without inventory" "fail" "syntax-check" \
-        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml" \
+        -e INVENTORY_FILE="/nonexistent/inventory.yml" \
         -e TARGET_HOSTS="cisco-switch-01"
 
     # Test mixed valid/invalid hosts (should fail)
@@ -231,8 +229,6 @@ test_platform_authentication() {
 
     # Test Metamako SSH authentication
     run_comprehensive_container_test "Metamako SSH auth" "success" "syntax-check" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
-        -e TARGET_HOSTS="metamako-switch-01"
 }
 
 # Test upgrade phases and workflows
@@ -269,7 +265,7 @@ test_epld_functionality() {
     run_comprehensive_container_test "EPLD upgrade enabled" "success" "syntax-check" \
         -e TARGET_HOSTS="cisco-switch-01" \
         -e ENABLE_EPLD_UPGRADE="true" \
-        -e TARGET_EPLD_IMAGE="n9000-epld.9.3.16.img" \
+        -e TARGET_EPLD_FIRMWARE="n9000-epld.9.3.16.M.img" \
         -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key"
 
     # Test disruptive EPLD upgrade
@@ -300,7 +296,7 @@ test_error_conditions() {
 
     # Test missing inventory
     run_comprehensive_container_test "Missing inventory" "fail" "syntax-check" \
-        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml"
+        -e INVENTORY_FILE="/nonexistent/inventory.yml"
 
     # Test invalid command
     run_comprehensive_container_test "Invalid command" "fail" "invalid-command"
@@ -359,7 +355,6 @@ test_comprehensive_scenarios() {
         -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")" \
         -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key" \
         -e OPENGEAR_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/opengear-token")" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
         -e TARGET_HOSTS="all" \
         -e UPGRADE_PHASE="validation"
 

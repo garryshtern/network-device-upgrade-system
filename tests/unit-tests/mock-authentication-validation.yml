@@ -40,14 +40,6 @@
         expected_auth_method: "ssh_key_and_api_token"
         should_pass: true
 
-      - name: "Mock Metamako SSH Key Authentication"
-        inventory_path: "mock-inventories/all-platforms.yml"
-        device_group: "metamako"
-        expected_ssh_key: "/tmp/mock-metamako-key"
-        expected_api_token: null
-        expected_auth_method: "ssh_key"
-        should_pass: true
-
   tasks:
     - name: Test mock device authentication scenarios
       include_tasks: validate_mock_auth_scenario.yml
@@ -77,7 +69,6 @@
             - "nxos"
             - "iosxe"
             - "opengear"
-            - "metamako"
 
         - name: Verify mock SSH keys exist
           ansible.builtin.stat:
@@ -87,7 +78,6 @@
             - "nxos"
             - "iosxe"
             - "opengear"
-            - "metamako"
 
         - name: Assert mock SSH keys were created
           assert:
@@ -127,8 +117,9 @@
                         'cisco_iosxe': {'ssh_key': '/tmp/mock-iosxe-key', 'api_token': None},
                         'fortios': {'ssh_key': None, 'api_token': 'mock-api-token-fortios-12345'},
                         'opengear': {'ssh_key': '/tmp/mock-opengear-key', 'api_token': 'mock-api-token-opengear-67890'},
-                        'metamako_mos': {'ssh_key': '/tmp/mock-metamako-key', 'api_token': None}
                     }
+
+                    # Removed: Metamako MOS is no longer supported (Phase 4 - Nov 2025)
 
                     results = []
                     for platform, auth in platforms.items():
@@ -142,8 +133,6 @@
                                 response = device.process_command('get system status')
                             elif platform == 'opengear':
                                 response = device.process_command('config -g config.system.version')
-                            elif platform == 'metamako_mos':
-                                response = device.process_command('mdk-version')
                             else:
                                 response = device.process_command('show version')
 
@@ -240,7 +229,6 @@
               - mock_auth_configs.fortios.api_token_var is not none
               - mock_auth_configs.opengear.ssh_key_var is not none
               - mock_auth_configs.opengear.api_token_var is not none
-              - mock_auth_configs.metamako.ssh_key_var is not none
               - mock_auth_configs.group_vars.vault_cisco_nxos_ssh_key == '/tmp/mock-nxos-key'
               - mock_auth_configs.group_vars.vault_fortios_api_token == 'mock-api-token-fortios-12345'
             fail_msg: "Mock inventory authentication configuration validation failed"

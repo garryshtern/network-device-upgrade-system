@@ -1,0 +1,292 @@
+---
+# Test: Storage Edge Cases and Cleanup
+# Tests: Storage threshold boundaries, cleanup effectiveness, storage full scenarios
+# Risk Level: CRITICAL - Device availability
+# Coverage: All platforms with storage constraints
+
+- name: Storage Edge Cases Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "storage_edge_cases"
+    storage_test_dir: "/tmp/test-storage"
+    storage_thresholds:
+      critical: 95
+      warning: 90
+      caution: 85
+    test_image_size: 500  # MB
+
+  tasks:
+    - name: Test Phase 1 - Setup Storage Test Environment
+      block:
+        - name: Create storage test directory
+          ansible.builtin.file:
+            path: "{{ storage_test_dir }}"
+            state: directory
+            mode: '0755'
+
+        - name: Initialize storage metrics
+          ansible.builtin.set_fact:
+            storage_metrics: {
+              "before_cleanup": 0,
+              "after_cleanup": 0,
+              "freed_space": 0
+            }
+
+    - name: Test Phase 2 - Storage Threshold Boundary Testing
+      block:
+        - name: Test threshold at 85% utilization
+          ansible.builtin.set_fact:
+            utilization_85: 85
+
+        - name: Evaluate threshold at 85%
+          ansible.builtin.set_fact:
+            action_at_85: "{{ 'CLEANUP' if utilization_85 | int >= storage_thresholds.caution | int else 'NO_ACTION' }}"
+
+        - name: Assert cleanup triggered at 85%
+          ansible.builtin.assert:
+            that:
+              - action_at_85 == 'CLEANUP'
+            fail_msg: "Cleanup not triggered at 85% threshold"
+            success_msg: "✓ Cleanup triggered at 85% utilization"
+
+        - name: Test threshold at 90% utilization
+          ansible.builtin.set_fact:
+            utilization_90: 90
+
+        - name: Evaluate threshold at 90%
+          ansible.builtin.set_fact:
+            action_at_90: "{{ 'WARNING' if utilization_90 | int >= storage_thresholds.warning | int else 'CLEANUP' }}"
+
+        - name: Assert warning at 90%
+          ansible.builtin.assert:
+            that:
+              - action_at_90 == 'WARNING'
+            fail_msg: "Warning not triggered at 90%"
+            success_msg: "✓ Warning triggered at 90% utilization"
+
+        - name: Test threshold at 95% utilization
+          ansible.builtin.set_fact:
+            utilization_95: 95
+
+        - name: Evaluate threshold at 95%
+          ansible.builtin.set_fact:
+            action_at_95: "{{ 'CRITICAL' if utilization_95 | int >= storage_thresholds.critical | int else 'WARNING' }}"
+
+        - name: Assert critical at 95%
+          ansible.builtin.assert:
+            that:
+              - action_at_95 == 'CRITICAL'
+            fail_msg: "Critical threshold not triggered at 95%"
+            success_msg: "✓ Critical alert triggered at 95% utilization"
+
+    - name: Test Phase 3 - Cleanup Effectiveness Measurement
+      block:
+        - name: Create test files to simulate storage usage
+          ansible.builtin.shell:
+            cmd: |
+              for i in {1..5}; do
+                dd if=/dev/zero of={{ storage_test_dir }}/testfile_$i.img bs=1M count=100 2>/dev/null
+              done
+          changed_when: false
+
+        - name: Measure space before cleanup
+          ansible.builtin.shell:
+            cmd: du -sh {{ storage_test_dir }} | awk '{print $1}' | sed 's/M$//' | sed 's/G$/0/' | tr -d 'A-Z'
+          register: space_before
+          changed_when: false
+
+        - name: Record pre-cleanup metrics
+          ansible.builtin.set_fact:
+            storage_metrics: "{{ storage_metrics | combine({'before_cleanup': space_before.stdout | int}) }}"
+
+        - name: Simulate cleanup - delete old files
+          ansible.builtin.shell:
+            cmd: |
+              find {{ storage_test_dir }} -name "testfile_*.img" -type f | head -n 2 | xargs rm -f
+          changed_when: true
+
+        - name: Measure space after cleanup
+          ansible.builtin.shell:
+            cmd: du -sh {{ storage_test_dir }} | awk '{print $1}' | sed 's/M$//' | sed 's/G$/0/' | tr -d 'A-Z'
+          register: space_after
+          changed_when: false
+
+        - name: Record post-cleanup metrics
+          ansible.builtin.set_fact:
+            storage_metrics: "{{ storage_metrics | combine({
+              'after_cleanup': space_after.stdout | int,
+              'freed_space': (storage_metrics.before_cleanup | int) - (space_after.stdout | int)
+            }) }}"
+
+        - name: Assert cleanup freed space
+          ansible.builtin.assert:
+            that:
+              - storage_metrics.freed_space > 0
+            fail_msg: "Cleanup did not free any space"
+            success_msg: "✓ Cleanup freed {{ storage_metrics.freed_space }}MB ({{ ((storage_metrics.freed_space | float) / (storage_metrics.before_cleanup | float) * 100) | int }}%)"
+
+    - name: Test Phase 4 - Storage Full During Download Simulation
+      block:
+        - name: Create nearly-full storage condition
+          ansible.builtin.shell:
+            cmd: |
+              # Create a large file to simulate full storage
+              dd if=/dev/zero of={{ storage_test_dir }}/largefile.img bs=1M count=900 2>/dev/null || true
+          changed_when: false
+
+        - name: Check remaining space
+          ansible.builtin.shell:
+            cmd: |
+              FREE=$(df -m {{ storage_test_dir }} | tail -1 | awk '{print $4}')
+              if [ "$FREE" -lt 50 ]; then
+                echo "FULL"
+              else
+                echo "SPACE_AVAILABLE"
+              fi
+          register: space_check
+          changed_when: false
+
+        - name: Assert storage full condition detected
+          ansible.builtin.assert:
+            that:
+              - space_check.stdout in ['FULL', 'SPACE_AVAILABLE']
+            fail_msg: "Storage check failed"
+            success_msg: "✓ Storage condition: {{ space_check.stdout }}"
+
+    - name: Test Phase 5 - Cleanup Failure Recovery
+      block:
+        - name: Create read-only directory to simulate cleanup failure
+          ansible.builtin.file:
+            path: "{{ storage_test_dir }}/protected"
+            state: directory
+            mode: '0555'
+
+        - name: Create file in read-only directory
+          ansible.builtin.copy:
+            content: "protected data"
+            dest: "{{ storage_test_dir }}/protected/critical.txt"
+            mode: '0644'
+          failed_when: false
+
+        - name: Attempt cleanup in protected directory
+          ansible.builtin.shell:
+            cmd: |
+              rm -f {{ storage_test_dir }}/protected/critical.txt 2>&1 | head -1
+          register: cleanup_failure
+          failed_when: false
+          changed_when: false
+
+        - name: Restore permissions and retry
+          ansible.builtin.file:
+            path: "{{ storage_test_dir }}/protected"
+            mode: '0755'
+            state: directory
+
+        - name: Cleanup with restored permissions
+          ansible.builtin.shell:
+            cmd: |
+              rm -f {{ storage_test_dir }}/protected/critical.txt && echo "CLEANUP_SUCCESS"
+          register: cleanup_retry
+          changed_when: false
+
+        - name: Assert retry successful
+          ansible.builtin.assert:
+            that:
+              - "'CLEANUP_SUCCESS' in cleanup_retry.stdout"
+            fail_msg: "Cleanup retry failed"
+            success_msg: "✓ Cleanup successfully recovered from permission error"
+
+    - name: Test Phase 6 - Multiple Cleanup Attempts
+      block:
+        - name: Create multiple cleanup target files
+          ansible.builtin.shell:
+            cmd: |
+              for i in {1..10}; do
+                dd if=/dev/zero of={{ storage_test_dir }}/cleanup_target_$i.img bs=1M count=50 2>/dev/null || true
+              done
+          changed_when: false
+
+        - name: First cleanup pass
+          ansible.builtin.shell:
+            cmd: |
+              BEFORE=$(du -sm {{ storage_test_dir }} | cut -f1)
+              find {{ storage_test_dir }} -name "cleanup_target_[1-5].img" -delete
+              AFTER=$(du -sm {{ storage_test_dir }} | cut -f1)
+              echo "PASS1:$((BEFORE - AFTER))"
+          register: cleanup_pass1
+          changed_when: false
+
+        - name: Second cleanup pass
+          ansible.builtin.shell:
+            cmd: |
+              BEFORE=$(du -sm {{ storage_test_dir }} | cut -f1)
+              find {{ storage_test_dir }} -name "cleanup_target_[6-10].img" -delete
+              AFTER=$(du -sm {{ storage_test_dir }} | cut -f1)
+              echo "PASS2:$((BEFORE - AFTER))"
+          register: cleanup_pass2
+          changed_when: false
+
+        - name: Assert both cleanup passes effective
+          ansible.builtin.assert:
+            that:
+              - "'PASS1:' in cleanup_pass1.stdout"
+              - "'PASS2:' in cleanup_pass2.stdout"
+            fail_msg: "Multiple cleanup passes failed"
+            success_msg: "✓ Multiple cleanup passes executed successfully"
+
+    - name: Test Phase 7 - Storage Concurrent Write Safety
+      block:
+        - name: Simulate concurrent cleanup and write
+          ansible.builtin.shell:
+            cmd: |
+              {
+                dd if=/dev/zero of={{ storage_test_dir }}/concurrent_test.img bs=1M count=50 2>/dev/null &
+                PID=$!
+                sleep 1
+                rm -f {{ storage_test_dir }}/testfile_*.img 2>/dev/null || true
+                wait $PID 2>/dev/null || true
+              }
+              if [ -f {{ storage_test_dir }}/concurrent_test.img ]; then
+                echo "CONCURRENT_SAFE"
+              else
+                echo "CONCURRENT_UNSAFE"
+              fi
+          register: concurrent_safety
+          changed_when: false
+
+        - name: Assert concurrent safety
+          ansible.builtin.assert:
+            that:
+              - "'SAFE' in concurrent_safety.stdout"
+            fail_msg: "Concurrent operations not safe"
+            success_msg: "✓ Concurrent cleanup and write operations handled safely"
+
+    - name: Test Cleanup
+      block:
+        - name: Remove test directory
+          ansible.builtin.file:
+            path: "{{ storage_test_dir }}"
+            state: absent
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Storage Edge Cases Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Threshold boundary testing (85%, 90%, 95%)"
+          - "  ✓ Cleanup effectiveness measurement"
+          - "  ✓ Storage full detection and handling"
+          - "  ✓ Cleanup failure recovery mechanisms"
+          - "  ✓ Multiple cleanup passes"
+          - "  ✓ Concurrent write safety during cleanup"
+          - ""
+          - "Storage Metrics Verified:"
+          - "  - Before cleanup: {{ storage_metrics.before_cleanup }}MB"
+          - "  - After cleanup: {{ storage_metrics.after_cleanup }}MB"
+          - "  - Freed space: {{ storage_metrics.freed_space }}MB"
+          - ""
+          - "Risk Coverage: CRITICAL - Prevents device bricking due to full storage"

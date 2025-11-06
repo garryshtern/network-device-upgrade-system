@@ -3,23 +3,20 @@
 # For console servers and smart PDUs
 
 # Connection settings - SSH key and API token auth preferred over passwords
+ansible_network_os: opengear
 ansible_connection: ssh  # Default to SSH, overridden for modern API devices
+
+# Platform identifier (use this in playbooks, NOT ansible_network_os)
+platform: opengear
+
 ansible_host: "{{ inventory_hostname }}"
-ansible_user: "{{ opengear_username }}"
-# SSH key authentication (preferred for SSH connections)
-ansible_ssh_private_key_file: "{{ vault_opengear_ssh_key | default(omit) }}"
-# Password authentication (fallback for SSH connections)
-ansible_ssh_pass: "{{ opengear_password | default(omit) }}"
-ansible_ssh_common_args: >
-  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-  -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey,password
-opengear_username: "{{ vault_opengear_username | default('admin') }}"
-opengear_password: "{{ vault_opengear_password | default(omit) }}"
-# API token authentication (preferred for API connections)
-opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
+
+# Credentials are dynamically mapped in group_vars/all.yml based on platform
+# ansible_user, ansible_password, ansible_ssh_private_key_file set in all.yml
+# SSH connection options configured globally in ansible.cfg
+# API credentials (vault_opengear_*) used directly in role tasks
 
 # Platform specific settings
-platform_type: "opengear"
 vendor: "opengear"
 device_family: "console_server"  # or smart_pdu
 
@@ -56,7 +53,7 @@ architecture_detection:
 firmware_upload_timeout: 3600
 firmware_chunk_size: 1048576  # 1MB chunks
 verify_firmware_checksum: true
-local_firmware_path: "{{ firmware_base_path }}/opengear"
+local_firmware_path: "{{ firmware_base_path }}"
 
 # Firmware filename patterns by device model
 firmware_filename_patterns:
@@ -165,7 +162,7 @@ max_upload_retries: 3
 session_keepalive: true
 
 # Monitoring integration
-export_metrics: true
+# NOTE: export_metrics inherited from group_vars/all.yml
 metric_collection_interval: 60
 alert_on_upgrade_failure: true
 
@@ -176,7 +173,7 @@ enable_audit_logging: true
 
 # Rollback settings
 enable_automatic_rollback: true
-rollback_timeout: 600
+# NOTE: rollback_timeout inherited from group_vars/all.yml
 preserve_user_data: true
 
 # Validation settings specific to device type

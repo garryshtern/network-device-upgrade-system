@@ -119,7 +119,7 @@ run_container_test() {
         -v "$MOCKUP_DIR/keys:/opt/keys:ro" \
         -v "$MOCKUP_DIR/firmware:/opt/firmware:ro" \
         -v "$(dirname "$MOCKUP_DIR")/../../ansible-content:/opt/network-upgrade/ansible-content:ro" \
-        -e ANSIBLE_INVENTORY="/opt/inventory/production.yml" \
+        -e INVENTORY_FILE="/opt/inventory/production.yml" \
         -e ANSIBLE_CONFIG="/opt/network-upgrade/ansible-content/ansible.cfg" \
         "${docker_args[@]}" \
         "$CONTAINER_IMAGE" "${container_command[@]}" \
@@ -148,7 +148,7 @@ run_container_test() {
     else
         error "$test_name: FAILED (exit code: $exit_code)"
         echo "=== DOCKER COMMAND THAT FAILED ==="
-        echo "docker run --rm -v \"$MOCKUP_DIR/inventory:/opt/inventory:ro\" -v \"$MOCKUP_DIR/keys:/opt/keys:ro\" -v \"$MOCKUP_DIR/firmware:/opt/firmware:ro\" -v \"$(dirname "$MOCKUP_DIR")/../../ansible-content:/opt/network-upgrade/ansible-content:ro\" -e ANSIBLE_INVENTORY=\"/opt/inventory/production.yml\" -e ANSIBLE_CONFIG=\"/opt/network-upgrade/ansible-content/ansible.cfg\" ${docker_args[*]} \"$CONTAINER_IMAGE\" ${container_command[*]}"
+        echo "docker run --rm -v \"$MOCKUP_DIR/inventory:/opt/inventory:ro\" -v \"$MOCKUP_DIR/keys:/opt/keys:ro\" -v \"$MOCKUP_DIR/firmware:/opt/firmware:ro\" -v \"$(dirname "$MOCKUP_DIR")/../../ansible-content:/opt/network-upgrade/ansible-content:ro\" -e INVENTORY_FILE=\"/opt/inventory/production.yml\" -e ANSIBLE_CONFIG=\"/opt/network-upgrade/ansible-content/ansible.cfg\" ${docker_args[*]} \"$CONTAINER_IMAGE\" ${container_command[*]}"
         echo "=== FULL STDOUT OUTPUT ==="
         cat "$stdout_file"
         echo "=== FULL STDERR OUTPUT ==="

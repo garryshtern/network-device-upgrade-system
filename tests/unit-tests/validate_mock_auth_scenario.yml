@@ -115,8 +115,8 @@
 
                 # Create mock device for the platform
                 platform = '{{ test_device_group }}'
-                if platform == 'metamako':
-                    platform = 'metamako_mos'  # Adjust platform name
+                if platform == 
+                    platform =   # Adjust platform name
 
                 device_id = manager.create_device(platform, f'mock-{platform}-test')
                 device = manager.devices[device_id]
@@ -126,7 +126,7 @@
                     response = device.process_command('get system status')
                 elif platform == 'opengear':
                     response = device.process_command('config -g config.system.version')
-                elif platform == 'metamako_mos':
+                elif platform == :
                     response = device.process_command('mdk-version')
                 else:
                     response = device.process_command('show version')

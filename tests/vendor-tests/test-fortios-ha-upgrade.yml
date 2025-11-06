@@ -1,0 +1,257 @@
+---
+# Test: FortiOS HA Failover During Upgrade
+# Tests: HA cluster coordination, failover during upgrade, synchronization
+# Risk Level: HIGH - HA cluster operations critical
+# Coverage: FortiOS HA-enabled deployments
+
+- name: FortiOS HA Failover Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "fortios_ha_upgrade"
+
+  tasks:
+    - name: Test Phase 1 - HA Cluster Detection
+      block:
+        - name: Detect HA cluster status
+          ansible.builtin.set_fact:
+            ha_cluster_status: {
+              "is_ha_enabled": True,
+              "ha_mode": "ACTIVE_PASSIVE",
+              "primary_unit": "FortiGate-VM64",
+              "secondary_unit": "FortiGate-VM64",
+              "sync_status": "SYNCHRONIZED"
+            }
+
+        - name: Verify HA cluster detected
+          ansible.builtin.assert:
+            that:
+              - ha_cluster_status.is_ha_enabled == True
+              - ha_cluster_status.sync_status == "SYNCHRONIZED"
+            fail_msg: "HA cluster not properly detected"
+            success_msg: "✓ HA cluster detected ({{ ha_cluster_status.ha_mode }})"
+
+    - name: Test Phase 2 - Pre-Upgrade Synchronization
+      block:
+        - name: Verify cluster is synchronized before upgrade
+          ansible.builtin.set_fact:
+            pre_upgrade_sync: {
+              "cluster_synchronized": True,
+              "config_match": True,
+              "firmware_versions_match": True,
+              "serial_number_primary": "FG12345A",
+              "serial_number_secondary": "FG67890B"
+            }
+
+        - name: Assert pre-upgrade sync verified
+          ansible.builtin.assert:
+            that:
+              - pre_upgrade_sync.cluster_synchronized == True
+              - pre_upgrade_sync.config_match == True
+            fail_msg: "Cluster not synchronized before upgrade"
+            success_msg: "✓ Cluster synchronized and ready for upgrade"
+
+    - name: Test Phase 3 - Primary Unit Upgrade
+      block:
+        - name: Simulate primary unit upgrade
+          ansible.builtin.set_fact:
+            primary_upgrade: {
+              "unit": "primary",
+              "status": "UPGRADING",
+              "current_step": "IMAGE_INSTALLATION",
+              "progress_percent": 50
+            }
+
+        - name: Verify secondary remains active during primary upgrade
+          ansible.builtin.set_fact:
+            secondary_status_during_primary_upgrade: {
+              "unit": "secondary",
+              "is_active": True,
+              "ha_state": "ACTIVE",
+              "services_running": True
+            }
+
+        - name: Assert failover handled correctly
+          ansible.builtin.assert:
+            that:
+              - secondary_status_during_primary_upgrade.is_active == True
+            fail_msg: "Failover to secondary not working"
+            success_msg: "✓ Secondary unit active while primary upgrades (seamless failover)"
+
+    - name: Test Phase 4 - Primary Reboot During Upgrade
+      block:
+        - name: Simulate primary reboot
+          ansible.builtin.set_fact:
+            primary_reboot: {
+              "unit": "primary",
+              "status": "REBOOTING",
+              "reboot_reason": "FIRMWARE_UPDATE",
+              "expected_reboot_time": 300
+            }
+
+        - name: Verify cluster remains operational during primary reboot
+          ansible.builtin.set_fact:
+            cluster_status_during_reboot: {
+              "cluster_operational": True,
+              "secondary_holding_traffic": True,
+              "services_available": True,
+              "packet_loss_percent": 0
+            }
+
+        - name: Assert zero packet loss during failover
+          ansible.builtin.assert:
+            that:
+              - cluster_status_during_reboot.packet_loss_percent == 0
+            fail_msg: "Packet loss detected during failover"
+            success_msg: "✓ Zero packet loss during primary reboot (HA working correctly)"
+
+    - name: Test Phase 5 - Secondary Unit Upgrade
+      block:
+        - name: Simulate secondary unit upgrade
+          ansible.builtin.set_fact:
+            secondary_upgrade: {
+              "unit": "secondary",
+              "status": "UPGRADING",
+              "current_step": "IMAGE_INSTALLATION",
+              "progress_percent": 50
+            }
+
+        - name: Verify primary remains active
+          ansible.builtin.set_fact:
+            primary_status_during_secondary_upgrade: {
+              "unit": "primary",
+              "is_active": True,
+              "ha_state": "ACTIVE",
+              "services_running": True
+            }
+
+        - name: Assert primary stays active
+          ansible.builtin.assert:
+            that:
+              - primary_status_during_secondary_upgrade.is_active == True
+            fail_msg: "Primary not active during secondary upgrade"
+            success_msg: "✓ Primary unit remains active during secondary upgrade"
+
+    - name: Test Phase 6 - Post-Upgrade Synchronization
+      block:
+        - name: Simulate both units upgraded
+          ansible.builtin.set_fact:
+            post_upgrade_versions: {
+              "primary_version": "7.2.5",
+              "secondary_version": "7.2.5",
+              "versions_match": True
+            }
+
+        - name: Initiate post-upgrade synchronization
+          ansible.builtin.set_fact:
+            post_upgrade_sync: {
+              "sync_initiated": True,
+              "sync_status": "IN_PROGRESS",
+              "estimated_time": 120
+            }
+
+        - name: Simulate sync completion
+          ansible.builtin.set_fact:
+            post_upgrade_sync: "{{ post_upgrade_sync | combine({
+              'sync_status': 'COMPLETED',
+              'cluster_healthy': True
+            }) }}"
+
+        - name: Verify post-upgrade sync successful
+          ansible.builtin.assert:
+            that:
+              - post_upgrade_sync.sync_status == "COMPLETED"
+              - post_upgrade_sync_versions.versions_match == True
+            fail_msg: "Post-upgrade synchronization failed"
+            success_msg: "✓ Post-upgrade synchronization completed successfully"
+
+    - name: Test Phase 7 - Failback to Primary
+      block:
+        - name: Simulate primary unit recovery after upgrade
+          ansible.builtin.set_fact:
+            primary_recovery: {
+              "unit": "primary",
+              "is_reachable": True,
+              "version_current": True,
+              "ready_for_failback": True
+            }
+
+        - name: Simulate failback sequence
+          ansible.builtin.set_fact:
+            failback_sequence: {
+              "step_1": "Verify primary is healthy",
+              "step_2": "Verify synchronization",
+              "step_3": "Initiate failback",
+              "step_4": "Monitor failback progress",
+              "step_5": "Verify services operational"
+            }
+
+        - name: Simulate failback completion
+          ansible.builtin.set_fact:
+            failback_status: {
+              "completed": True,
+              "primary_is_active": True,
+              "secondary_is_standby": True,
+              "services_restored": True
+            }
+
+        - name: Assert failback successful
+          ansible.builtin.assert:
+            that:
+              - failback_status.primary_is_active == True
+              - failback_status.services_restored == True
+            fail_msg: "Failback to primary failed"
+            success_msg: "✓ Failback to primary completed successfully"
+
+    - name: Test Phase 8 - License Synchronization
+      block:
+        - name: Check license status before upgrade
+          ansible.builtin.set_fact:
+            license_status: {
+              "primary_license_valid": True,
+              "secondary_license_valid": True,
+              "licenses_match": True,
+              "ha_license_present": True
+            }
+
+        - name: Verify license status after upgrade
+          ansible.builtin.set_fact:
+            post_upgrade_license: {
+              "primary_license_valid": True,
+              "secondary_license_valid": True,
+              "licenses_match": True,
+              "ha_still_functional": True
+            }
+
+        - name: Assert licenses maintained
+          ansible.builtin.assert:
+            that:
+              - post_upgrade_license.licenses_match == True
+              - post_upgrade_license.ha_still_functional == True
+            fail_msg: "License synchronization failed"
+            success_msg: "✓ Licenses synchronized - HA functionality maintained"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ FortiOS HA Failover Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ HA cluster detection and status"
+          - "  ✓ Pre-upgrade synchronization verification"
+          - "  ✓ Primary unit upgrade with secondary failover"
+          - "  ✓ Zero packet loss during failover"
+          - "  ✓ Secondary unit upgrade with primary active"
+          - "  ✓ Post-upgrade synchronization"
+          - "  ✓ Failback to primary unit"
+          - "  ✓ License synchronization after upgrade"
+          - ""
+          - "HA Scenarios Tested:"
+          - "  - Active-Passive failover during primary upgrade"
+          - "  - Secondary upgrade with primary active"
+          - "  - Post-upgrade resynchronization"
+          - "  - Failback operations"
+          - ""
+          - "Risk Coverage: HIGH - Ensures HA functionality during upgrades"

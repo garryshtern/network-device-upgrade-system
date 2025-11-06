@@ -10,7 +10,6 @@
     edge_case_scenarios:
       - name: "Upgrade Interruption and Recovery"
         scenario_type: "interruption_recovery"
-        device_platform: "cisco_nxos"
         interruption_phase: "upgrade_installation"
         interruption_duration: 45
         recovery_expected: true
@@ -25,7 +24,6 @@
 
       - name: "Device Reboot Loop Detection"
         scenario_type: "reboot_loop"
-        device_platform: "cisco_iosxe"
         reboot_count: 5
         loop_detection_threshold: 3
         intervention_expected: true
@@ -40,7 +38,6 @@
 
       - name: "Firmware Rollback During Power Loss"
         scenario_type: "power_loss_rollback"
-        device_platform: "metamako_mos"
         power_loss_timing: "post_installation_pre_validation"
         automatic_rollback_expected: true
 
@@ -67,7 +64,7 @@
             import time
 
             manager = MockDeviceManager()
-            device_id = manager.create_device('{{ item.device_platform }}', 'test-{{ item.device_platform }}-edge')
+            device_id = manager.create_device('{{ item.device_platform | default("nxos") }}', 'test-{{ item.device_platform | default("nxos") }}-edge')
             device = manager.devices[device_id]
 
             print('Testing: {{ item.name }}')

@@ -5,8 +5,7 @@
 dependency:
   name: galaxy
   options:
-    requirements-file: >
-      ../../../../../ansible-content/collections/requirements.yml
+    requirements-file: ${PWD}/ansible-content/collections/requirements.yml
 
 driver:
   name: docker
@@ -33,7 +32,7 @@ provisioner:
     host_vars:
       image-validation-test-instance:
         ansible_connection: local
-        platform_type: "multi_vendor"
+        platform: "nxos"  # Use nxos as default test platform
 
         # Image validation test variables
         firmware_base_path: "/tmp/firmware-test"
@@ -66,7 +65,7 @@ provisioner:
             expected_hash: "invalid_hash"
             signature_valid: false
           - name: "fortios_image"
-            filename: "fortios.7.4.1.out"
+            filename: "FGT_VM64_KVM-v7.4.1-build1234-FORTINET.out"
             vendor: "fortinet"
             platform: "fortios"
             size_mb: 512

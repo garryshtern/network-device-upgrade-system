@@ -1,0 +1,12 @@
+---
+# NX-OS Specific Firmware Transfer Handler
+# Called by secure-file-transfer.yml
+# Sets: transfer_result, transferred_file_hash
+# Note: Uses generic file transfer routine (nxos-generic-file-transfer.yml) to reduce duplication
+
+- name: NX-OS firmware transfer (uses generic file transfer handler)
+  ansible.builtin.include_tasks: nxos-generic-file-transfer.yml
+  vars:
+    nxos_file_path: "{{ local_file_path }}"
+    nxos_remote_file: "{{ target_firmware }}"
+    nxos_file_hash_source: "{{ calculated_hash }}"

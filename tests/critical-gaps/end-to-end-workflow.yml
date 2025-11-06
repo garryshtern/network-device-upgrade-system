@@ -13,7 +13,7 @@
         device_type: "cisco_nxos"
         device_model: "N9K-C93180YC-EX"
         current_version: "9.3.10"
-        target_firmware: "nxos.10.1.2.bin"
+        target_firmware: "nxos64-cs.10.1.2.M.bin"
         expected_result: "success"
         expected_phases_completed: 6
 
@@ -21,7 +21,7 @@
         device_type: "cisco_nxos"
         device_model: "N9K-C93240YC-FX2"
         current_version: "10.1.1"
-        target_firmware: "nxos.10.1.2.bin"
+        target_firmware: "nxos64-cs.10.1.2.M.bin"
         expected_result: "success"
         expected_phases_completed: 7
 
@@ -29,7 +29,7 @@
         device_type: "cisco_nxos"
         device_model: "N7K-C7018"
         current_version: "8.4.1"
-        target_firmware: "nxos.9.3.12.bin"
+        target_firmware: "nxos64-cs.9.3.12.M.bin"
         expected_result: "rollback_success"
         expected_phases_completed: 4
 
@@ -128,7 +128,6 @@
             "device_types_tested": ["cisco_nxos", "cisco_iosxe", "fortinet_fortios"],
             "total_phases_tested": {{ workflow_result.results | map(attribute='stdout') | map('from_json') | map(attribute='phases_completed') | sum }}
           }
-
 
     - name: Display end-to-end workflow test results
       ansible.builtin.debug:

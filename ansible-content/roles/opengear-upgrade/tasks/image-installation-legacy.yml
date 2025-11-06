@@ -46,15 +46,15 @@
 
     - name: Log pre-installation status
       ansible.builtin.debug:
-        msg: |
-          Pre-Installation Status:
-          - Device Architecture: {{ device_architecture | title }}
-          - Current Version: {{ pre_upgrade_version }}
-          - Firmware Path: {{ opengear_firmware_ready_path }}
-          - Upgrade Command: {{ upgrade_config.command }}
-          - Target Version: {{ opengear_upgrade_state.target_version }}
-          - Staging Info:
-          {{ staging_info.stdout }}
+        msg:
+          - "Pre-Installation Status:"
+          - "- Device Architecture: {{ device_architecture | title }}"
+          - "- Current Version: {{ pre_upgrade_version }}"
+          - "- Firmware Path: {{ opengear_firmware_ready_path }}"
+          - "- Upgrade Command: {{ upgrade_config.command }}"
+          - "- Target Version: {{ opengear_upgrade_state.target_version }}"
+          - "- Staging Info:"
+          - "{{ staging_info.stdout }}"
 
 - name: Console server preparation
   block:
@@ -67,7 +67,7 @@
 
     - name: Log active session check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check active console sessions: {{ active_sessions_check.stderr | default(active_sessions_check.stdout) | default('Unknown error') }}"
+        msg: "Warning: Failed to check active console sessions: {{ active_sessions_check.stderr if active_sessions_check.stderr is defined else (active_sessions_check.stdout if active_sessions_check.stdout is defined else default_error_message) }}"
       when:
         - active_sessions_check is defined
         - active_sessions_check.rc is defined
@@ -75,27 +75,23 @@
 
     - name: Warn about active sessions
       ansible.builtin.debug:
-        msg: |
-          WARNING: >
-            {{ active_sessions_check.stdout | default('0') | trim }}
-            active console sessions detected.
-          These sessions will be disconnected during the upgrade.
-      when: active_sessions_check.stdout | default('0') | trim | int > 0
+        msg:
+          - "WARNING: {{ active_sessions_check.stdout | trim }} active console sessions detected."
+          - "These sessions will be disconnected during the upgrade."
+      when: active_sessions_check.stdout | trim | int > 0
 
     - name: Send maintenance message to users
       ansible.builtin.raw: |
         wall 'MAINTENANCE: Firmware upgrade starting in 60 seconds.
           All sessions will be disconnected.'
       delegate_to: "{{ inventory_hostname }}"
-      when: active_sessions_check.stdout | default('0') | trim | int > 0
+      when: active_sessions_check.stdout | trim | int > 0
 
     - name: Wait for users to prepare
       ansible.builtin.pause:
         seconds: 60
-        prompt: >
-          Allowing time for active session users to prepare
-          for disconnection
-      when: active_sessions_check.stdout | default('0') | trim | int > 0
+        prompt: "Allowing time for active session users to prepare for disconnection"
+      when: active_sessions_check.stdout | trim | int > 0
 
 - name: Execute firmware installation based on device architecture
   block:
@@ -117,7 +113,7 @@
 
     - name: Execute modern puginstall command for firmware installation
       ansible.builtin.raw: |
-        puginstall {{ upgrade_config.options | default('') }}
+        puginstall {{ upgrade_config.options  }}
           {{ opengear_firmware_ready_path }}
       register: upgrade_execution
       delegate_to: "{{ inventory_hostname }}"
@@ -127,20 +123,14 @@
 
     - name: Log upgrade command execution output
       ansible.builtin.debug:
-        msg: |
-          {{ upgrade_config.command | title }} Command Execution:
-          - Command: >
-            {{ upgrade_config.command }}
-            {% if upgrade_config.options is defined %}
-            {{ upgrade_config.options }}
-            {% endif %}{{ opengear_firmware_ready_path }}
-          - Return Code: {{ upgrade_execution.rc }}
-          - Output:
-          {{ upgrade_execution.stdout }}
-          {% if upgrade_execution.stderr %}
-          - Error Output:
-          {{ upgrade_execution.stderr }}
-          {% endif %}
+        msg:
+          - "{{ upgrade_config.command | title }} Command Execution:"
+          - "- Command: {{ upgrade_config.command }} {% if upgrade_config.options is defined %}{{ upgrade_config.options }} {% endif %}{{ opengear_firmware_ready_path }}"
+          - "- Return Code: {{ upgrade_execution.rc }}"
+          - "- Output:"
+          - "{{ upgrade_execution.stdout }}"
+          - "{% if upgrade_execution.stderr %}- Error Output:{% endif %}"
+          - "{% if upgrade_execution.stderr %}{{ upgrade_execution.stderr }}{% endif %}"
 
     - name: Check upgrade command output for success indicators
       ansible.builtin.assert:
@@ -150,18 +140,15 @@
             'complete' in upgrade_execution.stdout.lower() or
             'programming' in upgrade_execution.stdout.lower() or
             'installed' in upgrade_execution.stdout.lower()
-        fail_msg: >
-          {{ upgrade_config.command }} command did not report
-          successful completion
+        fail_msg:
+          - "{{ upgrade_config.command }} command did not report successful completion"
 
 - name: Handle device reboot and recovery
   block:
     - name: Wait for automatic reboot to begin
       ansible.builtin.pause:
         seconds: 45
-        prompt: >
-          Waiting for {{ upgrade_config.command }} to complete and
-          trigger automatic reboot
+        prompt: "Waiting for {{ upgrade_config.command }} to complete and trigger automatic reboot"
 
     - name: Wait for device to become unreachable (reboot confirmation)
       ansible.builtin.wait_for:
@@ -221,11 +208,11 @@
         that:
           - opengear_upgrade_state.target_version in post_upgrade_version
           - pre_upgrade_version != post_upgrade_version
-        fail_msg: >
-          Installation completed but target version not active:
-          Previous: {{ pre_upgrade_version }}
-          Current: {{ post_upgrade_version }}
-          Expected: {{ opengear_upgrade_state.target_version }}
+        fail_msg:
+          - "Installation completed but target version not active:"
+          - "Previous: {{ pre_upgrade_version }}"
+          - "Current: {{ post_upgrade_version }}"
+          - "Expected: {{ opengear_upgrade_state.target_version }}"
 
     - name: Verify system health after installation
       ansible.builtin.raw: |
@@ -285,15 +272,14 @@
 
     - name: Log installation completion
       ansible.builtin.debug:
-        msg: |-
-          Opengear {{ upgrade_config.command | title }}
-          Installation Completed Successfully:
-          - Device Model: {{ opengear_upgrade_state.device_model }}
-          - Device Architecture: {{ device_architecture | title }}
-          - Previous Version: {{ pre_upgrade_version }}
-          - New Version: {{ post_upgrade_version }}
-          - Installation Method: {{ upgrade_config.command }} CLI Command
-          - Firmware File: {{ opengear_firmware_ready_path }}
-          - Serial Ports: {{ post_serial_ports.stdout | trim }} detected
-          - Storage Mount: {{ opengear_storage_path }}
-          - Status: SUCCESS
+        msg:
+          - "Opengear {{ upgrade_config.command | title }} Installation Completed Successfully:"
+          - "- Device Model: {{ opengear_upgrade_state.device_model }}"
+          - "- Device Architecture: {{ device_architecture | title }}"
+          - "- Previous Version: {{ pre_upgrade_version }}"
+          - "- New Version: {{ post_upgrade_version }}"
+          - "- Installation Method: {{ upgrade_config.command }} CLI Command"
+          - "- Firmware File: {{ opengear_firmware_ready_path }}"
+          - "- Serial Ports: {{ post_serial_ports.stdout | trim }} detected"
+          - "- Storage Mount: {{ opengear_storage_path }}"
+          - "- Status: SUCCESS"

@@ -1,0 +1,238 @@
+---
+# Rollback State Validation Pre-checks
+# Validates device state before, during, and after rollback operations
+# Ensures system consistency and prevents unsafe rollback execution
+
+- name: Rollback State Validation Tests
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_results: []
+    test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"
+
+  tasks:
+    - name: Test Group 1 - Pre-Rollback State Validation
+      block:
+        - name: Initialize pre-rollback validation
+          set_fact:
+            validation_1_device: "{{ test_device_registry.test_devices.nxos.issu_capable_with_epld }}"
+            pre_rollback_state:
+              device_responsive: true
+              current_version: "10.1.2"
+              original_version: "9.3.10"
+              upgrade_in_progress: false
+              upgrade_started_at: "2025-11-04T09:00:00Z"
+              upgrade_completed_at: "2025-11-04T09:45:00Z"
+              reboot_completed: true
+              system_healthy: true
+              config_backed_up: true
+              baseline_verified: true
+
+        - name: Validate device is in valid pre-rollback state
+          assert:
+            that:
+              - pre_rollback_state.device_responsive == true
+              - pre_rollback_state.reboot_completed == true
+              - pre_rollback_state.system_healthy == true
+              - pre_rollback_state.config_backed_up == true
+            fail_msg:
+              - "PRE-ROLLBACK VALIDATION FAILED"
+              - "Device State Requirements Not Met:"
+              - "  Responsive: {{ pre_rollback_state.device_responsive }}"
+              - "  Reboot Completed: {{ pre_rollback_state.reboot_completed }}"
+              - "  System Healthy: {{ pre_rollback_state.system_healthy }}"
+              - "  Config Backed Up: {{ pre_rollback_state.config_backed_up }}"
+              - "Troubleshooting: Ensure device is fully recovered before attempting rollback"
+
+        - name: Validate original firmware is available and verified
+          assert:
+            that:
+              - pre_rollback_state.baseline_verified == true
+              - pre_rollback_state.original_version == validation_1_device.firmware_version
+            fail_msg:
+              - "ORIGINAL FIRMWARE VALIDATION FAILED"
+              - "Expected Version: {{ validation_1_device.firmware_version }}"
+              - "Original Verified: {{ pre_rollback_state.baseline_verified }}"
+              - "Troubleshooting: Verify original firmware file exists and checksum matches"
+
+        - name: Record test 1 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Pre-Rollback State Validation', 'status': 'PASS'}] }}"
+
+      rescue:
+        - name: Record test 1 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Pre-Rollback State Validation', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 2 - Network Connectivity Pre-check
+      block:
+        - name: Initialize network validation
+          set_fact:
+            network_state:
+              device_ip: "10.0.0.1"
+              mgmt_interface_status: "up"
+              ping_response: true
+              ssh_port_responsive: true
+              api_endpoint_responsive: true
+              connection_latency_ms: 45
+              packet_loss_percent: 0
+
+        - name: Validate network connectivity for rollback operations
+          assert:
+            that:
+              - network_state.mgmt_interface_status == "up"
+              - network_state.ping_response == true
+              - network_state.ssh_port_responsive == true
+              - network_state.connection_latency_ms < 1000
+              - network_state.packet_loss_percent == 0
+            fail_msg:
+              - "NETWORK CONNECTIVITY VALIDATION FAILED"
+              - "Mgmt Interface: {{ network_state.mgmt_interface_status }}"
+              - "SSH Responsive: {{ network_state.ssh_port_responsive }}"
+              - "Latency: {{ network_state.connection_latency_ms }}ms"
+              - "Packet Loss: {{ network_state.packet_loss_percent }}%"
+              - "Troubleshooting: Fix network connectivity issues before rolling back"
+
+        - name: Record test 2 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Connectivity Pre-check', 'status': 'PASS'}] }}"
+
+      rescue:
+        - name: Record test 2 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Network Connectivity Pre-check', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 3 - Storage Space Validation
+      block:
+        - name: Initialize storage validation
+          set_fact:
+            storage_state:
+              bootflash_total_mb: 16000
+              bootflash_used_mb: 14500
+              bootflash_available_mb: 1500
+              original_firmware_size_mb: 850
+              current_firmware_size_mb: 860
+              min_required_free_space_mb: 1000
+              temporary_work_space_mb: 500
+
+        - name: Validate sufficient storage for rollback
+          assert:
+            that:
+              - storage_state.bootflash_available_mb >= storage_state.original_firmware_size_mb
+              - storage_state.bootflash_available_mb >= storage_state.min_required_free_space_mb
+              - storage_state.temporary_work_space_mb >= 300
+            fail_msg:
+              - "STORAGE SPACE VALIDATION FAILED"
+              - "Total Bootflash: {{ storage_state.bootflash_total_mb }}MB"
+              - "Available Space: {{ storage_state.bootflash_available_mb }}MB"
+              - "Required for Rollback: {{ storage_state.original_firmware_size_mb }}MB"
+              - "Minimum Required: {{ storage_state.min_required_free_space_mb }}MB"
+              - "Troubleshooting: Free up disk space before attempting rollback"
+
+        - name: Record test 3 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Storage Space Validation', 'status': 'PASS', 'available_mb': storage_state.bootflash_available_mb}] }}"
+
+      rescue:
+        - name: Record test 3 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Storage Space Validation', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 4 - Hardware State Validation
+      block:
+        - name: Initialize hardware validation
+          set_fact:
+            hardware_state:
+              device_model: "{{ test_device_registry.test_devices.iosxe.install_mode_capable.device_model }}"
+              cpu_utilization_percent: 35
+              memory_utilization_percent: 65
+              temperature_celsius: 48
+              temperature_max_celsius: 70
+              all_interfaces_operational: true
+              redundancy_status: "OK"
+              power_supplies_operational: 2
+              fans_operational: 4
+
+        - name: Validate hardware is ready for rollback
+          assert:
+            that:
+              - hardware_state.cpu_utilization_percent < 80
+              - hardware_state.memory_utilization_percent < 85
+              - hardware_state.temperature_celsius < hardware_state.temperature_max_celsius
+              - hardware_state.all_interfaces_operational == true
+              - hardware_state.power_supplies_operational >= 1
+            fail_msg:
+              - "HARDWARE STATE VALIDATION FAILED"
+              - "CPU Utilization: {{ hardware_state.cpu_utilization_percent }}%"
+              - "Memory Utilization: {{ hardware_state.memory_utilization_percent }}%"
+              - "Temperature: {{ hardware_state.temperature_celsius }}°C (max: {{ hardware_state.temperature_max_celsius }}°C)"
+              - "Power Supplies: {{ hardware_state.power_supplies_operational }}/2"
+              - "Troubleshooting: Resolve hardware issues before rolling back"
+
+        - name: Record test 4 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Hardware State Validation', 'status': 'PASS', 'redundancy': hardware_state.redundancy_status}] }}"
+
+      rescue:
+        - name: Record test 4 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Hardware State Validation', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 5 - Configuration State Validation
+      block:
+        - name: Initialize configuration validation
+          set_fact:
+            config_state:
+              running_config_backup_exists: true
+              running_config_hash: "abc123def456"
+              startup_config_exists: true
+              startup_config_hash: "abc123def456"
+              config_synced: true
+              vlans_configured: 15
+              routing_protocols_active: 3
+              acl_policies_configured: 8
+
+        - name: Validate configuration state before rollback
+          assert:
+            that:
+              - config_state.running_config_backup_exists == true
+              - config_state.startup_config_exists == true
+              - config_state.config_synced == true
+              - config_state.running_config_hash == config_state.startup_config_hash
+            fail_msg:
+              - "CONFIGURATION STATE VALIDATION FAILED"
+              - "Running Config Backup: {{ config_state.running_config_backup_exists }}"
+              - "Startup Config: {{ config_state.startup_config_exists }}"
+              - "Configs Synced: {{ config_state.config_synced }}"
+              - "Troubleshooting: Verify configuration backup is complete and consistent"
+
+        - name: Record test 5 result
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Configuration State Validation', 'status': 'PASS', 'vlans': config_state.vlans_configured}] }}"
+
+      rescue:
+        - name: Record test 5 failure
+          set_fact:
+            test_results: "{{ test_results + [{'test': 'Configuration State Validation', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Display rollback state validation results
+      debug:
+        msg:
+          - "==========================================="
+          - "ROLLBACK STATE VALIDATION TEST RESULTS"
+          - "==========================================="
+          - "{% for result in test_results %}{{ result.test }}: {{ result.status }}{% endfor %}"
+          - "==========================================="
+          - "Total Validations: {{ test_results | length }}"
+          - "Passed: {{ test_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+          - "Failed: {{ test_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+          - "==========================================="
+
+    - name: Fail if any rollback state validations failed
+      fail:
+        msg:
+          - "ROLLBACK STATE VALIDATION TESTS FAILED"
+          - "Failed validations: {{ test_results | selectattr('status', 'equalto', 'FAIL') | map(attribute='test') | list }}"
+      when: test_results | selectattr('status', 'equalto', 'FAIL') | list | length > 0

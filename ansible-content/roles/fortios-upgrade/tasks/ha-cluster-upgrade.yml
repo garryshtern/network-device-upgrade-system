@@ -148,16 +148,11 @@
 
 - name: Log HA cluster upgrade completion
   ansible.builtin.debug:
-    msg: |-
-      FortiOS HA Cluster Upgrade Completed:
-      - Unit Role: {{ fortios_upgrade_state.ha_role }}
-      - New Version: {{ fortios_upgrade_state.target_version }}
-      - HA Sync Status: {{ final_cluster_status.meta.results.sync_status }}
-      - >
-        Cluster Members:
-        {{ final_cluster_status.meta.results.members | length }}
-      - Upgrade Method: {{ 'Coordinated HA Upgrade' }}
-      - >-
-        Status:
-        {{ 'Success' if final_cluster_status.meta.results.sync_status ==
-        'synchronized' else 'Check Required' }}
+    msg:
+      - "FortiOS HA Cluster Upgrade Completed:"
+      - "- Unit Role: {{ fortios_upgrade_state.ha_role }}"
+      - "- New Version: {{ fortios_upgrade_state.target_version }}"
+      - "- HA Sync Status: {{ final_cluster_status.meta.results.sync_status }}"
+      - "- Cluster Members: {{ final_cluster_status.meta.results.members | length }}"
+      - "- Upgrade Method: Coordinated HA Upgrade"
+      - "- Status: {{ 'Success' if final_cluster_status.meta.results.sync_status == 'synchronized' else 'Check Required' }}"

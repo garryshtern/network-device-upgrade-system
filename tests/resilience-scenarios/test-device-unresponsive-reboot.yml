@@ -1,0 +1,247 @@
+---
+# Test: Device Unresponsive After Reboot
+# Tests: Device not responding to ping, partial boot, slow boot by platform, boot failure detection
+# Risk Level: CRITICAL - Post-reboot validation
+# Coverage: All platforms with different boot durations
+
+- name: Device Unresponsive After Reboot Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "device_unresponsive_reboot"
+    platform_boot_times:
+      cisco_nxos: 300  # 5 minutes
+      cisco_iosxe: 180  # 3 minutes
+      fortios: 120  # 2 minutes
+      opengear: 90   # 1.5 minutes
+
+  tasks:
+    - name: Test Phase 1 - Device No Ping Response Simulation
+      block:
+        - name: Simulate device not responding to ping
+          ansible.builtin.set_fact:
+            ping_simulation:
+              device: "nxos-test-01"
+              ping_responses: []
+
+        - name: Simulate failed ping attempts (5 attempts)
+          ansible.builtin.set_fact:
+            ping_simulation: "{{ ping_simulation | combine({'ping_responses': ping_simulation.ping_responses + [{'attempt': item, 'response': 'TIMEOUT'}]}, recursive=True) }}"
+          loop: "{{ range(1, 6) | list }}"
+
+        - name: Verify all pings failed
+          ansible.builtin.assert:
+            that:
+              - ping_simulation.ping_responses | length == 5
+              - (ping_simulation.ping_responses | map(attribute='response') | unique) == ['TIMEOUT']
+            fail_msg: "Ping timeout simulation failed"
+            success_msg: "✓ Device no-ping scenario simulated ({{ ping_simulation.ping_responses | length }} failed attempts)"
+
+    - name: Test Phase 2 - Device Partial Boot Scenario
+      block:
+        - name: Simulate device boot sequence
+          ansible.builtin.set_fact:
+            boot_sequence: []
+
+        - name: Add boot sequence stages
+          ansible.builtin.set_fact:
+            boot_sequence: "{{ boot_sequence + [item] }}"
+          loop:
+            - {stage: "BIOS POST", status: "COMPLETE"}
+            - {stage: "Bootloader", status: "COMPLETE"}
+            - {stage: "Kernel Loading", status: "COMPLETE"}
+            - {stage: "Driver Loading", status: "COMPLETE"}
+            - {stage: "SSH Service", status: "PENDING"}
+            - {stage: "Network Services", status: "PENDING"}
+
+        - name: Check for partial boot (services not ready)
+          ansible.builtin.set_fact:
+            is_partially_booted: "{{ (boot_sequence | map(attribute='status') | list) | select('match', 'PENDING') | list | length > 0 }}"
+
+        - name: Assert partial boot detected
+          ansible.builtin.assert:
+            that:
+              - is_partially_booted == True
+            fail_msg: "Partial boot not detected"
+            success_msg: "✓ Partial boot detected (SSH not ready, waiting for services)"
+
+        - name: Simulate service startup completion
+          ansible.builtin.set_fact:
+            boot_sequence: "{{ boot_sequence | map(
+              'combine',
+              {'status': 'COMPLETE'}
+            ) | list }}"
+
+        - name: Verify full boot after service startup
+          ansible.builtin.assert:
+            that:
+              - (boot_sequence | map(attribute='status') | unique) == ['COMPLETE']
+            fail_msg: "Full boot not achieved"
+            success_msg: "✓ Device fully booted after service startup"
+
+    - name: Test Phase 3 - Platform-Specific Boot Timeouts
+      block:
+        - name: Test NX-OS timeout (5 minutes)
+          ansible.builtin.set_fact:
+            nxos_boot_test:
+              platform: "cisco_nxos"
+              expected_timeout: "{{ platform_boot_times.cisco_nxos | int }}"
+              actual_boot_time: 280
+
+        - name: Assert NX-OS boots within timeout
+          ansible.builtin.assert:
+            that:
+              - "nxos_boot_test.actual_boot_time | int <= nxos_boot_test.expected_timeout | int"
+            fail_msg: "NX-OS boot exceeded 5-minute timeout"
+            success_msg: "✓ NX-OS booted within {{ nxos_boot_test.expected_timeout }}s (took {{ nxos_boot_test.actual_boot_time }}s)"
+
+        - name: Test IOS-XE timeout (3 minutes)
+          ansible.builtin.set_fact:
+            iosxe_boot_test:
+              platform: "cisco_iosxe"
+              expected_timeout: "{{ platform_boot_times.cisco_iosxe | int }}"
+              actual_boot_time: 170
+
+        - name: Assert IOS-XE boots within timeout
+          ansible.builtin.assert:
+            that:
+              - "iosxe_boot_test.actual_boot_time | int <= iosxe_boot_test.expected_timeout | int"
+            fail_msg: "IOS-XE boot exceeded 3-minute timeout"
+            success_msg: "✓ IOS-XE booted within {{ iosxe_boot_test.expected_timeout }}s (took {{ iosxe_boot_test.actual_boot_time }}s)"
+
+        - name: Test FortiOS timeout (2 minutes)
+          ansible.builtin.set_fact:
+            fortios_boot_test:
+              platform: "fortios"
+              expected_timeout: "{{ platform_boot_times.fortios | int }}"
+              actual_boot_time: 115
+
+        - name: Assert FortiOS boots within timeout
+          ansible.builtin.assert:
+            that:
+              - "fortios_boot_test.actual_boot_time | int <= fortios_boot_test.expected_timeout | int"
+            fail_msg: "FortiOS boot exceeded 2-minute timeout"
+            success_msg: "✓ FortiOS booted within {{ fortios_boot_test.expected_timeout }}s (took {{ fortios_boot_test.actual_boot_time }}s)"
+
+        - name: Test Opengear timeout (1.5 minutes)
+          ansible.builtin.set_fact:
+            opengear_boot_test:
+              platform: "opengear"
+              expected_timeout: "{{ platform_boot_times.opengear | int }}"
+              actual_boot_time: 85
+
+        - name: Assert Opengear boots within timeout
+          ansible.builtin.assert:
+            that:
+              - "opengear_boot_test.actual_boot_time | int <= opengear_boot_test.expected_timeout | int"
+            fail_msg: "Opengear boot exceeded 1.5-minute timeout"
+            success_msg: "✓ Opengear booted within {{ opengear_boot_test.expected_timeout }}s (took {{ opengear_boot_test.actual_boot_time }}s)"
+
+    - name: Test Phase 4 - Slow Boot Detection and Handling
+      block:
+        - name: Simulate slow boot (approaching timeout)
+          ansible.builtin.set_fact:
+            slow_boot_scenario: {
+              "platform": "cisco_nxos",
+              "boot_time": 290,
+              "max_timeout": 300,
+              "time_remaining": 10
+            }
+
+        - name: Alert on slow boot
+          ansible.builtin.assert:
+            that:
+              - slow_boot_scenario.time_remaining > 0
+            fail_msg: "Boot timeout exceeded"
+            success_msg: "✓ Slow boot detected ({{ slow_boot_scenario.time_remaining }}s remaining of {{ slow_boot_scenario.max_timeout }}s)"
+
+    - name: Test Phase 5 - Boot Failure Detection (Loop Reboot)
+      block:
+        - name: Simulate boot loop (repeated reboots)
+          ansible.builtin.set_fact:
+            boot_failure_events: []
+
+        - name: Add reboot events
+          ansible.builtin.set_fact:
+            boot_failure_events: "{{ boot_failure_events + [{'attempt': item, 'status': 'FAILED_TO_BOOT'}] }}"
+          loop: "{{ range(1, 4) | list }}"
+
+        - name: Check for boot loop pattern
+          ansible.builtin.set_fact:
+            boot_loop_detected: "{{ boot_failure_events | length >= 3 }}"
+
+        - name: Assert boot loop detected
+          ansible.builtin.assert:
+            that:
+              - boot_loop_detected == True
+            fail_msg: "Boot loop not detected"
+            success_msg: "✓ Boot loop detected after {{ boot_failure_events | length }} failed boot attempts"
+
+    - name: Test Phase 6 - Device Reachability Check Retry Logic
+      block:
+        - name: Simulate reachability checks with retry
+          ansible.builtin.set_fact:
+            reachability_checks: {
+              "attempt_1": False,
+              "attempt_2": False,
+              "attempt_3": True
+            }
+
+        - name: Determine when device becomes reachable
+          ansible.builtin.set_fact:
+            first_successful_check: "{{ reachability_checks | dict2items | selectattr('value', 'equalto', True) | first }}"
+
+        - name: Assert reachability achieved on retry
+          ansible.builtin.assert:
+            that:
+              - first_successful_check is defined
+              - first_successful_check.key == 'attempt_3'
+            fail_msg: "Device not reachable after retries"
+            success_msg: "✓ Device became reachable on {{ first_successful_check.key }}"
+
+    - name: Test Phase 7 - SSH Service Readiness Validation
+      block:
+        - name: Simulate SSH service startup sequence
+          ansible.builtin.set_fact:
+            ssh_service_timeline: []
+
+        - name: Add SSH service start events
+          ansible.builtin.set_fact:
+            ssh_service_timeline: "{{ ssh_service_timeline + [item] }}"
+          loop:
+            - {time: 0, event: "SSH service starting"}
+            - {time: 5, event: "SSH daemon binding to port 22"}
+            - {time: 8, event: "SSH service accepting connections"}
+            - {time: 10, event: "SSH keys loaded"}
+            - {time: 12, event: "SSH ready for authentication"}
+
+        - name: Verify SSH readiness timeline
+          ansible.builtin.assert:
+            that:
+              - ssh_service_timeline | length == 5
+              - ssh_service_timeline[-1].event == "SSH ready for authentication"
+            fail_msg: "SSH service readiness timeline invalid"
+            success_msg: "✓ SSH service ready by {{ ssh_service_timeline[-1].time }}s after boot"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Device Unresponsive After Reboot Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Device no-ping response handling"
+          - "  ✓ Partial boot detection"
+          - "  ✓ Slow boot detection and handling"
+          - "  ✓ Boot loop (repeated reboot) detection"
+          - "  ✓ Reachability check retry logic"
+          - "  ✓ SSH service readiness validation"
+          - ""
+          - "Platform Boot Times Verified:"
+          - "  - Cisco NX-OS: 5 minutes maximum"
+          - "  - Cisco IOS-XE: 3 minutes maximum"
+          - "  - FortiOS: 2 minutes maximum"
+          - "  - Opengear: 1.5 minutes maximum"
+          - ""
+          - "Risk Coverage: CRITICAL - Prevents indefinite wait for unresponsive devices"

@@ -1,333 +1,128 @@
 ---
-# ARP and Neighbor Discovery Validation
-# Validates ARP table entries and DHCP snooping binding table
+# ARP and MAC Data Validation
+# Compares entire arp_data and mac_data (arp_data normalized, mac_data raw)
+# Validates all ARP and MAC state before operational state validation
+#
+# DESIGN: Extract complete arp_data and mac_data dicts from baseline data, normalize arp_data, compare, report deltas
+# DATA SOURCES:
+# - ARP data: network_baseline.arp_data (normalized for comparison)
+# - MAC data: network_baseline.mac_data (raw comparison)
+# - Pre-upgrade baseline: network_baseline_pre
+# - Post-upgrade baseline: network_baseline_post
 
-- name: Get ARP table (NX-OS)
-  cisco.nxos.nxos_command:
-    commands:
-      - show ip arp | json
-      - show ip arp summary | json
-      - show ip arp statistics | json
-  register: nxos_arp_info
-  when:
-    - ansible_network_os == "cisco.nxos.nxos"
-    - not ansible_check_mode
-- name: Get ARP table (IOS-XE)
-  cisco.ios.ios_command:
-    commands:
-      - show ip arp
-      - show arp summary
-  register: ios_arp_info
-  when:
-    - ansible_network_os == "cisco.ios.ios"
-    - not ansible_check_mode
-- name: Get ARP table (Generic)
-  ansible.netcommon.cli_command:
-    command: show ip arp
-  changed_when: false
-  register: generic_arp_info
-  when:
-    - ansible_network_os not in ["cisco.nxos.nxos", "cisco.ios.ios"]
-    - not ansible_check_mode
-  failed_when: false
-- name: Extract ARP data
-  set_fact:
-    arp_entries: >
-      {{ nxos_arp_info.stdout[0] | from_json |
-         json_query('TABLE_arp.ROW_arp')
-      | default([]) }}'
-    arp_summary: '{{ nxos_arp_info.stdout[1] | from_json }}'
-    arp_statistics: '{{ nxos_arp_info.stdout[2] | from_json }}'
-  when:
-    - ansible_network_os == "cisco.nxos.nxos"
-    - not ansible_check_mode
-    - nxos_arp_info is defined
-    - nxos_arp_info.stdout is defined
-    - nxos_arp_info.stdout[0] != ""
-- name: Classify ARP entries
-  set_fact:
-    static_arp_entries: >
-      '{{ arp_entries | selectattr(''flag'', ''match'', ''.*S.*'')
-      | list }}'
-    dynamic_arp_entries: >
-      '{{ arp_entries | selectattr(''flag'', ''match'', ''.*D.*'')
-      | list }}'
-    incomplete_arp_entries: >
-      '{{ arp_entries | selectattr(''flag'', ''match'', ''.*I.*'')
-      | list }}'
-  when: arp_entries is defined and arp_entries | length > 0
-- name: Check ARP table completeness
-  ansible.builtin.assert:
-    that:
-      - arp_entries | length > 0
-    fail_msg: ARP table appears to be empty
-  when: arp_entries is defined
-- name: Validate ARP table size
-  ansible.builtin.debug:
-    msg: 'ARP Table Status:
-
-      Total Entries: {{ arp_entries | length }}
-
-      Static Entries: >
-        {{ static_arp_entries | length if static_arp_entries is defined
-      else 0 }}
-
-      Dynamic Entries: >
-        {{ dynamic_arp_entries | length if dynamic_arp_entries is defined
-      else 0 }}
-
-      Incomplete Entries: >
-        {{ incomplete_arp_entries | length if incomplete_arp_entries
-      is defined else 0 }}
-
-      {% if arp_summary is defined %}
-
-      Total Resolved: {{ arp_summary.resolved | default(''N/A'') }}
-
-      Total Incomplete: {{ arp_summary.incomplete | default(''N/A'') }}
-
-      {% endif %}
-
-      '
-  when: arp_entries is defined
-- name: Check for excessive incomplete entries
-  ansible.builtin.debug:
-    msg: >-
-      WARNING: {{ incomplete_arp_entries | length }}
-      incomplete ARP entries found
-  when: >
-    incomplete_arp_entries is defined and incomplete_arp_entries | length > 10
-- name: Check default gateway ARP entry
-  cisco.nxos.nxos_command:
-    commands:
-      - show ip route 0.0.0.0/0 | json
-  register: default_route_info
-  when:
-    - ansible_network_os == "cisco.nxos.nxos"
-    - not ansible_check_mode
-  failed_when: false
-- name: Extract default gateway
+# Initialize ARP/MAC comparison status
+- name: Initialize ARP/MAC comparison status
   ansible.builtin.set_fact:
-    default_gateway: >
-      {{ default_route_info.stdout[0] | from_json |
-         json_query('TABLE_vrf.ROW_vrf[0].TABLE_addrf.ROW_addrf.
-                     TABLE_prefix.ROW_prefix.ucast_nhops.TABLE_path.
-                     ROW_path.ipnexthop')
-      }}
+    arp_mac_comparison_status: "NOT_RUN"
+
+# Post-upgrade comparison for ARP and MAC data
+- name: Compare ARP and MAC data with baseline (post-upgrade only)
   when:
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+    - platform == 'nxos'
     - not ansible_check_mode
-    - default_route_info is defined
-    - default_route_info.rc == 0
-    - default_route_info.stdout[0] != ""
-- name: Verify default gateway in ARP table
-  ansible.builtin.debug:
-    msg: 'Default Gateway Validation:
+    - network_baseline_pre is defined
+    - network_baseline_post is defined
+  block:
+    # ARP Data - Normalize and Compare
+    - name: ARP Data Comparison
+      when:
+        - network_baseline_pre.arp_data is defined
+        - network_baseline_post.arp_data is defined
+      block:
+        - name: Normalize ARP pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.arp_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.arp_data }}"
 
-      Gateway IP: {{ default_gateway | default(''Not Found'') }}
+        - name: Store normalized ARP pre data
+          ansible.builtin.set_fact:
+            arp_pre_normalized: "{{ normalized_data }}"
 
-      {% if default_gateway is defined %}
+        - name: Normalize ARP post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.arp_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.arp_data }}"
 
-      {% set gateway_entry = arp_entries |
-        selectattr(''ip_addr'', ''equalto'', default_gateway)
-      | list %}
+        - name: Calculate ARP deltas
+          ansible.builtin.set_fact:
+            arp_post_normalized: "{{ normalized_data }}"
+            arp_added: "{{ normalized_data | difference_recursive(arp_pre_normalized) }}"
+            arp_removed: "{{ arp_pre_normalized | difference_recursive(normalized_data) }}"
+            arp_comparison_match: "{{ normalized_data == arp_pre_normalized }}"
 
-      Gateway in ARP: {{ ''YES'' if gateway_entry | length > 0 else ''NO'' }}
+        - name: Report ARP added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== ARP and MAC Data Comparison ==="
+              - "Added/Modified ARP Entries:"
+              - "{{ arp_added | to_proper_json }}"
+          when: arp_added | length > 0
 
-      {% if gateway_entry | length > 0 %}
+        - name: Report ARP removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== ARP and MAC Data Comparison ==="
+              - "Removed ARP Entries:"
+              - "{{ arp_removed | to_proper_json }}"
+          when: arp_removed | length > 0
 
-      Gateway MAC: {{ gateway_entry[0].mac_addr }}
+    # MAC Data - Raw Comparison (no normalization needed)
+    - name: MAC Data Comparison
+      when:
+        - network_baseline_pre.mac_data is defined
+        - network_baseline_post.mac_data is defined
+      block:
+        - name: Calculate MAC deltas
+          ansible.builtin.set_fact:
+            mac_added: "{{ network_baseline_post.mac_data | difference_recursive(network_baseline_pre.mac_data) }}"
+            mac_removed: "{{ network_baseline_pre.mac_data | difference_recursive(network_baseline_post.mac_data) }}"
+            mac_comparison_match: "{{ network_baseline_post.mac_data == network_baseline_pre.mac_data }}"
 
-      Gateway Interface: {{ gateway_entry[0].intf_out }}
+        - name: Report MAC added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== ARP and MAC Data Comparison ==="
+              - "Added/Modified MAC Entries:"
+              - "{{ mac_added | to_proper_json }}"
+          when: mac_added | length > 0
 
-      {% endif %}
+        - name: Report MAC removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== ARP and MAC Data Comparison ==="
+              - "Removed MAC Entries:"
+              - "{{ mac_removed | to_proper_json }}"
+          when: mac_removed | length > 0
 
-      {% endif %}
+    - name: Report no ARP and MAC changes
+      ansible.builtin.debug:
+        msg:
+          - "=== ARP and MAC Data Comparison ==="
+          - "Status: No changes detected in ARP and MAC data"
+      when:
+        - arp_comparison_match
+        - mac_comparison_match
 
-      '
-  when: arp_entries is defined
-- name: Get DHCP snooping binding table
-  cisco.nxos.nxos_command:
-    commands:
-      - show ip dhcp snooping binding | json
-  register: dhcp_snooping_info
-  when:
-    - ansible_network_os == "cisco.nxos.nxos"
-    - not ansible_check_mode
-  failed_when: false
-- name: Parse DHCP snooping bindings
-  set_fact:
-    dhcp_bindings: >
-      {{ dhcp_snooping_info.stdout[0] | from_json |
-         json_query('TABLE_binding.ROW_binding')
-      | default([]) }}'
-  when:
-    - not ansible_check_mode
-    - dhcp_snooping_info is defined
-    - dhcp_snooping_info.rc == 0
-- name: Validate DHCP snooping bindings
-  ansible.builtin.debug:
-    msg: 'DHCP Snooping Binding Table:
+    - name: Validate ARP and MAC comparison passed
+      ansible.builtin.assert:
+        that:
+          - arp_comparison_match | bool
+          - mac_comparison_match | bool
+        fail_msg:
+          - "CRITICAL: Network validation failed - ARP/MAC mismatch detected"
+          - "This indicates network state changed during upgrade"
+          - "Pre-upgrade ARP entries: {{ arp_pre_normalized | length }}"
+          - "Post-upgrade ARP entries: {{ arp_post_normalized | length }}"
+          - "ARP added entries: {{ arp_added | length }}"
+          - "ARP removed entries: {{ arp_removed | length }}"
+          - "MAC added entries: {{ mac_added | length }}"
+          - "MAC removed entries: {{ mac_removed | length }}"
+          - "RECOMMENDATION: Investigate network changes or rollback upgrade"
 
-      {% if dhcp_bindings is defined and dhcp_bindings | length > 0 %}
-
-      Total Bindings: {{ dhcp_bindings | length }}
-
-      {% for binding in dhcp_bindings[:10] %}
-
-      - >
-        {{ binding.ip_addr }}: {{ binding.mac_addr }}
-        ({{ binding.interface }}, VLAN
-      {{ binding.vlan_id }})
-
-      {% endfor %}
-
-      {% else %}
-
-      No DHCP snooping bindings found (feature may not be enabled)
-
-      {% endif %}
-
-      '
-  when: dhcp_snooping_info is defined
-- name: Get IPv6 neighbor table
-  cisco.nxos.nxos_command:
-    commands:
-      - show ipv6 neighbor | json
-  register: ipv6_neighbor_info
-  when:
-    - ansible_network_os == "cisco.nxos.nxos"
-    - not ansible_check_mode
-  failed_when: false
-- name: Parse IPv6 neighbors
-  set_fact:
-    ipv6_neighbors: >
-      {{ ipv6_neighbor_info.stdout[0] | from_json |
-         json_query('TABLE_neighbor.ROW_neighbor')
-      | default([]) }}'
-  when:
-    - not ansible_check_mode
-    - ipv6_neighbor_info is defined
-    - ipv6_neighbor_info.rc == 0
-- name: Validate IPv6 neighbor discovery
-  ansible.builtin.debug:
-    msg: 'IPv6 Neighbor Discovery:
-
-      {% if ipv6_neighbors is defined and ipv6_neighbors | length > 0 %}
-
-      Total IPv6 Neighbors: {{ ipv6_neighbors | length }}
-
-      {% for neighbor in ipv6_neighbors[:5] %}
-
-      - >: >-
-          {{ neighbor.ipv6_addr }}: {{
-          neighbor.link_layer_addr }} ({{ neighbor.interface
-      }})
-
-      {% endfor %}
-
-      {% else %}
-
-      No IPv6 neighbors found (IPv6 may not be configured)
-
-      {% endif %}
-
-      '
-  when: ipv6_neighbor_info is defined
-- name: Get MAC address table
-  cisco.nxos.nxos_command:
-    commands:
-      - show mac address-table | json
-  register: mac_table_info
-  when:
-    - ansible_network_os == "cisco.nxos.nxos"
-    - not ansible_check_mode
-  failed_when: false
-- name: Cross-reference ARP and MAC tables
-  set_fact:
-    mac_entries: >
-      {{ mac_table_info.stdout[0] | from_json |
-         json_query('TABLE_mac_address.ROW_mac_address')
-      | default([]) }}'
-  when:
-    - not ansible_check_mode
-    - mac_table_info is defined
-    - mac_table_info.rc == 0
-- name: Validate ARP-MAC correlation
-  ansible.builtin.debug:
-    msg: 'MAC Address Table Status:
-
-      Total MAC Entries: >
-        {{ mac_entries | length if mac_entries is defined else 0
-      }}
-
-      ARP-MAC Correlation: >
-        {{ ''Available'' if mac_entries is defined and arp_entries
-      is defined else ''Limited Data'' }}
-
-      {% if mac_entries is defined and arp_entries is defined %}
-
-      {% set correlated = [] %}
-
-      {% for arp in arp_entries[:5] %}
-
-      {% set mac_match = mac_entries |
-        selectattr(''disp_mac_addr'', ''equalto'',
-      arp.mac_addr) | list %}
-
-      {% if mac_match | length > 0 %}
-
-      {% set _ = correlated.append(arp) %}
-
-      {% endif %}
-
-      {% endfor %}
-
-      Correlated Entries: >
-        {{ correlated | length }}/{{ [arp_entries | length, 5] |
-      min }}
-
-      {% endif %}
-
-      '
-  when: mac_table_info is defined
-- name: Store ARP baseline
-  ansible.builtin.set_fact:
-    arp_baseline:
-      timestamp: '{{ lookup(''pipe'', ''date -u +%Y-%m-%dT%H:%M:%SZ'') }}'
-      total_arp_entries: >
-        '{{ arp_entries | length if arp_entries is defined else 0
-        }}'
-      static_entries: >
-        '{{ static_arp_entries | length if static_arp_entries is defined
-        else 0 }}'
-      dynamic_entries: >
-        '{{ dynamic_arp_entries | length if dynamic_arp_entries is
-        defined else 0 }}'
-      incomplete_entries: >
-        '{{ incomplete_arp_entries | length if incomplete_arp_entries
-        is defined else 0 }}'
-      default_gateway_present: >-
-        {{ true if default_gateway is defined and arp_entries
-        is defined and (arp_entries |
-          selectattr('ip_addr', 'equalto', default_gateway)
-        | list | length > 0) else false }}
-      dhcp_bindings: >
-        '{{ dhcp_bindings | length if dhcp_bindings is defined else 0
-        }}'
-      ipv6_neighbors: >
-        '{{ ipv6_neighbors | length if ipv6_neighbors is defined else
-        0 }}'
-      mac_entries: '{{ mac_entries | length if mac_entries is defined else 0 }}'
-- name: ARP validation summary
-  ansible.builtin.debug:
-    msg: |
-      ARP and Neighbor Discovery Validation Results:
-      - Total ARP Entries: {{ arp_baseline.total_arp_entries }}
-      - Static Entries: {{ arp_baseline.static_entries }}
-      - Dynamic Entries: {{ arp_baseline.dynamic_entries }}
-      - Incomplete Entries: {{ arp_baseline.incomplete_entries }}
-      - Default Gateway in ARP: {{ 'YES' if arp_baseline.default_gateway_present else 'NO' }}
-      - DHCP Snooping Bindings: {{ arp_baseline.dhcp_bindings }}
-      - IPv6 Neighbors: {{ arp_baseline.ipv6_neighbors }}
-      - MAC Table Entries: {{ arp_baseline.mac_entries }}
-      - Overall Status: {{ 'HEALTHY' if arp_baseline.total_arp_entries | int > 0 else 'EMPTY TABLE' }}
+    - name: Set ARP/MAC comparison success status
+      ansible.builtin.set_fact:
+        arp_mac_comparison_status: "PASS"

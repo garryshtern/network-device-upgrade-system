@@ -40,9 +40,7 @@
           - item.used_space_mb is defined
           - item.available_space_mb is defined
           - item.firmware_size_mb is defined
-        fail_msg: >-
-          Test platform {{ item.platform | default('unknown') }}
-          missing required fields
+        fail_msg: "Test platform {{ item.platform }} missing required fields"
       loop: "{{ test_platforms }}"
 
     # Verify space calculation scenarios
@@ -63,9 +61,7 @@
           - >-
             item.expected_result in
             ['proceed', 'cleanup_required', 'upgrade_blocked']
-        fail_msg: >-
-          Space scenario {{ item.name | default('unknown') }}
-          has invalid structure
+        fail_msg: "Space scenario {{ item.name }} has invalid structure"
       loop: "{{ space_scenarios }}"
 
     # Test space calculation logic manually
@@ -76,9 +72,9 @@
             available: 2048
             required: 1000
             margin: >-
-              {{ (1000 * (safety_margin_percent | default(20) / 100)) | int }}
+              {{ (1000 * (safety_margin_percent / 100)) | int }}
             total_needed: >-
-              {{ 1000 + (1000 * (safety_margin_percent | default(20) / 100))
+              {{ 1000 + (1000 * (safety_margin_percent / 100))
                 | int }}
           insufficient_case:
             available: 512
@@ -123,23 +119,22 @@
             | selectattr('platform', 'search', 'fortios') | list | length > 0
         fail_msg: "Multi-platform support not properly configured"
 
-    # Verify required task files exist
-    - name: Check for platform-specific task files
+    # Verify required task files exist (consolidated platform-agnostic architecture)
+    - name: Check for consolidated task files
       ansible.builtin.stat:
         path: "{{ item }}"
-      register: platform_task_files
+      register: consolidated_task_files
       loop:
         - "{{ role_path }}/tasks/main.yml"
-        - "{{ role_path }}/tasks/generic-assessment.yml"
-        - "{{ role_path }}/tasks/ios-assessment.yml"
-        - "{{ role_path }}/tasks/fortios-assessment.yml"
+        - "{{ role_path }}/tasks/storage-assessment.yml"
+        - "{{ role_path }}/tasks/platform-assessment.yml"
 
-    - name: Verify platform task files exist
+    - name: Verify consolidated task files exist
       ansible.builtin.assert:
         that:
           - item.stat.exists
         fail_msg: "Required task file {{ item.item }} not found"
-      loop: "{{ platform_task_files.results }}"
+      loop: "{{ consolidated_task_files.results }}"
 
     # Test cleanup settings validation
     - name: Verify cleanup configuration
@@ -181,38 +176,37 @@
             item.total_space_mb | int + 100  # Allow small variance
           - item.firmware_size_mb | int > 0
           - item.cleanup_threshold_mb | int > 0
-        fail_msg: >-
-          Storage thresholds for platform {{ item.platform }} are not logical
+        fail_msg: "Storage thresholds for platform {{ item.platform }} are not logical"
       loop: "{{ test_platforms }}"
 
     # Success message
     - name: Display verification success
       ansible.builtin.debug:
-        msg: |
-          ✅ Space Management Role Verification PASSED
-
-          Platform Support Validated:
-          - Multi-platform support: ✅ ({{ test_platforms | length }} platforms)
-          - Filesystem types: ✅ ({{ filesystem_types | join(', ') }})
-          - Task file structure: ✅
-
-          Space Management Features:
-          - Space calculation logic: ✅
-          - Safety margins: ✅ ({{ safety_margin_percent }}%)
-          - Cleanup capabilities: ✅
-          - Current image preservation: ✅
-
-          Test Coverage:
-          - Space scenarios: ✅ ({{ space_scenarios | length }} scenarios)
-          - Platform scenarios: ✅ ({{ test_platforms | length }} platforms)
-          - Threshold validation: ✅
-
-          Configuration Validation:
-          - Minimum free space: ✅ ({{ minimum_free_space_mb }}MB)
-          - Automatic cleanup: ✅ ({{ enable_automatic_cleanup }})
-          - Safety settings: ✅
-
-          Status: Ready for production storage management
+        msg:
+          - "✅ Space Management Role Verification PASSED"
+          - ""
+          - "Platform Support Validated:"
+          - "- Multi-platform support: ✅ ({{ test_platforms | length }} platforms)"
+          - "- Filesystem types: ✅ ({{ filesystem_types | join(', ') }})"
+          - "- Task file structure: ✅"
+          - ""
+          - "Space Management Features:"
+          - "- Space calculation logic: ✅"
+          - "- Safety margins: ✅ ({{ safety_margin_percent }}%)"
+          - "- Cleanup capabilities: ✅"
+          - "- Current image preservation: ✅"
+          - ""
+          - "Test Coverage:"
+          - "- Space scenarios: ✅ ({{ space_scenarios | length }} scenarios)"
+          - "- Platform scenarios: ✅ ({{ test_platforms | length }} platforms)"
+          - "- Threshold validation: ✅"
+          - ""
+          - "Configuration Validation:"
+          - "- Minimum free space: ✅ ({{ minimum_free_space_mb }}MB)"
+          - "- Automatic cleanup: ✅ ({{ enable_automatic_cleanup }})"
+          - "- Safety settings: ✅"
+          - ""
+          - "Status: Ready for production storage management"
 
     # Test edge cases
     - name: Test edge case validation

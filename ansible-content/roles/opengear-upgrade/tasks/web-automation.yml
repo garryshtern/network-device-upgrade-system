@@ -12,8 +12,8 @@
           Content-Type: "application/json"
         body_format: json
         body:
-          username: "{{ opengear_username }}"
-          password: "{{ opengear_password }}"
+          username: "{{ vault_opengear_username }}"
+          password: "{{ vault_opengear_password }}"
         validate_certs: false
       register: web_auth
 
@@ -87,9 +87,9 @@
       ansible.builtin.assert:
         that:
           - firmware_validation.json.valid == true
-        fail_msg: >-
-          "Firmware validation failed: {{ firmware_validation.json.message |
-              default('Unknown error') }}"
+        fail_msg:
+          - "Firmware validation failed:"
+          - "{{ firmware_validation.json.message }}"
 
     - name: Install firmware
       ansible.builtin.uri:
@@ -138,8 +138,8 @@
           Content-Type: "application/json"
         body_format: json
         body:
-          username: "{{ opengear_username }}"
-          password: "{{ opengear_password }}"
+          username: "{{ vault_opengear_username }}"
+          password: "{{ vault_opengear_password }}"
         validate_certs: false
       register: post_reboot_auth
 
@@ -161,15 +161,11 @@
 
 - name: Log web automation completion
   ansible.builtin.debug:
-    msg: |-
-      Opengear Web Automation Completed:
-      - Device: {{ opengear_upgrade_state.device_model }}
-      - Previous Version: {{ opengear_upgrade_state.current_version }}
-      - New Version: {{ post_upgrade_info.json.version }}
-      - Type: {{ opengear_upgrade_state.device_type | title }}
-      - Method: Web Interface API
-      - >-
-        Status:
-        {{ 'Success' if opengear_upgrade_state.target_version in
-        post_upgrade_info.json.version else
-          'Verification Required' }}
+    msg:
+      - "Opengear Web Automation Completed:"
+      - "- Device: {{ opengear_upgrade_state.device_model }}"
+      - "- Previous Version: {{ opengear_upgrade_state.current_version }}"
+      - "- New Version: {{ post_upgrade_info.json.version }}"
+      - "- Type: {{ opengear_upgrade_state.device_type | title }}"
+      - "- Method: Web Interface API"
+      - "- Status: {{ 'Success' if opengear_upgrade_state.target_version in post_upgrade_info.json.version else 'Verification Required' }}"

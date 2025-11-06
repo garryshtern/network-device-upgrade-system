@@ -224,5 +224,10 @@ local_config.yaml
 dev_config.yaml
 test_config.yaml
 
-# Documentation artifacts  
-*.pdftests/reports/
+# Documentation artifacts
+*.pdf
+tests/reports/
+
+# Generated analysis reports (temporary/local only)
+code-analysis-report*.md
+**/code-analysis-report*.md

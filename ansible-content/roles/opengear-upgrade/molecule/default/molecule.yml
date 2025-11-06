@@ -5,8 +5,7 @@
 dependency:
   name: galaxy
   options:
-    requirements-file: >
-      ../../../../../ansible-content/collections/requirements.yml
+    requirements-file: ${PWD}/ansible-content/collections/requirements.yml
 
 driver:
   name: docker
@@ -38,7 +37,7 @@ provisioner:
     host_vars:
       opengear-x86:
         ansible_connection: local
-        platform_type: "opengear"
+        platform: "opengear"
         architecture: "x86_64"
         model: "IM7208-2-DAC"
         current_firmware: "22.2.1"
@@ -47,7 +46,7 @@ provisioner:
 
       opengear-arm64:
         ansible_connection: local
-        platform_type: "opengear"
+        platform: "opengear"
         architecture: "aarch64"
         model: "IM7216-2-LTE"
         current_firmware: "22.2.1"
@@ -56,3 +55,18 @@ provisioner:
 
 verifier:
   name: ansible
+
+scenario:
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

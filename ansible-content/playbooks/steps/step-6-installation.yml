@@ -1,0 +1,28 @@
+---
+# STEP 6: Firmware Installation and Reboot
+# Platform-specific installation
+# MUST PASS or workflow STOPS
+# Dependencies: STEP 1 (managed by main workflow tags)
+#
+# NOTE: Pre-validation (step 5), image staging (step 4), space check (step 3),
+# and version check (step 2) are NOT prerequisites for installation.
+# Installation only needs connectivity and the firmware file on the controller.
+#
+# RECOMMENDED WORKFLOW:
+# 1. Run step 5 (pre-validation) to establish baseline
+# 2. Run step 6 (installation) to upgrade
+# 3. Run step 7 (post-validation) to compare with baseline
+# But step 6 can run independently if needed.
+
+- name: Install firmware (platform-specific)
+  ansible.builtin.include_role:
+    name: "{{ platform_role_map[platform] }}"
+    tasks_from: image-installation
+  when:
+    - platform is defined
+    - platform in platform_role_map
+
+- name: Wait for device to come back online
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ connectivity_timeout }}"
+    delay: 30

@@ -1,16 +1,24 @@
 ---
+# DEPRECATED: This playbook is deprecated and will be removed in a future version.
+#
+# Please use main-upgrade-workflow.yml with tags instead:
+#   ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step6 \
+#     --extra-vars "target_hosts=mydevice target_firmware=firmware.bin maintenance_window=true max_concurrent=1"
+#
+# This provides the same functionality with automatic dependency resolution.
+#
 # Phase 2: Image Installation Playbook
 # Maintenance window required - installs and activates firmware
 # Includes reboot and service disruption
 
 - name: Phase 2 - Firmware Installation
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
   vars:
     installation_start_time: "{{ ansible_date_time.iso8601 }}"
     reboot_required: true
-    max_reboot_wait: 600
-    validation_timeout: 300
+    # NOTE: reboot_wait_time and validation_timeout defined in group_vars/all.yml
+    max_reboot_wait: "{{ reboot_wait_time }}"  # Use group_vars value
   pre_tasks:
     - name: Verify maintenance window
       ansible.builtin.assert:
@@ -41,18 +49,27 @@
               }) }}
 
         - name: Verify Phase 1 completion
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/phase-validation.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: phase-validation
           vars:
             required_phase: "phase_1_complete"
 
+        - name: Gather comprehensive network resources for validation
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: network-resources-gathering
+
         - name: Validate network convergence
-          ansible.builtin.include_tasks:
-            ../roles/network-validation/tasks/protocol-convergence.yml
+          ansible.builtin.include_role:
+            name: network-validation
+          vars:
+            validation_phase: "pre_installation"
 
         - name: Final device health check
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/health-check.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: health-check
           vars:
             check_type: "pre_installation"
 
@@ -66,35 +83,37 @@
                 'current_step': 'firmware_installation'
               }) }}
 
-        - name: Install firmware - Cisco NX-OS
-          ansible.builtin.include_role:
-            name: cisco-nxos-upgrade
-            tasks_from: image-installation
-          when: ansible_network_os == 'cisco.nxos.nxos'
+        - name: NX-OS Platform Block
+          when: platform == 'nxos'
+          block:
+            - name: Install firmware - Cisco NX-OS
+              ansible.builtin.include_role:
+                name: cisco-nxos-upgrade
+                tasks_from: image-installation
 
-        - name: Install firmware - Cisco IOS-XE
-          ansible.builtin.include_role:
-            name: cisco-iosxe-upgrade
-            tasks_from: image-installation
-          when: ansible_network_os == 'cisco.ios.ios'
+        - name: IOS-XE Platform Block
+          when: platform == 'ios'
+          block:
+            - name: Install firmware - Cisco IOS-XE
+              ansible.builtin.include_role:
+                name: cisco-iosxe-upgrade
+                tasks_from: image-installation
 
-        - name: Install firmware - Metamako MOS
-          ansible.builtin.include_role:
-            name: metamako-mos-upgrade
-            tasks_from: image-installation
-          when: ansible_network_os == 'metamako.mos'
+        - name: Opengear Platform Block
+          when: platform == 'opengear'
+          block:
+            - name: Install firmware - Opengear
+              ansible.builtin.include_role:
+                name: opengear-upgrade
+                tasks_from: image-installation
 
-        - name: Install firmware - Opengear
-          ansible.builtin.include_role:
-            name: opengear-upgrade
-            tasks_from: image-installation
-          when: ansible_network_os == 'opengear'
-
-        - name: Install firmware - FortiOS
-          ansible.builtin.include_role:
-            name: fortios-upgrade
-            tasks_from: image-installation
-          when: ansible_network_os == 'fortinet.fortios.fortios'
+        - name: FortiOS Platform Block
+          when: platform == 'fortios'
+          block:
+            - name: Install firmware - FortiOS
+              ansible.builtin.include_role:
+                name: fortios-upgrade
+                tasks_from: image-installation
 
         - name: Mark pre-reboot tasks complete
           ansible.builtin.set_fact:
@@ -116,7 +135,7 @@
 
         - name: Execute platform-specific reboot
           ansible.builtin.include_role:
-            name: "{{ ansible_network_os }}-upgrade"
+            name: "{{ platform }}-upgrade"
             tasks_from: reboot
           when: reboot_required | bool
 
@@ -127,8 +146,9 @@
           when: reboot_required | bool
 
         - name: Verify device responsiveness
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/connectivity-check.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: connectivity-check
 
     # Step 4: Post-installation validation
     - name: Step 4 - Post-installation validation
@@ -141,14 +161,21 @@
               }) }}
 
         - name: Verify firmware version
-          ansible.builtin.include_tasks:
-            ../roles/image-validation/tasks/version-verification.yml
+          ansible.builtin.include_role:
+            name: image-validation
+            tasks_from: version-verification
 
         - name: Run post-installation health check
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/health-check.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: health-check
           vars:
             check_type: "post_installation"
+
+        - name: Gather comprehensive network resources for validation
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: network-resources-gathering
 
         - name: Validate network services
           ansible.builtin.include_role:
@@ -174,20 +201,24 @@
               }) }}
 
         - name: Record installation metrics
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/metrics-export.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: metrics-export
           vars:
             metric_type: "installation_completion"
             metric_data:
               device_id: "{{ inventory_hostname }}"
-              platform: "{{ ansible_network_os }}"
+              platform: "{{ platform }}"
               firmware_version: "{{ firmware_version }}"
               status: "success"
               reboot_required: "{{ reboot_required }}"
+          when:
+            - export_metrics | bool
 
         - name: Update device inventory
-          ansible.builtin.include_tasks:
-            ../roles/common/tasks/inventory-update.yml
+          ansible.builtin.include_role:
+            name: common
+            tasks_from: inventory-update
 
   post_tasks:
     - name: Calculate installation duration
@@ -204,6 +235,6 @@
         msg:
           - "=== Installation Complete ==="
           - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
+          - "Platform: {{ platform }}"
           - "Duration: {{ installation_duration }} seconds"
           - "Status: {{ installation_state.current_step }}"

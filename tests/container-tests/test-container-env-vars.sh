@@ -51,8 +51,6 @@ test_ssh_key_authentication() {
 
     # Test Metamako SSH key
     run_container_test "Metamako SSH key" "success" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
-        -e TARGET_HOSTS="metamako-switch-01"
 
     # Test multiple SSH keys
     run_container_test "Multiple SSH keys" "success" \
@@ -127,7 +125,7 @@ test_upgrade_configuration() {
         -e ENABLE_EPLD_UPGRADE="true" \
         -e ALLOW_DISRUPTIVE_EPLD="false" \
         -e EPLD_UPGRADE_TIMEOUT="7200" \
-        -e TARGET_EPLD_IMAGE="n9000-epld.9.3.12.img"
+        -e TARGET_EPLD_FIRMWARE="n9000-epld.9.3.12.M.img"
 
     # Test FortiOS multi-step upgrade
     run_container_test "FortiOS multi-step upgrade" "success" \
@@ -169,11 +167,11 @@ test_error_conditions() {
 
     # Test missing inventory file
     run_container_test "Missing inventory file" "fail" \
-        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml"
+        -e INVENTORY_FILE="/nonexistent/inventory.yml"
 
     # Test TARGET_HOSTS without inventory (critical new test)
     run_container_test "TARGET_HOSTS without inventory" "fail" \
-        -e ANSIBLE_INVENTORY="/nonexistent/inventory.yml" \
+        -e INVENTORY_FILE="/nonexistent/inventory.yml" \
         -e TARGET_HOSTS="cisco-switch-01"
 
     # Test invalid TARGET_HOSTS
@@ -195,7 +193,6 @@ test_comprehensive_scenario() {
         -e FORTIOS_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/fortios-token")" \
         -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key" \
         -e OPENGEAR_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/opengear-token")" \
-        -e METAMAKO_SSH_KEY="/opt/keys/metamako-key" \
         -e TARGET_HOSTS="all" \
         -e TARGET_FIRMWARE="auto-detect" \
         -e UPGRADE_PHASE="validation" \

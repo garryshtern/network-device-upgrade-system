@@ -1,282 +1,317 @@
 ---
-# Multicast Protocol Validation
-# Validates PIM neighbors, IGMP groups, RP reachability, and Anycast RP
+# Multicast Protocol Validation (PIM and IGMP)
+# Compares PIM interface, PIM neighbor, PIM RP, IGMP interface, IGMP groups, and mroute data
+#
+# DESIGN: Normalize only data types that have time-sensitive fields defined in defaults
+# DATA SOURCES:
+# - PIM data: network_baseline.pim_interface_data, network_baseline.pim_neighbor_data, network_baseline.pim_rp_data
+# - IGMP data: network_baseline.igmp_interface_data, network_baseline.igmp_groups_data
+# - Multicast routes: network_baseline.mroute_data
+# - Pre-upgrade baseline: network_baseline_pre
+# - Post-upgrade baseline: network_baseline_post
 
-- name: Gather PIM neighbor information
-  block:
-    - name: Get PIM neighbor status (NX-OS)
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip pim neighbor | json
-          - show ip pim interface | json
-          - show ip pim rp | json
-      register: nxos_pim_info
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
-      failed_when: false
-
-    - name: Get PIM neighbor status (IOS-XE)
-      cisco.ios.ios_command:
-        commands:
-          - show ip pim neighbor
-          - show ip pim interface
-          - show ip pim rp mapping
-      register: ios_pim_info
-      when:
-        - ansible_network_os == "cisco.ios.ios"
-        - not ansible_check_mode
-      failed_when: false
-
-- name: Parse PIM information for NX-OS
-  block:
-    - name: Extract PIM data
-      set_fact:
-        pim_neighbors: >
-          "{{ nxos_pim_info.stdout[0] | from_json |
-            json_query('TABLE_neighbor.ROW_neighbor') | default([]) }}"
-        pim_interfaces: >
-          "{{ nxos_pim_info.stdout[1] | from_json |
-            json_query('TABLE_intf.ROW_intf') | default([]) }}"
-        pim_rp_info: >
-          "{{ nxos_pim_info.stdout[2] | from_json |
-            json_query('TABLE_rp.ROW_rp') | default([]) }}"
-      when:
-        - not ansible_check_mode
-        - ansible_network_os == "cisco.nxos.nxos"
-        - nxos_pim_info.rc == 0
-
-    - name: Classify PIM neighbor states
-      set_fact:
-        pim_neighbors_up: >
-          "{{ pim_neighbors | selectattr('neighbor_state',
-            'equalto', 'up') | list }}"
-        pim_neighbors_down: >
-          "{{ pim_neighbors | selectattr('neighbor_state',
-            'equalto', 'down') | list }}"
-        pim_sparse_mode: >
-          "{{ pim_interfaces | selectattr('mode',
-            'equalto', 'sparse') | list }}"
-        pim_dense_mode: >
-          "{{ pim_interfaces | selectattr('mode', 'equalto', 'dense') | list }}"
-      when: pim_neighbors is defined and pim_interfaces is defined
-
-- name: PIM neighbor validation
-  block:
-    - name: Check PIM neighbor adjacencies
-      ansible.builtin.debug:
-        msg: |
-          PIM Neighbor Status:
-          Total Neighbors: {{ pim_neighbors | length }}
-          Neighbors Up: {{ pim_neighbors_up | length }}
-          Neighbors Down: {{ pim_neighbors_down | length }}
-          {% for neighbor in pim_neighbors_up %}
-          - >: >-
-              {{ neighbor.neighbor_addr }}: {{
-              neighbor.neighbor_state }} ({{ neighbor.interface }})
-          {% endfor %}
-      when: pim_neighbors is defined
-
-    - name: Validate PIM interface modes
-      ansible.builtin.debug:
-        msg: |
-          PIM Interface Modes:
-          Sparse Mode Interfaces: {{ pim_sparse_mode | length }}
-          Dense Mode Interfaces: {{ pim_dense_mode | length }}
-          {% for intf in pim_sparse_mode %}
-          - >: >-
-              {{ intf.interface }}: {{ intf.mode }} mode, DR:
-              {{ intf.dr_address }}
-          {% endfor %}
-      when: pim_interfaces is defined
-
-- name: IGMP group validation
-  block:
-    - name: Get IGMP group memberships
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip igmp groups | json
-          - show ip igmp interface | json
-      register: igmp_info
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
-      failed_when: false
-
-    - name: Parse IGMP information
-      set_fact:
-        igmp_groups: >
-          "{{ igmp_info.stdout[0] | from_json |
-            json_query('TABLE_group.ROW_group') | default([]) }}"
-        igmp_interfaces: >
-          "{{ igmp_info.stdout[1] | from_json |
-            json_query('TABLE_intf.ROW_intf') | default([]) }}"
-      when:
-        - not ansible_check_mode
-        - igmp_info is defined
-        - igmp_info.rc == 0
-
-    - name: Validate IGMP groups
-      ansible.builtin.debug:
-        msg: |
-          IGMP Group Status:
-          Total Groups: {{ igmp_groups | length }}
-          IGMP Interfaces: {{ igmp_interfaces | length }}
-          {% for group in igmp_groups[:10] %}
-          - >
-            Group {{ group.group_addr }}: {{ group.uptime }}
-            ({{ group.interface }})
-          {% endfor %}
-      when: igmp_groups is defined
-
-- name: Rendezvous Point (RP) validation
-  block:
-    - name: Validate RP configuration
-      ansible.builtin.debug:
-        msg: |
-          Rendezvous Point Status:
-          Total RPs: {{ pim_rp_info | length }}
-          {% for rp in pim_rp_info %}
-          - RP {{ rp.rp_addr }}: Groups {{ rp.group_range }} ({{ rp.rp_type }})
-          {% endfor %}
-      when: pim_rp_info is defined
-
-    - name: Test RP reachability
-      cisco.nxos.nxos_command:
-        commands:
-          - "ping {{ item.rp_addr }} count 3 timeout 5"
-      register: rp_reachability
-      loop: "{{ pim_rp_info[:5] }}"  # Test first 5 RPs
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - pim_rp_info is defined and pim_rp_info | length > 0
-        - not ansible_check_mode
-      failed_when: false
-
-    - name: Report RP reachability results
-      ansible.builtin.debug:
-        msg: |
-          RP Reachability Test Results:
-          {% for result in rp_reachability.results | default([]) %}
-          - >-
-            RP {{ loop.index }}: {{ 'REACHABLE' if result.stdout[0] |
-              regex_search('Success rate is [^0]') else 'UNREACHABLE' }}
-          {% endfor %}
-      when: rp_reachability is defined
-
-- name: Anycast RP validation
-  block:
-    - name: Check for Anycast RP configuration
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip pim anycast-rp | json
-      register: anycast_rp_info
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
-      failed_when: false
-
-    - name: Parse Anycast RP information
-      set_fact:
-        anycast_rp_sets: >
-          "{{ anycast_rp_info.stdout[0] | from_json |
-            json_query('TABLE_anycast_rp.ROW_anycast_rp') | default([]) }}"
-      when:
-        - not ansible_check_mode
-        - anycast_rp_info is defined
-        - anycast_rp_info.rc == 0
-
-    - name: Validate Anycast RP consistency
-      ansible.builtin.debug:
-        msg: |
-          Anycast RP Configuration:
-          {% if anycast_rp_sets | length > 0 %}
-          Total Anycast RP Sets: {{ anycast_rp_sets | length }}
-          {% for rp_set in anycast_rp_sets %}
-          - >
-            Set {{ rp_set.anycast_addr }}: Members
-            {{ rp_set.rp_members | length }}
-          {% endfor %}
-          {% else %}
-          No Anycast RP configuration found
-          {% endif %}
-      when: anycast_rp_sets is defined
-
-- name: Multicast routing table validation
-  block:
-    - name: Get multicast routing table
-      cisco.nxos.nxos_command:
-        commands:
-          - show ip mroute summary | json
-          - show ip mroute | json
-      register: mroute_info
-      when:
-        - ansible_network_os == "cisco.nxos.nxos"
-        - not ansible_check_mode
-      failed_when: false
-
-    - name: Parse multicast routes
-      set_fact:
-        mroute_summary: "{{ mroute_info.stdout[0] | from_json }}"
-        mroute_entries: >
-          "{{ mroute_info.stdout[1] | from_json |
-            json_query('TABLE_mroute.ROW_mroute') | default([]) }}"
-      when:
-        - not ansible_check_mode
-        - mroute_info is defined
-        - mroute_info.rc == 0
-
-    - name: Validate multicast forwarding
-      ansible.builtin.debug:
-        msg: |
-          Multicast Routing Status:
-          {% if mroute_summary is defined %}
-          Total Entries: {{ mroute_summary.total_entries | default(0) }}
-          Active Entries: {{ mroute_entries | length }}
-          {% for route in mroute_entries[:5] %}
-          - >-
-            ({{ route.source }}, {{ route.group }}):
-            {{ route.incoming_intf }} -> {{ route.outgoing_intf_list |
-              join(', ') }}
-          {% endfor %}
-          {% else %}
-          No multicast routing information available
-          {% endif %}
-      when: mroute_info is defined
-
-- name: Store multicast baseline
+# Post-upgrade comparison for multicast data
+- name: Initialize multicast comparison status
   ansible.builtin.set_fact:
-    multicast_baseline:
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      pim_neighbors_total: >
-        "{{ pim_neighbors | length if pim_neighbors is defined else 0 }}"
-      pim_neighbors_up: >
-        "{{ pim_neighbors_up | length if pim_neighbors_up is defined else 0 }}"
-      pim_sparse_interfaces: >
-        "{{ pim_sparse_mode | length if pim_sparse_mode is defined else 0 }}"
-      igmp_groups_total: >
-        "{{ igmp_groups | length if igmp_groups is defined else 0 }}"
-      rp_count: "{{ pim_rp_info | length if pim_rp_info is defined else 0 }}"
-      anycast_rp_sets: >
-        "{{ anycast_rp_sets | length if anycast_rp_sets is defined else 0 }}"
-      mroute_entries: >
-        "{{ mroute_entries | length if mroute_entries is defined else 0 }}"
+    multicast_comparison_status: "NOT_RUN"
 
-- name: Multicast validation summary
-  ansible.builtin.debug:
-    msg: |
-      Multicast Protocol Validation Results:
-      - >
-        PIM Neighbors: {{ multicast_baseline.pim_neighbors_up
-          }}/{{ multicast_baseline.pim_neighbors_total }}
-      - >
-        PIM Sparse Mode Interfaces:
-        {{ multicast_baseline.pim_sparse_interfaces }}
-      - IGMP Groups: {{ multicast_baseline.igmp_groups_total }}
-      - Configured RPs: {{ multicast_baseline.rp_count }}
-      - Anycast RP Sets: {{ multicast_baseline.anycast_rp_sets }}
-      - Active Multicast Routes: {{ multicast_baseline.mroute_entries }}
-      - >-
-        Overall Status: {{ 'CONFIGURED' if
-          multicast_baseline.pim_neighbors_total | int > 0 or
-          multicast_baseline.igmp_groups_total | int > 0 else 'NOT CONFIGURED' }}
+- name: Compare multicast data with baseline (post-upgrade only)
+  when:
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+    - platform == 'nxos'
+    - not ansible_check_mode
+    - multicast_enabled | bool
+    - network_baseline_pre is defined
+    - network_baseline_post is defined
+  block:
+    # PIM Interface Data - Normalize, Compare, and Report
+    - name: PIM Interface Data Comparison
+      when:
+        - network_baseline_pre.pim_interface_data is defined
+        - network_baseline_post.pim_interface_data is defined
+      block:
+        - name: Normalize PIM interface pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.pim_interface_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.pim_interface_data }}"
+
+        - name: Store normalized PIM interface pre data
+          ansible.builtin.set_fact:
+            pim_interface_pre_normalized: "{{ normalized_data }}"
+
+        - name: Normalize PIM interface post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.pim_interface_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.pim_interface_data }}"
+
+        - name: Calculate PIM interface deltas
+          ansible.builtin.set_fact:
+            pim_interface_post_normalized: "{{ normalized_data }}"
+            pim_interface_added: "{{ normalized_data | difference(pim_interface_pre_normalized) }}"
+            pim_interface_removed: "{{ pim_interface_pre_normalized | difference(normalized_data) }}"
+            pim_interface_match: "{{ normalized_data == pim_interface_pre_normalized }}"
+
+        - name: Report PIM interface added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Added/Modified PIM Interfaces:"
+              - "{{ pim_interface_added | to_nice_json }}"
+          when: pim_interface_added | length > 0
+
+        - name: Report PIM interface removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Removed PIM Interfaces:"
+              - "{{ pim_interface_removed | to_nice_json }}"
+          when: pim_interface_removed | length > 0
+
+    # PIM Neighbor Data - Normalize, Compare, and Report
+    - name: PIM Neighbor Data Comparison
+      when:
+        - network_baseline_pre.pim_neighbor_data is defined
+        - network_baseline_post.pim_neighbor_data is defined
+      block:
+        - name: Normalize PIM neighbor pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.pim_neighbor_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.pim_neighbor_data }}"
+
+        - name: Store normalized PIM neighbor pre data
+          ansible.builtin.set_fact:
+            pim_neighbor_pre_normalized: "{{ normalized_data }}"
+
+        - name: Normalize PIM neighbor post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.pim_neighbor_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.pim_neighbor_data }}"
+
+        - name: Calculate PIM neighbor deltas
+          ansible.builtin.set_fact:
+            pim_neighbor_post_normalized: "{{ normalized_data }}"
+            pim_neighbor_added: "{{ normalized_data | difference(pim_neighbor_pre_normalized) }}"
+            pim_neighbor_removed: "{{ pim_neighbor_pre_normalized | difference(normalized_data) }}"
+            pim_neighbor_match: "{{ normalized_data == pim_neighbor_pre_normalized }}"
+
+        - name: Report PIM neighbor added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Added/Modified PIM Neighbors:"
+              - "{{ pim_neighbor_added | to_nice_json }}"
+          when: pim_neighbor_added | length > 0
+
+        - name: Report PIM neighbor removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Removed PIM Neighbors:"
+              - "{{ pim_neighbor_removed | to_nice_json }}"
+          when: pim_neighbor_removed | length > 0
+
+    # PIM RP Data - Raw Comparison and Report
+    - name: PIM RP Data Comparison
+      when:
+        - network_baseline_pre.pim_rp_data is defined
+        - network_baseline_post.pim_rp_data is defined
+      block:
+        - name: Calculate PIM RP deltas
+          ansible.builtin.set_fact:
+            pim_rp_added: "{{ network_baseline_post.pim_rp_data | difference(network_baseline_pre.pim_rp_data) }}"
+            pim_rp_removed: "{{ network_baseline_pre.pim_rp_data | difference(network_baseline_post.pim_rp_data) }}"
+            pim_rp_match: "{{ network_baseline_post.pim_rp_data == network_baseline_pre.pim_rp_data }}"
+
+        - name: Report PIM RP added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Added/Modified PIM RPs:"
+              - "{{ pim_rp_added | to_nice_json }}"
+          when: pim_rp_added | length > 0
+
+        - name: Report PIM RP removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Removed PIM RPs:"
+              - "{{ pim_rp_removed | to_nice_json }}"
+          when: pim_rp_removed | length > 0
+
+    # IGMP Interface Data - Normalize, Compare, and Report
+    - name: IGMP Interface Data Comparison
+      when:
+        - network_baseline_pre.igmp_interface_data is defined
+        - network_baseline_post.igmp_interface_data is defined
+      block:
+        - name: Normalize IGMP interface pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.igmp_interface_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.igmp_interface_data }}"
+
+        - name: Store normalized IGMP interface pre data
+          ansible.builtin.set_fact:
+            igmp_interface_pre_normalized: "{{ normalized_data }}"
+
+        - name: Normalize IGMP interface post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.igmp_interface_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.igmp_interface_data }}"
+
+        - name: Calculate IGMP interface deltas
+          ansible.builtin.set_fact:
+            igmp_interface_post_normalized: "{{ normalized_data }}"
+            igmp_interface_added: "{{ normalized_data | difference(igmp_interface_pre_normalized) }}"
+            igmp_interface_removed: "{{ igmp_interface_pre_normalized | difference(normalized_data) }}"
+            igmp_interface_match: "{{ normalized_data == igmp_interface_pre_normalized }}"
+
+        - name: Report IGMP interface added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Added/Modified IGMP Interfaces:"
+              - "{{ igmp_interface_added | to_nice_json }}"
+          when: igmp_interface_added | length > 0
+
+        - name: Report IGMP interface removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Removed IGMP Interfaces:"
+              - "{{ igmp_interface_removed | to_nice_json }}"
+          when: igmp_interface_removed | length > 0
+
+    # IGMP Groups Data - Normalize, Compare, and Report
+    - name: IGMP Groups Data Comparison
+      when:
+        - network_baseline_pre.igmp_groups_data is defined
+        - network_baseline_post.igmp_groups_data is defined
+      block:
+        - name: Normalize IGMP groups pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.igmp_groups_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.igmp_groups_data }}"
+
+        - name: Store normalized IGMP groups pre data
+          ansible.builtin.set_fact:
+            igmp_groups_pre_normalized: "{{ normalized_data }}"
+
+        - name: Normalize IGMP groups post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.igmp_groups_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.igmp_groups_data }}"
+
+        - name: Calculate IGMP groups deltas
+          ansible.builtin.set_fact:
+            igmp_groups_post_normalized: "{{ normalized_data }}"
+            igmp_groups_added: "{{ normalized_data | difference(igmp_groups_pre_normalized) }}"
+            igmp_groups_removed: "{{ igmp_groups_pre_normalized | difference(normalized_data) }}"
+            igmp_groups_match: "{{ normalized_data == igmp_groups_pre_normalized }}"
+
+        - name: Report IGMP groups added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Added/Modified IGMP Groups:"
+              - "{{ igmp_groups_added | to_nice_json }}"
+          when: igmp_groups_added | length > 0
+
+        - name: Report IGMP groups removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Removed IGMP Groups:"
+              - "{{ igmp_groups_removed | to_nice_json }}"
+          when: igmp_groups_removed | length > 0
+
+    # Multicast Route Data - Normalize, Compare, and Report
+    - name: Multicast Route Data Comparison
+      when:
+        - network_baseline_pre.mroute_data is defined
+        - network_baseline_post.mroute_data is defined
+      block:
+        - name: Normalize mroute pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.mroute_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.mroute_data }}"
+
+        - name: Store normalized mroute pre data
+          ansible.builtin.set_fact:
+            mroute_pre_normalized: "{{ normalized_data }}"
+
+        - name: Normalize mroute post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.mroute_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.mroute_data }}"
+
+        - name: Calculate mroute deltas
+          ansible.builtin.set_fact:
+            mroute_post_normalized: "{{ normalized_data }}"
+            mroute_added: "{{ normalized_data | difference(mroute_pre_normalized) }}"
+            mroute_removed: "{{ mroute_pre_normalized | difference(normalized_data) }}"
+            mroute_match: "{{ normalized_data == mroute_pre_normalized }}"
+
+        - name: Report mroute added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Added/Modified Multicast Routes:"
+              - "{{ mroute_added | to_nice_json }}"
+          when: mroute_added | length > 0
+
+        - name: Report mroute removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== Multicast Data Comparison ==="
+              - "Removed Multicast Routes:"
+              - "{{ mroute_removed | to_nice_json }}"
+          when: mroute_removed | length > 0
+
+    - name: Report no multicast changes
+      ansible.builtin.debug:
+        msg:
+          - "=== Multicast Data Comparison ==="
+          - "Status: No changes detected in multicast data"
+      when:
+        - pim_interface_match
+        - pim_neighbor_match
+        - pim_rp_match
+        - igmp_interface_match
+        - igmp_groups_match
+        - mroute_match
+
+    - name: Validate multicast comparison passed
+      ansible.builtin.assert:
+        that:
+          - pim_interface_match | bool
+          - pim_neighbor_match | bool
+          - pim_rp_match | bool
+          - igmp_interface_match | bool
+          - igmp_groups_match | bool
+          - mroute_match | bool
+        fail_msg:
+          - "CRITICAL: Network validation failed - Multicast state mismatch detected"
+          - "This indicates multicast configuration or state changed during upgrade"
+          - "PIM interface mismatch: {{ not pim_interface_match }}"
+          - "PIM neighbor mismatch: {{ not pim_neighbor_match }}"
+          - "PIM RP mismatch: {{ not pim_rp_match }}"
+          - "IGMP interface mismatch: {{ not igmp_interface_match }}"
+          - "IGMP groups mismatch: {{ not igmp_groups_match }}"
+          - "Multicast route mismatch: {{ not mroute_match }}"
+          - "RECOMMENDATION: Investigate multicast changes or rollback upgrade"
+
+    - name: Set multicast comparison success status
+      ansible.builtin.set_fact:
+        multicast_comparison_status: "PASS"
+

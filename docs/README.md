@@ -1,179 +1,138 @@
-# Network Device Upgrade Management System Documentation
+# Documentation Index
 
-## 📚 Documentation Overview
+Complete documentation for the Network Device Upgrade Management System - automated firmware upgrades across 1000+ heterogeneous network devices.
 
-This directory contains comprehensive documentation for the Network Device Upgrade Management System, including architectural diagrams, implementation guides, and operational procedures.
+## 📚 Documentation Structure
 
-## 🗂️ Documentation Structure
+### [User Guides](user-guides/) - Getting Started & Day-to-Day Operations
 
-```
-docs/
-├── README.md                               # This documentation index
-├── platform-implementation-status.md      # Current platform implementation status
-├── platform-file-transfer-guide.md        # Platform-specific transfer methods and upgrade mechanisms
-├── testing-framework-guide.md             # Comprehensive testing guide (consolidated)
-├── molecule-testing-guide.md              # Role-specific container testing
-├── installation-guide.md                  # Complete installation procedures
-├── container-deployment.md                # Container deployment guide
-├── deployment-guide.md                    # Service-based deployment structure
-├── grafana-deployment.md                  # Grafana integration and dashboards
-├── grafana-configuration-guide.md         # Grafana detailed configuration
-├── critical-gaps-testing.md               # Critical gap testing framework
-├── upgrade-workflow-guide.md               # Comprehensive workflow diagrams
-├── workflow-architecture.md               # GitHub Actions workflow architecture
-├── ai-code-reviews/                       # AI-generated code review reports
-└── github-templates/                      # GitHub issue and PR templates
-```
+Essential documentation for operators and administrators:
 
-## 📖 Quick Start Documentation
+- **[Upgrade Workflow Guide](user-guides/upgrade-workflow-guide.md)** - How to perform upgrades
+- **[Container Deployment Guide](user-guides/container-deployment.md)** - Docker/Podman deployment
+- **[Complete Project Guide](../CLAUDE.md)** - Installation, configuration, parameters, and troubleshooting
 
-### For System Administrators
-1. **[Installation Guide](installation-guide.md)** - Start here for system deployment
-   - System requirements and pre-installation checklist
-   - Step-by-step installation with time estimates
-   - Native systemd service deployment procedures
-   - SSL certificate and security configuration
-   - **NEW**: Development and testing setup without devices
+### [Platform Guides](platform-guides/) - Platform-Specific Documentation
 
-1.1. **[Container Deployment Guide](container-deployment.md)** - Production-ready container deployment
-   - Docker and Podman deployment examples
-   - Multi-architecture support (amd64/arm64)
-   - Device inventory and firmware image mounting
-   - RHEL8/9 rootless podman compatibility
-   - Production scenarios with vault management
+Platform-specific implementation details and feature support:
 
-### For Developers and Testing
-2. **[Testing Framework Guide](testing-framework-guide.md)** - Complete testing ecosystem overview
-   - 14/14 test suites passing (100% success rate)
-   - Mock inventory testing for all 5 platforms
-   - Unit testing, integration testing, performance testing
-   - Template rendering and workflow logic validation
-   - Container testing with Docker/Podman
-   - CI/CD integration with GitHub Actions
-   - Mac/Linux development environment setup
+- **[Platform Implementation Status](platform-guides/platform-implementation-status.md)** - Feature support matrix for all platforms
 
-3. **[Molecule Testing Guide](molecule-testing-guide.md)** - Role-specific container testing
-   - 5/9 roles configured with Docker testing
-   - Business impact assessment and critical role testing
-   - Implementation status and remaining work
-   - ISSU logic, HA coordination, and validation testing
+**Supported Platforms**: Cisco NX-OS, Cisco IOS-XE, FortiOS, Opengear
 
-### For Network Engineers
-4. **[Upgrade Workflow Guide](upgrade-workflow-guide.md)** - Understand the upgrade process
-   - Phase-separated upgrade architecture
-   - Safety mechanisms and rollback procedures
-   - Platform-specific workflow variations
-   - Validation framework and error handling
+### [Deployment](deployment/) - System Deployment & Integration
 
-4.1. **[Platform File Transfer Guide](platform-file-transfer-guide.md)** - Transfer methods and upgrade mechanisms
-   - API vs SCP transfer methods by vendor (FortiOS uses HTTPS API, others use SCP)
-   - Security implications of different transfer methods
-   - Platform-specific upgrade mechanisms and troubleshooting
-   - Implementation code references and diagnostic procedures
+Deployment, monitoring, and optimization guides:
 
-### For Developers & Integrators
-5. **[Platform Implementation Guide](platform-implementation-status.md)** - Technical implementation details
-   - Platform support matrix with visual status
-   - Vendor-specific implementation details
-   - Platform readiness status and implementation details
-   - Architecture patterns for each platform
+- **[Grafana Integration Guide](deployment/grafana-integration.md)** - Dashboard deployment and configuration
+- **[Storage Cleanup Guide](deployment/storage-cleanup-guide.md)** - Storage management procedures
+- **[Container Build Optimization](deployment/container-build-optimization.md)** - Container optimization strategies
 
-6. **[Workflow Architecture Guide](workflow-architecture.md)** - CI/CD and automation architecture
-   - GitHub Actions workflow structure and optimization
-   - Container build pipeline and deployment
-   - Technology stack and testing framework
-   - Performance optimizations and best practices
+### [Testing](testing/) - Testing & Quality Assurance
 
-## 🏗️ System Architecture
+Testing framework and quality assurance documentation:
 
-The system follows a native service architecture with AWX orchestrating Ansible automation across network devices via systemd services.
+- **[Pre-Commit Setup](testing/pre-commit-setup.md)** - Git hooks and validation procedures
 
-**For detailed architecture diagrams and flow charts, see**:
-- **[upgrade-workflow-guide.md](upgrade-workflow-guide.md)** - Comprehensive workflow diagrams
-- **[platform-implementation-status.md](platform-implementation-status.md)** - Platform-specific architecture
+### [Architecture](architecture/) - System Design & CI/CD
 
-### Documentation Navigation by Role
+System architecture and CI/CD pipeline design:
 
-| Role | Start Here | Key Documents | Focus Areas |
-|------|------------|---------------|-------------|
-| **🔧 System Administrator** | [Installation Guide](installation-guide.md) | System setup, SSL, monitoring | Deployment & maintenance |
-| **👨‍💻 Network Engineer** | [Workflow Guide](upgrade-workflow-guide.md) | Process flows, validation | Operations & troubleshooting |
-| **🛠️ Developer/Integrator** | [Platform Status](platform-implementation-status.md) | Architecture, status | Integration & customization |
-| **🧪 QA/Testing** | [Testing Framework Guide](testing-framework-guide.md) | Test coverage, 14/14 success | Quality assurance |
+- **[GitHub Actions Workflow Architecture](architecture/workflow-architecture.md)** - CI/CD pipeline design and optimization
 
-## 📊 Current Implementation Status
+### [Internal](internal/) - Developer Documentation
 
-**Project Status**: 100% Complete - Production Ready  
-**All platforms**: Enterprise deployment ready
+Internal implementation notes and developer resources:
 
-For detailed platform status and completion analysis, see:
-- **[README.md](../README.md)** - Current project status and overview
-- **[Platform Implementation Status](platform-implementation-status.md)** - Comprehensive platform analysis
+- **[Documentation Index](internal/INDEX.md)** - Index of active developer documentation and reference guides
+- **[Test Data Consolidation Reference](internal/test-data-consolidation-reference.md)** - Reference guide for shared test data patterns and consolidation
+- **[Mock Device Pattern Analysis](internal/MOCK_DEVICE_PATTERN_ANALYSIS.md)** - Mock device testing patterns and scenario implementation
 
-## 🎯 Documentation Quick Reference
+### [GitHub Templates](github-templates/) - Repository Templates
 
-### Essential Reading Order
-1. **[README.md](../README.md)** - Project overview and quick start
-2. **[Platform Implementation Status](platform-implementation-status.md)** - Current completion status
-3. **[Installation Guide](installation-guide.md)** - Deployment procedures
-4. **[Testing Framework Guide](testing-framework-guide.md)** - Quality assurance overview
-5. **[Workflow Guide](upgrade-workflow-guide.md)** - Operational understanding
-6. **[Container Deployment Guide](container-deployment.md)** - Production container usage
+GitHub issue and PR templates:
 
-### Reference Documents
-- **[CLAUDE.md](../CLAUDE.md)** - Developer guidance and testing procedures
-- **[Workflow Architecture](workflow-architecture.md)** - CI/CD pipeline details
+- Pull Request Template
+- Bug Report Template
+- Feature Request Template
 
-### Visual Learning Path
+## 🚀 Quick Start
 
-```mermaid
-graph LR
-    A[📖 Read Overview] --> B[🔍 Check Status]
-    B --> C[⚙️ Install System]
-    C --> D[📊 Monitor Operations]
-    
-    A --> E[Project Goals]
-    B --> F[Platform Gaps]
-    C --> G[Deployment Steps]
-    D --> H[Workflow Mastery]
-    
-    style A fill:#e8f5e8
-    style B fill:#fff3e0
-    style C fill:#f3e5f5
-    style D fill:#e1f5fe
-```
+New to the system? Start here:
 
-## 🚀 Getting Started Checklist
+1. **[CLAUDE.md](../CLAUDE.md)** - Installation, setup, and configuration
+2. **[Container Deployment](user-guides/container-deployment.md)** - Deploy with Docker/Podman
+3. **[Upgrade Workflow Guide](user-guides/upgrade-workflow-guide.md)** - Run your first upgrade
 
-### Prerequisites Understanding
-- [ ] Read project overview and architecture  
-- [ ] Review implementation status and platform gaps
-- [ ] Understand phase-separated upgrade approach
-- [ ] Familiarize with supported platforms
+## 🔧 Common Tasks
 
-### System Deployment  
-- [ ] Verify system requirements
-- [ ] Follow installation guide step-by-step
-- [ ] Complete post-installation validation
-- [ ] Configure monitoring integration
+### Running an Upgrade
+See [Upgrade Workflow Guide](user-guides/upgrade-workflow-guide.md)
 
-### Operational Readiness
-- [ ] Review upgrade workflow procedures
-- [ ] Understand validation framework  
-- [ ] Practice with test devices
-- [ ] Establish operational procedures
+### Troubleshooting Issues
+See [CLAUDE.md](../CLAUDE.md) - Troubleshooting section
 
-## 📞 Support and Resources
+### Platform-Specific Configuration
+See [Platform Guides](platform-guides/)
 
-### Documentation Issues
-- Report documentation gaps or errors via project issues
-- Suggest improvements for clarity and completeness  
-- Contribute corrections and enhancements
+### Setting Up Monitoring
+See [Grafana Integration Guide](deployment/grafana-integration.md)
 
-### Implementation Support
-- Check platform-specific implementation status
-- System is production ready with comprehensive validation
+## 📋 System Overview
+
+### Key Features
+- **Multi-Platform Support**: 5 major network device platforms
+- **Scale**: Designed for 1000+ devices
+- **Automation**: Ansible-based with AWX integration
+- **Monitoring**: Real-time Grafana dashboards with InfluxDB
+- **Container Support**: Docker and Podman deployment
+- **Phase-Separated Upgrades**: Safe, controlled firmware upgrades
+- **Security**: SHA512 verification, signature validation, SSH key authentication
+
+### Architecture
+- **Ansible**: Core automation engine
+- **AWX**: Web UI and job orchestration
+- **NetBox**: Device inventory and IPAM
+- **Grafana**: Visualization and dashboards
+- **InfluxDB v2**: Time-series metrics
+- **Redis**: Job queuing and caching
+
+### Supported Platforms
+1. **Cisco NX-OS** - Data center switches (ISSU, EPLD support)
+2. **Cisco IOS-XE** - Catalyst switches (install mode, bundle mode)
+3. **FortiOS** - FortiGate firewalls (multi-step upgrades, HA support)
+4. **Opengear** - Console servers (legacy CLI + modern API)
+
+## 📖 Additional Resources
+
+### External Documentation
+- [Ansible Documentation](https://docs.ansible.com/)
+- [AWX Documentation](https://ansible.readthedocs.io/projects/awx/en/latest/)
+- [NetBox Documentation](https://docs.netbox.dev/)
+- [Grafana Documentation](https://grafana.com/docs/)
+
+### Repository
+- [GitHub Repository](https://github.com/garryshtern/network-device-upgrade-system)
+- [Container Registry](https://github.com/garryshtern/network-device-upgrade-system/pkgs/container/network-device-upgrade-system)
+
+## 🤝 Contributing
+
+Please see:
+- [Pull Request Template](github-templates/PULL_REQUEST_TEMPLATE.md)
+- [Bug Report Template](github-templates/bug_report.md)
+
+## 📝 Documentation Standards
+
+- All user-facing documentation in `user-guides/`
+- Platform-specific details in `platform-guides/`
+- Internal implementation notes in `internal/`
+- One-time analysis reports in `archived/`
+- Keep documentation updated with code changes
+- Use clear, concise language
+- Include examples where appropriate
 
 ---
 
-*This documentation is continuously updated to reflect the current implementation status and operational procedures. Last updated: September 15, 2025*
+**Last Updated**: November 2, 2025
+**System Version**: 4.0.0
+**Documentation Version**: 3.0.0

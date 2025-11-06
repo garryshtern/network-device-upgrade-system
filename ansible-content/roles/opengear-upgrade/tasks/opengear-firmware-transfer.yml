@@ -1,0 +1,171 @@
+---
+# Opengear Specific Firmware Transfer Handler
+# Called by secure-file-transfer.yml
+# Sets: transfer_result, transferred_file_hash
+
+- name: Opengear firmware transfer block
+  block:
+    - name: Authenticate to Opengear API
+      ansible.builtin.uri:
+        url: "https://{{ ansible_host }}/api/v1/auth/login"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          username: "{{ vault_opengear_username }}"
+          password: "{{ vault_opengear_password }}"
+        validate_certs: false
+      register: opengear_auth
+      when: not ansible_check_mode
+
+    - name: Simulate authentication in check mode
+      ansible.builtin.set_fact:
+        opengear_auth:
+          json:
+            token: "simulated-token-for-check-mode"
+      when: ansible_check_mode
+
+    - name: Store authentication token
+      ansible.builtin.set_fact:
+        vault_opengear_api_token: "{{ opengear_auth.json.token }}"
+
+    - name: Check if firmware file exists locally
+      ansible.builtin.stat:
+        path: "{{ local_file_path }}"
+      register: local_firmware_check
+      delegate_to: localhost
+
+    - name: Validate local firmware file
+      ansible.builtin.assert:
+        that:
+          - local_firmware_check.stat.exists
+        fail_msg: "Local firmware file not found: {{ local_file_path }}"
+
+    - name: Calculate firmware file checksum
+      ansible.builtin.stat:
+        path: "{{ local_file_path }}"
+        checksum_algorithm: md5
+      register: firmware_checksum
+      delegate_to: localhost
+
+    - name: Start firmware upload session
+      ansible.builtin.uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/upload/start"
+        method: POST
+        headers:
+          Authorization: "Token {{ vault_opengear_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          filename: "{{ target_firmware_filename }}"
+          size: >-
+            {{ firmware_checksum.stat.size if firmware_checksum is defined else
+            target_firmware_size_mb |
+              default(100) * 1024 * 1024 }}
+          checksum: >-
+            {{ firmware_checksum.stat.checksum if
+              firmware_checksum is defined else omit }}
+        validate_certs: false
+      register: upload_session
+      when: not ansible_check_mode
+
+    - name: Simulate upload session in check mode
+      ansible.builtin.set_fact:
+        upload_session:
+          json:
+            session_id: "simulated-session-id"
+      when: ansible_check_mode
+
+    - name: Push firmware file from server via API (Server-Initiated PUSH)
+      ansible.builtin.uri:
+        url: >
+          "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{
+            upload_session.json.session_id }}/chunk"
+        method: POST
+        headers:
+          Authorization: "Token {{ vault_opengear_api_token }}"
+          Content-Type: "application/octet-stream"
+        body: >
+          "{{ lookup('file', local_file_path, rstrip=False) | b64decode }}"
+        timeout: 3600
+        validate_certs: false
+      register: secure_chunk_upload
+      delegate_to: localhost
+      when: not ansible_check_mode
+      vars:
+        ansible_connection: local
+
+    - name: Complete firmware upload
+      ansible.builtin.uri:
+        url: >
+          "https://{{ ansible_host }}/api/v1/system/firmware/upload/{{
+            upload_session.json.session_id }}/complete"
+        method: POST
+        headers:
+          Authorization: "Token {{ vault_opengear_api_token }}"
+        validate_certs: false
+      register: upload_complete
+      when: not ansible_check_mode
+
+    - name: Get list of available firmware images
+      ansible.builtin.uri:
+        url: "https://{{ ansible_host }}/api/v1/system/firmware/list"
+        method: GET
+        headers:
+          Authorization: "Token {{ vault_opengear_api_token }}"
+        validate_certs: false
+      register: firmware_list
+      when: not ansible_check_mode
+
+    - name: Simulate firmware list in check mode
+      ansible.builtin.set_fact:
+        firmware_list:
+          json:
+            - filename: "{{ target_firmware_filename }}"
+              status: "ready"
+              checksum: "{{ firmware_checksum.stat.checksum if firmware_checksum is defined else 'simulated-checksum' }}"
+              size_mb: 100
+      when: ansible_check_mode
+
+    - name: Verify target firmware is available
+      ansible.builtin.assert:
+        that:
+          - >
+            firmware_list.json | selectattr('filename', 'equalto',
+              target_firmware_filename) | list | length > 0
+        fail_msg: "Target firmware file not found in device storage"
+
+    - name: Extract firmware information
+      ansible.builtin.set_fact:
+        uploaded_firmware_info: "{{ firmware_list.json | selectattr('filename', 'equalto', target_firmware_filename) | first }}"
+
+    - name: Validate firmware integrity
+      ansible.builtin.assert:
+        that:
+          - uploaded_firmware_info.status == 'ready'
+          - >
+            uploaded_firmware_info.checksum == firmware_checksum.stat.checksum
+              if firmware_checksum is defined else true
+        fail_msg: "Firmware integrity validation failed"
+
+    - name: Set transfer result (success)
+      ansible.builtin.set_fact:
+        transfer_result:
+          succeeded: true
+          method: "Opengear API (Server-Initiated PUSH)"
+          error_message: null
+        transferred_file_hash: "{{ uploaded_firmware_info.checksum }}"
+
+  rescue:
+    - name: Set transfer result (failure)
+      ansible.builtin.set_fact:
+        transfer_result:
+          succeeded: false
+          method: "Opengear API (Server-Initiated PUSH)"
+          error_message: "{{ ansible_failed_result.msg | default('Unknown transfer error') }}"
+      ignore_errors: true
+
+    - name: Re-raise the error
+      ansible.builtin.fail:
+        msg: "{{ transfer_result.error_message }}"

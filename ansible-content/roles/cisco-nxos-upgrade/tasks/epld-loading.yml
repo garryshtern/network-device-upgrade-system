@@ -1,0 +1,118 @@
+---
+# NX-OS EPLD Loading Tasks
+# Securely transfers optional EPLD firmware from server to device
+# SECURITY: Uses server-initiated PUSH transfers (not device-initiated PULL)
+
+- name: Display EPLD loading entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "NX-OS EPLD LOADING"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "EPLD File: {{ target_epld_firmware }}"
+      - "=========================================="
+
+- name: EPLD loading block
+  when:
+    - target_epld_firmware is defined
+    - target_epld_firmware | length > 0
+  block:
+    - name: Set EPLD firmware paths
+      ansible.builtin.set_fact:
+        epld_filename: "{{ target_epld_firmware }}"
+        local_epld_path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
+
+    - name: Check if target EPLD already exists on device
+      ansible.builtin.set_fact:
+        target_epld_exists: "{{ target_epld_firmware in storage_info.images_found if (storage_info is defined and storage_info.images_found is defined) else false }}"
+
+    - name: Display EPLD upload status
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "NX-OS EPLD STATUS"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "EPLD File: {{ target_epld_firmware }}"
+          - "Local Path: {{ local_epld_path }}"
+          - "Status: {{ 'Already staged' if target_epld_exists else 'Needs upload' }}"
+          - "=========================================="
+
+    - name: EPLD already staged - skip upload
+      when: target_epld_exists
+      block:
+        - name: Report EPLD already staged on device
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "EPLD ALREADY STAGED"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "EPLD: {{ target_epld_firmware }}"
+              - "Location: bootflash:{{ target_epld_firmware }}"
+              - "Status: SKIPPING UPLOAD"
+              - "Action: Proceeding to installation phase"
+              - "=========================================="
+
+        - name: Set EPLD loading results for already staged EPLD
+          ansible.builtin.set_fact:
+            nxos_epld_loading_results:
+              epld_file: "{{ target_epld_firmware }}"
+              file_size_bytes: 0
+              source_sha512: "{{ epld_calculated_hash if epld_calculated_hash is defined else 'not_verified' }}"
+              device_sha512: "skipped"
+              hash_verified: false
+              file_uploaded: false
+              loading_successful: true
+              loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+    - name: EPLD firmware upload block (if not already staged)
+      when: not target_epld_exists
+      block:
+        - name: Report EPLD upload starting
+          ansible.builtin.debug:
+            msg:
+              - "=========================================="
+              - "UPLOADING EPLD TO DEVICE"
+              - "=========================================="
+              - "Device: {{ inventory_hostname }}"
+              - "EPLD: {{ target_epld_firmware }}"
+              - "Source: {{ local_epld_path }}"
+              - "Destination: bootflash:{{ target_epld_firmware }}"
+              - "Method: SCP (Server-Initiated PUSH)"
+              - "Status: STARTING UPLOAD..."
+              - "=========================================="
+
+        - name: Push EPLD image from server to device via SCP (uses generic file transfer handler)
+          ansible.builtin.include_tasks: nxos-generic-file-transfer.yml
+          vars:
+            nxos_file_path: "{{ local_epld_path }}"
+            nxos_remote_file: "{{ target_epld_firmware }}"
+            nxos_file_hash_source: "{{ epld_calculated_hash }}"
+
+        - name: Extract device EPLD hash from transfer result
+          ansible.builtin.set_fact:
+            device_epld_hash: "{{ transferred_file_hash }}"
+
+        - name: Set EPLD loading results after upload
+          ansible.builtin.set_fact:
+            nxos_epld_loading_results:
+              epld_file: "{{ target_epld_firmware }}"
+              file_size_bytes: "{{ epld_file_info.size_bytes if (epld_file_info is defined and epld_file_info.size_bytes is defined) else 0 }}"
+              source_sha512: "{{ epld_calculated_hash }}"
+              device_sha512: "{{ transferred_file_hash }}"
+              hash_verified: true
+              file_uploaded: true
+              loading_successful: true
+              loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+        - name: Display EPLD loading results after upload
+          ansible.builtin.debug:
+            msg:
+              - "Secure EPLD image transfer completed successfully (Server-Initiated PUSH)"
+              - "Local Source: {{ local_epld_path }}"
+              - "Remote Destination: {{ ansible_host }}:bootflash:{{ nxos_epld_loading_results.epld_file }}"
+              - "File Size: {{ (nxos_epld_loading_results.file_size_bytes | int / 1024 / 1024) | round(2) }}MB"
+              - "Transfer Method: SCP (server-initiated)"
+              - "SHA512 Verified: {{ nxos_epld_loading_results.hash_verified }}"

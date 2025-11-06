@@ -5,18 +5,21 @@
 # Connection settings - API token authentication preferred over passwords
 ansible_network_os: fortinet.fortios.fortios
 ansible_connection: httpapi
+
+# Platform identifier (use this in playbooks, NOT ansible_network_os)
+platform: fortios
+
 ansible_host: "{{ inventory_hostname }}"
-ansible_user: "{{ vault_fortios_username | default('admin') }}"
+
+# Credentials are dynamically mapped in group_vars/all.yml based on platform
+# ansible_user, ansible_password set in all.yml
 # API token authentication (preferred for FortiOS 6.0+)
 ansible_httpapi_key: "{{ vault_fortios_api_token | default(omit) }}"
-# Password authentication (fallback when no token available)
-ansible_password: "{{ vault_fortios_password | default(omit) }}"
 ansible_httpapi_use_ssl: true
 ansible_httpapi_validate_certs: false
 ansible_httpapi_port: 443
 
 # Platform specific settings
-platform_type: "fortios"
 vendor: "fortinet"
 device_family: "fortigate"
 
@@ -39,7 +42,7 @@ license_grace_period_days: 30
 
 # Firmware management - Server-initiated PUSH only
 firmware_upload_method: "server_push"  # Only server-initiated uploads supported
-local_firmware_path: "{{ firmware_base_path }}/fortios"
+local_firmware_path: "{{ firmware_base_path }}"
 verify_firmware_signature: true
 
 # Security service validation
@@ -90,6 +93,7 @@ fortiguard_services:
 upgrade_method: "standard"  # standard, coordinated (for HA)
 pre_upgrade_backup: true
 post_upgrade_validation_timeout: 600
+multi_step_upgrade_required: false  # Enable multi-step upgrade for major version jumps
 
 # HA specific settings (when ha_enabled: true)
 ha_coordination:

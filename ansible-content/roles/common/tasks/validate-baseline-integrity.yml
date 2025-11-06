@@ -1,0 +1,104 @@
+---
+# Validate Baseline File Integrity
+# Ensures baseline files are not corrupted and contain valid JSON data
+#
+# Required variables:
+#   baseline_file_path: Path to the baseline file to validate
+#
+# Optional variables:
+#   baseline_type: Type of baseline (pre_upgrade, post_upgrade, comparison) for logging
+#   fail_on_corruption: Whether to fail if baseline is corrupted (default: true)
+#
+# Output variables:
+#   baseline_valid: Boolean indicating if baseline is valid
+#   baseline_checksum: SHA256 checksum of baseline file
+#   baseline_size: Size of baseline file in bytes
+#   baseline_error: Error message if validation failed
+
+- name: Validate baseline file integrity
+  block:
+    - name: Check if baseline file exists
+      ansible.builtin.stat:
+        path: "{{ baseline_file_path }}"
+        checksum_algorithm: sha256
+      register: baseline_stat
+
+    - name: Fail if baseline file does not exist
+      ansible.builtin.fail:
+        msg: "Baseline file not found: {{ baseline_file_path }}"
+      when: not baseline_stat.stat.exists
+
+    - name: Store baseline metadata
+      set_fact:
+        baseline_checksum: "{{ baseline_stat.stat.checksum }}"
+        baseline_size: "{{ baseline_stat.stat.size }}"
+
+    - name: Validate baseline file is not empty
+      ansible.builtin.fail:
+        msg:
+          - "Baseline file is empty (0 bytes): {{ baseline_file_path }}"
+          - "File may have been corrupted or incompletely written"
+          - "Cannot proceed with validation"
+      when: baseline_stat.stat.size == 0
+
+    - name: Read baseline file content
+      ansible.builtin.slurp:
+        src: "{{ baseline_file_path }}"
+      register: baseline_content
+
+    - name: Validate baseline JSON syntax
+      block:
+        - name: Parse baseline JSON
+          set_fact:
+            baseline_parsed: "{{ baseline_content.content | b64decode | from_json }}"
+
+        - name: Verify baseline structure contains required fields
+          ansible.builtin.assert:
+            that:
+              - baseline_parsed is mapping
+            fail_msg: "Baseline file is not valid JSON object"
+
+      rescue:
+        - name: Baseline JSON parsing failed
+          ansible.builtin.fail:
+            msg:
+              - "Baseline file contains invalid JSON: {{ baseline_file_path }}"
+              - "Error: {{ ansible_failed_result.msg | default('JSON parsing error') }}"
+              - "File may be corrupted. Size: {{ baseline_stat.stat.size }} bytes"
+              - "Checksum: {{ baseline_checksum }}"
+              - "Cannot proceed with validation using corrupted baseline"
+
+    - name: Validate baseline has network data
+      ansible.builtin.assert:
+        that:
+          - baseline_parsed.network_resources is defined or baseline_parsed.timestamp is defined
+        fail_msg: "Baseline file structure is invalid - missing required network data fields"
+
+    - name: Set baseline valid status
+      set_fact:
+        baseline_valid: true
+        baseline_error: null
+
+    - name: Display baseline validation success
+      ansible.builtin.debug:
+        msg:
+          - "Baseline file validated successfully"
+          - "File: {{ baseline_file_path }}"
+          - "Size: {{ baseline_stat.stat.size }} bytes"
+          - "Checksum (SHA256): {{ baseline_checksum }}"
+          - "Type: {{ baseline_type | default('unknown') }}"
+
+  rescue:
+    - name: Set baseline invalid status
+      set_fact:
+        baseline_valid: false
+        baseline_error: "{{ ansible_failed_result.msg | default('Unknown validation error') }}"
+
+    - name: Fail on corrupted baseline
+      ansible.builtin.fail:
+        msg:
+          - "CRITICAL: Baseline file validation failed"
+          - "File: {{ baseline_file_path }}"
+          - "Error: {{ baseline_error }}"
+          - "Cannot proceed with upgrade without valid baseline"
+      when: (fail_on_corruption | default(true)) | bool

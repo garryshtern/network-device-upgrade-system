@@ -2,21 +2,6 @@
 # FortiOS Upgrade Role - Main Tasks
 # Handles Fortinet firewall upgrades with HA cluster support
 
-- name: Initialize FortiOS upgrade variables
-  ansible.builtin.set_fact:
-    fortios_upgrade_state:
-      device: "{{ inventory_hostname }}"
-      current_version: ""
-      target_version: "{{ target_firmware_version }}"
-      ha_mode: "standalone"
-      ha_role: "master"
-      cluster_member: ""
-      license_status: "unknown"
-      vdom_mode: false
-      multi_step_required: "{{ multi_step_upgrade_required | default(false) }}"
-      upgrade_path: "{{ upgrade_path | default([target_firmware_version]) }}"
-      current_step: "{{ current_step | default(0) }}"
-
 - name: Skip FortiOS upgrade in check mode
   ansible.builtin.debug:
     msg: "FortiOS upgrade skipped in check mode - requires API connectivity"
@@ -24,7 +9,7 @@
 
 - name: FortiOS upgrade tasks
   block:
-    - name: Gather FortiOS device facts
+    - name: Gather FortiOS device facts for HA/VDOM info
       fortinet.fortios.fortios_monitor_fact:
         vdom: "root"
         selector: "system_status"
@@ -32,38 +17,30 @@
 
     - name: Parse device information
       ansible.builtin.set_fact:
-        fortios_upgrade_state: >
-          "{{ fortios_upgrade_state | combine({'current_version': >
-            fortios_facts.meta.results.version,
-            'ha_mode': fortios_facts.meta.results.ha_mode,
-          'ha_role': >
-            fortios_facts.meta.results.ha_group_name
-              | default('standalone'), 'vdom_mode': >
-              fortios_facts.meta.results.vdom_mode == 'enable'}) }}"
+        fortios_upgrade_state: "{{ fortios_upgrade_state | combine({
+          'current_version': current_firmware_version,
+          'ha_mode': fortios_facts.meta.results.ha_mode,
+          'ha_role': fortios_facts.meta.results.ha_group_name,
+          'vdom_mode': (fortios_facts.meta.results.vdom_mode == 'enable')
+        }) }}"
 
     - name: Check HA cluster configuration
       ansible.builtin.include_tasks: ha-coordination.yml
       when: fortios_upgrade_state.ha_mode != "standalone"
 
-    - name: Validate FortiCare license
-      ansible.builtin.include_tasks: license-validation.yml
-
     - name: Display upgrade plan
       ansible.builtin.debug:
-        msg: |
-          FortiOS Upgrade Plan for {{ inventory_hostname }}:
-          Current Version: {{ fortios_upgrade_state.current_version }}
-          Target Version: {{ fortios_upgrade_state.target_version }}
-          Multi-Step Required: {{ fortios_upgrade_state.multi_step_required }}
-          Upgrade Path: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}
-          Current Step: >-
-            {{ fortios_upgrade_state.current_step }}/
-            {{ fortios_upgrade_state.upgrade_path |
-                length }}
-          HA Mode: {{ fortios_upgrade_state.ha_mode }}
-          HA Role: {{ fortios_upgrade_state.ha_role }}
-          VDOM Mode: {{ fortios_upgrade_state.vdom_mode }}
-          License: {{ fortios_upgrade_state.license_status }}
+        msg:
+          - "FortiOS Upgrade Plan for {{ inventory_hostname }}:"
+          - "Current Version: {{ fortios_upgrade_state.current_version }}"
+          - "Target Version: {{ fortios_upgrade_state.target_version }}"
+          - "Multi-Step Required: {{ fortios_upgrade_state.multi_step_required }}"
+          - "Upgrade Path: {{ fortios_upgrade_state.upgrade_path | join(' → ') }}"
+          - "Current Step: {{ fortios_upgrade_state.current_step }}/{{ fortios_upgrade_state.upgrade_path | length }}"
+          - "HA Mode: {{ fortios_upgrade_state.ha_mode }}"
+          - "HA Role: {{ fortios_upgrade_state.ha_role }}"
+          - "VDOM Mode: {{ fortios_upgrade_state.vdom_mode }}"
+          - "License: {{ fortios_upgrade_state.license_status }}"
 
     - name: Validate upgrade path
       ansible.builtin.assert:
@@ -77,9 +54,7 @@
           - >
             fortios_upgrade_state.current_step <
               fortios_upgrade_state.upgrade_path | length
-        fail_msg: >
-          "Invalid upgrade path, version format,
-            license issue, or step configuration"
+        fail_msg: "Invalid upgrade path, version format, license issue, or step configuration"
 
     - name: Execute multi-step upgrade process
       ansible.builtin.include_tasks: multi-step-upgrade.yml

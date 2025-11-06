@@ -2,86 +2,31 @@
 # Image Loading for FortiOS Devices
 # Securely transfers firmware images from server to device
 # SECURITY: Uses server-initiated PUSH transfers when possible
+# NOTE: Core transfer logic refactored to common/tasks/secure-file-transfer.yml
 
-- name: Pre-load system checks
-  block:
-    - name: Check available disk space
-      fortinet.fortios.fortios_monitor_fact:
-        vdom: "root"
-        selector: "system_storage"
-      register: storage_info
+# NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
+# No need to re-check here - STEP 3 ensures sufficient space before calling this task
 
-    - name: Verify sufficient space
-      ansible.builtin.assert:
-        that:
-          - storage_info.meta.results.available_mb | int > 1000
-        fail_msg: "Insufficient disk space for firmware download"
+# IMPORTANT: local_firmware_path MUST point to a file following MANDATORY naming:
+# Pattern: FGT_*-v{version}-build*-FORTINET.out
+# Example: FGT_VM64_KVM-v7.2.5-build1517-FORTINET.out
+# See: docs/firmware-naming-standards.md
 
-- name: Secure local image upload (Server-Initiated PUSH ONLY)
-  block:
-    - name: Push firmware image from server to FortiOS device
-      fortinet.fortios.fortios_monitor:
-        vdom: "root"
-        selector: "system_firmware_upload"
-        params:
-          file_content: "{{ lookup('file', local_firmware_path) | b64encode }}"
-          filename: "{{ fortios_upgrade_state.target_version }}.out"
-      register: secure_upload
-      delegate_to: localhost
-      when: local_firmware_path is defined
-      vars:
-        ansible_connection: local
-
-    - name: Verify secure upload completion
-      fortinet.fortios.fortios_monitor_fact:
-        vdom: "root"
-        selector: "system_firmware_list"
-      register: firmware_list
-      when: local_firmware_path is defined and secure_upload is succeeded
-
-- name: Validate staged firmware
-  block:
-    - name: Get list of available firmware images
-      fortinet.fortios.fortios_monitor_fact:
-        vdom: "root"
-        selector: "system_firmware_list"
-      register: available_firmware
-
-    - name: Verify target firmware is available
-      ansible.builtin.assert:
-        that:
-          - >
-            available_firmware.meta.results | selectattr('version', 'equalto',
-              fortios_upgrade_state.target_version) | list | length > 0
-        fail_msg: "Target firmware not found in available images"
-
-    - name: Check firmware integritycon
-      fortinet.fortios.fortios_monitor:
-        vdom: "root"
-        selector: "system_firmware_verify"
-        params:
-          version: "{{ fortios_upgrade_state.target_version }}"
-      register: firmware_verification
-
-    - name: Confirm firmware integrity
-      ansible.builtin.assert:
-        that:
-          - firmware_verification.meta.results.status == "valid"
-        fail_msg: "Firmware integrity check failed"
+- name: Execute platform-specific FortiOS firmware transfer
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: secure-file-transfer
+  vars:
+    transfer_handler_task: fortios-firmware-transfer.yml
+    local_file_path: "{{ local_firmware_path }}"
 
 - name: Log loading completion
   ansible.builtin.debug:
-    msg: |-
-      Secure FortiOS Image Loading Completed:
-      - Target Version: {{ fortios_upgrade_state.target_version }}
-      - Transfer Method: Server-Initiated PUSH (Secure Upload)
-      - >-
-        File Size: {{ available_firmware.meta.results |
-          selectattr('version', 'equalto',
-          fortios_upgrade_state.target_version) |
-          map(attribute='size_mb') | first | default('Unknown') }} MB
-      - >-
-        Integrity: {{ firmware_verification.meta.results.status |
-          default('Not Verified') }}
-      - Security: PUSH transfer from server (HIGH SECURITY)
-      - Status: Ready for Installation
+    msg:
+      - "Secure FortiOS Image Loading Completed:"
+      - "- Target Version: {{ fortios_upgrade_state.target_version }}"
+      - "- Transfer Method: {{ transfer_result.method if transfer_result.method is defined else 'Server-Initiated PUSH' }}"
+      - "- File Size: {{ file_size_mb }}MB"
+      - "- Integrity: {{ transferred_file_hash if transferred_file_hash is defined else 'not_verified' }}"
+      - "- Security: PUSH transfer from server (HIGH SECURITY)"
+      - "- Status: Ready for Installation"

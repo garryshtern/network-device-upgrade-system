@@ -94,4 +94,4 @@ prompt: |
   {% endif %}
   ```
 
-  Focus on network device upgrade playbooks and roles for Cisco, FortiOS, Opengear, and Metamako platforms.
+  Focus on network device upgrade playbooks and roles for Cisco, FortiOS, and Opengear platforms.

@@ -6,42 +6,27 @@
 - name: Cisco IOS-XE Platform Tests
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     role_path: >-
       {{ playbook_dir }}/../../ansible-content/roles/cisco-iosxe-upgrade
+    test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"
     test_scenarios:
       - name: "Install Mode Capable Device"
-        device_vars:
-          platform_type: "cisco_iosxe"
-          device_model: "ISR4431"
-          firmware_version: "16.12.07"
-          target_version: "17.06.04"
-          install_mode: true
-          boot_mode: "install"
+        device_vars: "{{ test_device_registry.test_devices.iosxe.install_mode_capable | combine({'boot_mode': 'install'}) }}"
         expected_results:
           install_mode_supported: true
           upgrade_method: "install_mode_upgrade"
 
       - name: "Bundle Mode Device"
-        device_vars:
-          platform_type: "cisco_iosxe"
-          device_model: "C9300-48U"
-          firmware_version: "16.12.08"
-          target_version: "17.06.04"
-          install_mode: false
-          boot_mode: "bundle"
+        device_vars: "{{ test_device_registry.test_devices.iosxe.bundle_mode_device | combine({'boot_mode': 'bundle'}) }}"
         expected_results:
           install_mode_supported: false
           upgrade_method: "bundle_mode_upgrade"
 
       - name: "Legacy Device (Bundle Only)"
-        device_vars:
-          platform_type: "cisco_iosxe"
-          device_model: "C3850-48T"
-          firmware_version: "16.09.08"
-          target_version: "16.12.09"
-          install_mode: false
-          boot_mode: "bundle"
+        device_vars: "{{ test_device_registry.test_devices.iosxe.legacy_bundle_only | combine({'boot_mode': 'bundle'}) }}"
         expected_results:
           install_mode_supported: false
           upgrade_method: "bundle_mode_upgrade"
@@ -129,7 +114,6 @@
             dest: "/tmp/test_{{ item | basename }}"
           vars:
             ansible_host: "127.0.0.1"
-            platform_type: "cisco_iosxe"
             firmware_version: "16.12.07"
             target_version: "17.06.04"
             install_mode: true

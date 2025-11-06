@@ -9,14 +9,14 @@
         url: "https://{{ ansible_host }}/api/v1/auth/refresh"
         method: POST
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: token_refresh
       failed_when: false
 
     - name: Log token refresh failures
       ansible.builtin.debug:
-        msg: "Warning: API token refresh failed: {{ token_refresh.msg | default('Unknown error') }}"
+        msg: "Warning: API token refresh failed: {{ token_refresh.msg if token_refresh.msg is defined else default_error_message }}"
       when:
         - token_refresh is defined
         - token_refresh.failed is defined
@@ -24,16 +24,16 @@
 
     - name: Update API token if refreshed
       ansible.builtin.set_fact:
-        opengear_api_token: >-
+        vault_opengear_api_token: >-
           {{ token_refresh.json.token if token_refresh.json is defined else
-            opengear_api_token }}
+            vault_opengear_api_token }}
 
     - name: Verify firmware image is ready for installation
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/firmware/list"
         method: GET
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: pre_install_firmware_list
 
@@ -62,7 +62,7 @@
         url: "https://{{ ansible_host }}/api/v1/system/maintenance"
         method: POST
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
           Content-Type: "application/json"
         body_format: json
         body:
@@ -81,7 +81,7 @@
         url: "https://{{ ansible_host }}/api/v1/power/outlets/critical"
         method: GET
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: critical_power_check
       when: opengear_upgrade_state.device_type == "smart_pdu"
@@ -89,7 +89,7 @@
 
     - name: Log critical power check failures
       ansible.builtin.debug:
-        msg: "Warning: Failed to check critical power outlets: {{ critical_power_check.msg | default('Unknown error') }}"
+        msg: "Warning: Failed to check critical power outlets: {{ critical_power_check.msg if critical_power_check.msg is defined else default_error_message }}"
       when:
         - critical_power_check is defined
         - critical_power_check.failed is defined
@@ -97,14 +97,12 @@
 
     - name: Warn about critical power outlets
       ansible.builtin.debug:
-        msg: |
-          WARNING: {{ critical_power_check.json | length if
-          critical_power_check.json is defined else 0 }} critical power outlets
-          detected.
-          Firmware upgrade may cause brief power interruption.
-      when: >
-        opengear_upgrade_state.device_type == "smart_pdu"
-          and critical_power_check.json is defined
+        msg:
+          - "WARNING: {{ critical_power_check.json | length if critical_power_check.json is defined else 0 }} critical power outlets detected."
+          - "Firmware upgrade may cause brief power interruption."
+      when:
+        - opengear_upgrade_state.device_type == "smart_pdu"
+        - critical_power_check.json is defined
 
 - name: Execute firmware installation
   block:
@@ -113,7 +111,7 @@
         url: "https://{{ ansible_host }}/api/v1/system/config/backup"
         method: POST
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
           Content-Type: "application/json"
         body_format: json
         body:
@@ -128,7 +126,7 @@
         url: "https://{{ ansible_host }}/api/v1/system/firmware/install"
         method: POST
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
           Content-Type: "application/json"
         body_format: json
         body:
@@ -148,7 +146,7 @@
             firmware_install.json.install_id }}/status"
         method: GET
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: install_progress
       until: >
@@ -196,8 +194,8 @@
           Content-Type: "application/json"
         body_format: json
         body:
-          username: "{{ opengear_username }}"
-          password: "{{ opengear_password }}"
+          username: "{{ vault_opengear_username }}"
+          password: "{{ vault_opengear_password }}"
         validate_certs: false
       register: post_reboot_auth
       retries: 5
@@ -205,14 +203,14 @@
 
     - name: Update API token for post-reboot operations
       ansible.builtin.set_fact:
-        opengear_api_token: "{{ post_reboot_auth.json.token }}"
+        vault_opengear_api_token: "{{ post_reboot_auth.json.token }}"
 
     - name: Verify new firmware version is active
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/info"
         method: GET
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: post_install_info
 
@@ -221,16 +219,16 @@
         that:
           - opengear_upgrade_state.target_version
             in post_install_info.json.version
-        fail_msg: >
-          "Installation completed but target version not
-            active: {{ post_install_info.json.version }}"
+        fail_msg:
+          - "Installation completed but target version not active:"
+          - "{{ post_install_info.json.version }}"
 
     - name: Verify system health after installation
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}/api/v1/system/health"
         method: GET
         headers:
-          Authorization: "Token {{ opengear_api_token }}"
+          Authorization: "Token {{ vault_opengear_api_token }}"
         validate_certs: false
       register: post_install_health
 
@@ -251,7 +249,7 @@
             url: "https://{{ ansible_host }}/api/v1/serialports/status"
             method: GET
             headers:
-              Authorization: "Token {{ opengear_api_token }}"
+              Authorization: "Token {{ vault_opengear_api_token }}"
             validate_certs: false
           register: post_serial_status
 
@@ -260,7 +258,7 @@
             url: "https://{{ ansible_host }}/api/v1/system/maintenance"
             method: POST
             headers:
-              Authorization: "Token {{ opengear_api_token }}"
+              Authorization: "Token {{ vault_opengear_api_token }}"
               Content-Type: "application/json"
             body_format: json
             body:
@@ -275,7 +273,7 @@
             url: "https://{{ ansible_host }}/api/v1/power/outlets/status"
             method: GET
             headers:
-              Authorization: "Token {{ opengear_api_token }}"
+              Authorization: "Token {{ vault_opengear_api_token }}"
             validate_certs: false
           register: post_power_status
 
@@ -286,23 +284,15 @@
             fail_msg: "Power management not operational after upgrade"
 - name: Log installation completion
   ansible.builtin.debug:
-    msg: |-
-      Opengear Installation Completed Successfully:
-      - Device Model: {{ opengear_upgrade_state.device_model }}
-      - Device Type: {{ opengear_upgrade_state.device_type | title }}
-      - Previous Version: {{ opengear_upgrade_state.current_version }}
-      - New Version: {{ post_install_info.json.version }}
-      - Installation Method: Web API
-      - >-
-        Config Backup: {{ config_backup.json.backup_id if
-          config_backup.json is defined else 'Not Created' }}
-      - >-
-        System Health: {{ post_install_health.json.status if
-          post_install_health.json is defined else 'Not Checked' }}
-      - >-
-        Serial Ports: {{ post_serial_status.json |
-          length if post_serial_status is defined else 'N/A' }} operational
-      - >-
-        Power Outlets: {{ post_power_status.json |
-          length if post_power_status is defined else 'N/A' }} operational
-      - Status: SUCCESS
+    msg:
+      - "Opengear Installation Completed Successfully:"
+      - "- Device Model: {{ opengear_upgrade_state.device_model }}"
+      - "- Device Type: {{ opengear_upgrade_state.device_type | title }}"
+      - "- Previous Version: {{ opengear_upgrade_state.current_version }}"
+      - "- New Version: {{ post_install_info.json.version }}"
+      - "- Installation Method: Web API"
+      - "- Config Backup: {{ config_backup.json.backup_id if config_backup.json is defined else 'Not Created' }}"
+      - "- System Health: {{ post_install_health.json.status if post_install_health.json is defined else 'Not Checked' }}"
+      - "- Serial Ports: {{ post_serial_status.json | length if post_serial_status is defined else 'N/A' }} operational"
+      - "- Power Outlets: {{ post_power_status.json | length if post_power_status is defined else 'N/A' }} operational"
+      - "- Status: SUCCESS"

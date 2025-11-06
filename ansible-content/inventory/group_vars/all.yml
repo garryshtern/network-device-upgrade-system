@@ -1,27 +1,85 @@
 ---
-# Global Variables for Network Device Upgrade System
-# Applies to all devices across all vendors
+# Global Variables for Network Device Upgrade System - INVENTORY LEVEL
+# See CLAUDE.md for variable placement strategy and documentation
 
 # Connection settings
 ansible_connection_timeout: 30
 ansible_command_timeout: 300
 ansible_connect_timeout: 30
 
+# Dynamic connection credentials based on platform variable
+# This allows environment variables to work without requiring specific group membership
+ansible_user: >-
+  {{
+    (platform == 'nxos' and vault_cisco_nxos_username is defined) | ternary(vault_cisco_nxos_username, '') or
+    (platform == 'ios' and vault_cisco_iosxe_username is defined) | ternary(vault_cisco_iosxe_username, '') or
+    (platform == 'fortios' and vault_fortios_username is defined) | ternary(vault_fortios_username, '') or
+    (platform == 'opengear' and vault_opengear_username is defined) | ternary(vault_opengear_username, '') or
+    'admin'
+  }}
+
+ansible_password: >-
+  {{
+    (platform == 'nxos' and vault_cisco_nxos_password is defined) | ternary(vault_cisco_nxos_password, omit) or
+    (platform == 'ios' and vault_cisco_iosxe_password is defined) | ternary(vault_cisco_iosxe_password, omit) or
+    (platform == 'fortios' and vault_fortios_password is defined) | ternary(vault_fortios_password, omit) or
+    (platform == 'opengear' and vault_opengear_password is defined) | ternary(vault_opengear_password, omit) or
+    omit
+  }}
+
+ansible_ssh_private_key_file: >-
+  {{
+    (platform == 'nxos' and vault_cisco_nxos_ssh_key is defined) | ternary(vault_cisco_nxos_ssh_key, omit) or
+    (platform == 'ios' and vault_cisco_iosxe_ssh_key is defined) | ternary(vault_cisco_iosxe_ssh_key, omit) or
+    (platform == 'opengear' and vault_opengear_ssh_key is defined) | ternary(vault_opengear_ssh_key, omit) or
+    omit
+  }}
+
 # Upgrade workflow settings
-max_concurrent_devices: 5
+target_hosts: all  # Default hosts pattern for playbooks
+# Concurrency control - Default value; can be overridden with -e "max_concurrent=N"
+# The 'serial' keyword is processed before playbook-level group_vars are loaded,
+# but inventory-level group_vars ARE loaded in time for serial to use the value
+max_concurrent: 5
 max_retry_attempts: 3
 connectivity_timeout: 300
 reboot_wait_time: 600
 validation_timeout: 300
+required_space_gb: 4  # Minimum free space required for upgrades (GB)
+firmware_size_gb: 2  # Expected firmware image size (GB)
+target_firmware: ""  # Must be set at runtime
+platform_firmware: {}  # Platform-specific firmware mappings
+
+# =============================================================================
+# NETBOX INTEGRATION (consolidated from playbook-level)
+# =============================================================================
+# NetBox API connection settings
+# NOTE: These pull from environment variables at runtime
+# Set NETBOX_URL, NETBOX_TOKEN, etc. in your environment
+netbox_url: "{{ lookup('env', 'NETBOX_URL') | default('http://netbox:8000') }}"
+netbox_token: "{{ lookup('env', 'NETBOX_TOKEN') | default('') }}"
 
 # Phase control
-phase_1_timeout: 3600  # Image loading phase (1 hour)
-phase_2_timeout: 1800  # Installation phase (30 minutes)
+image_loading_timeout: 3600  # Timeout for firmware image upload (1 hour)
+installation_timeout: 1800  # Timeout for firmware installation/reboot (30 minutes)
+
+# File transfer settings (async operations)
+file_transfer_timeout: 3600  # Maximum time for file transfers (1 hour)
+file_transfer_poll_interval: 10  # Status check interval during transfer (seconds)
 
 # Backup and rollback
 backup_enabled: true
 rollback_on_failure: true
+rollback_timeout: 600  # Rollback operation timeout (seconds)
 keep_backup_count: 3
+maintenance_window: false  # MUST be explicitly set to true for upgrades (safety)
+# NOTE: backup_type, include_startup_config moved to ansible-content/group_vars/all.yml
+# These are backup configuration defaults and should be defined in playbook-level group_vars
+include_running_config: true  # Include running config in backups
+restore_config: true  # Restore config during rollback
+restore_firmware: true  # Restore firmware during rollback
+emergency_mode: false  # Emergency rollback mode
+rollback_reason: "upgrade_failure"  # Default rollback reason
 
 # Validation settings
 skip_validation: false
@@ -29,9 +87,21 @@ network_state_comparison: true
 baseline_capture_enabled: true
 convergence_monitoring: true
 
+# Debug settings
+# NOTE: show_debug moved to ansible-content/group_vars/all.yml
+# This is a global debug flag and should be defined in playbook-level group_vars
+
 # Storage paths
-firmware_base_path: "/var/lib/network-upgrade/firmware"
-backup_base_path: "/var/lib/network-upgrade/backups"
+network_upgrade_base_path: "/var/lib/network-upgrade"
+firmware_base_path: "{{ network_upgrade_base_path }}/firmware"
+backup_base_path: "{{ network_upgrade_base_path }}/backups"
+baseline_base_path: "{{ network_upgrade_base_path }}/baselines"
+# Baseline file paths - dynamically constructed per inventory_hostname
+baseline_file_pre_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}_pre_upgrade_baseline.json"
+baseline_file_post_upgrade: "{{ baseline_base_path }}/{{ inventory_hostname }}_post_upgrade_baseline.json"
+baseline_file_comparison: "{{ baseline_base_path }}/{{ inventory_hostname }}_post_check_comparison.json"
+validation_results_path: "{{ network_upgrade_base_path }}/validation"
+compliance_results_path: "{{ network_upgrade_base_path }}/compliance"
 log_base_path: "/var/log/network-upgrade"
 
 # Timing settings
@@ -42,13 +112,13 @@ protocol_convergence_timeout: 300
 
 # Security settings
 hash_verification_enabled: true
+hash_file_extension: "sha512sum"  # Extension for hash files (e.g., firmware.bin.sha512sum)
 signature_validation_enabled: false  # Enable if vendor supports it
 cleanup_images_after_upgrade: false
 
-# Monitoring and metrics
-export_metrics: true
-metrics_batch_size: 100
-metrics_export_interval: 30
+# NOTE: Metrics configuration moved to ansible-content/group_vars/all.yml
+# This ensures safe defaults (metrics disabled) for all scenarios
+# Use -e "export_metrics=true" in production with proper InfluxDB configuration
 
 # Notification settings
 send_notifications: true
@@ -61,11 +131,107 @@ temperature_threshold_celsius: 45
 power_threshold_percent: 85
 
 # Network validation settings
+# NOTE: bgp_enabled, bfd_enabled, multicast_enabled moved to ansible-content/group_vars/all.yml
+# These are validation defaults and should be defined in playbook-level group_vars
 ping_test_enabled: true
 ping_test_host: "8.8.8.8"
 ping_test_count: 3
+validation_type: "post_upgrade"  # Default validation type: pre_upgrade or post_upgrade
 
 # Logging
 log_level: "info"  # debug, info, warning, error
 structured_logging: true
+# NOTE: log_retention_days moved to ansible-content/group_vars/all.yml
+# This is a logging default and should be defined in playbook-level group_vars
+# NOTE: debug_metrics - use ansible-content/group_vars/all.yml
+
+# Compliance and reporting
+generate_report: true  # Generate compliance/validation reports
+# NOTE: export_metrics - use ansible-content/group_vars/all.yml (standardized variable naming)
+# log_metrics_locally - use ansible-content/group_vars/all.yml
+compliance_standards: ['security_baseline', 'network_hardening']  # Default compliance standards
+current_firmware_version: "unknown"  # Current firmware version (detected at runtime)
+site_name: "unknown"  # Site/location name
+vendor: "unknown"  # Device vendor
+validation_score: 0  # Validation score (calculated at runtime)
+
+# Common upgrade state base (extended by vendor roles)
+common_upgrade_state:
+  device: "{{ inventory_hostname }}"
+  current_version: ""
+  target_version: "{{ target_firmware }}"
+  upgrade_start_time: ""
+  upgrade_end_time: ""
+  upgrade_status: "not_started"
+
+# Platform-to-role mapping for dynamic role selection
+# Maps platform identifier to upgrade role name
+platform_role_map:
+  nxos: "cisco-nxos-upgrade"
+  ios: "cisco-iosxe-upgrade"
+  fortios: "fortios-upgrade"
+  opengear: "opengear-upgrade"
+
+# =============================================================================
+# MOVED FROM PLAYBOOK-LEVEL group_vars (ensuring variables load for all scenarios)
+# =============================================================================
+
+# ANSIBLE FACTS DEFAULTS (for cases where facts may not be gathered yet)
+# These provide safe defaults when ansible_net_* facts are not yet available
+ansible_net_hostname: "N/A"
+ansible_net_model: "N/A"
+ansible_net_serialnum: "N/A"
+ansible_net_version: "N/A"
+ansible_net_image: "N/A"
+ansible_net_gather_network_resources: []
+ansible_net_config: "# No config retrieved"
+
+# DEVICE CONNECTION DEFAULTS
+# Default connection method (already defined above, but including for completeness)
+ansible_connection: "ansible.netcommon.network_cli"
+
+# Connection timeout settings (redundant with above but keeping for explicit definition)
+default_command_timeout: 60
+default_connect_timeout: 30
+default_persistent_timeout: 300
+default_persistent_command_timeout: 300
+
+# SSH key file default path
+default_ssh_key_file: "/var/lib/awx/.ssh/network_devices"
+
+# Monitoring flags
+monitoring_enabled: true
+
+# METRICS AND MONITORING
+# Metrics export settings - STANDARDIZED VARIABLE NAME: export_metrics
+# Set to true to enable metrics export to InfluxDB, webhooks, and NetBox
+# Default: false (metrics disabled, non-intrusive)
+export_metrics: false
+log_metrics_locally: false
+debug_metrics: false
+update_netbox: false
+
+# InfluxDB connection settings (REQUIRED if export_metrics is true)
+# All three must be configured: url, token, and bucket name
+# Empty values will cause metrics export to be skipped silently if export_metrics is false
+# Empty values will cause clear error message if export_metrics is true (enforced by metrics-export.yml)
+influxdb_url: ""                           # Example: "http://localhost:8086"
+influxdb_token: ""                         # InfluxDB v2 API token (keep secret!)
+influxdb_bucket: "network_upgrades"        # Bucket name (will be created if missing)
+influxdb_org: "default"                    # Organization name in InfluxDB
+
+# Metrics webhook settings (optional, requires both url and token if used)
+metrics_webhook_url: ""                    # Example: "https://example.com/metrics"
+metrics_webhook_token: ""                  # Bearer token for webhook authentication
+
+# DEBUG AND DISPLAY SETTINGS
+# Control debug output
+show_debug: false
+
+# LOGGING DEFAULTS
+# Log retention period
 log_retention_days: 30
+
+# ROLLBACK STATE DEFAULTS
+# Default value for update_current_step flag
+update_current_step: false

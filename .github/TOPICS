@@ -3,7 +3,6 @@ ansible
 awx
 cisco
 fortinet
-metamako
 opengear
 firmware-upgrade
 network-devices

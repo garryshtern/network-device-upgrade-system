@@ -1,38 +1,74 @@
 ---
 # Storage Assessment Tasks
-# Cross-platform storage space assessment
+# Consolidated platform-agnostic storage space assessment with optional validation
+# Replaces both storage-assessment.yml and space-check.yml
+#
+# Variables:
+#   - minimum_free_space_gb: Required free space (optional, for validation)
+#   - validate_space: Enable assertion-based validation (default: false)
+#
+# Usage:
+#   Assessment only:  tasks_from: storage-assessment
+#   With validation:  tasks_from: storage-assessment, vars: {validate_space: true, minimum_free_space_gb: 4}
 
-- name: Gather device platform information
-  ansible.builtin.setup:
-    gather_subset: ["!all", "!min", "network"]
-  when: ansible_network_os is not defined
-
-- name: Initialize storage assessment variables
-  ansible.builtin.set_fact:
-    storage_info:
-      platform: "{{ ansible_network_os | default('unknown') }}"
-      total_space_gb: 0
-      free_space_gb: 0
-      used_space_gb: 0
-      images_found: []
-      cleanup_candidates: []
-
-- name: Platform-specific storage assessment
-  ansible.builtin.include_tasks: "{{ storage_info.platform }}-assessment.yml"
-  when: storage_info.platform != 'unknown'
-
-- name: Generic storage assessment fallback
-  ansible.builtin.include_tasks: generic-assessment.yml
-  when: storage_info.platform == 'unknown'
+- name: Platform-agnostic storage assessment
+  ansible.builtin.include_tasks: platform-assessment.yml
 
 - name: Calculate storage metrics
   ansible.builtin.set_fact:
     storage_info: >-
       {{ storage_info | combine({
-        'used_space_gb': storage_info.total_space_gb
-          - storage_info.free_space_gb,
-        'usage_percentage': ((storage_info.total_space_gb
-          - storage_info.free_space_gb) / storage_info.total_space_gb * 100)
+        'used_space_gb': (storage_info.total_space_gb | float)
+          - (storage_info.free_space_gb | float),
+        'usage_percentage': (((storage_info.total_space_gb | float)
+          - (storage_info.free_space_gb | float)) / (storage_info.total_space_gb | float) * 100)
           | round(1)
       }) }}
-  when: storage_info.total_space_gb > 0
+  when: (storage_info.total_space_gb | float) > 0
+
+- name: Optional validation block
+  when:
+    - validate_space is defined
+    - validate_space | bool
+    - minimum_free_space_gb is defined
+  block:
+    - name: Set space check results from storage_info
+      ansible.builtin.set_fact:
+        space_check_passed: "{{ storage_info.free_space_gb | float >= minimum_free_space_gb | float }}"
+
+    - name: Validate storage space availability
+      ansible.builtin.assert:
+        that:
+          - storage_info.free_space_gb | float >= minimum_free_space_gb | float
+        fail_msg: "Insufficient storage space: {{ storage_info.free_space_gb }}GB available, {{ minimum_free_space_gb }}GB required"
+        success_msg: "Storage space check passed: {{ storage_info.free_space_gb }}GB available, {{ minimum_free_space_gb }}GB required"
+      when: not ansible_check_mode
+
+    - name: Display storage check results
+      ansible.builtin.debug:
+        msg:
+          - "=== Storage Space Check ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ platform }}"
+          - "Required Space: {{ minimum_free_space_gb }}GB"
+          - "Available Space: {{ storage_info.free_space_gb }}GB"
+          - "Total Space: {{ storage_info.total_space_gb }}GB"
+          - "Status: {{ 'PASS' if space_check_passed else 'FAIL' }}"
+          - "=========================="
+
+    - name: Record space check completion
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: metrics-export
+      vars:
+        metric_type: "storage_check"
+        metric_data:
+          device_id: "{{ inventory_hostname }}"
+          platform: "{{ platform }}"
+          required_space_gb: "{{ minimum_free_space_gb }}"
+          available_space_gb: "{{ storage_info.free_space_gb }}"
+          total_space_gb: "{{ storage_info.total_space_gb }}"
+          status: "{{ 'success' if space_check_passed else 'failed' }}"
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      when:
+        - export_metrics | bool

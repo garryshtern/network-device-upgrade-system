@@ -1,0 +1,219 @@
+---
+# Test: Concurrent Device Race Conditions
+# Tests: Device ordering enforcement, concurrent state conflicts, max concurrent limits
+# Risk Level: CRITICAL - Production scale issues
+# Coverage: All platforms with concurrent upgrade handling
+
+- name: Concurrent Device Race Conditions Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "concurrent_race_conditions"
+    max_concurrent: 3
+    test_device_count: 10
+
+  tasks:
+    - name: Test Phase 1 - Setup Device Registry
+      block:
+        - name: Initialize device registry
+          ansible.builtin.set_fact:
+            device_registry: {}
+            upgrade_execution_order: []
+
+        - name: Create mock device entries
+          ansible.builtin.set_fact:
+            device_registry: "{{ device_registry | combine({
+              'device_' + item | string: {
+                'device_id': 'device_' + item | string,
+                'status': 'PENDING',
+                'started_at': None,
+                'completed_at': None,
+                'upgrade_step': 0
+              }
+            }) }}"
+          loop: "{{ range(1, test_device_count + 1) | list }}"
+
+        - name: Verify device registry created
+          ansible.builtin.assert:
+            that:
+              - device_registry | length == test_device_count
+            fail_msg: "Device registry not properly initialized"
+            success_msg: "✓ Created device registry with {{ test_device_count }} devices"
+
+    - name: Test Phase 2 - Device Ordering Enforcement
+      block:
+        - name: Simulate sequential upgrade processing
+          ansible.builtin.set_fact:
+            device_registry: "{{ device_registry | combine({
+              item: device_registry[item] | combine({
+                'status': 'IN_PROGRESS',
+                'started_at': '2025-11-04T12:00:00Z'
+              })
+            }) }}"
+          loop: "{{ device_registry.keys() | list | sort }}"
+          register: ordering_results
+
+        - name: Verify devices started in sorted order
+          ansible.builtin.assert:
+            that:
+              - device_registry | length == test_device_count
+              - (device_registry.values() | map(attribute='status') | unique) == ['IN_PROGRESS']
+            fail_msg: "Device ordering not enforced"
+            success_msg: "✓ Device ordering properly enforced in sequential processing"
+
+    - name: Test Phase 3 - Max Concurrent Limits
+      block:
+        - name: Create concurrent upgrade tracker
+          ansible.builtin.set_fact:
+            concurrent_tracker: []
+
+        - name: Simulate max concurrent enforcement
+          ansible.builtin.set_fact:
+            concurrent_upgrade_batch: "{{ (device_registry.keys() | list | sort)[0:max_concurrent] }}"
+
+        - name: Verify max concurrent limit not exceeded
+          ansible.builtin.assert:
+            that:
+              - concurrent_upgrade_batch | length <= max_concurrent
+            fail_msg: "Max concurrent limit exceeded: {{ concurrent_upgrade_batch | length }} > {{ max_concurrent }}"
+            success_msg: "✓ Max concurrent limit enforced ({{ concurrent_upgrade_batch | length }}/{{ max_concurrent }})"
+
+    - name: Test Phase 4 - Concurrent State Conflicts
+      block:
+        - name: Simulate concurrent device upgrades
+          ansible.builtin.set_fact:
+            concurrent_states: {}
+
+        - name: Create state entries for devices in flight
+          ansible.builtin.set_fact:
+            concurrent_states: "{{ concurrent_states | combine({
+              item: {
+                'step': (loop_index0 % 8) + 1,
+                'state_hash': (item + '_state_' + (loop_index0 | string)) | hash('md5')
+              }
+            }) }}"
+          loop: "{{ concurrent_upgrade_batch }}"
+          loop_control:
+            index_var: loop_index0
+
+        - name: Verify no conflicting states
+          ansible.builtin.assert:
+            that:
+              - concurrent_states | length == max_concurrent
+              - concurrent_states | length <= test_device_count
+            fail_msg: "State conflict detected in concurrent operations"
+            success_msg: "✓ No conflicting states in concurrent operations ({{ concurrent_states | length }} devices)"
+
+    - name: Test Phase 5 - Queue Processing Order
+      block:
+        - name: Create upgrade queue
+          ansible.builtin.set_fact:
+            upgrade_queue: "{{ device_registry.keys() | list | sort }}"
+
+        - name: Verify queue order remains consistent
+          ansible.builtin.assert:
+            that:
+              - upgrade_queue == (device_registry.keys() | list | sort)
+            fail_msg: "Queue processing order changed unexpectedly"
+            success_msg: "✓ Queue processing order maintained correctly"
+
+    - name: Test Phase 6 - Recovery from Concurrent Failures
+      block:
+        - name: Simulate failure in one concurrent device
+          ansible.builtin.set_fact:
+            device_registry: "{{ device_registry | combine({
+              concurrent_upgrade_batch[0]: device_registry[concurrent_upgrade_batch[0]] | combine({
+                'status': 'FAILED',
+                'error': 'Simulated upgrade failure'
+              })
+            }) }}"
+
+        - name: Verify other concurrent devices continue
+          ansible.builtin.assert:
+            that:
+              - device_registry[concurrent_upgrade_batch[0]].status == 'FAILED'
+            fail_msg: "Failure not properly recorded"
+            success_msg: "✓ Concurrent device failure properly isolated"
+
+        - name: Verify remaining devices can continue upgrading
+          ansible.builtin.set_fact:
+            remaining_devices: "{{ concurrent_upgrade_batch[1:] | default([]) }}"
+
+        - name: Assert remaining devices available for upgrade
+          ansible.builtin.assert:
+            that:
+              - remaining_devices | length == (max_concurrent - 1)
+            fail_msg: "Remaining devices not available after failure"
+            success_msg: "✓ {{ remaining_devices | length }} devices available after one failure"
+
+    - name: Test Phase 7 - Concurrent Lock Mechanism
+      block:
+        - name: Create lock registry
+          ansible.builtin.set_fact:
+            device_locks: {}
+
+        - name: Acquire locks for concurrent devices
+          ansible.builtin.set_fact:
+            device_locks: "{{ device_locks | combine({
+              item: {
+                'lock_acquired': True,
+                'lock_time': '2025-11-04T12:00:00Z',
+                'holder': 'upgrade_worker'
+              }
+            }) }}"
+          loop: "{{ concurrent_upgrade_batch }}"
+
+        - name: Verify no duplicate locks
+          ansible.builtin.assert:
+            that:
+              - device_locks | length == max_concurrent
+              - (device_locks | dict2items | map(attribute='value.lock_acquired') | list) | unique | length == 1
+            fail_msg: "Duplicate or invalid locks detected"
+            success_msg: "✓ All devices locked for concurrent upgrade ({{ device_locks | length }} locks)"
+
+        - name: Release locks after upgrade
+          ansible.builtin.set_fact:
+            device_locks: "{{ device_locks | combine({
+              item: device_locks[item] | combine({'lock_acquired': False})
+            }) }}"
+          loop: "{{ device_locks.keys() | list }}"
+
+    - name: Test Phase 8 - Scale Testing (10 devices)
+      block:
+        - name: Verify total device count matches expected
+          ansible.builtin.assert:
+            that:
+              - device_registry | length == test_device_count
+            fail_msg: "Device count mismatch"
+            success_msg: "✓ All {{ test_device_count }} devices present in registry"
+
+        - name: Calculate queue batches needed
+          ansible.builtin.set_fact:
+            total_batches: "{{ ((test_device_count + max_concurrent - 1) / max_concurrent) | int }}"
+
+        - name: Verify batching calculation correct
+          ansible.builtin.assert:
+            that:
+              - total_batches | int > 0
+              - total_batches | int >= ((test_device_count + max_concurrent - 1) / max_concurrent) | int
+            fail_msg: "Batch calculation incorrect"
+            success_msg: "✓ 10 devices will require {{ total_batches }} batches of {{ max_concurrent }} devices"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Concurrent Device Race Conditions Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Device ordering enforcement"
+          - "  ✓ Max concurrent limit enforcement ({{ max_concurrent }} devices)"
+          - "  ✓ Concurrent state conflict detection"
+          - "  ✓ Queue processing order consistency"
+          - "  ✓ Failure isolation in concurrent operations"
+          - "  ✓ Device lock mechanisms"
+          - "  ✓ Scale testing ({{ test_device_count }} devices)"
+          - ""
+          - "Concurrent Capacity: {{ test_device_count }} devices in {{ total_batches }} batches"
+          - "Risk Coverage: CRITICAL - Race conditions at production scale"

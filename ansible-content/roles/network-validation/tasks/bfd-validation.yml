@@ -1,0 +1,94 @@
+---
+# BFD (Bidirectional Forwarding Detection) Validation
+# Compares BFD data (neighbor state, session info) pre and post upgrade
+# Validates all BFD state before operational state validation
+#
+# DESIGN: Extract complete bfd_data dict from baseline data, normalize, compare using difference(), report only deltas
+# DATA SOURCES:
+# - BFD data: network_baseline.bfd_data (from 'show bfd neighbors')
+# - Pre-upgrade baseline: network_baseline_pre
+# - Post-upgrade baseline: network_baseline_post
+
+# Initialize BFD comparison status
+- name: Initialize BFD comparison status
+  ansible.builtin.set_fact:
+    bfd_comparison_status: "NOT_RUN"
+
+# Post-upgrade comparison for BFD data
+- name: Compare BFD data with baseline (post-upgrade only)
+  when:
+    - validation_phase is defined
+    - validation_phase == 'post_upgrade'
+    - platform == 'nxos'
+    - not ansible_check_mode
+    - network_baseline_pre is defined
+    - network_baseline_post is defined
+    - network_baseline_pre.bfd_data is defined
+    - network_baseline_post.bfd_data is defined
+  block:
+    # BFD Data - Normalize and Compare
+    - name: BFD Data Comparison
+      block:
+        - name: Normalize BFD pre-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_pre.bfd_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.bfd_data }}"
+
+        - name: Store normalized BFD pre data
+          ansible.builtin.set_fact:
+            bfd_pre_normalized: "{{ normalized_data }}"
+
+        - name: Normalize BFD post-upgrade data
+          ansible.builtin.include_tasks: normalize-baseline-data.yml
+          vars:
+            data_to_normalize: "{{ network_baseline_post.bfd_data }}"
+            fields_to_exclude: "{{ baseline_comparison_excluded_fields.bfd_data }}"
+
+        - name: Calculate BFD deltas
+          ansible.builtin.set_fact:
+            bfd_post_normalized: "{{ normalized_data }}"
+            bfd_added: "{{ normalized_data | difference(bfd_pre_normalized) }}"
+            bfd_removed: "{{ bfd_pre_normalized | difference(normalized_data) }}"
+            bfd_comparison_match: "{{ normalized_data == bfd_pre_normalized }}"
+
+        - name: Report BFD added entries
+          ansible.builtin.debug:
+            msg:
+              - "=== BFD Data Comparison ==="
+              - "Added/Modified BFD Sessions:"
+              - "{{ bfd_added | to_nice_json }}"
+          when: bfd_added | length > 0
+
+        - name: Report BFD removed entries
+          ansible.builtin.debug:
+            msg:
+              - "=== BFD Data Comparison ==="
+              - "Removed BFD Sessions:"
+              - "{{ bfd_removed | to_nice_json }}"
+          when: bfd_removed | length > 0
+
+    - name: Report no BFD changes
+      ansible.builtin.debug:
+        msg:
+          - "=== BFD Data Comparison ==="
+          - "Status: No changes detected in BFD data"
+      when:
+        - bfd_comparison_match
+
+    - name: Validate BFD comparison passed
+      ansible.builtin.assert:
+        that:
+          - bfd_comparison_match | bool
+        fail_msg:
+          - "CRITICAL: Network validation failed - BFD session mismatch detected"
+          - "This indicates BFD neighbor state changed during upgrade"
+          - "Pre-upgrade BFD sessions: {{ bfd_pre_normalized | length }}"
+          - "Post-upgrade BFD sessions: {{ bfd_post_normalized | length }}"
+          - "BFD added sessions: {{ bfd_added | length }}"
+          - "BFD removed sessions: {{ bfd_removed | length }}"
+          - "RECOMMENDATION: Investigate BFD neighbor changes or rollback upgrade"
+
+    - name: Set BFD comparison success status
+      ansible.builtin.set_fact:
+        bfd_comparison_status: "PASS"

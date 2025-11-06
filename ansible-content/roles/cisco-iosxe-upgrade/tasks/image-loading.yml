@@ -2,120 +2,25 @@
 # Image Loading for Cisco IOS-XE Devices
 # Handles secure server-initiated file transfer and staging
 # SECURITY: Uses server-initiated PUSH transfers (not device-initiated PULL)
+# NOTE: Core transfer logic refactored to common/tasks/secure-file-transfer.yml
 
-- name: Pre-transfer validation
-  block:
-    - name: Check available space
-      cisco.ios.ios_command:
-        commands:
-          - "dir bootflash: | include bytes"
-      register: space_check
+# NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
+# No need to re-check here - STEP 3 ensures sufficient space before calling this task
 
-    - name: Parse available space
-      ansible.builtin.set_fact:
-        available_bytes: >-
-          {{
-            space_check.stdout[0]
-            | regex_search('(\\d+) bytes free')
-            | regex_replace(' bytes free', '')
-            | int
-          }}
-
-    - name: Verify sufficient space
-      ansible.builtin.assert:
-        that:
-          - available_bytes | int >
-            (target_image_size | default(1000000000) | int)
-        fail_msg: >-
-          Insufficient space: {{ available_bytes }} bytes available,
-          {{ target_image_size | default(1000000000) }} required
-
-- name: Transfer image file (Server-Initiated PUSH)
-  block:
-    - name: Enable SCP server on device (if not already enabled)
-      cisco.ios.ios_config:
-        lines:
-          - ip scp server enable
-      register: scp_enable_result
-      failed_when: false  # May already be enabled
-
-    - name: Log SCP server enable failures
-      ansible.builtin.debug:
-        msg: "Warning: Failed to enable SCP server: {{ scp_enable_result.msg | default('Unknown error') }}"
-      when:
-        - scp_enable_result is defined
-        - scp_enable_result.failed is defined
-        - scp_enable_result.failed | bool
-
-    - name: Push image from server to device via SCP
-      ansible.posix.synchronize:
-        src: "{{ local_image_path }}"
-        dest: "{{ ansible_host }}:{{ target_image_filename }}"
-        mode: push
-        rsync_opts:
-          - "--timeout=3600"
-          - "--progress"
-        delegate_to: localhost
-      register: scp_result
-      vars:
-        ansible_ssh_pipelining: false
-
-    - name: Alternative SCP transfer method (if synchronize fails)
-      ansible.builtin.command:
-        cmd: >-
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-          {{
-            '-i ' + ansible_ssh_private_key_file
-            if ansible_ssh_private_key_file is defined else ''
-          }}
-          "{{ local_image_path }}"
-          "{{ ansible_user }}@{{ ansible_host }}:{{ target_image_filename }}"
-        timeout: 3600
-      delegate_to: localhost
-      when: scp_result is failed
-      register: scp_fallback_result
-
-    - name: Verify file transfer completion
-      cisco.ios.ios_command:
-        commands:
-          - "dir bootflash:{{ target_image_filename }}"
-      register: file_verification
-
-    - name: Confirm file exists and size matches
-      ansible.builtin.assert:
-        that:
-          - target_image_filename in file_verification.stdout[0]
-          - target_image_size | string in file_verification.stdout[0]
-        fail_msg: "File transfer verification failed"
-
-- name: Image integrity validation
-  block:
-    - name: Calculate MD5 hash of transferred file
-      cisco.ios.ios_command:
-        commands:
-          - "verify /md5 bootflash:{{ target_image_filename }}"
-      register: md5_verification
-      when: expected_md5_hash is defined
-
-    - name: Verify MD5 hash matches expected
-      ansible.builtin.assert:
-        that:
-          - expected_md5_hash in md5_verification.stdout[0]
-        fail_msg: "MD5 hash verification failed"
-      when: expected_md5_hash is defined
+- name: Execute platform-specific IOS-XE firmware transfer
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: secure-file-transfer
+  vars:
+    transfer_handler_task: iosxe-firmware-transfer.yml
+    local_file_path: "{{ local_image_path }}"
 
 - name: Log transfer completion
   ansible.builtin.debug:
-    msg: |-
-      Secure Image Transfer Completed (Server-Initiated PUSH):
-      - Local Source: {{ local_image_path }}
-      - >
-        Remote Destination:
-        {{ ansible_host }}:bootflash:{{ target_image_filename }}
-      - >-
-        Transfer Method: {{ 'SCP (synchronize)' if
-          scp_result is succeeded else 'SCP (fallback)' }}
-      - Size: {{ target_image_size }} bytes
-      - >
-        Hash Verified:
-        {{ 'Yes' if expected_md5_hash is defined else 'Skipped' }}
+    msg:
+      - "Secure Image Transfer Completed (Server-Initiated PUSH):"
+      - "- Local Source: {{ local_file_path }}"
+      - "- Remote Destination: {{ ansible_host }}:bootflash:{{ target_image_filename }}"
+      - "- Transfer Method: {{ transfer_result.method if transfer_result.method is defined else 'SCP' }}"
+      - "- Size: {{ file_size_mb }}MB"
+      - "- Hash Verified: {{ 'Yes' if transferred_file_hash is defined else 'Skipped' }}"

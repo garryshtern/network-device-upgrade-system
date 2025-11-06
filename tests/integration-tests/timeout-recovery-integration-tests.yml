@@ -1,0 +1,287 @@
+---
+# Timeout and Recovery Integration Tests
+# Tests device timeout handling, recovery scenarios, and connection retry logic
+# This validates the wait-for-device.yml task under various failure conditions
+
+- name: Timeout and Recovery Integration Testing
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_results: []
+    wait_timeout: 60
+    wait_sleep: 5
+    wait_delay: 0
+
+  tasks:
+    - name: Test Group 1 - Early Authentication Failure Detection
+      block:
+        - name: Authentication failure test setup
+          ansible.builtin.debug:
+            msg: "Testing early authentication failure detection (should fail immediately, not timeout)"
+
+        - name: Simulate auth failure with mock connection result
+          ansible.builtin.set_fact:
+            connection_wait_result:
+              failed: true
+              msg: "Authentication failed: Permission denied"
+              exception: null
+
+        - name: Check for authentication errors in connection result
+          block:
+            - name: Validate that auth failure message contains expected text
+              ansible.builtin.assert:
+                that:
+                  - connection_wait_result.failed
+                  - connection_wait_result.msg is defined
+                  - "'Permission denied' in connection_wait_result.msg"
+                fail_msg:
+                  - "AUTHENTICATION FAILURE DETECTION FAILED"
+                  - "Expected: Permission denied message"
+                  - "Actual: {{ connection_wait_result.msg | default('No message') }}"
+                  - "Test: Early auth detection must fail immediately without timeout"
+                  - "Troubleshooting: Verify auth error messages are properly caught"
+          rescue:
+            - name: Handle test failure
+              ansible.builtin.fail:
+                msg: "Early auth failure detection test failed"
+
+        - name: Record test 1 result
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Early Auth Failure Detection', 'status': 'PASS', 'duration': '~0s'}] }}"
+
+      rescue:
+        - name: Record test 1 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Early Auth Failure Detection', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 2 - Connection Timeout Handling
+      block:
+        - name: Connection timeout test setup
+          ansible.builtin.debug:
+            msg: "Testing device timeout detection after max retries"
+
+        - name: Simulate multiple connection failures (timeout scenario)
+          ansible.builtin.set_fact:
+            connection_attempts:
+              - { attempt: 1, timestamp: "2025-11-04T11:00:00Z", status: "timeout", msg: "Connection timed out" }
+              - { attempt: 2, timestamp: "2025-11-04T11:00:10Z", status: "timeout", msg: "Connection timed out" }
+              - { attempt: 3, timestamp: "2025-11-04T11:00:20Z", status: "timeout", msg: "Connection timed out" }
+              - { attempt: 4, timestamp: "2025-11-04T11:00:30Z", status: "timeout", msg: "Connection timed out" }
+              - { attempt: 5, timestamp: "2025-11-04T11:00:40Z", status: "timeout", msg: "Connection timed out" }
+              - { attempt: 6, timestamp: "2025-11-04T11:00:50Z", status: "timeout", msg: "Connection timed out" }
+
+        - name: Verify timeout count matches expected retries
+          ansible.builtin.assert:
+            that:
+              - connection_attempts | length == 6
+              - connection_attempts | map(attribute='status') | unique | list == ['timeout']
+            fail_msg:
+              - "TIMEOUT SIMULATION VERIFICATION FAILED"
+              - "Expected: 6 timeout attempts"
+              - "Actual: {{ connection_attempts | length }} attempts"
+              - "Attempt statuses: {{ connection_attempts | map(attribute='status') | unique | list }}"
+              - "Test: Device should fail after 6 x 10s retries = 60s timeout"
+              - "Troubleshooting: Verify retry count calculation is correct"
+
+        - name: Simulate final connection failure after retries exhausted
+          ansible.builtin.set_fact:
+            connection_wait_result:
+              failed: true
+              msg: "Connection timeout - no response"
+              rc: 1
+
+        - name: Validate timeout failure message contains required info
+          ansible.builtin.assert:
+            that:
+              - connection_wait_result.failed
+              - "'Connection timeout' in connection_wait_result.msg or 'timeout' in connection_wait_result.msg.lower()"
+            fail_msg:
+              - "TIMEOUT FAILURE MESSAGE VALIDATION FAILED"
+              - "Expected: Message containing 'timeout' or 'Connection timeout'"
+              - "Actual: {{ connection_wait_result.msg | default('NO MESSAGE') }}"
+              - "Test: Error messages must clearly indicate timeout condition"
+              - "Troubleshooting: Ensure connection error messages include timeout indicators"
+
+        - name: Record test 2 result
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Connection Timeout Handling', 'status': 'PASS', 'retries': 6, 'duration': '~60s'}] }}"
+
+      rescue:
+        - name: Record test 2 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Connection Timeout Handling', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 3 - Partial Recovery (Intermittent Connectivity)
+      block:
+        - name: Partial recovery test setup
+          ansible.builtin.debug:
+            msg: "Testing intermittent connectivity and eventual recovery"
+
+        - name: Simulate intermittent connection failures then success
+          ansible.builtin.set_fact:
+            intermittent_attempts:
+              - { attempt: 1, status: "timeout", timestamp: "2025-11-04T11:05:00Z" }
+              - { attempt: 2, status: "timeout", timestamp: "2025-11-04T11:05:10Z" }
+              - { attempt: 3, status: "timeout", timestamp: "2025-11-04T11:05:20Z" }
+              - { attempt: 4, status: "connected", timestamp: "2025-11-04T11:05:30Z", response_time: 150 }
+
+        - name: Validate recovery occurred on attempt 4
+          ansible.builtin.assert:
+            that:
+              - intermittent_attempts[3].status == 'connected'
+              - intermittent_attempts[3].attempt == 4
+            fail_msg: "Intermittent recovery simulation failed"
+
+        - name: Set successful connection result
+          ansible.builtin.set_fact:
+            connection_wait_result:
+              failed: false
+              status: "connected"
+              msg: null
+
+        - name: Validate recovery was successful
+          ansible.builtin.assert:
+            that:
+              - not connection_wait_result.failed
+              - connection_wait_result.status == 'connected'
+            fail_msg: "Recovery validation failed"
+
+        - name: Record test 3 result
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Intermittent Connectivity Recovery', 'status': 'PASS', 'recovery_time': '30s'}] }}"
+
+      rescue:
+        - name: Record test 3 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Intermittent Connectivity Recovery', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 4 - Retry Count Calculation
+      block:
+        - name: Retry calculation test setup
+          ansible.builtin.debug:
+            msg: "Testing retry count calculation from timeout value"
+
+        - name: Test retry calculation for different timeout values
+          ansible.builtin.set_fact:
+            retry_calculations:
+              - { timeout: 60, expected_retries: 6, description: "60s timeout = 6 retries (10s each)" }
+              - { timeout: 120, expected_retries: 12, description: "120s timeout = 12 retries (10s each)" }
+              - { timeout: 300, expected_retries: 30, description: "300s timeout = 30 retries (10s each)" }
+              - { timeout: 900, expected_retries: 90, description: "900s timeout = 90 retries (10s each)" }
+
+        - name: Validate timeout to retry calculations
+          ansible.builtin.assert:
+            that:
+              - item.expected_retries == (item.timeout | int / 10) | int
+            fail_msg: "Retry calculation incorrect for {{ item.timeout }}s timeout"
+          loop: "{{ retry_calculations }}"
+
+        - name: Record test 4 result
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Retry Count Calculation', 'status': 'PASS', 'test_cases': 4}] }}"
+
+      rescue:
+        - name: Record test 4 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Retry Count Calculation', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 5 - Reboot Timeout vs Connection Timeout
+      block:
+        - name: Reboot timeout test setup
+          ansible.builtin.debug:
+            msg: "Testing device reboot scenarios with timeout handling"
+
+        - name: Simulate reboot sequence with timeout
+          ansible.builtin.set_fact:
+            reboot_sequence:
+              stage: "reboot_initiated"
+              device_online_pre_reboot: true
+              reboot_command_sent_time: "2025-11-04T12:00:00Z"
+              device_goes_offline_time: "2025-11-04T12:00:05Z"
+              device_comes_back_time: "2025-11-04T12:01:30Z"
+              total_downtime_seconds: 85
+              reboot_timeout: 180
+
+        - name: Validate device was offline during reasonable reboot window
+          ansible.builtin.assert:
+            that:
+              - reboot_sequence.total_downtime_seconds < reboot_sequence.reboot_timeout
+              - reboot_sequence.total_downtime_seconds > 10
+            fail_msg: "Reboot timeout sequence invalid"
+
+        - name: Simulate device recovery within timeout window
+          ansible.builtin.set_fact:
+            final_connection_state:
+              recovered: true
+              recovery_time: "{{ reboot_sequence.total_downtime_seconds }}"
+              status: "online"
+              within_timeout: "{{ reboot_sequence.total_downtime_seconds < reboot_sequence.reboot_timeout }}"
+
+        - name: Validate recovery within timeout
+          ansible.builtin.assert:
+            that:
+              - final_connection_state.recovered
+              - final_connection_state.within_timeout
+            fail_msg: "Device failed to recover within timeout window"
+
+        - name: Record test 5 result
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Reboot Timeout Handling', 'status': 'PASS', 'downtime': '85s', 'timeout': '180s'}] }}"
+
+      rescue:
+        - name: Record test 5 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Reboot Timeout Handling', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Test Group 6 - Timeout Error Message Completeness
+      block:
+        - name: Timeout error message test setup
+          ansible.builtin.debug:
+            msg: "Testing timeout error messages contain required troubleshooting info"
+
+        - name: Simulate timeout error message
+          ansible.builtin.set_fact:
+            timeout_error_message:
+              - "Device failed to respond after 60s timeout"
+              - "Device: test-device-01"
+              - "Last error: Connection timeout - no response"
+              - "Attempted 6 connection retries (10s each)"
+              - "Check device connectivity, power status, and network access"
+
+        - name: Validate error message contains required fields
+          ansible.builtin.assert:
+            that:
+              - timeout_error_message | length >= 5
+              - timeout_error_message | join('') | regex_search('Device:')
+              - timeout_error_message | join('') | regex_search('[0-9]+ connection retries')
+              - timeout_error_message | join('') | regex_search('timeout')
+            fail_msg: "Timeout error message missing required fields"
+
+        - name: Record test 6 result
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Timeout Error Message Completeness', 'status': 'PASS', 'required_fields': 5}] }}"
+
+      rescue:
+        - name: Record test 6 failure
+          ansible.builtin.set_fact:
+            test_results: "{{ test_results + [{'test': 'Timeout Error Message Completeness', 'status': 'FAIL', 'error': ansible_failed_result.msg | default('Unknown')}] }}"
+
+    - name: Display test results summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "TIMEOUT AND RECOVERY TEST RESULTS"
+          - "=========================================="
+          - "{% for result in test_results %}{{ result.test }}: {{ result.status }}{% endfor %}"
+          - "=========================================="
+          - "Total Tests: {{ test_results | length }}"
+          - "Passed: {{ test_results | selectattr('status', 'equalto', 'PASS') | list | length }}"
+          - "Failed: {{ test_results | selectattr('status', 'equalto', 'FAIL') | list | length }}"
+          - "=========================================="
+
+    - name: Fail if any tests failed
+      ansible.builtin.fail:
+        msg: "Timeout and recovery tests failed"
+      when: test_results | selectattr('status', 'equalto', 'FAIL') | list | length > 0

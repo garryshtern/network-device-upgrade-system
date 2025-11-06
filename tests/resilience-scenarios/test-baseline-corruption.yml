@@ -1,0 +1,284 @@
+---
+# Test: Baseline Data Corruption Detection
+# Tests: Corrupted baseline detection, malformed YAML, missing fields, stale data
+# Risk Level: CRITICAL - Pre-upgrade validation critical
+# Coverage: Validation framework for all platforms
+
+- name: Baseline Data Corruption Detection Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "baseline_corruption_detection"
+    baseline_dir: "/tmp/test-baselines"
+    valid_baseline_fields:
+      - "bgp_neighbors"
+      - "routing_table"
+      - "interface_status"
+      - "arp_table"
+      - "multicast_status"
+      - "collection_timestamp"
+
+  tasks:
+    - name: Test Phase 1 - Setup Baseline Directory
+      block:
+        - name: Create baseline test directory
+          ansible.builtin.file:
+            path: "{{ baseline_dir }}"
+            state: directory
+            mode: '0755'
+
+        - name: Create valid baseline for NX-OS
+          ansible.builtin.copy:
+            content: |
+              ---
+              platform: cisco_nxos
+              device: nxos-switch-01
+              collection_timestamp: "2025-11-04T12:00:00Z"
+              bgp_neighbors:
+                - neighbor: "10.0.0.1"
+                  status: "Established"
+                  as: 65001
+              routing_table:
+                - destination: "10.0.0.0/24"
+                  via: "10.0.0.1"
+              interface_status:
+                - interface: "Eth1/1"
+                  status: "up"
+                  speed: "100G"
+              arp_table:
+                - ip: "10.0.0.1"
+                  mac: "aa:bb:cc:dd:ee:01"
+            dest: "{{ baseline_dir }}/nxos-valid.yml"
+
+        - name: Verify valid baseline created
+          ansible.builtin.stat:
+            path: "{{ baseline_dir }}/nxos-valid.yml"
+          register: valid_baseline_stat
+
+        - name: Assert valid baseline exists
+          ansible.builtin.assert:
+            that:
+              - valid_baseline_stat.stat.exists
+              - valid_baseline_stat.stat.size > 0
+            fail_msg: "Valid baseline not created"
+            success_msg: "✓ Valid baseline created successfully"
+
+    - name: Test Phase 2 - Baseline Corruption Detection (Truncated)
+      block:
+        - name: Create truncated baseline (corruption simulation)
+          ansible.builtin.copy:
+            content: |
+              ---
+              platform: cisco_nxos
+              device: nxos-switch-01
+              collection_timestamp: "2025-11-04T12:00:00Z"
+              bgp_neighbors:
+                - neighbor: "10.0.0.1"
+            dest: "{{ baseline_dir }}/nxos-truncated.yml"
+
+        - name: Read and validate baseline
+          ansible.builtin.slurp:
+            src: "{{ baseline_dir }}/nxos-truncated.yml"
+          register: truncated_baseline
+
+        - name: Parse YAML to check for issues
+          ansible.builtin.set_fact:
+            parsed_baseline: "{{ truncated_baseline.content | b64decode | from_yaml }}"
+
+        - name: Check for incomplete data
+          ansible.builtin.set_fact:
+            missing_fields: "{{ valid_baseline_fields | difference(parsed_baseline.keys() | list) }}"
+
+        - name: Assert corruption detected
+          ansible.builtin.assert:
+            that:
+              - missing_fields | length > 0
+            fail_msg: "Truncated baseline not detected as corrupted"
+            success_msg: "✓ Corrupted baseline detected (missing {{ missing_fields | length }} fields)"
+
+    - name: Test Phase 3 - Malformed YAML Detection
+      block:
+        - name: Create malformed YAML baseline
+          ansible.builtin.copy:
+            content: |
+              ---
+              platform: cisco_nxos
+              device: nxos-switch-01
+                collection_timestamp: "2025-11-04T12:00:00Z"
+              bgp_neighbors
+                - neighbor: "10.0.0.1"
+            dest: "{{ baseline_dir }}/nxos-malformed.yml"
+
+        - name: Attempt to parse malformed YAML
+          ansible.builtin.shell:
+            cmd: |
+              python3 -c "
+              import yaml
+              try:
+                  with open('{{ baseline_dir }}/nxos-malformed.yml') as f:
+                      yaml.safe_load(f)
+                  print('PARSE_SUCCESS')
+              except yaml.YAMLError as e:
+                  print('PARSE_FAILED:' + str(e)[:50])
+              " 2>&1
+          register: malformed_parse
+          changed_when: false
+
+        - name: Assert malformed YAML detected
+          ansible.builtin.assert:
+            that:
+              - "'PARSE_FAILED' in malformed_parse.stdout"
+            fail_msg: "Malformed YAML not detected"
+            success_msg: "✓ Malformed YAML properly detected as parse error"
+
+    - name: Test Phase 4 - Missing Required Fields
+      block:
+        - name: Create baseline with missing required fields
+          ansible.builtin.copy:
+            content: |
+              ---
+              platform: cisco_nxos
+              device: nxos-switch-01
+              collection_timestamp: "2025-11-04T12:00:00Z"
+              bgp_neighbors: []
+              routing_table: []
+            dest: "{{ baseline_dir }}/nxos-incomplete.yml"
+
+        - name: Validate required fields present
+          ansible.builtin.shell:
+            cmd: |
+              python3 -c "
+              import yaml
+              required = ['bgp_neighbors', 'routing_table', 'interface_status', 'arp_table']
+              with open('{{ baseline_dir }}/nxos-incomplete.yml') as f:
+                  data = yaml.safe_load(f)
+              missing = [f for f in required if f not in data]
+              print('MISSING:' + ','.join(missing) if missing else 'COMPLETE')
+              " 2>&1
+          register: field_validation
+          changed_when: false
+
+        - name: Assert missing fields detected
+          ansible.builtin.assert:
+            that:
+              - "'MISSING:' in field_validation.stdout"
+            fail_msg: "Missing fields not detected"
+            success_msg: "✓ Baseline with missing fields detected ({{ field_validation.stdout.split(':')[1] }})"
+
+    - name: Test Phase 5 - Stale Baseline Detection
+      block:
+        - name: Create stale baseline (30+ days old)
+          ansible.builtin.copy:
+            content: |
+              ---
+              platform: cisco_nxos
+              device: nxos-switch-01
+              collection_timestamp: "2025-10-04T12:00:00Z"
+              bgp_neighbors: []
+              routing_table: []
+            dest: "{{ baseline_dir }}/nxos-stale.yml"
+
+        - name: Check baseline age
+          ansible.builtin.shell:
+            cmd: |
+              python3 -c "
+              import yaml
+              from datetime import datetime, timedelta
+              with open('{{ baseline_dir }}/nxos-stale.yml') as f:
+                  data = yaml.safe_load(f)
+              ts = datetime.fromisoformat(data['collection_timestamp'].replace('Z', '+00:00'))
+              age_days = (datetime.now(ts.tzinfo) - ts).days
+              if age_days > 30:
+                  print('STALE:' + str(age_days))
+              else:
+                  print('CURRENT:' + str(age_days))
+              " 2>&1
+          register: staleness_check
+          changed_when: false
+
+        - name: Assert stale baseline detected
+          ansible.builtin.assert:
+            that:
+              - "'STALE:' in staleness_check.stdout"
+            fail_msg: "Stale baseline not detected"
+            success_msg: "✓ Stale baseline detected (age: {{ staleness_check.stdout.split(':')[1] }} days)"
+
+    - name: Test Phase 6 - Baseline Size Validation
+      block:
+        - name: Create empty baseline
+          ansible.builtin.copy:
+            content: ""
+            dest: "{{ baseline_dir }}/nxos-empty.yml"
+
+        - name: Check baseline file size
+          ansible.builtin.stat:
+            path: "{{ baseline_dir }}/nxos-empty.yml"
+          register: empty_baseline_stat
+
+        - name: Assert empty baseline detected
+          ansible.builtin.assert:
+            that:
+              - empty_baseline_stat.stat.size == 0
+            fail_msg: "Empty baseline size check failed"
+            success_msg: "✓ Empty baseline detected (size: {{ empty_baseline_stat.stat.size }} bytes)"
+
+    - name: Test Phase 7 - Baseline Data Type Validation
+      block:
+        - name: Create baseline with wrong data types
+          ansible.builtin.copy:
+            content: |
+              ---
+              platform: cisco_nxos
+              device: nxos-switch-01
+              collection_timestamp: 123456
+              bgp_neighbors: "not_a_list"
+              routing_table: {}
+            dest: "{{ baseline_dir }}/nxos-wrongtypes.yml"
+
+        - name: Validate data types
+          ansible.builtin.shell:
+            cmd: |
+              python3 -c "
+              import yaml
+              with open('{{ baseline_dir }}/nxos-wrongtypes.yml') as f:
+                  data = yaml.safe_load(f)
+              issues = []
+              if not isinstance(data.get('bgp_neighbors'), list):
+                  issues.append('bgp_neighbors not list')
+              if not isinstance(data.get('routing_table'), (list, dict)):
+                  issues.append('routing_table wrong type')
+              print('ISSUES:' + ','.join(issues) if issues else 'VALID')
+              " 2>&1
+          register: datatype_check
+          changed_when: false
+
+        - name: Assert data type validation works
+          ansible.builtin.assert:
+            that:
+              - "'ISSUES:' in datatype_check.stdout"
+            fail_msg: "Data type validation failed"
+            success_msg: "✓ Wrong data types detected in baseline"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Baseline Data Corruption Detection Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Truncated baseline detection"
+          - "  ✓ Malformed YAML detection"
+          - "  ✓ Missing required fields detection"
+          - "  ✓ Stale baseline detection (30+ days)"
+          - "  ✓ Empty baseline detection"
+          - "  ✓ Wrong data type detection"
+          - ""
+          - "Validation Mechanisms Tested:"
+          - "  - YAML syntax validation"
+          - "  - Required field validation"
+          - "  - Data type checking"
+          - "  - Timestamp staleness checking"
+          - "  - File size validation"
+          - ""
+          - "Risk Coverage: CRITICAL - Prevents invalid baseline use in post-upgrade validation"

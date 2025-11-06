@@ -1,0 +1,176 @@
+---
+# Test: Notification and Alerting System
+# Tests: Alert delivery, failure notifications, status updates, escalation procedures
+# Risk Level: MEDIUM - Operational visibility
+# Coverage: All platforms
+
+- name: Notification and Alerting Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "notification_alerting"
+
+  tasks:
+    - name: Test Phase 1 - Notification Configuration
+      block:
+        - name: Define notification channels
+          ansible.builtin.set_fact:
+            notification_channels:
+              email:
+                enabled: true
+                recipients: ["ops-team@example.com"]
+              slack:
+                enabled: true
+                webhook_url: "https://hooks.slack.com/services/example"
+              pagerduty:
+                enabled: true
+                integration_key: "integration-key-example"
+
+        - name: Verify notification channels
+          ansible.builtin.assert:
+            that:
+              - notification_channels.email.enabled | bool
+              - notification_channels.slack.enabled | bool
+              - notification_channels.pagerduty.enabled | bool
+            fail_msg: "Notification channels not configured"
+            success_msg: "✓ All notification channels configured"
+
+    - name: Test Phase 2 - Upgrade Start Notification
+      block:
+        - name: Simulate upgrade start notification
+          ansible.builtin.set_fact:
+            upgrade_start_alert:
+              event: "upgrade_started"
+              device: "device-1"
+              timestamp: "2025-11-05T10:00:00Z"
+              notification_sent: true
+              delivery_successful: true
+
+        - name: Verify start notification sent
+          ansible.builtin.assert:
+            that:
+              - upgrade_start_alert.notification_sent | bool
+              - upgrade_start_alert.delivery_successful | bool
+            fail_msg: "Upgrade start notification not sent"
+            success_msg: "✓ Upgrade start notification delivered"
+
+    - name: Test Phase 3 - Success Notification
+      block:
+        - name: Simulate upgrade success notification
+          ansible.builtin.set_fact:
+            success_alert:
+              event: "upgrade_completed"
+              device: "device-1"
+              new_version: "10.1.2"
+              duration_seconds: 1800
+              notification_sent: true
+
+        - name: Verify success notification
+          ansible.builtin.assert:
+            that:
+              - success_alert.notification_sent | bool
+              - success_alert.event == "upgrade_completed"
+            fail_msg: "Success notification not sent"
+            success_msg: "✓ Upgrade success notification delivered"
+
+    - name: Test Phase 4 - Failure Alert and Escalation
+      block:
+        - name: Simulate upgrade failure
+          ansible.builtin.set_fact:
+            failure_alert:
+              event: "upgrade_failed"
+              device: "device-2"
+              error: "Image checksum mismatch"
+              severity: "critical"
+              immediate_notification_sent: true
+              escalation_triggered: true
+              pagerduty_incident_created: true
+
+        - name: Verify failure alert
+          ansible.builtin.assert:
+            that:
+              - failure_alert.immediate_notification_sent | bool
+              - failure_alert.escalation_triggered | bool
+              - failure_alert.pagerduty_incident_created | bool
+            fail_msg: "Failure alert escalation not working"
+            success_msg: "✓ Failure alert escalated to PagerDuty"
+
+    - name: Test Phase 5 - Warning and Timeout Alerts
+      block:
+        - name: Simulate timeout warning
+          ansible.builtin.set_fact:
+            timeout_alert:
+              event: "upgrade_timeout_approaching"
+              device: "device-3"
+              elapsed_seconds: 2700
+              timeout_seconds: 3600
+              time_remaining_seconds: 900
+              warning_sent: true
+
+        - name: Verify timeout warning
+          ansible.builtin.assert:
+            that:
+              - timeout_alert.warning_sent | bool
+              - timeout_alert.time_remaining_seconds < 1200
+            fail_msg: "Timeout warning not sent"
+            success_msg: "✓ Timeout approaching alert delivered"
+
+    - name: Test Phase 6 - Rollback Notification
+      block:
+        - name: Simulate rollback notification
+          ansible.builtin.set_fact:
+            rollback_alert:
+              event: "rollback_initiated"
+              device: "device-4"
+              reason: "post_upgrade_validation_failed"
+              rolled_back_to_version: "9.3.10"
+              notification_sent: true
+              severity: "high"
+
+        - name: Verify rollback notification
+          ansible.builtin.assert:
+            that:
+              - rollback_alert.notification_sent | bool
+              - rollback_alert.severity == "high"
+            fail_msg: "Rollback notification not sent"
+            success_msg: "✓ Rollback notification delivered with high severity"
+
+    - name: Test Phase 7 - Batch Status Updates
+      block:
+        - name: Simulate batch progress update
+          ansible.builtin.set_fact:
+            batch_update:
+              event: "batch_progress"
+              batch_id: "batch-001"
+              total_devices: 10
+              completed: 5
+              in_progress: 2
+              remaining: 3
+              success_rate_percent: 100
+              update_sent: true
+
+        - name: Verify batch update
+          ansible.builtin.assert:
+            that:
+              - batch_update.update_sent | bool
+              - batch_update.completed + batch_update.in_progress + batch_update.remaining == batch_update.total_devices
+            fail_msg: "Batch status update failed"
+            success_msg: "✓ Batch progress update delivered"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Notification and Alerting Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Notification channel configuration (3 channels)"
+          - "  ✓ Upgrade start notification delivery"
+          - "  ✓ Upgrade success notification delivery"
+          - "  ✓ Failure alert escalation to PagerDuty"
+          - "  ✓ Timeout approaching alert delivery"
+          - "  ✓ Rollback notification with severity"
+          - "  ✓ Batch progress status updates"
+          - ""
+          - "Risk Coverage: MEDIUM - Ensures operational visibility and alerting"

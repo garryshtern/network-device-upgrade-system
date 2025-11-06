@@ -36,7 +36,7 @@
           - platform_type is defined
           - firmware_version is defined
           - target_version is defined
-          - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
+          - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']
         fail_msg: "Required variables not properly defined"
         success_msg: "✓ Variable validation passed"
 

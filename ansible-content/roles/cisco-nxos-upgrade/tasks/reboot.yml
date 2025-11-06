@@ -7,7 +7,7 @@
     msg:
       - "=== NX-OS Device Reboot Required ==="
       - "Device: {{ inventory_hostname }}"
-      - "Reason: {{ reboot_reason | default('firmware_upgrade') }}"
+      - "Reason: {{ reboot_reason }}"
       - "Timeout: {{ nxos_reboot_timeout }}s"
       - "================================="
 
@@ -27,20 +27,43 @@
     ansible_command_timeout: 30
 
 - name: Wait for device to become unreachable
-  ansible.builtin.wait_for_connection:
-    timeout: 60
-    sleep: 5
-  failed_when: false
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-for-device
+  vars:
+    wait_timeout: 60
+    wait_sleep: 5
+    connection_check_failed_when: false
 
 - name: Wait additional time for complete shutdown
   ansible.builtin.pause:
     seconds: "{{ nxos_reboot_delay }}"
 
 - name: Wait for device to come back online
-  ansible.builtin.wait_for_connection:
-    timeout: "{{ nxos_reboot_timeout }}"
-    delay: 30
-    sleep: 10
+  block:
+    - name: Record reboot wait start time
+      set_fact:
+        reboot_wait_start: "{{ ansible_date_time.iso8601_basic_short }}"
+
+    - name: Wait for device to become reachable (with timeout safeguard)
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-for-device
+      vars:
+        wait_timeout: "{{ nxos_reboot_timeout }}"
+        wait_delay: 30
+        wait_sleep: 10
+      timeout: "{{ (nxos_reboot_timeout | int) + 120 }}"
+
+  rescue:
+    - name: Device failed to come back online - escalate as critical failure
+      ansible.builtin.fail:
+        msg:
+          - "CRITICAL: Device did not recover after {{ nxos_reboot_timeout }}s timeout"
+          - "Device: {{ inventory_hostname }}"
+          - "The device may be hung, powered down, or experiencing boot issues"
+          - "Manual intervention required - check device console/IPMI"
+          - "Upgrade cannot proceed - requires manual recovery"
 
 - name: Wait for NX-OS services to stabilize
   ansible.builtin.pause:
@@ -66,14 +89,11 @@
 - name: Validate system came up with new firmware
   ansible.builtin.assert:
     that:
-      - target_firmware_version is defined
-      - target_firmware_version | regex_replace('\\.bin$', '')
+      - target_firmware is defined
+      - target_firmware | regex_replace('\\.bin$', '')
         in post_reboot_version
-    fail_msg: |
-      Device did not boot with target firmware version
-      Expected: {{ target_firmware_version }}
-      Actual version: {{ post_reboot_version }}
-  when: reboot_reason | default('firmware_upgrade') == 'firmware_upgrade'
+    fail_msg: "Device did not boot with target firmware version - Expected: {{ target_firmware }}, Actual version: {{ post_reboot_version }}"
+  when: reboot_reason == 'firmware_upgrade'
 
 - name: Check for boot issues in system logs
   cisco.nxos.nxos_command:
@@ -92,15 +112,25 @@
 - name: Verify critical interfaces are operational
   cisco.nxos.nxos_command:
     commands:
-      - show interface brief | json
+      - command: show interface brief
+        output: json
   register: post_reboot_interfaces
+
+- name: Check for errors in interface data
+  ansible.builtin.include_tasks: check-nxos-command-errors.yml
+  vars:
+    command_result: "{{ post_reboot_interfaces }}"
+    variable_mapping:
+      interface_brief_data: 0
+    fail_on_error: true
 
 - name: Parse interface status
   ansible.builtin.set_fact:
     interfaces_down_post_reboot: >-
-      {{ post_reboot_interfaces.stdout[0] |
-        from_json | json_query(
+      {{ interface_brief_data |
+        json_query(
         'TABLE_interface.ROW_interface[?state != `up`]') | length }}
+  when: interface_brief_data is defined
 
 - name: Set reboot completion status
   ansible.builtin.set_fact:
@@ -110,7 +140,7 @@
       uptime_after_reboot: "{{ post_reboot_uptime }}"
       interfaces_down_count: "{{ interfaces_down_post_reboot }}"
       boot_warnings_present: >
-        "{{ (boot_log_check.stdout[0] | default('') | length) > 0 }}"
+        "{{ (boot_log_check.stdout[0] if boot_log_check.stdout is defined and boot_log_check.stdout | length > 0 else '' | length) > 0 }}"
       reboot_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
 
 - name: Display reboot completion status

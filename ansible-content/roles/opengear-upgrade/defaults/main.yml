@@ -6,10 +6,21 @@ opengear_connection_timeout: 300
 opengear_command_timeout: 60
 opengear_ssh_retries: 3
 
+# Opengear metrics defaults (consolidated from playbook-level)
+active_sessions: 0
+total_power_usage: 0
+
 # Architecture detection settings
 auto_detect_architecture: true
 fallback_architecture: "legacy"
 api_test_timeout: 10
+
+# API call defaults (for api-call.yml reusable task)
+api_use_auth: true
+api_extra_headers: {}
+api_timeout: 30
+api_failed_when: false
+api_when_condition: true
 
 # Legacy architecture settings (older Opengear devices)
 legacy_upgrade_method: "cli"
@@ -27,6 +38,7 @@ opengear_image_directory: "/tmp"
 opengear_backup_image_directory: "/var/backups"
 opengear_image_extension: "bin"
 opengear_verify_image_checksum: true
+target_firmware_size_mb: 100
 
 # Storage management
 opengear_minimum_free_space_mb: 1024
@@ -51,3 +63,15 @@ validate_console_ports: true
 # Timing controls
 post_upgrade_delay: 60
 service_check_timeout: 120
+
+# Console server check settings
+console_targets: []
+
+# Upgrade state initialization (extends common_upgrade_state from group_vars)
+opengear_upgrade_state: "{{
+  common_upgrade_state | combine({'device_model': '',
+    'device_type': 'console_server',
+    'serial_ports': [],
+    'power_ports': [],
+    'web_session': ''})
+}}"

@@ -1,5 +1,47 @@
 ---
 # Hash verification tasks
+# MANDATORY: SHA512 hash file must exist for all firmware images
+# OPTIONAL: SHA512 hash file for EPLD (if enable_epld_upgrade is true)
+
+# ============================================================================
+# FIRMWARE HASH VERIFICATION (MANDATORY)
+# ============================================================================
+
+- name: Check for firmware SHA512 hash file
+  ansible.builtin.stat:
+    path: "{{ firmware_base_path }}/{{ target_firmware }}.{{ hash_file_extension }}"
+  register: firmware_hash_file_stat
+  delegate_to: localhost
+
+- name: Enforce mandatory firmware SHA512 hash file requirement
+  ansible.builtin.assert:
+    that:
+      - firmware_hash_file_stat.stat.exists
+    fail_msg:
+      - "MANDATORY SHA512 hash file missing for firmware!"
+      - "Required file: {{ firmware_base_path }}/{{ target_firmware }}.{{ hash_file_extension }}"
+      - "Hash verification is REQUIRED for all firmware uploads"
+      - "Create the hash file with: sha512sum {{ target_firmware }} > {{ target_firmware }}.{{ hash_file_extension }}"
+
+- name: Read firmware SHA512 hash from file
+  ansible.builtin.slurp:
+    src: "{{ firmware_base_path }}/{{ target_firmware }}.{{ hash_file_extension }}"
+  register: firmware_hash_content
+  delegate_to: localhost
+
+- name: Extract and validate firmware SHA512 hash value
+  ansible.builtin.set_fact:
+    firmware_expected_hash: "{{ (firmware_hash_content.content | b64decode).split()[0] | trim }}"
+
+- name: Verify firmware SHA512 hash format is valid
+  ansible.builtin.assert:
+    that:
+      - firmware_expected_hash | length == 128
+      - firmware_expected_hash is match('^[a-f0-9]{128}$')
+    fail_msg:
+      - "Invalid SHA512 hash format in {{ target_firmware }}.{{ hash_file_extension }}"
+      - "Hash value: {{ firmware_expected_hash }}"
+      - "Expected: 128 hexadecimal characters"
 
 - name: Calculate SHA512 hash of firmware file
   ansible.builtin.stat:
@@ -9,55 +51,92 @@
   register: firmware_file_hash
   delegate_to: localhost
 
-- name: Look for expected hash file
-  ansible.builtin.stat:
-    path: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
-  register: hash_file_stat
-  delegate_to: localhost
-
-- name: Read expected hash from file
-  ansible.builtin.slurp:
-    src: "{{ firmware_base_path }}/{{ target_firmware }}.sha512"
-  register: expected_hash_content
-  delegate_to: localhost
-  when: hash_file_stat.stat.exists
-
-- name: Extract expected hash value
-  ansible.builtin.set_fact:
-    expected_hash: >
-      "{{ (expected_hash_content.content | b64decode).split()[0] | trim }}"
-  when: hash_file_stat.stat.exists
-
-- name: Use provided hash if no hash file exists
-  ansible.builtin.set_fact:
-    expected_hash: "{{ firmware_expected_hash | default('') }}"
-  when: not hash_file_stat.stat.exists and firmware_expected_hash is defined
-
-- name: Verify hash matches expected value
+- name: Verify firmware SHA512 hash matches expected value
   ansible.builtin.assert:
     that:
-      - expected_hash | length > 0
-      - firmware_file_hash.stat.checksum == expected_hash
-    fail_msg: >
-      "Hash verification failed for {{ target_firmware }}: calculated {{
-        firmware_file_hash.stat.checksum }} != expected {{ expected_hash }}"
-    success_msg: "Hash verification passed for {{ target_firmware }}"
-  when: expected_hash is defined and expected_hash | length > 0
+      - firmware_file_hash.stat.checksum == firmware_expected_hash
+    fail_msg:
+      - "Firmware SHA512 hash verification FAILED!"
+      - "File: {{ target_firmware }}"
+      - "Expected: {{ firmware_expected_hash }}"
+      - "Calculated: {{ firmware_file_hash.stat.checksum }}"
+      - "The firmware file may be corrupted or the hash file is incorrect"
+    success_msg: "SHA512 hash verification passed for {{ target_firmware }}"
 
-- name: Warning when no hash available
-  ansible.builtin.debug:
-    msg: |
-      WARNING: No expected hash found for {{ target_firmware }}
-      Calculated hash: {{ firmware_file_hash.stat.checksum }}
-      To enable hash verification, provide either:
-      - A .sha512 file alongside the firmware
-      - Set firmware_expected_hash variable
-  when: expected_hash is not defined or expected_hash | length == 0
-
-- name: Set hash verification result
+- name: Set firmware hash verification results
   ansible.builtin.set_fact:
-    hash_verification_passed: >
-      {{ expected_hash is defined and expected_hash | length > 0 and
-         firmware_file_hash.stat.checksum == expected_hash }}
+    firmware_hash_verification_passed: true
     calculated_hash: "{{ firmware_file_hash.stat.checksum }}"
-    expected_hash_value: "{{ expected_hash | default('not_provided') }}"
+    expected_hash_value: "{{ firmware_expected_hash }}"
+
+# ============================================================================
+# EPLD HASH VERIFICATION (OPTIONAL)
+# ============================================================================
+
+- name: EPLD hash verification block (if enabled)
+  when:
+    - enable_epld_upgrade | bool
+    - target_epld_firmware is defined
+    - target_epld_firmware | length > 0
+  block:
+    - name: Check for EPLD SHA512 hash file
+      ansible.builtin.stat:
+        path: "{{ firmware_base_path }}/{{ target_epld_firmware }}.{{ hash_file_extension }}"
+      register: epld_hash_file_stat
+      delegate_to: localhost
+
+    - name: Enforce EPLD SHA512 hash file requirement
+      ansible.builtin.assert:
+        that:
+          - epld_hash_file_stat.stat.exists
+        fail_msg:
+          - "EPLD SHA512 hash file missing!"
+          - "Required file: {{ firmware_base_path }}/{{ target_epld_firmware }}.{{ hash_file_extension }}"
+          - "Hash verification is REQUIRED for EPLD uploads"
+          - "Create the hash file with: sha512sum {{ target_epld_firmware }} > {{ target_epld_firmware }}.{{ hash_file_extension }}"
+
+    - name: Read EPLD SHA512 hash from file
+      ansible.builtin.slurp:
+        src: "{{ firmware_base_path }}/{{ target_epld_firmware }}.{{ hash_file_extension }}"
+      register: epld_hash_content
+      delegate_to: localhost
+
+    - name: Extract and validate EPLD SHA512 hash value
+      ansible.builtin.set_fact:
+        epld_expected_hash: "{{ (epld_hash_content.content | b64decode).split()[0] | trim }}"
+
+    - name: Verify EPLD SHA512 hash format is valid
+      ansible.builtin.assert:
+        that:
+          - epld_expected_hash | length == 128
+          - epld_expected_hash is match('^[a-f0-9]{128}$')
+        fail_msg:
+          - "Invalid SHA512 hash format in {{ target_epld_firmware }}.{{ hash_file_extension }}"
+          - "Hash value: {{ epld_expected_hash }}"
+          - "Expected: 128 hexadecimal characters"
+
+    - name: Calculate SHA512 hash of EPLD file
+      ansible.builtin.stat:
+        path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
+        get_checksum: true
+        checksum_algorithm: sha512
+      register: epld_file_hash
+      delegate_to: localhost
+
+    - name: Verify EPLD SHA512 hash matches expected value
+      ansible.builtin.assert:
+        that:
+          - epld_file_hash.stat.checksum == epld_expected_hash
+        fail_msg:
+          - "EPLD SHA512 hash verification FAILED!"
+          - "File: {{ target_epld_firmware }}"
+          - "Expected: {{ epld_expected_hash }}"
+          - "Calculated: {{ epld_file_hash.stat.checksum }}"
+          - "The EPLD file may be corrupted or the hash file is incorrect"
+        success_msg: "SHA512 hash verification passed for {{ target_epld_firmware }}"
+
+    - name: Set EPLD hash verification results
+      ansible.builtin.set_fact:
+        epld_hash_verification_passed: true
+        epld_calculated_hash: "{{ epld_file_hash.stat.checksum }}"
+        epld_expected_hash_value: "{{ epld_expected_hash }}"

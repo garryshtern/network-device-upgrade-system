@@ -4,6 +4,8 @@
 - name: Test Network Validation Playbook
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../../shared-test-vars.yml
   vars:
     # Test configuration
     test_environment: true
@@ -16,7 +18,6 @@
 
     # Mock device configuration
     ansible_network_os: "cisco.nxos.nxos"
-    device_platform: "cisco_nxos"
 
     # Test validation parameters
     validation_results_path: "/tmp/network-validation-test"
@@ -93,7 +94,7 @@
       ansible.builtin.set_fact:
         validation_state:
           device_name: "{{ inventory_hostname }}"
-          platform: "{{ ansible_network_os }}"
+          platform: nxos
           validation_timestamp: >-
             {{ ansible_date_time.epoch | default('1695340800') }}
           validation_types: "{{ validation_types }}"

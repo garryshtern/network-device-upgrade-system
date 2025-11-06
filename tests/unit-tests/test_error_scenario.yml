@@ -1,6 +1,7 @@
 ---
 # Error scenario test task file
 # Tests individual error handling scenarios
+# Note: This is an included task file, shared-test-vars loaded by parent playbook
 
 - name: "Set variables for: {{ error_test.name }}"
   set_fact:
@@ -23,7 +24,7 @@
     - name: "Validate platform type"
       assert:
         that:
-          - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear', 'metamako_mos']
+          - platform_type in ['cisco_nxos', 'cisco_iosxe', 'fortios', 'opengear']
         fail_msg: "Invalid platform type: {{ platform_type }}"
       when: error_test.error_type != 'invalid_platform'
 

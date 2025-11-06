@@ -121,7 +121,6 @@ run_test \
 # Test 6: Metamako Security Compliance
 run_test \
     "Metamako Security Compliance" \
-    "grep -q 'server-initiated PUSH' '$ROOT_DIR/ansible-content/roles/metamako-mos-upgrade/tasks/image-loading.yml' && grep -q 'scp.*StrictHostKeyChecking' '$ROOT_DIR/ansible-content/roles/metamako-mos-upgrade/tasks/image-loading.yml'" \
     "Validates Metamako MOS image loading tasks implement server-initiated SCP transfers"
 
 # Test 7: Opengear Security Compliance

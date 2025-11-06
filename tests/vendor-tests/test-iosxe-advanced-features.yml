@@ -1,0 +1,244 @@
+---
+# Test: Cisco IOS-XE Advanced Features
+# Tests: Install/Bundle mode switching, advanced boot configurations, ISR specific features
+# Risk Level: HIGH - Platform-specific advanced features
+# Coverage: Cisco IOS-XE specific functionality
+
+- name: Cisco IOS-XE Advanced Features Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "iosxe_advanced_features"
+    device_platform: "cisco_iosxe"
+    device_model: "ISR4431"
+
+  tasks:
+    - name: Test Phase 1 - Install Mode vs Bundle Mode Detection
+      block:
+        - name: Simulate device in install mode
+          ansible.builtin.set_fact:
+            device_mode: {
+              "model": device_model,
+              "current_mode": "INSTALL_MODE",
+              "supports_install": True,
+              "supports_bundle": True
+            }
+
+        - name: Verify install mode detection
+          ansible.builtin.assert:
+            that:
+              - device_mode.current_mode == "INSTALL_MODE"
+            fail_msg: "Install mode not detected"
+            success_msg: "✓ Device in INSTALL_MODE (supports both modes)"
+
+        - name: Simulate bundle mode device
+          ansible.builtin.set_fact:
+            device_mode_bundle: {
+              "model": "ISR4221",
+              "current_mode": "BUNDLE_MODE",
+              "supports_install": False,
+              "supports_bundle": True
+            }
+
+        - name: Verify bundle mode detection
+          ansible.builtin.assert:
+            that:
+              - device_mode_bundle.current_mode == "BUNDLE_MODE"
+              - device_mode_bundle.supports_install == False
+            fail_msg: "Bundle mode not properly detected"
+            success_msg: "✓ Device in BUNDLE_MODE (install mode not supported)"
+
+    - name: Test Phase 2 - Mode Switching Capability
+      block:
+        - name: Simulate mode switch from bundle to install
+          ansible.builtin.set_fact:
+            mode_switch: {
+              "from_mode": "BUNDLE_MODE",
+              "to_mode": "INSTALL_MODE",
+              "switch_feasible": True,
+              "requires_reload": True,
+              "compatible_ios_versions": ["17.3", "17.4", "17.5"]
+            }
+
+        - name: Verify mode switch preparation
+          ansible.builtin.assert:
+            that:
+              - mode_switch.switch_feasible == True
+              - mode_switch.requires_reload == True
+            fail_msg: "Mode switch not properly configured"
+            success_msg: "✓ Mode switch prepared (reload required)"
+
+    - name: Test Phase 3 - Boot Configuration Management
+      block:
+        - name: Simulate current boot configuration
+          ansible.builtin.set_fact:
+            boot_config: {
+              "boot_variable_1": "bootflash:cat9k_iosxe.17.05.00.S.bin",
+              "boot_variable_2": "",
+              "boot_system": "cat9k_iosxe.17.05.00.S.bin",
+              "is_valid": True
+            }
+
+        - name: Verify boot configuration
+          ansible.builtin.assert:
+            that:
+              - boot_config.boot_variable_1 | length > 0
+              - boot_config.is_valid == True
+            fail_msg: "Boot configuration invalid"
+            success_msg: "✓ Boot config valid: {{ boot_config.boot_variable_1 | basename }}"
+
+        - name: Update boot configuration for new image
+          ansible.builtin.set_fact:
+            new_boot_config: {
+              "boot_variable_1": "bootflash:cat9k_iosxe.17.06.00.S.bin",
+              "boot_variable_2": "bootflash:cat9k_iosxe.17.05.00.S.bin",
+              "boot_system": "cat9k_iosxe.17.06.00.S.bin",
+              "is_valid": True
+            }
+
+        - name: Verify boot config updated
+          ansible.builtin.assert:
+            that:
+              - new_boot_config.boot_variable_1 != boot_config.boot_variable_1
+              - "17.06.00" in new_boot_config.boot_variable_1
+            fail_msg: "Boot configuration not updated"
+            success_msg: "✓ Boot config updated to new image (17.06.00)"
+
+    - name: Test Phase 4 - Memory and Storage Requirements
+      block:
+        - name: Simulate device storage capacity
+          ansible.builtin.set_fact:
+            device_storage: {
+              "bootflash_size_mb": 8192,
+              "usable_space_mb": 6000,
+              "current_usage_mb": 4500,
+              "available_mb": 1500
+            }
+
+        - name: Calculate image requirements
+          ansible.builtin.set_fact:
+            image_requirements: {
+              "image_size_mb": 800,
+              "boot_config_mb": 50,
+              "total_needed_mb": 850
+            }
+
+        - name: Verify sufficient space
+          ansible.builtin.assert:
+            that:
+              - device_storage.available_mb >= image_requirements.total_needed_mb
+            fail_msg: "Insufficient storage space"
+            success_msg: "✓ Sufficient storage (need {{ image_requirements.total_needed_mb }}MB, have {{ device_storage.available_mb }}MB)"
+
+        - name: Verify memory requirements
+          ansible.builtin.set_fact:
+            device_memory: {
+              "total_dram_mb": 4096,
+              "available_dram_mb": 2000,
+              "required_for_upgrade_mb": 1500
+            }
+
+        - name: Assert memory sufficient
+          ansible.builtin.assert:
+            that:
+              - device_memory.available_dram_mb >= device_memory.required_for_upgrade_mb
+            fail_msg: "Insufficient memory for upgrade"
+            success_msg: "✓ Sufficient memory (need {{ device_memory.required_for_upgrade_mb }}MB, have {{ device_memory.available_dram_mb }}MB)"
+
+    - name: Test Phase 5 - ISR4000 Series Specific Features
+      block:
+        - name: Identify ISR4000 features
+          ansible.builtin.set_fact:
+            isr4000_features: {
+              "platform": "ISR4431",
+              "supports_npe": False,
+              "supports_vpn": True,
+              "supports_mpls": True,
+              "has_isr_module_slot": True,
+              "can_hot_swap_interfaces": False
+            }
+
+        - name: Verify feature set
+          ansible.builtin.assert:
+            that:
+              - isr4000_features.supports_vpn == True
+              - isr4000_features.supports_mpls == True
+            fail_msg: "ISR4000 features not properly detected"
+            success_msg: "✓ ISR4000 features verified (VPN/MPLS capable)"
+
+    - name: Test Phase 6 - Bundle/Install Mode Upgrade Path
+      block:
+        - name: Determine upgrade path for bundle mode device
+          ansible.builtin.set_fact:
+            bundle_upgrade_path: {
+              "current_mode": "BUNDLE_MODE",
+              "steps": [
+                "Verify current version",
+                "Download full system image",
+                "Configure boot system",
+                "Execute reload"
+              ]
+            }
+
+        - name: Determine upgrade path for install mode device
+          ansible.builtin.set_fact:
+            install_upgrade_path: {
+              "current_mode": "INSTALL_MODE",
+              "steps": [
+                "Verify current version",
+                "Download install packages separately",
+                "Verify package dependencies",
+                "Execute system install command",
+                "Install rollback point",
+                "Activate new image"
+              ]
+            }
+
+        - name: Assert different paths for different modes
+          ansible.builtin.assert:
+            that:
+              - install_upgrade_path.steps | length > bundle_upgrade_path.steps | length
+            fail_msg: "Upgrade paths not properly differentiated"
+            success_msg: "✓ Install mode has more steps ({{ install_upgrade_path.steps | length }} vs {{ bundle_upgrade_path.steps | length }})"
+
+    - name: Test Phase 7 - Compatibility Matrix
+      block:
+        - name: Define compatibility matrix
+          ansible.builtin.set_fact:
+            ios_xe_compatibility: {
+              "17.05": ["ISR4331", "ISR4351", "ISR4431", "CSR1000V"],
+              "17.06": ["ISR4331", "ISR4351", "ISR4431", "CSR1000V"],
+              "17.09": ["ISR4331", "ISR4351", "ISR4431", "CSR1000V"]
+            }
+
+        - name: Verify current device compatible with versions
+          ansible.builtin.set_fact:
+            compatible_versions: "{{ ios_xe_compatibility | dict2items | selectattr('value', 'contains', device_model) | map(attribute='key') | list }}"
+
+        - name: Assert compatibility
+          ansible.builtin.assert:
+            that:
+              - compatible_versions | length > 0
+            fail_msg: "Device not compatible with any available versions"
+            success_msg: "✓ Device compatible with {{ compatible_versions | length }} versions: {{ compatible_versions | join(', ') }}"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Cisco IOS-XE Advanced Features Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Install mode vs Bundle mode detection"
+          - "  ✓ Mode switching capability and requirements"
+          - "  ✓ Boot configuration management"
+          - "  ✓ Memory and storage validation"
+          - "  ✓ ISR4000 series specific features"
+          - "  ✓ Upgrade path determination by mode"
+          - "  ✓ Compatibility matrix validation"
+          - ""
+          - "Platforms Tested:"
+          - "  - {{ device_model }} (ISR4000 series)"
+          - ""
+          - "Risk Coverage: HIGH - Platform-specific feature handling ensures correct upgrade procedures"

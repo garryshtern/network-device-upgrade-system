@@ -1,13 +1,21 @@
 ---
+# DEPRECATED: This playbook is deprecated and will be removed in a future version.
+#
+# Please use main-upgrade-workflow.yml with tags instead:
+#   ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step4 \
+#     --extra-vars "target_hosts=mydevice target_firmware=firmware.bin max_concurrent=5"
+#
+# This provides the same functionality with automatic dependency resolution.
+#
 # Image Loading Playbook
 # Downloads and stages firmware images on network devices
 # Business hours safe - does not disrupt operations
 
 - name: Firmware Image Loading
-  hosts: "{{ target_hosts | default('all') }}"
+  hosts: "{{ target_hosts }}"
   gather_facts: false
   vars:
-    firmware_source_path: "{{ firmware_base_path }}/{{ ansible_network_os }}"
+    firmware_source_path: "{{ firmware_base_path }}"
     device_storage_path: "/var/lib/firmware"
     integrity_check_required: true
     cleanup_old_images: true
@@ -19,75 +27,71 @@
       delegate_to: localhost
     - name: Fail if firmware file not found
       ansible.builtin.fail:
-        msg: >-
-          Firmware file not found:
-          {{ firmware_source_path }}/{{ firmware_version }}
+        msg:
+          - "Firmware file not found:"
+          - "{{ firmware_source_path }}/{{ firmware_version }}"
       when: not firmware_file.stat.exists
-
-    - name: Check device storage capacity
-      ansible.builtin.include_tasks:
-        ../roles/space-management/tasks/space-check.yml
-      vars:
-        required_space_gb: "{{ firmware_size_gb | default(2) }}"
 
     - name: Platform-specific image loading
       block:
-        # Cisco NX-OS Image Loading
-        - name: Load Cisco NX-OS image
-          ansible.builtin.include_role:
-            name: cisco-nxos-upgrade
-            tasks_from: image-loading
-          when: ansible_network_os == 'cisco.nxos.nxos'
+        - name: NX-OS Platform Block
+          when: platform == 'nxos'
+          block:
+            - name: Load Cisco NX-OS image
+              ansible.builtin.include_role:
+                name: cisco-nxos-upgrade
+                tasks_from: image-loading
 
-        # Cisco IOS-XE Image Loading
-        - name: Load Cisco IOS-XE image
-          ansible.builtin.include_role:
-            name: cisco-iosxe-upgrade
-            tasks_from: image-loading
-          when: ansible_network_os == 'cisco.ios.ios'
+        - name: IOS-XE Platform Block
+          when: platform == 'ios'
+          block:
+            - name: Load Cisco IOS-XE image
+              ansible.builtin.include_role:
+                name: cisco-iosxe-upgrade
+                tasks_from: image-loading
 
-        # Metamako MOS Image Loading
-        - name: Load Metamako MOS image
-          ansible.builtin.include_role:
-            name: metamako-mos-upgrade
-            tasks_from: image-loading
-          when: ansible_network_os == 'metamako.mos'
+        - name: Opengear Platform Block
+          when: platform == 'opengear'
+          block:
+            - name: Load Opengear image
+              ansible.builtin.include_role:
+                name: opengear-upgrade
+                tasks_from: image-loading
 
-        # Opengear Image Loading
-        - name: Load Opengear image
-          ansible.builtin.include_role:
-            name: opengear-upgrade
-            tasks_from: image-loading
-          when: ansible_network_os == 'opengear'
-
-        # FortiOS Image Loading
-        - name: Load FortiOS image
-          ansible.builtin.include_role:
-            name: fortios-upgrade
-            tasks_from: image-loading
-          when: ansible_network_os == 'fortinet.fortios.fortios'
+        - name: FortiOS Platform Block
+          when: platform == 'fortios'
+          block:
+            - name: Load FortiOS image
+              ansible.builtin.include_role:
+                name: fortios-upgrade
+                tasks_from: image-loading
 
     - name: Verify image integrity
-      ansible.builtin.include_tasks:
-        ../roles/image-validation/tasks/hash-verification.yml
+      ansible.builtin.include_role:
+        name: image-validation
+        tasks_from: hash-verification
 
     - name: Record image loading completion
-      ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: metrics-export
       vars:
         metric_type: "image_loading"
         metric_data:
           device_id: "{{ inventory_hostname }}"
           firmware_version: "{{ firmware_version }}"
-          platform: "{{ ansible_network_os }}"
+          platform: "{{ platform }}"
           status: "success"
-          timestamp: "{{ ansible_date_time.iso8601 }}"
+          timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+      when:
+        - export_metrics | bool
 
     - name: Display loading results
       ansible.builtin.debug:
         msg:
           - "=== Image Loading Complete ==="
           - "Device: {{ inventory_hostname }}"
-          - "Platform: {{ ansible_network_os }}"
+          - "Platform: {{ platform }}"
           - "Firmware: {{ firmware_version }}"
           - "Status: LOADED"
           - "=============================="

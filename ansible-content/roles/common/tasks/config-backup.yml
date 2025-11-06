@@ -5,57 +5,58 @@
 
 - name: Set backup variables
   ansible.builtin.set_fact:
-    backup_timestamp: >-
-      {{ ansible_date_time.iso8601 if ansible_date_time is defined
-         else lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}
-    backup_base_path: "/var/lib/network-upgrade/backups"
-    backup_type: "{{ backup_type | default('pre_upgrade') }}"
-    include_startup_config: "{{ include_startup_config | default(true) }}"
+    backup_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+    backup_type: "{{ backup_type }}"
+    include_startup_config: "{{ include_startup_config }}"
     include_running_config: true
 
-- name: Create backup directory structure
+- name: Create backup directory for this device
   ansible.builtin.file:
-    path: >-
-      {{ backup_base_path }}/{{ inventory_hostname }}/
-      {{ backup_timestamp | regex_replace(':', '-') }}
+    path: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}"
     state: directory
     mode: '0755'
   delegate_to: localhost
 
 - name: Platform-specific configuration backup
   block:
-    # For test purposes, we'll create a simple backup placeholder
-    # In production, this would include platform-specific backup tasks
-    - name: Create backup placeholder for testing
-      ansible.builtin.copy:
-        content: |
-          # Configuration backup placeholder for {{ ansible_network_os }}
-          # Device: {{ inventory_hostname }}
-          # Timestamp: {{ backup_timestamp }}
-          # Platform: {{ ansible_network_os }}
-        dest: >-
-          {{ backup_base_path }}/{{ inventory_hostname }}/
-          {{ backup_timestamp | regex_replace(':', '-') }}/config_backup.txt
-        mode: '0644'
-      delegate_to: localhost
+    - name: NX-OS Platform Block
+      when: platform == 'nxos'
+      block:
+        - name: Gather NX-OS configuration facts
+          cisco.nxos.nxos_facts:
+            gather_subset:
+              - config
+          register: nxos_config_facts
 
-- name: Record backup completion
-  ansible.builtin.include_tasks: ../roles/common/tasks/metrics-export.yml
-  vars:
-    metric_type: "config_backup"
-    metric_data:
-      device_id: "{{ inventory_hostname }}"
-      backup_timestamp: "{{ backup_timestamp }}"
-      platform: "{{ ansible_network_os }}"
-      backup_type: "{{ backup_type }}"
-      status: "success"
+        - name: Save NX-OS config backup to file
+          ansible.builtin.copy:
+            content: "{{ ansible_net_config }}"
+            dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
+            mode: '0644'
+          delegate_to: localhost
+
+    - name: IOS-XE Platform Block
+      when: platform == 'ios'
+      block:
+        - name: Gather IOS-XE configuration facts
+          cisco.ios.ios_facts:
+            gather_subset:
+              - config
+          register: ios_config_facts
+
+        - name: Save IOS-XE config backup to file
+          ansible.builtin.copy:
+            content: "{{ ansible_net_config }}"
+            dest: "{{ backup_base_path }}/{{ inventory_hostname }}/{{ backup_timestamp | regex_replace(':', '-') }}/running-config.txt"
+            mode: '0644'
+          delegate_to: localhost
 
 - name: Display backup results
   ansible.builtin.debug:
     msg:
       - "=== Configuration Backup Complete ==="
       - "Device: {{ inventory_hostname }}"
-      - "Platform: {{ ansible_network_os }}"
+      - "Platform: {{ platform }}"
       - "Backup Type: {{ backup_type }}"
       - "Timestamp: {{ backup_timestamp }}"
       - "Status: SUCCESS"

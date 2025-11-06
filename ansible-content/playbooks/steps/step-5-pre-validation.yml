@@ -1,0 +1,73 @@
+---
+# STEP 5: Config Backup and Pre-Upgrade Validation
+# 1. Backup current running configuration
+# 2. Gather network resources and validate connectivity/state
+# Comprehensive validation: BGP, interfaces, routing, etc.
+# MUST PASS or workflow STOPS
+# Dependencies: STEP 1 (managed by main workflow tags)
+# NOTE: Baseline file paths are defined in main workflow pre_tasks
+
+- name: Display STEP 5 entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "STEP 5: CONFIG BACKUP AND PRE-UPGRADE VALIDATION"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "Backing up configuration and gathering baseline..."
+      - "=========================================="
+
+- name: Backup current configuration before upgrade
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: config-backup
+
+- name: Gather comprehensive network resources for validation
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: network-resources-gathering
+  vars:
+    validation_phase: "pre_upgrade"
+
+- name: Display network resources gathering completion
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "STEP 5: Validating baseline file integrity"
+      - "=========================================="
+
+- name: Validate pre-upgrade baseline file integrity
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: validate-baseline-integrity
+  vars:
+    baseline_file_path: "{{ baseline_file_pre_upgrade }}"
+    baseline_type: "pre_upgrade"
+    fail_on_corruption: true
+  when: baseline_file_pre_upgrade is defined
+
+- name: Display validation completion
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "STEP 5 COMPLETE: CONFIG BACKED UP AND BASELINE VALIDATED"
+      - "=========================================="
+      - "Baseline data ready for post-upgrade comparison"
+      - "Baseline Checksum: {{ baseline_checksum }}"
+      - "Baseline Size: {{ baseline_size }} bytes"
+      - "=========================================="
+  when: baseline_valid | bool
+
+- name: Export step 5 metrics
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: metrics-export
+  vars:
+    metric_type: "pre_upgrade_baseline"
+    metric_data:
+      baseline_collected: "true"
+      baseline_valid: "{{ baseline_valid | bool }}"
+      baseline_checksum: "{{ baseline_checksum }}"
+      device: "{{ inventory_hostname }}"
+  when: export_metrics | bool

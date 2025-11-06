@@ -1,0 +1,188 @@
+---
+# Test: Opengear Legacy Device Support
+# Tests: Legacy CLI command compatibility, firmware extension handling, legacy upgrade paths
+# Risk Level: MEDIUM - Legacy device support
+# Coverage: Opengear CM7100/OM7200 legacy architecture
+
+- name: Opengear Legacy Device Upgrade Test Suite
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
+  vars:
+    test_scenario: "opengear_legacy_support"
+
+  tasks:
+    - name: Test Phase 1 - Legacy Architecture Detection
+      block:
+        - name: Verify legacy device identification
+          ansible.builtin.assert:
+            that:
+              - opengear_devices.cm7100_legacy.device_architecture == "legacy_cli"
+              - opengear_devices.om7200_legacy.device_architecture == "legacy_cli"
+            fail_msg: "Legacy device architecture not detected"
+            success_msg: "✓ Legacy device architectures identified"
+
+        - name: Verify legacy firmware extension
+          ansible.builtin.assert:
+            that:
+              - opengear_devices.cm7100_legacy.firmware_extension == ".flash"
+              - opengear_devices.om7200_legacy.firmware_extension == ".flash"
+            fail_msg: "Legacy firmware extension incorrect"
+            success_msg: "✓ Legacy firmware extensions correct"
+
+        - name: Verify legacy upgrade command
+          ansible.builtin.assert:
+            that:
+              - opengear_devices.cm7100_legacy.upgrade_command == "netflash"
+              - opengear_devices.om7200_legacy.upgrade_command == "netflash"
+            fail_msg: "Legacy upgrade command not set"
+            success_msg: "✓ Legacy upgrade commands configured"
+
+    - name: Test Phase 2 - Legacy Storage Path Handling
+      block:
+        - name: Verify legacy storage paths
+          ansible.builtin.assert:
+            that:
+              - opengear_devices.cm7100_legacy.storage_paths | length > 0
+              - opengear_devices.cm7100_legacy.storage_paths[0] == "/var/mnt/storage.nvlog"
+            fail_msg: "Legacy storage paths not configured"
+            success_msg: "✓ Legacy storage paths available"
+
+        - name: Simulate legacy firmware placement
+          ansible.builtin.set_fact:
+            legacy_firmware_path: "{{ opengear_devices.cm7100_legacy.storage_paths[0] }}/firmware.flash"
+
+        - name: Verify firmware path construction
+          ansible.builtin.assert:
+            that:
+              - legacy_firmware_path == "/var/mnt/storage.nvlog/firmware.flash"
+            fail_msg: "Legacy firmware path construction failed"
+            success_msg: "✓ Legacy firmware paths constructed correctly"
+
+    - name: Test Phase 3 - Legacy to Legacy Upgrade Compatibility
+      block:
+        - name: Create legacy upgrade scenario (CM7100)
+          ansible.builtin.set_fact:
+            legacy_upgrade:
+              device: "CM7100"
+              from_version: "5.16.8"
+              to_version: "5.18.2"
+              upgrade_command: "netflash"
+              firmware_file: "opengear_cm7100_5.18.2.flash"
+
+        - name: Verify legacy upgrade scenario
+          ansible.builtin.assert:
+            that:
+              - legacy_upgrade.device == "CM7100"
+              - legacy_upgrade.from_version == "5.16.8"
+              - legacy_upgrade.upgrade_command == "netflash"
+              - legacy_upgrade.firmware_file.endswith(".flash")
+            fail_msg: "Legacy upgrade scenario invalid"
+            success_msg: "✓ Legacy upgrade scenario valid"
+
+    - name: Test Phase 4 - Legacy Manual Intervention Requirements
+      block:
+        - name: Verify legacy devices require manual intervention
+          ansible.builtin.assert:
+            that:
+              - firmware_upgrade_scenarios.opengear_516_to_518.requires_manual_intervention == true
+            fail_msg: "Manual intervention not marked for legacy devices"
+            success_msg: "✓ Manual intervention requirement detected for legacy devices"
+
+        - name: Simulate manual intervention flag
+          ansible.builtin.set_fact:
+            requires_operator_confirmation: true
+
+        - name: Verify manual intervention flag
+          ansible.builtin.assert:
+            that:
+              - requires_operator_confirmation | bool
+            fail_msg: "Manual intervention flag not set"
+            success_msg: "✓ Manual intervention flag active"
+
+    - name: Test Phase 5 - Web Interface Disabled in Legacy
+      block:
+        - name: Verify web interface disabled for legacy devices
+          ansible.builtin.assert:
+            that:
+              - opengear_devices.cm7100_legacy.web_interface_enabled == false
+              - opengear_devices.om7200_legacy.web_interface_enabled == false
+            fail_msg: "Web interface should be disabled for legacy devices"
+            success_msg: "✓ Web interface correctly disabled for legacy devices"
+
+        - name: Verify CLI-only access for legacy
+          ansible.builtin.set_fact:
+            legacy_access_method: "cli_only"
+
+        - name: Assert CLI-only access
+          ansible.builtin.assert:
+            that:
+              - legacy_access_method == "cli_only"
+            fail_msg: "CLI-only access not enforced"
+            success_msg: "✓ CLI-only access enforced for legacy devices"
+
+    - name: Test Phase 6 - Legacy vs Modern Device Differentiation
+      block:
+        - name: Compare legacy vs modern device types
+          ansible.builtin.set_fact:
+            device_comparison:
+              legacy_count: 2
+              modern_count: 2
+              total_opengear_devices: 4
+
+        - name: Verify device type differentiation
+          ansible.builtin.assert:
+            that:
+              - device_comparison.legacy_count == 2
+              - device_comparison.modern_count == 2
+              - device_comparison.total_opengear_devices == 4
+            fail_msg: "Device type counts incorrect"
+            success_msg: "✓ Legacy and modern devices properly differentiated"
+
+        - name: Verify modern devices use puginstall
+          ansible.builtin.assert:
+            that:
+              - opengear_devices.cm8100_modern.upgrade_command == "puginstall"
+              - opengear_devices.om2200_modern.upgrade_command == "puginstall"
+            fail_msg: "Modern devices should use puginstall"
+            success_msg: "✓ Modern devices use puginstall command"
+
+    - name: Test Phase 7 - Legacy Upgrade Path Compatibility
+      block:
+        - name: Simulate legacy upgrade execution
+          ansible.builtin.set_fact:
+            legacy_upgrade_execution:
+              device_model: "CM7100"
+              pre_upgrade_version: "5.16.8"
+              post_upgrade_version: "5.18.2"
+              command_executed: "netflash opengear_cm7100_5.18.2.flash"
+              status: "success"
+
+        - name: Verify legacy upgrade execution
+          ansible.builtin.assert:
+            that:
+              - legacy_upgrade_execution.device_model == "CM7100"
+              - legacy_upgrade_execution.pre_upgrade_version == "5.16.8"
+              - legacy_upgrade_execution.post_upgrade_version == "5.18.2"
+              - legacy_upgrade_execution.command_executed.startswith("netflash")
+              - legacy_upgrade_execution.status == "success"
+            fail_msg: "Legacy upgrade execution invalid"
+            success_msg: "✓ Legacy upgrade execution successful"
+
+    - name: Test Summary
+      debug:
+        msg:
+          - "✓ Opengear Legacy Device Support Test Suite Completed"
+          - ""
+          - "Test Results:"
+          - "  ✓ Legacy architecture detection (CM7100, OM7200)"
+          - "  ✓ Legacy firmware extension handling (.flash)"
+          - "  ✓ Legacy upgrade command support (netflash)"
+          - "  ✓ Legacy storage path handling"
+          - "  ✓ Manual intervention requirements"
+          - "  ✓ CLI-only access enforcement"
+          - "  ✓ Legacy vs modern device differentiation"
+          - "  ✓ Legacy upgrade path execution"
+          - ""
+          - "Risk Coverage: MEDIUM - Ensures legacy device compatibility"

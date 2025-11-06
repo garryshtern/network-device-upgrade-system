@@ -5,15 +5,15 @@
 !
 {% if install_mode | default(false) %}
 ! Install Mode Configuration
-boot system {{ target_firmware_version }}
+boot system {{ target_firmware }}
 {% else %}
-! Bundle Mode Configuration  
-boot system bootflash:{{ target_firmware_filename }}
+! Bundle Mode Configuration
+boot system bootflash:{{ target_firmware }}
 {% endif %}
 !
 ! Boot parameters
 boot-start-marker
-boot system switch all {{ target_firmware_version | default(target_firmware_filename) }}
+boot system switch all {{ target_firmware }}
 boot-end-marker
 !
 ! Configuration register

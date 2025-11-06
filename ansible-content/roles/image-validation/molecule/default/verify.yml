@@ -24,15 +24,13 @@
       ansible.builtin.assert:
         that:
           - firmware_hash_algorithm in ['sha256', 'sha512']
-        fail_msg: >-
-          Insecure hash algorithm specified (should be sha256 or sha512)
+        fail_msg: "Insecure hash algorithm specified (should be sha256 or sha512)"
 
     - name: Verify signature verification is enabled for production
       ansible.builtin.assert:
         that:
           - verify_digital_signatures | bool
-        fail_msg: >-
-          Digital signature verification should be enabled for security
+        fail_msg: "Digital signature verification should be enabled for security"
 
     # Test compatibility matrix validation
     - name: Verify compatibility matrix is defined
@@ -61,9 +59,7 @@
           - item.platform is defined
           - item.expected_hash is defined
           - item.signature_valid is defined
-        fail_msg: >-
-          Test firmware image {{ item.name | default('unknown') }} missing
-          required fields
+        fail_msg: "Test firmware image {{ item.name }} missing required fields"
       loop: "{{ test_firmware_images }}"
 
     # Security-specific validations
@@ -133,28 +129,26 @@
     # Success validation message
     - name: Display verification success
       ansible.builtin.debug:
-        msg: |
-          ✅ Image Validation Role Verification PASSED
-
-          Security Features Validated:
-          - Hash algorithm security: ✅ ({{ firmware_hash_algorithm }})
-          - Digital signature verification: ✅
-          - File permission validation: ✅
-          - Multi-vendor support: ✅ ({{ supported_vendors | join(', ') }})
-          - Compatibility matrix: ✅
-
-          Test Configuration Validated:
-          - >-
-            Test firmware images: ✅
-            ({{ test_firmware_images | length }} configured)
-          - Security scan settings: ✅
-          - Trust anchor validation: ✅
-
-          Task Structure Validated:
-          - Required task files: ✅
-          - Role configuration: ✅
-
-          Status: Ready for security-critical firmware validation
+        msg:
+          - "✅ Image Validation Role Verification PASSED"
+          - ""
+          - "Security Features Validated:"
+          - "- Hash algorithm security: ✅ ({{ firmware_hash_algorithm }})"
+          - "- Digital signature verification: ✅"
+          - "- File permission validation: ✅"
+          - "- Multi-vendor support: ✅ ({{ supported_vendors | join(', ') }})"
+          - "- Compatibility matrix: ✅"
+          - ""
+          - "Test Configuration Validated:"
+          - "- Test firmware images: ✅ ({{ test_firmware_images | length }} configured)"
+          - "- Security scan settings: ✅"
+          - "- Trust anchor validation: ✅"
+          - ""
+          - "Task Structure Validated:"
+          - "- Required task files: ✅"
+          - "- Role configuration: ✅"
+          - ""
+          - "Status: Ready for security-critical firmware validation"
 
     # Test specific security scenarios
     - name: Test security scenario validation

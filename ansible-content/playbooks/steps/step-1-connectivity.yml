@@ -1,0 +1,75 @@
+---
+# STEP 1: Basic Connectivity Check
+# Gather basic facts to verify connectivity and get device info
+# MUST PASS or workflow STOPS
+# Dependencies: None (can run standalone)
+
+- name: Gather Ansible facts (required for timestamps and system info)
+  ansible.builtin.setup:
+
+- name: Gather basic device facts (NX-OS)
+  cisco.nxos.nxos_facts:
+    gather_subset:
+      - hardware
+      - min
+  when: platform == 'nxos'
+
+- name: Gather basic device facts (IOS-XE)
+  cisco.ios.ios_facts:
+    gather_subset:
+      - hardware
+      - min
+  when: platform == 'ios'
+
+- name: Test basic connectivity (other platforms)
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ connectivity_timeout }}"
+  when: platform not in ['nxos', 'ios']
+
+- name: Verify facts gathered successfully (Cisco platforms)
+  ansible.builtin.assert:
+    that:
+      - ansible_net_version is defined
+      - ansible_net_hostname is defined
+      - ansible_net_model is defined
+      - ansible_net_image is defined
+    fail_msg: "Failed to gather basic device facts. Check connectivity and authentication."
+  when: platform in ['nxos', 'ios']
+
+- name: Set current firmware from facts
+  ansible.builtin.set_fact:
+    current_firmware_version: "{{ ansible_net_version }}"
+    current_firmware_image: "{{ ansible_net_image }}"
+    current_firmware_image_filename: "{{ ansible_net_image | regex_replace('^.*/', '') }}"
+  when: platform in ['nxos', 'ios']
+
+- name: Connectivity confirmed
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "CONNECTIVITY ESTABLISHED"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "Hostname: {{ ansible_net_hostname }}"
+      - "Current Version: {{ current_firmware_version }}"
+      - "Current Image: {{ current_firmware_image }}"
+      - "Image Filename: {{ current_firmware_image_filename }}"
+      - "Model: {{ ansible_net_model }}"
+      - "Status: Connected successfully"
+      - "Note: Comprehensive facts will be gathered after image staging"
+      - "=========================================="
+  when: platform in ['nxos', 'ios']
+
+- name: Connectivity confirmed (other platforms)
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "CONNECTIVITY ESTABLISHED"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "Status: Connected successfully"
+      - "Note: Comprehensive facts will be gathered after image staging"
+      - "=========================================="
+  when: platform not in ['nxos', 'ios']

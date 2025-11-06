@@ -1,0 +1,10 @@
+---
+# STEP 4: Image Upload
+# Server-initiated PUSH only (no device-initiated pulls)
+# MUST PASS or workflow STOPS
+# Dependencies: STEP 1 (managed by main workflow tags)
+
+- name: Ensure firmware image on device (check bootflash + upload if needed)
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: image-loading

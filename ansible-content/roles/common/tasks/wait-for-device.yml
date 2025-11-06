@@ -1,0 +1,57 @@
+---
+# Wait for Device Connection
+# Reusable task for waiting for device connectivity
+#
+# Required variables:
+#   wait_timeout: Maximum time to wait in seconds
+#
+# Optional variables (defaults in roles/common/defaults/main.yml):
+#   wait_delay: Seconds to wait before starting checks (default: 5)
+#   wait_sleep: Seconds between retries (default: 5)
+#   connection_check_failed_when: Override failure condition (default: not set)
+#   connection_check_when: Additional conditional (default: true)
+
+- name: Wait for device connection with early failure detection
+  block:
+    - name: Calculate retry count from timeout
+      set_fact:
+        calculated_retries: "{{ ((wait_timeout | int) / 10) | int }}"
+
+    - name: Test device connection with short timeout to detect auth failures quickly
+      ansible.builtin.wait_for_connection:
+        timeout: 10
+        delay: 0
+        sleep: 2
+      register: connection_wait_result
+      failed_when: false
+      until: connection_wait_result is succeeded
+      retries: "{{ calculated_retries }}"
+      delay: 0
+
+    - name: Fail immediately on authentication errors
+      ansible.builtin.fail:
+        msg: "Authentication failed - check username/password/SSH keys"
+      when:
+        - connection_wait_result.failed
+        - connection_wait_result.msg is defined
+        - "'Permission denied' in connection_wait_result.msg or 'Authentication' in connection_wait_result.msg or 'authentication' in connection_wait_result.msg or 'password' in connection_wait_result.msg"
+
+    - name: Fail if device did not come back online after timeout
+      ansible.builtin.fail:
+        msg:
+          - "Device failed to respond after {{ wait_timeout }}s timeout"
+          - "Device: {{ inventory_hostname }}"
+          - "Last error: {{ connection_wait_result.msg if connection_wait_result.msg is defined else 'Connection timeout - no response' }}"
+          - "Attempted {{ calculated_retries }} connection retries (10s each)"
+          - "Check device connectivity, power status, and network access"
+      when:
+        - connection_wait_result.failed
+        - connection_check_failed_when is not defined
+
+    - name: Check for other connection failures (if not fatal)
+      ansible.builtin.debug:
+        msg: "Connection check failed but continuing: {{ connection_wait_result.msg if connection_wait_result.msg is defined else 'Unknown connection error' }}"
+      when:
+        - connection_wait_result.failed
+        - connection_check_failed_when is defined
+  when: connection_check_when | bool

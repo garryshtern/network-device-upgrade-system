@@ -136,7 +136,6 @@
             cisco.com=trusted
             fortinet.com=trusted
             opengear.com=trusted
-            metamako.com=trusted
 
         - path: /tmp/security-test/tools/hash-validator
           mode: '0755'
@@ -156,7 +155,7 @@
         content: |
           # Known good firmware hashes
           cisco_nxos_10.1.2.bin:sha512:a1b2c3d4e5f6789012345678901234567890abcdef
-          fortios_7.4.1.out:sha512:f9e8d7c6b5a4321098765432109876543210fedcba
+          FGT_VM64_KVM-v7.4.1-build1234-FORTINET.out:sha512:f9e8d7c6b5a4321098765432109876543210fedcba
           iosxe_17.09.04a.bin:sha512:1a2b3c4d5e6f7890abcdef1234567890abcdef12
         dest: /tmp/security-test/checksums/known-good-hashes.db
         mode: '0644'
@@ -192,20 +191,20 @@
 
     - name: Validate security test environment
       ansible.builtin.debug:
-        msg: |
-          Image Validation Security Test Environment Prepared:
-          - Cryptographic libraries: ✅
-          - CA certificates: ✅
-          - Security tools: ✅
-          - Configuration files: ✅
-          - Hash database: ✅
-          - Signature validation: ✅
-
-          Security Features Available:
-          - Certificate chain validation
-          - Digital signature verification
-          - Hash algorithm validation
-          - Vendor trust validation
-          - Timestamp verification
-
-          Ready for security-critical testing
+        msg:
+          - "Image Validation Security Test Environment Prepared:"
+          - "- Cryptographic libraries: ✅"
+          - "- CA certificates: ✅"
+          - "- Security tools: ✅"
+          - "- Configuration files: ✅"
+          - "- Hash database: ✅"
+          - "- Signature validation: ✅"
+          - ""
+          - "Security Features Available:"
+          - "- Certificate chain validation"
+          - "- Digital signature verification"
+          - "- Hash algorithm validation"
+          - "- Vendor trust validation"
+          - "- Timestamp verification"
+          - ""
+          - "Ready for security-critical testing"

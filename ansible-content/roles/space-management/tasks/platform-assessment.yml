@@ -1,0 +1,146 @@
+---
+# Platform-Agnostic Storage Assessment and Cleanup
+# Consolidates logic from platform-specific assessment files
+# Uses platform-specific variables for commands, parsing, and paths
+
+- name: Get initial storage information from device
+  ansible.builtin.include_tasks: get-storage-output.yml
+
+- name: Parse storage information
+  ansible.builtin.include_tasks: parse-storage-output.yml
+
+- name: Display parsed images (debug only)
+  ansible.builtin.debug:
+    msg: "Parsed images: {{ parsed_storage.images | join(', ') if parsed_storage.images | length > 0 else 'None' }}"
+  when: show_debug | bool
+
+- name: Calculate initial storage metrics
+  ansible.builtin.set_fact:
+    storage_info:
+      total_space_gb: "{{ ((parsed_storage.total_bytes | int / 1024 / 1024 / 1024) | round(2)) | float }}"
+      free_space_gb: "{{ ((parsed_storage.free_bytes | int / 1024 / 1024 / 1024) | round(2)) | float }}"
+      images_found: "{{ parsed_storage.images }}"
+      cleanup_candidates: "{{ parsed_storage.images }}"
+
+- name: Check if cleanup is needed
+  ansible.builtin.set_fact:
+    cleanup_needed: "{{ (storage_info.free_space_gb | float) < (minimum_free_space_gb | float) }}"
+
+- name: Storage cleanup block
+  when: cleanup_needed
+  block:
+    - name: Get current running image (platform-specific)
+      when:
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
+      block:
+        - name: NX-OS Platform Block
+          when: platform == 'nxos'
+          block:
+            - name: Get NX-OS running image
+              cisco.nxos.nxos_command:
+                commands:
+                  - show version | include image
+              register: running_image_result
+              changed_when: false
+
+        - name: IOS-XE Platform Block
+          when: platform == 'ios'
+          block:
+            - name: Get IOS-XE running image
+              cisco.ios.ios_command:
+                commands:
+                  - show version | include System image
+              register: running_image_result
+              changed_when: false
+
+        - name: FortiOS/Opengear Platform Block
+          when: platform in ['fortios', 'opengear']
+          block:
+            - name: Skip running image detection for FortiOS and Opengear
+              ansible.builtin.set_fact:
+                running_image_result:
+                  stdout:
+                    - "N/A"
+
+    - name: Simulate running image for check mode or localhost
+      ansible.builtin.set_fact:
+        running_image_result:
+          stdout:
+            - "system image file is: bootflash:///test-image.bin"
+          rc: 0
+      when: ansible_check_mode or inventory_hostname == 'localhost'
+
+    - name: Parse running image filename (platform-specific)
+      ansible.builtin.set_fact:
+        running_image_file: "{{ running_image_parsers[platform] }}"
+      vars:
+        running_image_parsers:
+          nxos: "{{ running_image_result.stdout[0] | regex_search('bootflash:///(.+\\.(bin|img))', '\\1') | first }}"
+          ios: "{{ running_image_result.stdout[0] | regex_search('System image file is \"bootflash:/(.+\\.bin)\"', '\\1') | first }}"
+          fortios: ""
+          opengear: ""
+      when: running_image_result.stdout[0] is defined
+
+    - name: Build list of protected files (running image + target firmware + optional EPLD)
+      ansible.builtin.set_fact:
+        protected_files:
+          - "{{ running_image_file }}"
+          - "{{ target_firmware if (target_firmware is defined and target_firmware) else 'NONE' }}"
+          - "{{ target_epld_firmware if (target_epld_firmware is defined and target_epld_firmware and enable_epld_upgrade | bool) else 'NONE' }}"
+
+    - name: Identify obsolete images for cleanup (excluding protected files)
+      ansible.builtin.set_fact:
+        cleanup_candidates: "{{ parsed_storage.images | difference(protected_files) | reject('equalto', 'NONE') | list }}"
+
+    - name: Remove obsolete image files (platform-specific)
+      when:
+        - not ansible_check_mode
+        - inventory_hostname != 'localhost'
+      block:
+        - name: NX-OS Platform Block
+          when: platform == 'nxos'
+          block:
+            - name: Remove NX-OS obsolete images
+              cisco.nxos.nxos_command:
+                commands:
+                  - "delete bootflash:{{ item }} no-prompt"
+              loop: "{{ cleanup_candidates }}"
+              when:
+                - preserve_current_image
+                - item != running_image_file
+                - cleanup_candidates | length > 0
+              register: cleanup_result
+              failed_when: false
+
+        - name: IOS-XE Platform Block
+          when: platform == 'ios'
+          block:
+            - name: Remove IOS-XE obsolete images
+              cisco.ios.ios_command:
+                commands:
+                  - "delete /force bootflash:/{{ item }}"
+              loop: "{{ cleanup_candidates }}"
+              when:
+                - preserve_current_image
+                - item != running_image_file
+                - cleanup_candidates | length > 0
+              register: cleanup_result
+              failed_when: false
+
+    - name: Log cleanup actions
+      ansible.builtin.debug:
+        msg: "Removed {{ cleanup_result.results | selectattr('changed', 'equalto', true) | list | length }} obsolete image(s)"
+      when: cleanup_result is defined
+
+    - name: Re-assess storage after cleanup
+      ansible.builtin.include_tasks: get-storage-output.yml
+
+    - name: Re-parse storage information after cleanup
+      ansible.builtin.include_tasks: parse-storage-output.yml
+
+    - name: Update final storage info with post-cleanup metrics
+      ansible.builtin.set_fact:
+        storage_info: "{{ storage_info | combine({'free_space_gb': ((parsed_storage.free_bytes | int / 1024 / 1024 / 1024) | round(2) | float)}) }}"
+        storage_cleanup_performed: true
+      when: parsed_storage is defined

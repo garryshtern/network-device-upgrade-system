@@ -1,0 +1,15 @@
+---
+# Common Role - Default Variables
+
+# Wait for device connection parameters
+wait_delay: 5
+wait_sleep: 5
+connection_check_when: true
+
+# Metrics export parameters
+metric_data: {}
+
+# Baseline filename suffixes
+baseline_suffix_pre_upgrade: "_pre_upgrade_baseline.json"
+baseline_suffix_post_upgrade: "_post_upgrade_baseline.json"
+baseline_suffix_comparison: "_post_check_comparison.json"

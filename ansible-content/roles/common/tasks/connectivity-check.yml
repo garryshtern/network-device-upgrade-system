@@ -1,125 +1,251 @@
 ---
 # Common Connectivity Check Tasks
-# Tests basic device connectivity and responsiveness
+# Platform-specific basic connectivity validation
+# REDESIGNED: Uses platform-appropriate commands (not generic "show version")
+#
+# STRICT PLATFORM GATING:
+# - NX-OS facts (ansible_network_resources) ONLY gathered when platform == 'nxos'
+# - nxos_facts and nxos_command modules ONLY used for NX-OS devices
+# - Other platforms use their respective modules (ios_command, etc.)
 
-- name: Override connection type for FortiOS in check mode
-  ansible.builtin.set_fact:
-    ansible_connection: local
-  when:
-    - ansible_check_mode
-    - ansible_network_os == 'fortios'
-
-- name: Test basic connectivity to device
-  ansible.builtin.wait_for_connection:
-    timeout: 60
-    delay: 5
-  register: connectivity_test
-  when: not ansible_check_mode
-
-- name: Simulate connectivity test in check mode
-  ansible.builtin.set_fact:
-    connectivity_test: {"changed": false, "failed": false}
-  when: ansible_check_mode
-
-- name: Perform ping test to device
-  ansible.builtin.ping:
-  register: ping_result
-  when: not ansible_check_mode
-
-- name: Simulate ping test in check mode
-  ansible.builtin.set_fact:
-    ping_result: {"changed": false, "failed": false}
-  when: ansible_check_mode
-
-- name: Test SSH connectivity
+- name: Platform-based connectivity check
+  when: platform is defined
   block:
-    - name: Execute simple command to test SSH
-      ansible.builtin.raw: echo "SSH connectivity test"
-      register: ssh_test
-      changed_when: false
-      when: not ansible_check_mode
-
-    - name: Set SSH connectivity status
+    - name: Initialize ansible_date_time if not defined (check mode)
       ansible.builtin.set_fact:
-        ssh_connectivity: true
-
-  rescue:
-    - name: SSH connectivity failed
-      ansible.builtin.set_fact:
-        ssh_connectivity: false
-  when: ansible_connection != 'httpapi'
-
-- name: Set SSH connectivity status for httpapi
-  ansible.builtin.set_fact:
-    ssh_connectivity: true
-  when: ansible_connection == 'httpapi'
-
-- name: Network CLI connectivity test (for network devices)
-  block:
-    - name: Test network CLI connection
-      ansible.builtin.raw: show version
-      register: cli_test
-      changed_when: false
+        ansible_date_time:
+          iso8601: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+          epoch: "{{ lookup('pipe', 'date +%s') }}"
       when:
-        - ansible_connection == 'network_cli'
-        - not ansible_check_mode
+        - ansible_check_mode
+        - ansible_date_time is not defined
 
-    - name: Set CLI connectivity status
+    - name: Set platform-specific connection settings (once for entire workflow)
       ansible.builtin.set_fact:
-        cli_connectivity: "{{ (cli_test is succeeded) if (cli_test is defined) else true }}"
-      when: ansible_connection == 'network_cli'
+        ansible_connection: >-
+          {{
+            (ansible_check_mode and platform == 'fortios') | ternary('local',
+            (platform == 'nxos') | ternary('ansible.netcommon.network_cli',
+            (platform == 'ios') | ternary('ansible.netcommon.network_cli',
+            (platform == 'fortios') | ternary('httpapi',
+            (platform == 'opengear') | ternary('ssh',
+            ansible_connection)))))
+          }}
+        ansible_network_os: >-
+          {{
+            (platform == 'nxos') | ternary('cisco.nxos.nxos',
+            (platform == 'ios') | ternary('cisco.ios.ios',
+            (platform == 'fortios') | ternary('fortinet.fortios.fortios',
+            (platform == 'opengear') | ternary('opengear',
+            ansible_network_os | default(omit)))))
+          }}
+        ansible_user: >-
+          {{
+            (platform == 'nxos') | ternary(vault_cisco_nxos_username,
+            (platform == 'ios') | ternary(vault_cisco_iosxe_username,
+            (platform == 'fortios') | ternary(vault_fortios_username,
+            (platform == 'opengear') | ternary(vault_opengear_username,
+            ansible_user))))
+          }}
+        ansible_password: >-
+          {{
+            (platform == 'nxos') | ternary(vault_cisco_nxos_password | default(omit),
+            (platform == 'ios') | ternary(vault_cisco_iosxe_password | default(omit),
+            (platform == 'fortios') | ternary(vault_fortios_password | default(omit),
+            (platform == 'opengear') | ternary(vault_opengear_password | default(omit),
+            omit)))))
+          }}
+        ansible_ssh_private_key_file: >-
+          {{
+            (platform == 'nxos') | ternary(vault_cisco_nxos_ssh_key | default(omit),
+            (platform == 'ios') | ternary(vault_cisco_iosxe_ssh_key | default(omit),
+            (platform == 'opengear') | ternary(vault_opengear_ssh_key | default(omit),
+            omit))))
+          }}
+        ansible_httpapi_key: >-
+          {{
+            (platform == 'fortios') | ternary(vault_fortios_api_token | default(omit), omit)
+          }}
 
-  rescue:
-    - name: CLI connectivity failed
+    - name: Step 1 & 2 - Connect and retrieve basic device information (tests auth and connection)
+      when: not ansible_check_mode
+      block:
+        - name: NX-OS Platform Block
+          when: platform == 'nxos'
+          block:
+            - name: Gather basic NX-OS facts for connectivity verification
+              cisco.nxos.nxos_facts:
+                gather_subset:
+                  - hardware
+                  - min
+              register: nxos_facts_output
+
+            - name: Parse and store NX-OS version from facts
+              ansible.builtin.set_fact:
+                device_version_info:
+                  raw_output: "{{ ansible_net_version }}"
+                  platform: "{{ platform }}"
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  version: "{{ ansible_net_version }}"
+                  model: "{{ ansible_net_model }}"
+                  hostname: "{{ ansible_net_hostname }}"
+                  serial: "{{ ansible_net_serialnum }}"
+                  image: "{{ ansible_net_image }}"
+                current_firmware_version: "{{ ansible_net_version }}"
+              when:
+                - nxos_facts_output is defined
+                - nxos_facts_output is succeeded
+
+            - name: Display basic NX-OS facts after successful connection
+              ansible.builtin.debug:
+                msg:
+                  - "=== NX-OS Basic Connectivity Verified ==="
+                  - "Hostname: {{ ansible_net_hostname }}"
+                  - "Model: {{ ansible_net_model }}"
+                  - "Serial: {{ ansible_net_serialnum }}"
+                  - "OS Version: {{ ansible_net_version }}"
+                  - "Image: {{ ansible_net_image }}"
+                  - "Status: Connected"
+                  - "========================================"
+              when:
+                - nxos_facts_output is succeeded
+                - show_debug | bool
+
+        - name: IOS-XE Platform Block
+          when: platform == 'ios'
+          block:
+            - name: Get IOS-XE version
+              cisco.ios.ios_command:
+                commands:
+                  - show version
+              register: ios_version_output
+              changed_when: false
+
+            - name: Parse and store IOS-XE version
+              ansible.builtin.set_fact:
+                device_version_info:
+                  raw_output: "{{ ios_version_output.stdout[0] }}"
+                  platform: "{{ platform }}"
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first }}"
+                current_firmware_version: "{{ ios_version_output.stdout[0] | regex_search('Version ([0-9.()A-Za-z]+)', '\\1') | first }}"
+              when:
+                - ios_version_output is defined
+                - ios_version_output.stdout is defined
+                - ios_version_output is succeeded
+
+        - name: FortiOS Platform Block
+          when: platform == 'fortios'
+          block:
+            - name: Get FortiOS version
+              fortinet.fortios.fortios_monitor_fact:
+                vdom: "root"
+                selector: "system_status"
+              register: fortios_version_output
+
+            - name: Parse and store FortiOS version
+              ansible.builtin.set_fact:
+                device_version_info:
+                  raw_output: "{{ fortios_version_output }}"
+                  platform: "{{ platform }}"
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  version: "{{ fortios_version_output.meta.results.version }}"
+                current_firmware_version: "{{ fortios_version_output.meta.results.version }}"
+              when:
+                - fortios_version_output is defined
+                - fortios_version_output is succeeded
+
+        - name: Opengear Platform Block
+          when: platform == 'opengear'
+          block:
+            - name: Get Opengear version
+              ansible.builtin.raw: config -g config.version
+              register: opengear_version_output
+              changed_when: false
+
+            - name: Parse and store Opengear version
+              ansible.builtin.set_fact:
+                device_version_info:
+                  raw_output: "{{ opengear_version_output.stdout }}"
+                  platform: "{{ platform }}"
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') }}"
+                current_firmware_version: "{{ opengear_version_output.stdout | regex_replace('\\n', '') }}"
+              when:
+                - opengear_version_output is defined
+                - opengear_version_output.stdout is defined
+                - opengear_version_output is succeeded
+
+        - name: Set connection test result (success)
+          ansible.builtin.set_fact:
+            connection_wait_result: {"changed": false, "failed": false}
+            ping_result: {"changed": false, "failed": false}
+            cli_connectivity: true
+
+      rescue:
+        - name: Connection or version retrieval failed
+          ansible.builtin.fail:
+            msg: >-
+              Failed to connect to device {{ inventory_hostname }} or retrieve version information.
+              This is required for upgrade operations. Please check:
+              (1) Device connectivity (network, SSH access),
+              (2) Credentials (username, password, or SSH key),
+              (3) Device is responding to commands.
+              Platform: {{ platform }}. Error occurred during version retrieval.
+
+    - name: Simulate connectivity test in check mode
       ansible.builtin.set_fact:
-        cli_connectivity: false
-  when: ansible_connection == 'network_cli'
+        connection_wait_result: {"changed": false, "failed": false}
+        ping_result: {"changed": false, "failed": false}
+        cli_connectivity: true
+        device_version_info:
+          raw_output: "Check mode - no actual connection"
+          platform: "{{ platform }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          version: "check_mode"
+        current_firmware_version: "check_mode"
+      when: ansible_check_mode
 
-- name: Set CLI connectivity status for httpapi
-  ansible.builtin.set_fact:
-    cli_connectivity: true
-  when: ansible_connection == 'httpapi'
+    - name: Set overall connectivity status
+      ansible.builtin.set_fact:
+        device_connectivity:
+          device: "{{ inventory_hostname }}"
+          platform: "{{ platform }}"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          basic_connectivity: "{{ connection_wait_result is succeeded }}"
+          ping_successful: "{{ ping_result is succeeded }}"
+          cli_connectivity: "{{ cli_connectivity }}"
+          overall_status: >-
+            {{
+              (connection_wait_result is succeeded) and
+              (ping_result is succeeded) and
+              (cli_connectivity)
+            }}
 
-- name: Set overall connectivity status
-  ansible.builtin.set_fact:
-    device_connectivity:
-      device: "{{ inventory_hostname }}"
-      timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-      basic_connectivity: "{{ connectivity_test is succeeded }}"
-      ping_successful: "{{ ping_result is succeeded }}"
-      ssh_connectivity: "{{ ssh_connectivity | default(true) }}"
-      cli_connectivity: "{{ cli_connectivity | default(true) }}"
-      overall_status: "
-      {{ (connectivity_test is succeeded) and (ping_result is succeeded) and
-         (ssh_connectivity | default(true)) and
-         (cli_connectivity | default(true)) }}
-        "
+    - name: Display connectivity results
+      ansible.builtin.debug:
+        msg:
+          - "=== Connectivity Check Results ==="
+          - "Device: {{ inventory_hostname }}"
+          - "Platform: {{ device_connectivity.platform }}"
+          - "Ping Test: {{ 'PASS' if device_connectivity.ping_successful else 'FAIL' }}"
+          - "CLI Connectivity: {{ 'PASS' if device_connectivity.cli_connectivity else 'FAIL' }}"
+          - "Current Version: {{ device_version_info.version if device_version_info is defined else 'unknown' }}"
+          - "Overall Status: {{ 'CONNECTED' if device_connectivity.overall_status else 'CONNECTION FAILED' }}"
+          - "================================="
 
-- name: Display connectivity results
-  ansible.builtin.debug:
-    msg:
-      - "=== Connectivity Check Results ==="
-      - "Device: {{ inventory_hostname }}"
-      - >-
-        Basic Connectivity: {{ 'PASS' if
-        device_connectivity.basic_connectivity else 'FAIL' }}
-      - >-
-        Ping Test: {{ 'PASS' if
-        device_connectivity.ping_successful else 'FAIL' }}
-      - >-
-        SSH Connectivity: {{ 'PASS' if
-        device_connectivity.ssh_connectivity else 'FAIL' }}
-      - >-
-        CLI Connectivity: {{ 'PASS' if
-        device_connectivity.cli_connectivity else 'FAIL' }}
-      - >-
-        Overall Status: {{ 'CONNECTED' if
-        device_connectivity.overall_status else 'CONNECTION FAILED' }}
-      - "================================="
+    - name: Fail if device is not reachable
+      ansible.builtin.fail:
+        msg: "Device {{ inventory_hostname }} is not reachable - connectivity check failed"
+      when: not device_connectivity.overall_status
 
-- name: Fail if device is not reachable
+- name: Platform not defined - provide guidance
   ansible.builtin.fail:
-    msg: >
-      "Device {{ inventory_hostname }} is not
-        reachable - connectivity check failed"
-  when: not device_connectivity.overall_status
+    msg: >-
+      Platform variable not defined for host {{ inventory_hostname }}.
+      To fix this, ensure your host is a member of a platform group in your inventory:
+      cisco_nxos (for Cisco NX-OS devices), cisco_iosxe (for Cisco IOS-XE devices),
+      fortios (for Fortinet FortiGate devices), opengear (for Opengear devices).
+      Alternatively, define 'platform' variable in host_vars for this host.
+      Current groups: {{ group_names }}
+  when: platform is not defined

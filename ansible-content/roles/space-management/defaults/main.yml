@@ -1,0 +1,34 @@
+---
+# Space Management Role Defaults
+# Default values for storage assessment and cleanup
+
+# FortiOS specific defaults
+vdom: root
+
+# Storage cleanup defaults
+minimum_free_space_gb: "{{ required_space_gb | default(4) }}"
+cleanup_old_images: true
+preserve_current_image: true
+preserve_backup_image: true
+
+# Space check defaults
+required_space_gb: "{{ firmware_size_gb | default(2) }}"
+
+# Storage info initialization
+storage_info:
+  platform: "{{ platform }}"
+  total_space_gb: 0
+  free_space_gb: 0
+  used_space_gb: 0
+  images_found: []
+  cleanup_candidates: []
+
+# Space check results initialization
+space_check_results:
+  device: "{{ inventory_hostname }}"
+  platform: "{{ platform }}"
+  timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+  required_space: "{{ required_space_gb | default(2) }}"
+  available_space: 0
+  passed: false
+  warnings: []

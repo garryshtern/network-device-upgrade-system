@@ -2,232 +2,158 @@
 # Cisco NX-OS Image Loading Tasks
 # Securely transfers firmware images from server to device
 # SECURITY: Uses server-initiated PUSH transfers (not device-initiated PULL)
+# NOTE: Core transfer logic refactored to common/tasks/secure-file-transfer.yml
 
-- name: Determine platform-specific firmware filename
+- name: Set firmware paths
+  ansible.builtin.set_fact:
+    firmware_filename: "{{ target_firmware }}"
+    local_firmware_path: "{{ firmware_base_path }}/{{ target_firmware }}"
+
+- name: EPLD setup block (if EPLD upgrade enabled)
+  when: enable_epld_upgrade | bool
   block:
-    - name: Get device model information
-      cisco.nxos.nxos_command:
-        commands:
-          - show module | json
-      register: nxos_module_info
-
-    - name: Extract device model
-      ansible.builtin.set_fact:
-        device_model: >-
-          {{ nxos_facts.ansible_facts.ansible_net_model |
-             default(nxos_module_info.stdout[0].
-                     TABLE_modinfo.ROW_modinfo[0].model) }}
-
-    - name: Determine device platform family
-      ansible.builtin.set_fact:
-        device_platform: >-
-          {%- for pattern in device_model_patterns -%}
-            {%- if device_model is match(pattern.regex) -%}
-              {{ pattern.platform }}
-            {%- endif -%}
-          {%- endfor -%}
-
-    - name: Set firmware filename pattern
-      ansible.builtin.set_fact:
-        firmware_filename: >-
-          {%- if device_platform and
-              device_platform in firmware_filename_patterns -%}
-            {%- set platform_patterns =
-                firmware_filename_patterns[device_platform] -%}
-            {%- if device_model in platform_patterns -%}
-              {{ platform_patterns[device_model] }}
-            {%- else -%}
-              {{ platform_patterns.default }}
-            {%- endif -%}
-          {%- else -%}
-            nxos.{{ target_firmware_version }}.bin
-          {%- endif -%}
-
-    - name: Set firmware paths
-      ansible.builtin.set_fact:
-        local_firmware_path: "{{ firmware_base_path }}/{{ firmware_filename }}"
-
-    - name: Set EPLD firmware filename (if EPLD upgrade enabled)
-      ansible.builtin.set_fact:
-        epld_firmware_filename: >-
-          {%- if enable_epld_upgrade | default(false) -%}
-            {%- if device_platform and
-                device_platform in epld_firmware_patterns -%}
-              {{ epld_firmware_patterns[device_platform].default }}
-            {%- else -%}
-              n9000-epld.{{
-                target_epld_version |
-                default(target_firmware_version) }}.img
-            {%- endif -%}
-          {%- else -%}
-
-          {%- endif -%}
-        local_epld_path: >-
-          {%- if enable_epld_upgrade | default(false) -%}
-            {{ firmware_base_path }}/{{ epld_firmware_filename }}
-          {%- else -%}
-
-          {%- endif -%}
-      when: enable_epld_upgrade | default(false)
-
-    - name: Display firmware selection
-      ansible.builtin.debug:
-        msg:
-          - "Device Model: {{ device_model }}"
-          - "Platform Family: {{ device_platform | default('generic') }}"
-          - "Firmware File: {{ firmware_filename }}"
-          - "Full Path: {{ local_firmware_path }}"
-          - "EPLD Enabled: {{ enable_epld_upgrade | default(false) }}"
-          - "EPLD File: {{ epld_firmware_filename | default('N/A') }}"
-          - "EPLD Path: {{ local_epld_path | default('N/A') }}"
-
-- name: Get current storage information
-  cisco.nxos.nxos_command:
-    commands:
-      - "dir bootflash: | json"
-  register: nxos_storage_info
-
-- name: Parse storage information
-  ansible.builtin.set_fact:
-    nxos_storage_data: "{{ nxos_storage_info.stdout[0] | from_json }}"
-
-- name: Calculate free space
-  ansible.builtin.set_fact:
-    available_space_mb: >
-      "{{ (nxos_storage_data.dir_size.free | int / 1024 / 1024) | int }}"
-    required_space_mb: >
-      "{{ firmware_size_mb | default(nxos_minimum_free_space_mb) }}"
-
-- name: Verify sufficient storage space
-  ansible.builtin.assert:
-    that:
-      - available_space_mb | int >= required_space_mb | int
-    fail_msg: >
-      "Insufficient storage space. Available: {{
-        available_space_mb }}MB, Required: {{ required_space_mb }}MB"
-
-- name: Check if target firmware already exists
-  cisco.nxos.nxos_command:
-    commands:
-      - dir bootflash:{{ target_firmware_version }}
-  register: firmware_exists_check
-  failed_when: false
-
-- name: Log firmware check failures
-  ansible.builtin.debug:
-    msg: "Warning: Failed to check existing firmware: {{ firmware_exists_check.msg | default('Unknown error') }}"
-  when:
-    - firmware_exists_check is defined
-    - firmware_exists_check.failed is defined
-    - firmware_exists_check.failed | bool
-
-- name: Set firmware exists flag
-  ansible.builtin.set_fact:
-    target_firmware_exists: >
-      "{{ 'No such file' not in firmware_exists_check.stdout[0] }}"
-
-- name: Skip download if firmware already exists
-  ansible.builtin.debug:
-    msg: >
-      "Target firmware {{ target_firmware_version }} already exists on device"
-  when: target_firmware_exists
-
-- name: Transfer firmware image to device (Server-Initiated PUSH)
-  when: not target_firmware_exists
-
-  block:
-    - name: Enable SCP server on NX-OS device
-      cisco.nxos.nxos_config:
-        lines:
-          - feature scp-server
-      register: scp_enable_result
-      failed_when: false  # May already be enabled
-
-    - name: Log SCP server enable failures
-      ansible.builtin.debug:
-        msg: "Warning: Failed to enable SCP server: {{ scp_enable_result.msg | default('Unknown error') }}"
-      when:
-        - scp_enable_result is defined
-        - scp_enable_result.failed is defined
-        - scp_enable_result.failed | bool
-
-    - name: Push firmware image from server to device via SCP
-      cisco.nxos.nxos_file_copy:
-        file_system: "bootflash:"
-        local_file: "{{ local_firmware_path }}"
-        remote_file: "{{ target_firmware_version }}"
-        file_pull: false  # Server pushes to device
-        connect_ssh_port: "{{ ansible_ssh_port | default(22) }}"
-        vrf: "{{ management_vrf | default('management') }}"
-      register: nxos_file_copy_result
-      delegate_to: localhost
-      vars:
-        ansible_connection: local
-
-    - name: Verify secure file transfer completed successfully
+    - name: Validate EPLD firmware filename provided
       ansible.builtin.assert:
         that:
-          - nxos_file_copy_result is succeeded
-          - nxos_file_copy_result.transfer_status == 'Received'
-        fail_msg: >-
-          Secure firmware file transfer failed: {{ nxos_file_copy_result.msg |
-            default('Unknown error') }}
+          - target_epld_firmware is defined
+          - target_epld_firmware | length > 0
+        fail_msg:
+          - "EPLD upgrade enabled but target_epld_firmware not provided"
+          - "You must explicitly specify the EPLD firmware filename"
+          - "Example: target_epld_firmware=n9000-epld.10.3.1.img"
 
-- name: Verify firmware file on device
-  cisco.nxos.nxos_command:
-    commands:
-      - dir bootflash:{{ target_firmware_version }} | json
-  register: firmware_verification
+    - name: Set EPLD firmware paths
+      ansible.builtin.set_fact:
+        epld_firmware_filename: "{{ target_epld_firmware }}"
+        local_epld_path: "{{ firmware_base_path }}/{{ target_epld_firmware }}"
 
-- name: Parse firmware file information
-  ansible.builtin.set_fact:
-    firmware_file_info: "{{ firmware_verification.stdout[0] | from_json }}"
-
-- name: Validate firmware file integrity
-  ansible.builtin.assert:
-    that:
-      - firmware_file_info.file_list | length > 0
-      - firmware_file_info.file_list[0].size > 1024000  # Minimum 1MB
-    fail_msg: "Firmware file validation failed"
-
-- name: Calculate MD5 hash of firmware file on device
-  cisco.nxos.nxos_command:
-    commands:
-      - show file bootflash:{{ target_firmware_version }} md5sum
-  register: nxos_firmware_hash
-  when: firmware_md5_hash is defined
-
-- name: Verify firmware MD5 hash
-  ansible.builtin.assert:
-    that:
-      - firmware_md5_hash in nxos_firmware_hash.stdout[0]
-    fail_msg: |
-      Firmware MD5 hash mismatch!
-      Expected: {{ firmware_md5_hash }}
-      Device hash output: {{ nxos_firmware_hash.stdout[0] }}
-  when: firmware_md5_hash is defined
-
-- name: Set image loading results
-  ansible.builtin.set_fact:
-    nxos_image_loading_results:
-      firmware_file: "{{ target_firmware_version }}"
-      file_size_bytes: "{{ firmware_file_info.file_list[0].size }}"
-      loading_successful: true
-      hash_verified: "{{ firmware_md5_hash is defined }}"
-      loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
-
-- name: Display image loading results
+- name: Display firmware selection
   ansible.builtin.debug:
     msg:
-      - >
-        "Secure firmware image transfer completed
-          successfully (Server-Initiated PUSH)"
-      - "Local Source: {{ local_firmware_path }}"
-      - >
-        "Remote Destination: {{ ansible_host }}:bootflash:{{
-          nxos_image_loading_results.firmware_file }}"
-      - >-
-        File Size: {{ (nxos_image_loading_results.file_size_bytes |
-          int / 1024 / 1024) | round(2) }}MB
-      - "Transfer Method: SCP (server-initiated)"
-      - "Hash Verified: {{ nxos_image_loading_results.hash_verified }}"
+      - "Device: {{ inventory_hostname }}"
+      - "Model: {{ ansible_net_model }}"
+      - "Firmware File: {{ firmware_filename }}"
+      - "Full Path: {{ local_firmware_path }}"
+      - "EPLD Enabled: {{ enable_epld_upgrade }}"
+      - "EPLD File: {{ epld_firmware_filename if (enable_epld_upgrade | bool) else 'N/A' }}"
+      - "EPLD Path: {{ local_epld_path if (enable_epld_upgrade | bool) else 'N/A' }}"
+
+# NOTE: Storage space validation already performed in STEP 3 of main-upgrade-workflow
+# STEP 3 ran "dir bootflash:" and stored image list in storage_info.images_found
+# Reuse that data instead of running another dir command
+
+- name: Initialize file existence checks (default to not found)
+  ansible.builtin.set_fact:
+    target_firmware_exists: false
+    target_epld_exists_check: false
+
+- name: Check if target firmware and EPLD already exist on device
+  ansible.builtin.set_fact:
+    target_firmware_exists: "{{ target_firmware in storage_info.images_found }}"
+    target_epld_exists_check: "{{ target_epld_firmware in storage_info.images_found if target_epld_firmware is defined else false }}"
+  when:
+    - storage_info is defined
+    - storage_info.images_found is defined
+
+- name: Set EPLD existence variable based on enable_epld_upgrade
+  when: enable_epld_upgrade | bool
+  block:
+    - name: Set EPLD exists flag when EPLD is enabled
+      ansible.builtin.set_fact:
+        target_epld_exists: "{{ target_epld_exists_check }}"
+
+- name: Set EPLD does not exist when EPLD is disabled
+  ansible.builtin.set_fact:
+    target_epld_exists: false
+  when: not (enable_epld_upgrade | bool)
+
+- name: Display upload status for firmware and EPLD
+  ansible.builtin.debug:
+    msg:
+      - "Firmware status: {{ 'Already staged' if target_firmware_exists else 'Needs upload' }}"
+      - "EPLD enabled: {{ enable_epld_upgrade | bool }}"
+      - "EPLD status: {{ 'Already staged' if target_epld_exists else ('Needs upload' if (enable_epld_upgrade | bool) else 'Not enabled') }}"
+
+- name: Firmware already staged - skip upload
+  when: target_firmware_exists
+  block:
+    - name: Report firmware already staged on device
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "FIRMWARE ALREADY STAGED"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Firmware: {{ target_firmware }}"
+          - "Location: bootflash:{{ target_firmware }}"
+          - "Status: SKIPPING UPLOAD"
+          - "Action: Proceeding to installation phase"
+          - "=========================================="
+
+    - name: Set image loading results for already staged firmware
+      ansible.builtin.set_fact:
+        nxos_image_loading_results:
+          firmware_file: "{{ target_firmware }}"
+          file_size_bytes: "{{ firmware_file_info.size_bytes }}"
+          source_sha512: "{{ calculated_hash if calculated_hash is defined else 'not_verified' }}"
+          device_sha512: "skipped"
+          hash_verified: false
+          file_uploaded: false
+          loading_successful: true
+          loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Transfer firmware if not already staged
+  when: not target_firmware_exists
+  block:
+    - name: Report firmware upload starting
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "UPLOADING FIRMWARE TO DEVICE"
+          - "=========================================="
+          - "Device: {{ inventory_hostname }}"
+          - "Firmware: {{ target_firmware }}"
+          - "Source: {{ local_firmware_path }}"
+          - "Destination: bootflash:{{ target_firmware }}"
+          - "Method: SCP (Server-Initiated PUSH)"
+          - "Status: STARTING UPLOAD..."
+          - "=========================================="
+
+    - name: Execute platform-specific NX-OS firmware transfer
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: secure-file-transfer
+      vars:
+        transfer_handler_task: nxos-firmware-transfer.yml
+        local_file_path: "{{ local_firmware_path }}"
+
+    - name: Set image loading results after upload
+      ansible.builtin.set_fact:
+        nxos_image_loading_results:
+          firmware_file: "{{ target_firmware }}"
+          file_size_bytes: "{{ firmware_file_info.size_bytes }}"
+          source_sha512: "{{ calculated_hash }}"
+          device_sha512: "{{ transferred_file_hash }}"
+          hash_verified: true
+          file_uploaded: true
+          loading_successful: true
+          loading_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+    - name: Display image loading results after upload
+      ansible.builtin.debug:
+        msg:
+          - "Secure firmware image transfer completed successfully (Server-Initiated PUSH)"
+          - "Local Source: {{ local_firmware_path }}"
+          - "Remote Destination: {{ ansible_host }}:bootflash:{{ nxos_image_loading_results.firmware_file }}"
+          - "File Size: {{ (nxos_image_loading_results.file_size_bytes | int / 1024 / 1024) | round(2) }}MB"
+          - "Transfer Method: SCP (server-initiated)"
+          - "SHA512 Verified: {{ nxos_image_loading_results.hash_verified }}"
+
+# ============================================================================
+# OPTIONAL EPLD FIRMWARE UPLOAD - DELEGATED TO SEPARATE TASK FILE
+# ============================================================================
+
+- name: Load and upload EPLD firmware (optional)
+  ansible.builtin.include_tasks:
+    file: epld-loading.yml
+  when: enable_epld_upgrade | bool

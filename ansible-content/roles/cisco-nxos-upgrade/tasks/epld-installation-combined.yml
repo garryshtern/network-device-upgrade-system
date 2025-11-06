@@ -1,0 +1,196 @@
+---
+# Combined NX-OS Firmware + EPLD Installation
+# Installs firmware and EPLD in single operation for faster upgrades
+# Prerequisites: Both firmware and EPLD must be staged on device
+# Usage: Only called when enable_epld_upgrade=true AND install_combined_mode=true
+
+- name: Display combined installation entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "NX-OS COMBINED FIRMWARE + EPLD INSTALLATION"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Firmware: {{ target_firmware }}"
+      - "EPLD: {{ target_epld_firmware }}"
+      - "Install Method: Combined (single operation)"
+      - "=========================================="
+
+- name: Pre-installation validation
+  block:
+    - name: Verify firmware is staged on device
+      ansible.builtin.assert:
+        that:
+          - target_firmware in storage_info.images_found
+        fail_msg:
+          - "Firmware not found on device: {{ target_firmware }}"
+          - "Available images: {{ storage_info.images_found }}"
+
+    - name: Verify EPLD is staged on device
+      ansible.builtin.assert:
+        that:
+          - target_epld_firmware in storage_info.images_found
+        fail_msg:
+          - "EPLD not found on device: {{ target_epld_firmware }}"
+          - "Available images: {{ storage_info.images_found }}"
+
+    - name: Check current versions (firmware and EPLD)
+      cisco.nxos.nxos_command:
+        commands:
+          - show version | include image
+          - show version epld
+      register: current_versions
+
+    - name: Parse current firmware version
+      ansible.builtin.set_fact:
+        current_fw_version: "{{ current_versions.stdout[0] | regex_search('image file is \\\"(.+?)\\\"', '\\1') | first }}"
+
+    - name: Parse current EPLD versions
+      ansible.builtin.set_fact:
+        current_epld_versions: >-
+          {{ current_versions.stdout[1] |
+            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)',
+              multiline=True) }}
+
+    - name: Check ISSU/installation compatibility
+      cisco.nxos.nxos_command:
+        commands:
+          - show module
+          - show install all impact system {{ target_firmware }}
+      register: compatibility_check
+      failed_when: false
+
+    - name: Determine installation method
+      ansible.builtin.set_fact:
+        has_dual_sup: >-
+          {{ 'Supervisor' in compatibility_check.stdout[0] and
+            compatibility_check.stdout[0].count('Supervisor') >= 2 }}
+
+- name: Combined firmware + EPLD installation
+  block:
+    - name: Display pre-installation information
+      ansible.builtin.debug:
+        msg:
+          - "Current firmware: {{ current_fw_version }}"
+          - "Target firmware: {{ target_firmware }}"
+          - "Current EPLD modules: {{ current_epld_versions | length }}"
+          - "Dual supervisors: {{ has_dual_sup }}"
+          - "Installation will be: {{ 'Non-disruptive (ISSU)' if has_dual_sup else 'Disruptive (reboot required)' }}"
+
+    - name: Execute combined install (firmware + EPLD)
+      cisco.nxos.nxos_command:
+        commands:
+          - "install all system {{ target_firmware }} epld {{ target_epld_firmware }}"
+      register: combined_install_result
+      vars:
+        ansible_command_timeout: 3600
+        ansible_connect_timeout: 3600
+
+    - name: Display combined installation result
+      ansible.builtin.debug:
+        msg:
+          - "Combined installation command issued"
+          - "Monitoring status..."
+
+    - name: Monitor combined installation progress
+      cisco.nxos.nxos_command:
+        commands:
+          - show install all status
+      register: install_status
+      until: >-
+        'Success' in install_status.stdout[0] or
+        'Completed' in install_status.stdout[0] or
+        'Failed' in install_status.stdout[0]
+      retries: 120
+      delay: 30
+      when: combined_install_result is defined
+
+    - name: Validate combined installation completion
+      ansible.builtin.assert:
+        that:
+          - "'Success' in install_status.stdout[0] or 'Completed' in install_status.stdout[0]"
+        fail_msg:
+          - "Combined firmware + EPLD installation failed!"
+          - "Status: {{ install_status.stdout[0] }}"
+      when: install_status is defined
+
+- name: Post-installation validation
+  block:
+    - name: Verify new firmware version
+      cisco.nxos.nxos_command:
+        commands:
+          - show version | include image
+      register: new_fw_version_output
+
+    - name: Extract new firmware version
+      ansible.builtin.set_fact:
+        new_fw_version: "{{ new_fw_version_output.stdout[0] | regex_search('image file is \\\"(.+?)\\\"', '\\1') | first }}"
+
+    - name: Verify new EPLD versions
+      cisco.nxos.nxos_command:
+        commands:
+          - show version epld
+      register: new_epld_version_output
+
+    - name: Parse new EPLD versions
+      ansible.builtin.set_fact:
+        new_epld_versions: >-
+          {{ new_epld_version_output.stdout[0] |
+            regex_findall('Module\\s+(\\d+).*?EPLD.*?Version\\s+(\\S+)',
+              multiline=True) }}
+
+    - name: Verify firmware updated
+      ansible.builtin.assert:
+        that:
+          - target_firmware in new_fw_version
+        fail_msg:
+          - "Firmware verification failed!"
+          - "Expected: {{ target_firmware }}"
+          - "Actual: {{ new_fw_version }}"
+        success_msg: "Firmware successfully updated to {{ target_firmware }}"
+
+    - name: Verify EPLD updated
+      ansible.builtin.assert:
+        that:
+          - new_epld_versions | length > 0
+        fail_msg:
+          - "EPLD verification failed!"
+          - "Could not read EPLD versions after installation"
+
+    - name: Check system health after combined installation
+      cisco.nxos.nxos_command:
+        commands:
+          - show system resources
+          - show module
+          - show interface brief
+      register: post_install_health
+
+    - name: Set combined installation results
+      ansible.builtin.set_fact:
+        combined_installation_results:
+          target_firmware: "{{ target_firmware }}"
+          target_epld: "{{ target_epld_firmware }}"
+          previous_firmware: "{{ current_fw_version }}"
+          updated_firmware: "{{ new_fw_version }}"
+          previous_epld_modules: "{{ current_epld_versions | length }}"
+          updated_epld_modules: "{{ new_epld_versions | length }}"
+          installation_method: "{{ 'ISSU (non-disruptive)' if has_dual_sup else 'Disruptive (reboot)' }}"
+          success: true
+          system_healthy: "{{ post_install_health is defined }}"
+          completion_timestamp: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }}"
+
+- name: Display combined installation summary
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "COMBINED INSTALLATION SUMMARY"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Firmware: {{ combined_installation_results.previous_firmware }} → {{ combined_installation_results.updated_firmware }}"
+      - "EPLD Modules: {{ combined_installation_results.previous_epld_modules }} → {{ combined_installation_results.updated_epld_modules }}"
+      - "Installation Method: {{ combined_installation_results.installation_method }}"
+      - "Success: {{ combined_installation_results.success }}"
+      - "System Health: {{ 'Healthy' if combined_installation_results.system_healthy else 'Requires verification' }}"
+      - "Completion Time: {{ combined_installation_results.completion_timestamp }}"
+      - "=========================================="
+  when: combined_installation_results is defined

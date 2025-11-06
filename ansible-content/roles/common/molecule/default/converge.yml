@@ -84,12 +84,11 @@
   tasks:
     # Test connectivity check functionality
     - name: Test connectivity check utilities
-      when: test_connectivity | default(false)
+      when: test_connectivity
       block:
         - name: Mock connectivity test (simulated)
           ansible.builtin.debug:
-            msg: >-
-              Testing connectivity to {{ device_hostname }} ({{ device_ip }})
+            msg: "Testing connectivity to {{ device_hostname }} ({{ device_ip }})"
 
         - name: Simulate ping test result
           ansible.builtin.set_fact:
@@ -105,10 +104,9 @@
               changed: false
               failed: false
 
-
     # Test health check functionality
     - name: Test health check utilities
-      when: test_health_checks | default(false)
+      when: test_health_checks
       block:
         - name: Simulate system health checks
           ansible.builtin.set_fact:
@@ -125,10 +123,9 @@
             fail_msg: "Health check category {{ item }} not found in results"
           loop: "{{ health_check_categories }}"
 
-
     # Test storage cleanup functionality
     - name: Test storage cleanup utilities
-      when: test_storage_cleanup | default(false)
+      when: test_storage_cleanup
       block:
         - name: Scan for files to cleanup
           ansible.builtin.find:
@@ -147,10 +144,9 @@
               - preserve_recent_files | bool
             fail_msg: "Recent file preservation should be enabled for safety"
 
-
     # Test metrics export functionality
     - name: Test metrics export utilities
-      when: test_metrics_export | default(false)
+      when: test_metrics_export
       block:
         - name: Generate test metrics data
           ansible.builtin.set_fact:
@@ -190,10 +186,9 @@
             fail_msg: "Metrics file for format {{ item.item }} not created"
           loop: "{{ metrics_files.results }}"
 
-
     # Test error handling functionality
     - name: Test error handling utilities
-      when: test_error_handling | default(false)
+      when: test_error_handling
       block:
         - name: Test error scenario handling
           ansible.builtin.set_fact:

@@ -2,63 +2,51 @@
 # Opengear Upgrade Role - Main Tasks
 # Handles console servers and smart PDU upgrades via web interface
 
-- name: Initialize Opengear upgrade variables
-  ansible.builtin.set_fact:
-    opengear_upgrade_state:
-      device: "{{ inventory_hostname }}"
-      device_model: ""
-      current_version: ""
-      target_version: "{{ target_firmware_version }}"
-      device_type: "console_server"  # console_server or smart_pdu
-      serial_ports: []
-      power_ports: []
-      web_session: ""
-
 - name: Detect device architecture (API vs CLI)
   block:
     - name: Test for modern API support
-      ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/info"
-        method: GET
-        headers:
-          Authorization: "Token {{ opengear_api_token | default('') }}"
-        validate_certs: false
-        timeout: 10
-      register: api_test
-      failed_when: false
+      ansible.builtin.include_tasks: api-call.yml
+      vars:
+        api_endpoint: "/system/info"
+        api_method: "GET"
+        api_timeout: 10
+        api_failed_when: false
 
     - name: Set architecture type based on API availability
       ansible.builtin.set_fact:
         opengear_architecture: >
-          "{{ 'modern' if api_test.status == 200 else 'legacy' }}"
-        api_available: "{{ api_test.status == 200 }}"
+          "{{ 'modern' if opengear_api_response.status == 200 else 'legacy' }}"
+        api_available: "{{ opengear_api_response.status == 200 }}"
   rescue:
-    - name: API unavailable, assume legacy architecture
-      ansible.builtin.set_fact:
-        opengear_architecture: "legacy"
-        api_available: false
+    - name: API test failed - fail with detailed error
+      ansible.builtin.fail:
+        msg:
+          - "ERROR: Opengear device architecture detection FAILED for {{ inventory_hostname }}"
+          - "API test to /system/info endpoint failed unexpectedly"
+          - "This could indicate: (1) Device is unreachable, (2) API credentials are incorrect"
+          - "(3) Device may be in boot/recovery mode, (4) Network connectivity issue"
+          - "Cannot proceed without successfully detecting device architecture"
+          - "Please verify: Device connectivity, credentials, API availability"
+          - "If device is legacy (no API), ensure proper CLI connectivity and credentials"
 
 - name: Detect device information (Modern API)
   when: api_available
 
   block:
     - name: Get device info via API
-      ansible.builtin.uri:
-        url: "https://{{ ansible_host }}/api/v1/system/info"
-        method: GET
-        headers:
-          Authorization: "Token {{ opengear_api_token }}"
-        validate_certs: false
-      register: device_info_api
+      ansible.builtin.include_tasks: api-call.yml
+      vars:
+        api_endpoint: "/system/info"
+        api_method: "GET"
 
     - name: Parse API device information
       ansible.builtin.set_fact:
         opengear_upgrade_state: >
           "{{ opengear_upgrade_state | combine({
-            'device_model': device_info_api.json.model,
-            'current_version': device_info_api.json.version,
+            'device_model': opengear_api_response.json.model,
+            'current_version': opengear_api_response.json.version,
             'device_type': ('smart_pdu' if 'CM8100' in
-              device_info_api.json.model else 'console_server'),
+              opengear_api_response.json.model else 'console_server'),
             'architecture': 'modern',
             'upgrade_method': 'api'}) }}"
 - name: Detect device information (Legacy CLI)
@@ -101,17 +89,17 @@
 
 - name: Display upgrade plan
   ansible.builtin.debug:
-    msg: |
-      Opengear Upgrade Plan for {{ inventory_hostname }}:
-      Model: {{ opengear_upgrade_state.device_model }}
-      Architecture: {{ opengear_upgrade_state.architecture | title }}
-      Type: {{ opengear_upgrade_state.device_type }}
-      Current Version: {{ opengear_upgrade_state.current_version }}
-      Target Version: {{ opengear_upgrade_state.target_version }}
-      Upgrade Method: {{ opengear_upgrade_state.upgrade_method | upper }}
-      API Available: {{ api_available | string | title }}
-      Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}
-      Power Outlets: {{ opengear_upgrade_state.power_ports | length }}
+    msg:
+      - "Opengear Upgrade Plan for {{ inventory_hostname }}:"
+      - "Model: {{ opengear_upgrade_state.device_model }}"
+      - "Architecture: {{ opengear_upgrade_state.architecture | title }}"
+      - "Type: {{ opengear_upgrade_state.device_type }}"
+      - "Current Version: {{ opengear_upgrade_state.current_version }}"
+      - "Target Version: {{ opengear_upgrade_state.target_version }}"
+      - "Upgrade Method: {{ opengear_upgrade_state.upgrade_method | upper }}"
+      - "API Available: {{ api_available | string | title }}"
+      - "Serial Ports: {{ opengear_upgrade_state.serial_ports | length }}"
+      - "Power Outlets: {{ opengear_upgrade_state.power_ports | length }}"
 
 - name: Validate upgrade path
   ansible.builtin.assert:

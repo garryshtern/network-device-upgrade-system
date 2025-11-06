@@ -2,41 +2,22 @@
 # Cisco NX-OS Upgrade Role - Main Tasks
 # Handles ISSU-capable upgrades with comprehensive validation
 
-- name: Initialize NX-OS upgrade variables
-  ansible.builtin.set_fact:
-    nxos_upgrade_state:
-      device: "{{ inventory_hostname }}"
-      current_version: ""
-      target_version: "{{ target_firmware_version }}"
-      issu_capable: false
-      upgrade_method: "disruptive"
-      boot_variables: []
-
-- name: Gather NX-OS device facts
-  cisco.nxos.nxos_facts:
-    gather_subset:
-      - hardware
-      - config
-      - interfaces
-  register: nxos_facts
-
-- name: Set current firmware version
+- name: Set current firmware version from connectivity check
   ansible.builtin.set_fact:
     nxos_upgrade_state: >
-      "{{ nxos_upgrade_state | combine({'current_version':
-        nxos_facts.ansible_facts.ansible_net_version}) }}"
+      "{{ nxos_upgrade_state | combine({'current_version': current_firmware_version}) }}"
 
 - name: Check ISSU compatibility
   ansible.builtin.include_tasks: check-issu-capability.yml
 
 - name: Display upgrade plan
   ansible.builtin.debug:
-    msg: |
-      NX-OS Upgrade Plan for {{ inventory_hostname }}:
-      Current Version: {{ nxos_upgrade_state.current_version }}
-      Target Version: {{ nxos_upgrade_state.target_version }}
-      ISSU Capable: {{ nxos_upgrade_state.issu_capable }}
-      Upgrade Method: {{ nxos_upgrade_state.upgrade_method }}
+    msg:
+      - "NX-OS Upgrade Plan for {{ inventory_hostname }}:"
+      - "Current Version: {{ nxos_upgrade_state.current_version }}"
+      - "Target Version: {{ nxos_upgrade_state.target_version }}"
+      - "ISSU Capable: {{ nxos_upgrade_state.issu_capable }}"
+      - "Upgrade Method: {{ nxos_upgrade_state.upgrade_method }}"
 
 - name: Validate upgrade path
   ansible.builtin.assert:
@@ -46,13 +27,14 @@
         match("^[0-9]+\\.[0-9]+\\([0-9]+\\)")
     fail_msg: "Invalid upgrade path or target version format"
 
-- name: Handle EPLD upgrade (if required)
-  ansible.builtin.include_tasks: epld-upgrade.yml
-  when: upgrade_epld | default(false) and target_epld_image is defined
-
-- name: Execute upgrade based on ISSU capability
+- name: Execute firmware upgrade based on ISSU capability
   ansible.builtin.include_tasks: "{{ upgrade_task_file }}"
   vars:
     upgrade_task_file: >-
       {{ 'issu-procedures.yml' if nxos_upgrade_state.issu_capable
          else 'image-installation.yml' }}
+  # NOTE: EPLD installation is now called from image-installation.yml
+  # after firmware installation completes. This ensures proper sequencing:
+  # 1. Firmware installed + rebooted
+  # 2. Device comes back online
+  # 3. EPLD installation executed (if enabled)

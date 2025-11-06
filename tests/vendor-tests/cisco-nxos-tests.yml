@@ -6,59 +6,29 @@
 - name: Cisco NX-OS Platform Tests
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     role_path: >-
       {{ playbook_dir }}/../../ansible-content/roles/cisco-nxos-upgrade
+    test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"
     test_scenarios:
       - name: "ISSU Capable with EPLD Upgrade"
-        device_vars:
-          platform_type: "cisco_nxos"
-          device_model: "N9K-C93180YC-EX"
-          firmware_version: "9.3.10"
-          target_version: "10.1.2"
-          issu_capable: true
-          epld_upgrade_required: true
-          current_epld_version: "1.2.3"
-          target_epld_version: "1.3.1"
-          epld_images:
-            - "n9000-epld.10.1.2.img"
-          nxapi_enabled: true
+        device_vars: "{{ test_device_registry.test_devices.nxos.issu_capable_with_epld }}"
         expected_results:
           upgrade_method: "issu"
           epld_required: true
           nxapi_supported: true
 
       - name: "Non-ISSU Device without EPLD"
-        device_vars:
-          platform_type: "cisco_nxos"
-          device_model: "N9K-C9336C-FX2"
-          firmware_version: "9.2.4"
-          target_version: "10.1.2"
-          issu_capable: false
-          epld_upgrade_required: false
-          current_epld_version: "1.3.0"
-          target_epld_version: "1.3.1"
-          epld_images: []
-          nxapi_enabled: false
+        device_vars: "{{ test_device_registry.test_devices.nxos.non_issu_without_epld }}"
         expected_results:
           upgrade_method: "standard"
           epld_required: false
           nxapi_supported: false
 
       - name: "ISSU with Multiple EPLD Images"
-        device_vars:
-          platform_type: "cisco_nxos"
-          device_model: "N9K-C93240YC-FX2"
-          firmware_version: "10.0.1"
-          target_version: "10.2.3"
-          issu_capable: true
-          epld_upgrade_required: true
-          current_epld_version: "2.1.0"
-          target_epld_version: "2.2.1"
-          epld_images:
-            - "n9000-epld.10.2.3.img"
-            - "n9000-module-epld.10.2.3.img"
-          nxapi_enabled: true
+        device_vars: "{{ test_device_registry.test_devices.nxos.issu_with_multiple_epld }}"
         expected_results:
           upgrade_method: "issu"
           epld_required: true
@@ -87,7 +57,7 @@
         - "tasks/image-loading.yml"
         - "tasks/image-installation.yml"
         - "tasks/issu-procedures.yml"
-        - "tasks/validation.yml"
+        - "defaults/main.yml"
         - "vars/main.yml"
 
     - name: Assert all required NX-OS files exist
@@ -105,44 +75,83 @@
         loop_var: nxos_scenario
         label: "{{ nxos_scenario.name }}"
 
-    - name: Test NX-OS validation capabilities
+    - name: Test NX-OS validation is centralized
       block:
-        - name: Validate BGP validation exists
+        - name: Verify validation removed from NX-OS role
           stat:
             path: "{{ role_path }}/tasks/validation.yml"
-          register: bgp_validation_check
+          register: nxos_validation_check
 
-        - name: Read validation task content
-          slurp:
-            src: "{{ role_path }}/tasks/validation.yml"
-          register: validation_content
-          when: bgp_validation_check.stat.exists
-
-        - name: Assert NX-OS validation capabilities
+        - name: Assert validation is not in NX-OS role
           assert:
             that:
-              - bgp_validation_check.stat.exists
-              - "'bgp' in validation_content.content | b64decode"
-              - "'bfd' in validation_content.content | b64decode"
-              - "'igmp' in validation_content.content | b64decode"
-            fail_msg: "NX-OS validation capabilities missing"
-            success_msg: "✓ NX-OS validation capabilities confirmed (BGP, BFD, IGMP)"
+              - not nxos_validation_check.stat.exists
+            success_msg: "✓ Validation correctly removed from NX-OS role (now centralized)"
+            fail_msg: "Validation should be centralized, not in NX-OS role"
+
+        - name: Verify centralized network validation exists
+          stat:
+            path: "{{ playbook_dir }}/../../ansible-content/roles/network-validation/tasks/network-resource-validation.yml"
+          register: centralized_validation_check
+
+        - name: Assert centralized validation capabilities exist
+          assert:
+            that:
+              - centralized_validation_check.stat.exists
+            success_msg: "✓ Network validation is properly centralized"
+            fail_msg: "Centralized network validation missing"
 
     - name: Test NX-OS EPLD upgrade capability
       block:
-        - name: Check for EPLD handling in tasks
+        - name: Check for EPLD handling in image-installation tasks
           slurp:
-            src: "{{ role_path }}/tasks/main.yml"
-          register: main_tasks_content
+            src: "{{ role_path }}/tasks/image-installation.yml"
+          register: image_installation_content
           when: nxos_role_check.stat.exists
 
         - name: Validate EPLD upgrade logic exists
           assert:
             that:
-              - "'epld' in main_tasks_content.content | b64decode"
-            fail_msg: "EPLD upgrade handling missing from main tasks"
+              - "'epld' in image_installation_content.content | b64decode"
+            fail_msg: "EPLD upgrade handling missing from image-installation tasks"
             success_msg: "✓ EPLD upgrade capability confirmed"
-          when: main_tasks_content is defined
+          when: image_installation_content is defined
+
+        - name: Check for EPLD installation task file
+          stat:
+            path: "{{ role_path }}/tasks/epld-installation.yml"
+          register: epld_installation_check
+
+        - name: Validate EPLD installation task file exists
+          assert:
+            that:
+              - epld_installation_check.stat.exists
+            fail_msg: "EPLD installation task file missing: epld-installation.yml"
+            success_msg: "✓ EPLD installation task file found"
+
+        - name: Check for combined EPLD installation task file
+          stat:
+            path: "{{ role_path }}/tasks/epld-installation-combined.yml"
+          register: epld_combined_check
+
+        - name: Validate combined EPLD installation task file exists
+          assert:
+            that:
+              - epld_combined_check.stat.exists
+            fail_msg: "Combined EPLD installation task file missing: epld-installation-combined.yml"
+            success_msg: "✓ Combined EPLD installation task file found"
+
+        - name: Check for EPLD loading task file
+          stat:
+            path: "{{ role_path }}/tasks/epld-loading.yml"
+          register: epld_loading_check
+
+        - name: Validate EPLD loading task file exists
+          assert:
+            that:
+              - epld_loading_check.stat.exists
+            fail_msg: "EPLD loading task file missing: epld-loading.yml"
+            success_msg: "✓ EPLD loading task file found"
 
     - name: Test NX-OS ISSU procedures
       block:

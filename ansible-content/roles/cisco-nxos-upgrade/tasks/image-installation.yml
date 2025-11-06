@@ -1,135 +1,39 @@
 ---
 # Cisco NX-OS Image Installation Tasks
-# Installs and activates firmware images
+# Installs and activates firmware images using nxos_install_os module
+# REFACTORED: Uses cisco.nxos.nxos_install_os instead of manual install commands
+#
+# Note: Hardware facts already gathered in STEP 1 of main workflow
+# ansible_net_image, ansible_net_version, ansible_net_platform already available
 
-- name: Get current boot configuration
-  cisco.nxos.nxos_command:
-    commands:
-      - show boot | json
-  register: current_boot_config
-
-- name: Parse current boot variables
-  ansible.builtin.set_fact:
-    current_boot_image: >-
-      {{ current_boot_config.stdout[0] |
-        from_json | json_query('sys_img_name') }}
-    current_kickstart: >-
-      {{ current_boot_config.stdout[0] |
-        from_json | json_query('kick_img_name') }}
-
-- name: Display current boot configuration
+- name: Display current system information
   ansible.builtin.debug:
     msg:
-      - "Current system image: {{ current_boot_image }}"
-      - "Current kickstart image: {{ current_kickstart }}"
-      - "Target system image: bootflash:{{ target_firmware_version }}"
+      - "Current image: {{ ansible_net_image }}"
+      - "Current version: {{ ansible_net_version }}"
+      - "Target image: {{ target_firmware }}"
+      - "Platform: {{ ansible_net_platform }}"
 
-- name: Check if ISSU (In-Service Software Upgrade) is possible
-  when: nxos_issu_capable | default(false)
+- name: Install NX-OS image using nxos_install_os module
+  cisco.nxos.nxos_install_os:
+    system_image_file: "{{ target_firmware }}"
+    issu: desired
+  register: install_result
+  vars:
+    ansible_command_timeout: 1800
+    ansible_connect_timeout: 1800
 
-  block:
-    - name: Check ISSU compatibility
-      cisco.nxos.nxos_command:
-        commands:
-          - >
-            show install all impact system
-            bootflash:{{ target_firmware_version }}
-      register: issu_compatibility_check
-      failed_when: false
-
-    - name: Log ISSU compatibility check failures
-      ansible.builtin.debug:
-        msg: "Warning: ISSU compatibility check failed: {{ issu_compatibility_check.msg | default('Unknown error') }}"
-      when:
-        - issu_compatibility_check is defined
-        - issu_compatibility_check.failed is defined
-        - issu_compatibility_check.failed | bool
-
-    - name: Set ISSU capability flag
-      ansible.builtin.set_fact:
-        issu_supported: >
-          "{{ 'compatible' in issu_compatibility_check.stdout[0] | lower }}"
-      when: issu_compatibility_check is succeeded
-
-    - name: Set ISSU not supported
-      ansible.builtin.set_fact:
-        issu_supported: false
-      when: issu_compatibility_check is failed
-
-- name: Perform ISSU upgrade (if supported)
-  when: issu_supported | default(false)
-
-  block:
-    - name: Start ISSU upgrade
-      cisco.nxos.nxos_command:
-        commands:
-          - install all system bootflash:{{ target_firmware_version }}
-      register: issu_upgrade_result
-
-    - name: Wait for ISSU completion
-      cisco.nxos.nxos_command:
-        commands:
-          - show install all status
-      register: issu_status
-      retries: 60
-      delay: 30
-      until: "'successful' in issu_status.stdout[0] | lower"
-
-    - name: Set installation method used
-      ansible.builtin.set_fact:
-        installation_method: "issu"
-
-  rescue:
-    - name: ISSU failed - falling back to disruptive upgrade
-      ansible.builtin.debug:
-        msg: "ISSU upgrade failed, proceeding with disruptive upgrade"
-
-    - name: Set fallback to disruptive upgrade
-      ansible.builtin.set_fact:
-        issu_supported: false
-
-- name: Perform disruptive upgrade (if ISSU not supported or failed)
-  when: not issu_supported | default(true)
-
-  block:
-    - name: Update boot variables for disruptive upgrade
-      cisco.nxos.nxos_config:
-        lines:
-          - boot system bootflash:{{ target_firmware_version }}
-        save_when: always
-      register: boot_config_update
-
-    - name: Verify boot configuration update
-      cisco.nxos.nxos_command:
-        commands:
-          - show boot | json
-      register: updated_boot_config
-
-    - name: Validate boot variable update
-      ansible.builtin.set_fact:
-        boot_update_successful: >
-          "{{ target_firmware_version in updated_boot_config.stdout[0] }}"
-
-    - name: Assert boot configuration was updated
-      ansible.builtin.assert:
-        that:
-          - boot_update_successful
-        fail_msg: "Failed to update boot variables"
-
-    - name: Set installation method used
-      ansible.builtin.set_fact:
-        installation_method: "disruptive"
-
-    - name: Save configuration before reboot
-      cisco.nxos.nxos_config:
-        save_when: always
+- name: Set installation method based on result
+  ansible.builtin.set_fact:
+    installation_method: "{{ 'issu' if (install_result.issu_attempted is defined and install_result.issu_attempted) else 'disruptive' }}"
+    boot_update_successful: true
 
 - name: Set installation completion status
   ansible.builtin.set_fact:
     nxos_installation_results:
-      target_firmware: "{{ target_firmware_version }}"
+      target_firmware: "{{ target_firmware }}"
       installation_method: "{{ installation_method }}"
-      boot_variables_updated: "{{ boot_update_successful | default(false) }}"
+      boot_variables_updated: "{{ boot_update_successful }}"
       issu_performed: "{{ installation_method == 'issu' }}"
       reboot_required: "{{ installation_method == 'disruptive' }}"
       installation_timestamp: >
@@ -146,3 +50,21 @@
 - name: Installation completion notification
   ansible.builtin.debug:
     msg: "NX-OS firmware installation phase completed successfully"
+
+# ============================================================================
+# OPTIONAL EPLD INSTALLATION - AFTER FIRMWARE INSTALL AND REBOOT
+# ============================================================================
+
+- name: EPLD installation block (if enabled)
+  when:
+    - enable_epld_upgrade | bool
+  block:
+    - name: Combined firmware + EPLD installation (both in single operation)
+      ansible.builtin.include_tasks:
+        file: epld-installation-combined.yml
+      when: install_combined_mode | bool
+
+    - name: Sequential EPLD installation (after firmware reboot)
+      ansible.builtin.include_tasks:
+        file: epld-installation.yml
+      when: not (install_combined_mode | bool)

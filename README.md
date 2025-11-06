@@ -6,8 +6,7 @@ A complete AWX-based network device upgrade management system designed for manag
 
 This system provides automated firmware upgrade capabilities for:
 - **Cisco NX-OS** (Nexus Switches) with ISSU support
-- **Cisco IOS-XE** (Enterprise Routers/Switches) with Install Mode  
-- **Metamako MOS** (Ultra-Low Latency Switches) with Application Management
+- **Cisco IOS-XE** (Enterprise Routers/Switches) with Install Mode
 - **Opengear** (Console Servers/Smart PDUs) with multi-architecture support
 - **FortiOS** (Fortinet Firewalls) with HA coordination
 
@@ -45,6 +44,8 @@ This system provides automated firmware upgrade capabilities for:
 
 ## Quick Start
 
+### System Installation
+
 ```bash
 # 1. Install base system
 ./install/setup-system.sh
@@ -70,6 +71,57 @@ export INFLUXDB_TOKEN="your_token_here"
 ./provision-dashboards.sh
 ```
 
+### Workflow Execution
+
+**Single Entry Point**: All upgrade operations use `main-upgrade-workflow.yml` with tag-based execution.
+
+```bash
+# Health check (connectivity validation) - STEP 1
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step1 \
+  -e target_hosts=mydevice -e max_concurrent=5
+
+# Pre-upgrade validation (network state baseline) - STEP 5
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step5 \
+  -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5
+
+# Image loading (business hours safe) - STEP 4
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml --tags step4 \
+  -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5
+
+# Full upgrade workflow (maintenance window)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  -e target_hosts=mydevice -e target_firmware=fw.bin \
+  -e max_concurrent=5 -e maintenance_window=true
+```
+
+**Container Usage** (Docker/Podman):
+```bash
+# Health check using container
+docker run --rm -v $(pwd)/inventory:/inventory \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest \
+  playbook main-upgrade-workflow.yml --tags step1 \
+  -e target_hosts=mydevice -e max_concurrent=5
+
+# Full upgrade using container
+docker run --rm -v $(pwd)/inventory:/inventory \
+  -e ANSIBLE_TAGS="step1,step2,step3,step4,step5,step6,step7,step8" \
+  ghcr.io/garryshtern/network-device-upgrade-system:latest \
+  playbook main-upgrade-workflow.yml \
+  -e target_hosts=mydevice -e target_firmware=fw.bin \
+  -e max_concurrent=5 -e maintenance_window=true
+```
+
+**Deprecated Playbooks**: Individual playbooks have been consolidated into the main workflow:
+- `health-check.yml` → Use `--tags step1` instead
+- `network-validation.yml` → Use `--tags step5` (pre-upgrade) or `--tags step7` (post-upgrade)
+- `image-loading.yml` → Use `--tags step4` instead
+- `image-installation.yml` → Use `--tags step6` instead
+- `emergency-rollback.yml` → Use `--tags step8` instead
+
+**Standalone Operational Playbooks** (still separate):
+- `compliance-audit.yml` - Security and compliance auditing
+- `config-backup.yml` - Configuration backup operations
+
 ## 🧪 Testing Framework
 
 **Comprehensive testing capabilities for Mac/Linux development without physical devices:**
@@ -85,11 +137,19 @@ export INFLUXDB_TOKEN="your_token_here"
 ### 🚀 **Quick Testing**
 ```bash
 # Syntax validation (100% clean)
-ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  -e target_hosts=localhost -e target_firmware=test.bin \
+  -e maintenance_window=true -e max_concurrent=1
 
 # Mock device testing (all 5 platforms)
 ansible-playbook -i tests/mock-inventories/all-platforms.yml --check \
-  ansible-content/playbooks/main-upgrade-workflow.yml
+  ansible-content/playbooks/main-upgrade-workflow.yml \
+  -e target_hosts=all -e target_firmware=test.bin \
+  -e maintenance_window=true -e max_concurrent=5
+
+# Tag-based testing (individual steps)
+ansible-playbook --syntax-check ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step1 -e target_hosts=localhost -e max_concurrent=1
 
 # Complete test suite
 ./tests/run-all-tests.sh
@@ -115,19 +175,19 @@ podman run --rm ghcr.io/garryshtern/network-device-upgrade-system:latest
 - **YAML/JSON Validation** - File syntax and structure validation ✅
 - **CI/CD Integration** - GitHub Actions automated testing ✅
 
-**See comprehensive guide**: [Testing Framework Guide](docs/testing-framework-guide.md)
+**See comprehensive guide**: [Documentation Hub](docs/README.md) - Complete testing and setup documentation
 
 ## 📚 Documentation
 
 **Complete documentation with architectural diagrams and implementation guides:**
 
 - **[📖 Documentation Hub](docs/README.md)** - Start here for comprehensive guides
-- **[⚙️ Installation Guide](docs/installation-guide.md)** - Step-by-step deployment  
-- **[🔄 Workflow Guide](docs/upgrade-workflow-guide.md)** - Upgrade process and safety mechanisms
-- **[🏗️ Platform Guide](docs/platform-implementation-status.md)** - Technical implementation details
-- **[📊 Implementation Status](docs/platform-implementation-status.md)** - Current completion analysis
-- **[🧪 Testing Framework Guide](docs/testing-framework-guide.md)** - Comprehensive testing without physical devices
-- **[🧪 Molecule Testing Guide](docs/molecule-testing-guide.md)** - Role-specific container testing
+- **[⚙️ Installation & Configuration](CLAUDE.md)** - Complete system documentation including installation, parameters, and troubleshooting
+- **[🔄 Upgrade Workflow Guide](docs/user-guides/upgrade-workflow-guide.md)** - Upgrade process and safety mechanisms
+- **[🐳 Container Deployment Guide](docs/user-guides/container-deployment.md)** - Docker/Podman deployment
+- **[📋 Ansible Module Usage](docs/user-guides/ansible-module-usage-guide.md)** - Ansible module reference
+- **[🏗️ Platform Implementation Status](docs/platform-guides/platform-implementation-status.md)** - Technical implementation details and feature support
+- **[📊 Network Validation Data Types](docs/internal/network-validation-data-types.md)** - Comprehensive validation reference for developers
 
 ## Architecture
 
@@ -145,10 +205,9 @@ graph TD
     F --> H[Grafana<br/>Dashboards<br/>Existing]
     
     C -.-> I[Cisco NX-OS]
-    C -.-> J[Cisco IOS-XE]  
+    C -.-> J[Cisco IOS-XE]
     C -.-> K[FortiOS]
-    C -.-> L[Metamako MOS]
-    C -.-> M[Opengear]
+    C -.-> L[Opengear]
     
     style A fill:#e1f5fe
     style C fill:#f3e5f5
@@ -258,19 +317,114 @@ network-upgrade-system/
 └── .claude/                   # Claude Code commands and workflows
 ```
 
-## Documentation
+## Workflow Execution Modes
 
-- 📘 [Installation Guide](docs/installation-guide.md) - Complete setup instructions
-- 🔄 [Upgrade Workflow Guide](docs/upgrade-workflow-guide.md) - Upgrade process and safety mechanisms  
-- 🏗️ [Platform Implementation Guide](docs/platform-implementation-status.md) - Technical implementation details
-- 📊 [Grafana Integration](docs/grafana-deployment.md) - Dashboard automation and monitoring  
-- 📖 [Documentation Hub](docs/README.md) - Complete documentation index
+The system uses **`main-upgrade-workflow.yml`** as the single entry point for all upgrade operations. Individual steps can be executed using Ansible tags, with automatic dependency resolution.
+
+### Available Execution Tags
+
+| Tag | Step Name | Description | Dependencies | Safe During Business Hours |
+|-----|-----------|-------------|--------------|---------------------------|
+| `step1` | Connectivity Check | Initial SSH/NETCONF connectivity validation | None | ✅ Yes |
+| `step2` | Version Check | Collect current firmware version and verify file exists | step1 (direct); steps 1-2 (via tags) | ✅ Yes |
+| `step3` | Space Check | Verify sufficient disk space, auto-clean if needed | step1 (direct); steps 1-3 (via tags) | ✅ Yes |
+| `step4` | Image Upload | Upload firmware and verify SHA512 hash (PHASE 1) | step1 (direct); steps 1-4 (via tags) | ✅ Yes |
+| `step5` | Config Backup & Pre-Validation | Backup config and capture network state baseline | step1 (direct); steps 1-5 (via tags) | ✅ Yes |
+| `step6` | Installation & Reboot | Install firmware and reboot device (PHASE 2) | step1 (direct); steps 1-6 (via tags) | ⚠️ Maintenance Window |
+| `step7` | Post-Upgrade Validation | Validate network state after upgrade (PHASE 3) | step1 (direct); steps 1-7 (via tags) | ⚠️ Maintenance Window |
+| `step8` | Emergency Rollback | Restore previous firmware and configuration | step1 (direct); triggered by step7 or manual | ⚠️ Maintenance Window |
+
+### Execution Examples
+
+**Individual Step Execution:**
+```bash
+# Run only health check (STEP 1)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step1 \
+  -e target_hosts=mydevice \
+  -e max_concurrent=5
+
+# Run only image loading (STEP 4) - business hours safe
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step4 \
+  -e target_hosts=mydevice \
+  -e target_firmware=nxos-10.3.5.bin \
+  -e max_concurrent=5
+```
+
+**Multiple Step Execution:**
+```bash
+# Run PHASE 1: Health check + backup + image loading
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step1,step3,step4 \
+  -e target_hosts=mydevice \
+  -e target_firmware=nxos-10.3.5.bin \
+  -e max_concurrent=5
+
+# Run PHASE 2: Installation + validation (maintenance window)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  --tags step6,step7,step8 \
+  -e target_hosts=mydevice \
+  -e target_firmware=nxos-10.3.5.bin \
+  -e maintenance_window=true \
+  -e max_concurrent=5
+```
+
+**Full Workflow Execution:**
+```bash
+# Execute all steps (complete upgrade)
+ansible-playbook ansible-content/playbooks/main-upgrade-workflow.yml \
+  -e target_hosts=mydevice \
+  -e target_firmware=nxos-10.3.5.bin \
+  -e maintenance_window=true \
+  -e max_concurrent=5
+```
+
+### Required Variables by Execution Mode
+
+| Execution Mode | Required Variables |
+|----------------|-------------------|
+| Health Check Only (step1) | `target_hosts`, `max_concurrent` |
+| Image Loading (step4) | `target_hosts`, `target_firmware`, `max_concurrent` |
+| Validation Only (step5/step7) | `target_hosts`, `target_firmware`, `max_concurrent` |
+| Full Upgrade | `target_hosts`, `target_firmware`, `maintenance_window`, `max_concurrent` |
+
+### Automatic Dependency Resolution
+
+**New Dependency Model**: Each step file depends directly only on STEP 1 (connectivity). The main workflow orchestrates additional dependencies through tag-based execution:
+
+- **Direct Dependencies**: All steps 2-8 include only STEP 1 (connectivity check)
+- **Orchestrated Dependencies**: Main workflow ensures proper execution order via tags
+- **STEP 2** Version check runs after STEP 1 (orchestrated by tags)
+- **STEP 3** Backup runs after STEPS 1-2 (orchestrated by tags)
+- **STEP 4** Image loading runs after STEPS 1-3 (orchestrated by tags)
+- **STEP 5** Pre-validation runs after STEPS 1-4 (orchestrated by tags)
+- **STEP 6** Installation runs after STEPS 1-5 (orchestrated by tags)
+- **STEP 7** Post-validation runs after STEPS 1-6 (orchestrated by tags)
+- **STEP 8** Emergency rollback can run independently (STEP 1 only) or triggered by STEP 7
+
+**Example**: Running `--tags step6` ensures the main workflow executes steps 1-6 in order, even though step-6-installation.yml only includes step-1-connectivity.yml directly.
+
+### Playbook Migration Guide
+
+For users migrating from legacy individual playbooks:
+
+| Legacy Playbook | New Command |
+|----------------|-------------|
+| `health-check.yml` | `main-upgrade-workflow.yml --tags step1` |
+| `network-validation.yml` (pre) | `main-upgrade-workflow.yml --tags step5` |
+| `network-validation.yml` (post) | `main-upgrade-workflow.yml --tags step7` |
+| `image-loading.yml` | `main-upgrade-workflow.yml --tags step4` |
+| `image-installation.yml` | `main-upgrade-workflow.yml --tags step6` |
+| `emergency-rollback.yml` | `main-upgrade-workflow.yml --tags step8` |
+
+**Note**: Legacy playbooks are deprecated and will be removed in a future release. Migrate to tag-based execution.
 
 ## Support
 
 For technical support and questions:
-- Check the [Installation Guide](docs/installation-guide.md) troubleshooting section
-- Review platform-specific procedures in [Platform Implementation Guide](docs/platform-implementation-status.md)
+- Check the [CLAUDE.md](CLAUDE.md) for complete documentation and troubleshooting
+- Review platform-specific procedures in [Platform Implementation Guide](docs/platform-guides/platform-implementation-status.md)
 - Examine log files in `$HOME/.local/share/network-upgrade/logs/`
 - Use the built-in health check: `./scripts/system-health.sh`
 

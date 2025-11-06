@@ -5,46 +5,28 @@
 - name: FortiOS Platform Tests
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - ../shared-test-vars.yml
   vars:
     role_path: "{{ playbook_dir }}/../../ansible-content/roles/fortios-upgrade"
+    test_device_registry: "{{ lookup('file', playbook_dir + '/../fixtures/test-device-registry.yml') | from_yaml }}"
     test_scenarios:
       - name: "HA Primary Firewall"
-        device_vars:
-          platform_type: "fortios"
-          device_model: "FortiGate-600E"
-          firmware_version: "7.0.8"
-          target_version: "7.2.4"
-          ha_enabled: true
-          ha_role: "primary"
-          vdom_enabled: true
+        device_vars: "{{ test_device_registry.test_devices.fortios.ha_primary_firewall | combine({'vdom_enabled': true}) }}"
         expected_results:
           ha_upgrade_required: true
           upgrade_method: "ha_upgrade"
           ha_coordination: true
 
       - name: "HA Secondary Firewall"
-        device_vars:
-          platform_type: "fortios"
-          device_model: "FortiGate-600E"
-          firmware_version: "7.0.8"
-          target_version: "7.2.4"
-          ha_enabled: true
-          ha_role: "secondary"
-          vdom_enabled: true
+        device_vars: "{{ test_device_registry.test_devices.fortios.ha_secondary_firewall | combine({'vdom_enabled': true}) }}"
         expected_results:
           ha_upgrade_required: true
           upgrade_method: "ha_upgrade"
           ha_coordination: true
 
       - name: "Standalone Firewall"
-        device_vars:
-          platform_type: "fortios"
-          device_model: "FortiGate-200F"
-          firmware_version: "7.0.12"
-          target_version: "7.2.4"
-          ha_enabled: false
-          ha_role: "standalone"
-          vdom_enabled: false
+        device_vars: "{{ test_device_registry.test_devices.fortios.standalone_firewall | combine({'vdom_enabled': false, 'ha_role': 'standalone'}) }}"
         expected_results:
           ha_upgrade_required: false
           upgrade_method: "standalone_upgrade"

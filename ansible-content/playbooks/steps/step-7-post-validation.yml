@@ -1,0 +1,137 @@
+---
+# STEP 7: Post-Upgrade Validation
+# Compare to pre-upgrade state
+# Failure triggers OPTIONAL rollback (does not stop workflow)
+# Dependencies: STEP 1 (managed by main workflow tags)
+# NOTE: STEP 5 baseline must exist from prior run, STEP 6 should have been run
+# NOTE: Baseline file paths are defined in main workflow pre_tasks
+
+- name: Check if pre-upgrade baseline file exists
+  ansible.builtin.stat:
+    path: "{{ baseline_file_pre_upgrade }}"
+  register: baseline_file
+  delegate_to: localhost
+  changed_when: false
+
+- name: Fail immediately if baseline missing
+  ansible.builtin.fail:
+    msg:
+      - "CRITICAL: Pre-upgrade baseline file missing for post-upgrade validation."
+      - ""
+      - "Post-upgrade validation REQUIRES a baseline from step 5 (pre-upgrade gathering)."
+      - ""
+      - "Baseline path: {{ baseline_file_pre_upgrade }}"
+      - "File found: {{ baseline_file.stat.exists }}"
+      - ""
+      - "You must run step 5 BEFORE step 6 and step 7."
+      - ""
+      - "Correct workflow sequence:"
+      - "1. Run step 5: ansible-playbook main-upgrade-workflow.yml --tags step5 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5"
+      - "2. Run step 6: ansible-playbook main-upgrade-workflow.yml --tags step6 -e target_hosts=mydevice -e target_firmware=fw.bin -e max_concurrent=5 -e maintenance_window=true"
+      - "3. Run step 7: ansible-playbook main-upgrade-workflow.yml --tags step7 -e target_hosts=mydevice -e max_concurrent=5"
+  when: not baseline_file.stat.exists
+
+- name: Validate pre-upgrade baseline file integrity before comparison
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: validate-baseline-integrity
+  vars:
+    baseline_file_path: "{{ baseline_file_pre_upgrade }}"
+    baseline_type: "pre_upgrade"
+    fail_on_corruption: true
+  when: baseline_file.stat.exists
+
+- name: Display STEP 7 entry
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "STEP 7: POST-UPGRADE VALIDATION"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Platform: {{ platform }}"
+      - "About to gather post-upgrade network resources..."
+      - "=========================================="
+
+- name: Gather comprehensive network resources for post-upgrade validation
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: network-resources-gathering
+  vars:
+    validation_phase: "post_upgrade"
+
+- name: Display network resources gathering completion
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "POST-UPGRADE RESOURCES GATHERED - PROCEEDING TO VALIDATION"
+      - "=========================================="
+
+- name: Capture post-upgrade network state
+  ansible.builtin.include_role:
+    name: network-validation
+  vars:
+    validation_phase: "post_upgrade"
+    compare_to_baseline: true
+
+- name: Save comparison validation results to file
+  ansible.builtin.copy:
+    content: "{{ validation_comparison_results | to_nice_json }}"
+    dest: "{{ baseline_file_comparison }}"
+    mode: '0644'
+  delegate_to: localhost
+  changed_when: false
+
+- name: Display post-upgrade validation results and baseline comparison
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "POST-UPGRADE BASELINE COMPARISON RESULTS"
+      - "=========================================="
+      - "Device: {{ inventory_hostname }}"
+      - "Network Resources: {{ validation_comparison_results.network_resources_status }}"
+      - "ARP/MAC Comparison: {{ validation_comparison_results.arp_mac_status }}"
+      - "Routing Comparison: {{ validation_comparison_results.routing_status }}"
+      - "BFD Comparison: {{ validation_comparison_results.bfd_status }}"
+      - "Multicast Comparison: {{ validation_comparison_results.multicast_status }}"
+      - ""
+      - "Files saved:"
+      - "  - {{ baseline_file_post_upgrade }}"
+      - "  - {{ baseline_file_comparison }}"
+      - "=========================================="
+
+- name: Display baseline comparison changes (on failure)
+  when: validation_comparison_results.network_resources_status == "FAIL" or validation_comparison_results.arp_mac_status == "FAIL" or validation_comparison_results.routing_status == "FAIL"
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "BASELINE COMPARISON DIFFERENCES DETECTED"
+      - "=========================================="
+      - "Network Resources: {{ validation_comparison_results.network_resources_status }}"
+      - "ARP/MAC Status: {{ validation_comparison_results.arp_mac_status }}"
+      - "Routing Status: {{ validation_comparison_results.routing_status }}"
+      - ""
+      - "Run with -v flag to see detailed delta entries"
+      - "=========================================="
+
+- name: Compare pre/post upgrade states
+  ansible.builtin.assert:
+    that:
+      - validation_comparison_results is defined
+      - validation_comparison_results.network_resources_status != "FAIL"
+      - validation_comparison_results.arp_mac_status != "FAIL"
+      - validation_comparison_results.routing_status != "FAIL"
+    fail_msg: "Post-upgrade validation shows degradation from baseline."
+
+- name: Export step 7 metrics
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: metrics-export
+  vars:
+    metric_type: "post_upgrade_validation"
+    metric_data:
+      validation_passed: "{{ 'true' if validation_comparison_results.network_resources_status != 'FAIL' and validation_comparison_results.arp_mac_status != 'FAIL' and validation_comparison_results.routing_status != 'FAIL' else 'false' }}"
+      network_resources_status: "{{ validation_comparison_results.network_resources_status }}"
+      arp_mac_status: "{{ validation_comparison_results.arp_mac_status }}"
+      routing_status: "{{ validation_comparison_results.routing_status }}"
+      device: "{{ inventory_hostname }}"
+  when: export_metrics | bool

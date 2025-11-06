@@ -1,6 +1,13 @@
 ---
-# Image validation tasks - placeholder for image integrity checks
+# Image Validation Tasks
+# Complete firmware image validation workflow
 
-- name: Placeholder image validation
-  ansible.builtin.debug:
-    msg: "Image validation placeholder - checks would be implemented here"
+- name: Run integrity audit (file existence, size, permissions, extension)
+  ansible.builtin.include_tasks: integrity-audit.yml
+
+- name: Run hash verification (MANDATORY - SHA512 checksum validation)
+  ansible.builtin.include_tasks: hash-verification.yml
+
+- name: Run version verification (extract and validate version from filename)
+  ansible.builtin.include_tasks: version-verification.yml
+  when: expected_firmware_version is defined
