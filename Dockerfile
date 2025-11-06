@@ -1,6 +1,6 @@
 # Network Device Upgrade System - Production Container
 # Optimized for RHEL8/9 podman compatibility with non-root execution
-FROM python:3.14-alpine
+FROM python:3.13-alpine
 
 # Metadata labels for GitHub Container Registry
 LABEL org.opencontainers.image.title="Network Device Upgrade System"
@@ -50,14 +50,8 @@ COPY ansible-content/collections/requirements.yml ./ansible-content/collections/
 # Install Ansible and Python dependencies as non-root user
 USER ansible
 
-# Install uv for fast Python package management
-RUN python -m pip install uv
-
-# Set PATH to include user binaries
-ENV PATH="/home/ansible/.local/bin:${PATH}"
-
-# Install Ansible 11.0.0 (includes ansible-core 2.18.10) and dependencies using uv
-RUN uv pip install --system --no-cache-dir \
+# Install Ansible 11.0.0 (includes ansible-core 2.18.10) and dependencies
+RUN pip install --user --no-cache-dir \
         ansible==11.0.0 \
         ansible-pylibssh \
         paramiko \
@@ -66,6 +60,9 @@ RUN uv pip install --system --no-cache-dir \
         pyyaml \
         requests \
         psutil
+
+# Set PATH to include user binaries
+ENV PATH="/home/ansible/.local/bin:${PATH}"
 
 # Install Ansible collections with explicit versions
 RUN ansible-galaxy collection install \
