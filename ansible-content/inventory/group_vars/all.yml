@@ -69,12 +69,12 @@ file_transfer_poll_interval: 10  # Status check interval during transfer (second
 
 # Backup and rollback
 backup_enabled: true
+backup_type: "pre_upgrade"  # Backup type: pre_upgrade, post_upgrade, or on_demand
 rollback_on_failure: true
 rollback_timeout: 600  # Rollback operation timeout (seconds)
 keep_backup_count: 3
 maintenance_window: false  # MUST be explicitly set to true for upgrades (safety)
-# NOTE: backup_type, include_startup_config moved to ansible-content/group_vars/all.yml
-# These are backup configuration defaults and should be defined in playbook-level group_vars
+include_startup_config: true  # Include startup config in backups
 include_running_config: true  # Include running config in backups
 restore_config: true  # Restore config during rollback
 restore_firmware: true  # Restore firmware during rollback
