@@ -57,7 +57,7 @@ RUN python -m pip install uv
 ENV PATH="/home/ansible/.local/bin:${PATH}"
 
 # Install Ansible 11.0.0 (includes ansible-core 2.18.10) and dependencies using uv
-RUN uv pip install --user --no-cache-dir \
+RUN uv pip install --no-cache-dir \
         ansible==11.0.0 \
         ansible-pylibssh \
         paramiko \
