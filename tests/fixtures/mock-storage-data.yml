@@ -18,11 +18,7 @@ mock_storage_output:
     stdout:
       - "v7.2.4 build 1396"
     rc: 0
-    
-  
-    stdout: "1048576000    Jan 01 12:00  test-image.iso\n\n10737418240 bytes total (5368709120 bytes free)"
-    rc: 0
-    
+
   opengear:
     stdout: "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       10G   5G   5G  50% /data"
     stdout_lines:
