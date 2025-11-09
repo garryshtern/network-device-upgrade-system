@@ -4,6 +4,9 @@
 
 set -e
 
+# Add error handling to ensure proper exit
+trap 'echo "ERROR: Test runner exited unexpectedly at line $LINENO"; exit 1' ERR
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
