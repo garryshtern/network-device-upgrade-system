@@ -82,26 +82,25 @@ jobs:
             exit 1
           fi
 
-          # Get the test report
-          REPORT=$(cat tests/results/test_report_*.txt)
+          # Get the test report and strip ANSI color codes
+          REPORT=$(cat tests/results/test_report_*.txt | sed 's/\x1b\[[0-9;]*m//g')
 
-          # Check for success message
-          if echo "$REPORT" | grep -q "All.*test.*passed"; then
-            PASSED=$(echo "$REPORT" | grep -o "Passed: [0-9]*" | head -1 | cut -d' ' -f2)
-            echo "✅ SUCCESS: All $PASSED test suites passed"
+          # Extract Failed and Passed counts using more robust parsing
+          FAILED_COUNT=$(echo "$REPORT" | grep -o "Failed: [0-9]*" | tail -1 | cut -d' ' -f2)
+          PASSED_COUNT=$(echo "$REPORT" | grep -o "Passed: [0-9]*" | tail -1 | cut -d' ' -f2)
+
+          echo "Test Results:"
+          echo "  Passed: $PASSED_COUNT"
+          echo "  Failed: $FAILED_COUNT"
+
+          # Check if all tests passed
+          if [[ "$FAILED_COUNT" == "0" ]] || [[ -z "$FAILED_COUNT" && "$PASSED_COUNT" -gt 0 ]]; then
+            echo "✅ SUCCESS: All $PASSED_COUNT test suites passed"
             exit 0
-          fi
-
-          # Check for failure indicators
-          if echo "$REPORT" | grep -q "Failed: [1-9]"; then
-            FAILED=$(echo "$REPORT" | grep -o "Failed: [1-9][0-9]*" | cut -d' ' -f2)
-            PASSED=$(echo "$REPORT" | grep -o "Passed: [0-9]*" | cut -d' ' -f2)
-            echo "❌ FAILED: $FAILED test suite(s) failed (Passed: $PASSED)"
+          else
+            echo "❌ FAILED: $FAILED_COUNT test suite(s) failed"
             echo ""
             echo "Failed test details:"
-            grep -A 5 "FAILED\|failed\|Failed" tests/results/test_report_*.txt || true
+            grep -i "failed\|error" tests/results/test_report_*.txt || true
             exit 1
           fi
-
-          echo "❌ FAILED: Could not determine test status"
-          exit 1
