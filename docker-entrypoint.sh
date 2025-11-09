@@ -623,15 +623,25 @@ setup_inventory() {
             exit 1
         fi
 
+        # Ensure inventory directory exists
+        mkdir -p "${ansible_inventory_dir}" 2>/dev/null || true
+
         # Remove existing symlink/file if it exists
         rm -f "${ansible_inventory}" 2>/dev/null || true
 
-        # Create symlink
-        if ln -sf "${INVENTORY_FILE}" "${ansible_inventory}" 2>/dev/null; then
-            log "  Symlink created successfully"
+        # Create symlink, handle error gracefully
+        if ! ln -sf "${INVENTORY_FILE}" "${ansible_inventory}" 2>/dev/null; then
+            warn "Could not create symlink (filesystem may not support it)"
+            warn "Attempting to use inventory file directly instead"
+            # Verify the inventory file exists and is accessible
+            if [[ -f "${INVENTORY_FILE}" ]]; then
+                log "Using inventory file directly: ${INVENTORY_FILE}"
+            else
+                error "Failed to create inventory symlink and source file not accessible"
+                exit 1
+            fi
         else
-            error "Failed to create inventory symlink"
-            exit 1
+            log "Symlink created successfully"
         fi
     else
         log "Using default inventory: ${ansible_inventory}"
