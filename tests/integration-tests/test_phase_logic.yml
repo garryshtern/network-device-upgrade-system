@@ -6,7 +6,6 @@
 - name: "Set phase variables: {{ test_phase.phase }}"
   set_fact:
     current_test_phase: "{{ test_phase.phase }}"
-    platform_type: "{{ platform }}"
 
 - name: "Test {{ test_phase.phase }} phase logic"
   block:
@@ -39,14 +38,14 @@
 
     - name: "Test platform-specific phase logic"
       set_fact:
-        platform_specific_actions: "{{ platform_phase_map[platform_type][current_test_phase] | default([]) }}"
+        platform_specific_actions: "{{ platform_phase_map[platform][current_test_phase] | default([]) }}"
       vars:
         platform_phase_map:
-          cisco_nxos:
+          nxos:
             loading: ["check_issu_capability", "validate_nxos_image"]
             installation: ["{{ 'perform_issu' if issu_capable | default(false) else 'standard_upgrade' }}"]
             validation: ["check_nxos_status", "validate_bfd"]
-          cisco_iosxe:
+          ios:
             loading: ["check_install_mode", "validate_iosxe_image"]
             installation: ["{{ 'install_mode_upgrade' if install_mode | default(false) else 'bundle_mode_upgrade' }}"]
             validation: ["check_iosxe_status", "validate_ipsec"]
