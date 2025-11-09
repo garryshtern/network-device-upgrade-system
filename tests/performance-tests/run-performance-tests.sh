@@ -101,7 +101,7 @@ main() {
 
     # Test 7: Collection requirements processing
     run_performance_test "Collection requirements processing" 10 \
-        bash -c "cd '$PROJECT_ROOT' && python3 -c \"import yaml; data=yaml.safe_load(open('ansible-content/collections/requirements.yml')); print(f'Loaded {len(data.get(\\\"collections\\\", []))} collections')\""
+        python3 -c "import yaml; import json; data=yaml.safe_load(open('ansible-content/collections/requirements.yml')); print('Loaded', len(data.get('collections', [])), 'collections')"
 
     # Summary
     echo ""
