@@ -88,18 +88,6 @@ all:
         opengear_password: "{{ vault_opengear_password | default('admin123') }}"
         opengear_api_token: "{{ vault_opengear_api_token | default(omit) }}"
 
-      hosts:
-          ansible_host: 192.168.1.501
-          device_model: MetaConnect48
-          current_firmware: "1.60.17"
-          target_firmware: "1.62.2"
-          ansible_host: 192.168.1.502
-          device_model: MetaConnect24
-          current_firmware: "1.60.17"
-          target_firmware: "1.62.2"
-      vars:
-        ansible_connection: local
-
   vars:
     # Global Variables for Testing
     image_server_username: "{{ vault_image_server_username | default('ftp-user') }}"
