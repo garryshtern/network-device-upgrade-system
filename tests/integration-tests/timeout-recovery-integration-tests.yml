@@ -265,9 +265,9 @@
           ansible.builtin.assert:
             that:
               - timeout_error_message | length >= 5
-              - timeout_error_message | join('') | regex_search('Device:')
-              - timeout_error_message | join('') | regex_search('[0-9]+ connection retries')
-              - timeout_error_message | join('') | regex_search('[Tt]imeout')
+              - timeout_error_message | join('') | regex_search('Device:') is not none
+              - timeout_error_message | join('') | regex_search('[0-9]+ connection retries') is not none
+              - timeout_error_message | join('') | regex_search('[Tt]imeout') is not none
             fail_msg:
               - "Timeout error message missing required fields"
               - "Message: {{ timeout_error_message | join('') }}"
