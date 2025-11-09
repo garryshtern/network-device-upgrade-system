@@ -250,6 +250,17 @@
               - "Attempted 6 connection retries (10s each)"
               - "Check device connectivity, power status, and network access"
 
+        - name: Debug - Show timeout error message
+          ansible.builtin.debug:
+            msg:
+              - "=== TIMEOUT ERROR MESSAGE DEBUG ==="
+              - "Message array: {{ timeout_error_message }}"
+              - "Length: {{ timeout_error_message | length }}"
+              - "Joined: {{ timeout_error_message | join('') }}"
+              - "Has Device:: {{ timeout_error_message | join('') | regex_search('Device:') }}"
+              - "Has [0-9]+ connection retries: {{ timeout_error_message | join('') | regex_search('[0-9]+ connection retries') }}"
+              - "Has [Tt]imeout: {{ timeout_error_message | join('') | regex_search('[Tt]imeout') }}"
+
         - name: Validate error message contains required fields
           ansible.builtin.assert:
             that:
@@ -257,7 +268,12 @@
               - timeout_error_message | join('') | regex_search('Device:')
               - timeout_error_message | join('') | regex_search('[0-9]+ connection retries')
               - timeout_error_message | join('') | regex_search('[Tt]imeout')
-            fail_msg: "Timeout error message missing required fields"
+            fail_msg:
+              - "Timeout error message missing required fields"
+              - "Message: {{ timeout_error_message | join('') }}"
+              - "Regex 1 (Device:): {{ timeout_error_message | join('') | regex_search('Device:') }}"
+              - "Regex 2 ([0-9]+ connection retries): {{ timeout_error_message | join('') | regex_search('[0-9]+ connection retries') }}"
+              - "Regex 3 ([Tt]imeout): {{ timeout_error_message | join('') | regex_search('[Tt]imeout') }}"
 
         - name: Record test 6 result
           ansible.builtin.set_fact:
