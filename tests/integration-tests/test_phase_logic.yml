@@ -6,6 +6,7 @@
 - name: "Set phase variables: {{ test_phase.phase }}"
   set_fact:
     current_test_phase: "{{ test_phase.phase }}"
+    platform_type: "{{ platform }}"
 
 - name: "Test {{ test_phase.phase }} phase logic"
   block:
