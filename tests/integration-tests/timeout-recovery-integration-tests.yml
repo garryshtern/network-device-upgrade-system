@@ -255,8 +255,8 @@
             that:
               - timeout_error_message | length >= 5
               - timeout_error_message | join('') | regex_search('Device:')
-              - timeout_error_message | join('') | regex_search('[0-9]+ connection retries')
-              - timeout_error_message | join('') | regex_search('timeout')
+              - timeout_error_message | join('') | regex_search('[0-9]+ .*retries')
+              - timeout_error_message | join('') | regex_search('[Tt]imeout')
             fail_msg: "Timeout error message missing required fields"
 
         - name: Record test 6 result

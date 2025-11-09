@@ -153,10 +153,10 @@ jobs:
           - ✅ Multi-architecture (amd64/arm64)
           
           ### 📋 System Requirements
-          
+
           - **Ansible**: 12.0.0+ (ansible-core 2.19.2+)
           - **Python**: 3.13.9+
-          - **Platform Support**: Cisco NX-OS, IOS-XE, FortiOS, Opengear, Metamako MOS
+          - **Platform Support**: Cisco NX-OS, IOS-XE, FortiOS, Opengear
           
           ### 📦 Installation Options
           

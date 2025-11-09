@@ -226,9 +226,6 @@ test_platform_authentication() {
         -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key" \
         -e OPENGEAR_API_TOKEN="$(cat "$MOCKUP_DIR/tokens/opengear-token")" \
         -e TARGET_HOSTS="opengear-console-01"
-
-    # Test Metamako SSH authentication
-    run_comprehensive_container_test "Metamako SSH auth" "success" "syntax-check" \
 }
 
 # Test upgrade phases and workflows

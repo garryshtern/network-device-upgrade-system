@@ -12,9 +12,8 @@ Brief description of the changes in this PR.
 
 ## Platform(s) Affected
 - [ ] Cisco NX-OS
-- [ ] Cisco IOS-XE  
+- [ ] Cisco IOS-XE
 - [ ] FortiOS
-- [ ] Metamako MOS
 - [ ] Opengear
 - [ ] General/Cross-platform
 

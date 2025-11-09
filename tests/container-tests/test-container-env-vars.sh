@@ -49,9 +49,6 @@ test_ssh_key_authentication() {
         -e OPENGEAR_SSH_KEY="/opt/keys/opengear-key" \
         -e TARGET_HOSTS="opengear-console-01"
 
-    # Test Metamako SSH key
-    run_container_test "Metamako SSH key" "success" \
-
     # Test multiple SSH keys
     run_container_test "Multiple SSH keys" "success" \
         -e CISCO_NXOS_SSH_KEY="/opt/keys/cisco-nxos-key" \

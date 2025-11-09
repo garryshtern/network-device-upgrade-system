@@ -118,12 +118,7 @@ run_test \
     "grep -q 'Server-Initiated PUSH' '$ROOT_DIR/ansible-content/roles/fortios-upgrade/tasks/image-loading.yml' && ! grep -q 'FortiGuard.*download' '$ROOT_DIR/ansible-content/roles/fortios-upgrade/tasks/image-loading.yml'" \
     "Validates FortiOS image loading tasks implement server-initiated PUSH transfers only"
 
-# Test 6: Metamako Security Compliance
-run_test \
-    "Metamako Security Compliance" \
-    "Validates Metamako MOS image loading tasks implement server-initiated SCP transfers"
-
-# Test 7: Opengear Security Compliance
+# Test 6: Opengear Security Compliance
 run_test \
     "Opengear Security Compliance" \
     "grep -q 'Server-Initiated PUSH' '$ROOT_DIR/ansible-content/roles/opengear-upgrade/tasks/image-loading.yml' && ! grep -q 'device-initiated.*download' '$ROOT_DIR/ansible-content/roles/opengear-upgrade/tasks/image-loading.yml'" \
