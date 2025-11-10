@@ -12,6 +12,8 @@ concurrency:
 on:
   workflow_dispatch:
     description: 'Run comprehensive test suite manually'
+  pull_request:
+    branches: [main, develop]
   schedule:
     # Run comprehensive tests weekly on Sundays at 4:00 AM UTC
     - cron: '0 4 * * 0'
