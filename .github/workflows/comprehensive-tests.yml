@@ -82,8 +82,8 @@ jobs:
             exit 1
           fi
 
-          # Get the test report and strip ANSI color codes
-          REPORT=$(cat tests/results/test_report_*.txt | sed 's/\x1b\[[0-9;]*m//g')
+          # Get the test report and strip ANSI color codes (both literal \033 and actual ESC chars)
+          REPORT=$(cat tests/results/test_report_*.txt | sed 's/\\033\[[0-9;]*m//g' | sed 's/\x1b\[[0-9;]*m//g')
 
           # Extract Failed and Passed counts using more robust parsing
           FAILED_COUNT=$(echo "$REPORT" | grep -o "Failed: [0-9]*" | tail -1 | cut -d' ' -f2)
