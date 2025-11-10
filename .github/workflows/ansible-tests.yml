@@ -182,7 +182,7 @@ jobs:
         env:
           MOLECULE_NO_LOG: false
 
-call-container-build:
+  call-container-build:
     name: Build and Push Production Container Image
     needs: [lint-and-syntax, unit-tests, integration-tests, security-scan, mock-device-tests, container-tests]
     # Only build production container on main branch pushes after all tests pass
