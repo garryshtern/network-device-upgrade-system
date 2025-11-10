@@ -82,21 +82,16 @@ jobs:
             exit 1
           fi
 
-          # Extract test results - strip ANSI codes using multiple methods
-          # First try perl, then fall back to awk-based extraction
-          RESULT=$(perl -pe 's/\x1b\[[0-9;]*m//g' tests/results/test_report_*.txt 2>/dev/null | grep -E "^(Passed|Failed):" | tail -2)
+          # Get the test report file (should be only one)
+          REPORT_FILE=$(ls tests/results/test_report_*.txt | head -1)
 
-          # If perl didn't work or didn't remove codes, use awk to extract just numbers
-          if echo "$RESULT" | grep -q '[0-9]';then
-            # perl worked, extract using simple grep/awk
-            PASSED=$(echo "$RESULT" | grep "^Passed:" | tail -1 | awk '{print $NF}')
-            FAILED=$(echo "$RESULT" | grep "^Failed:" | tail -1 | awk '{print $NF}')
-          else
-            # Fallback: extract using sed to remove control characters
-            RESULT=$(sed 's/[[:cntrl:]]\[[^m]*m//g' tests/results/test_report_*.txt | grep -E "^(Passed|Failed):" | tail -2)
-            PASSED=$(echo "$RESULT" | grep "^Passed:" | tail -1 | awk '{for(i=NF;i>0;i--)if($i~/^[0-9]+$/)print $i}')
-            FAILED=$(echo "$RESULT" | grep "^Failed:" | tail -1 | awk '{for(i=NF;i>0;i--)if($i~/^[0-9]+$/)print $i}')
-          fi
+          # Extract summary section from the top of the file (first 15 lines)
+          # The summary is in the header: "- Passed: X" and "- Failed: Y"
+          SUMMARY=$(head -15 "$REPORT_FILE")
+
+          # Extract Passed and Failed from summary (without ANSI codes)
+          PASSED=$(echo "$SUMMARY" | grep "^- Passed:" | awk '{print $NF}')
+          FAILED=$(echo "$SUMMARY" | grep "^- Failed:" | awk '{print $NF}')
 
           echo "Test Results:"
           echo "  Passed: $PASSED"
@@ -107,6 +102,6 @@ jobs:
             echo "✅ SUCCESS: All $PASSED test suites passed"
             exit 0
           else
-            echo "❌ FAILED: $FAILED test suite(s) failed"
+            echo "❌ FAILED: $FAILED test suite(s) failed (or test results could not be parsed)"
             exit 1
           fi
