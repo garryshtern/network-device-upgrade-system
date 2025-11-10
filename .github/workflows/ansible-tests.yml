@@ -12,19 +12,9 @@ on:
   pull_request:
     branches: [main, develop]
   schedule:
-    # Run comprehensive tests weekly on Sundays at 3:00 AM UTC
-    - cron: '0 3 * * 0'
+    # Run comprehensive tests weekly on Sundays at 4:00 AM UTC
+    - cron: '0 4 * * 0'
   workflow_dispatch:
-    inputs:
-      test_level:
-        description: 'Test level to run'
-        required: false
-        default: 'standard'
-        type: choice
-        options:
-          - 'standard'
-          - 'comprehensive'
-          - 'critical-gaps-only'
 
 permissions:
   contents: write
@@ -198,8 +188,8 @@ jobs:
   critical-gap-tests:
     name: Critical Gap Test Suite
     runs-on: ubuntu-latest
-    # Only run on schedule, manual trigger with critical-gaps-only, or manual comprehensive
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.test_level == 'critical-gaps-only' || inputs.test_level == 'comprehensive'))
+    # Only run on schedule or manual trigger
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         python-version: ["3.13.9"]
@@ -263,11 +253,9 @@ jobs:
           fi
 
   comprehensive-test-suite:
-    name: Comprehensive Test Suite (All 14 Tests)
+    name: Comprehensive Test Suite (50+ Tests)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # Only run on schedule or manual trigger with comprehensive level
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_level == 'comprehensive')
+    timeout-minutes: 90
 
     steps:
       - name: Checkout code
@@ -286,11 +274,12 @@ jobs:
       - name: Create results directory
         run: mkdir -p tests/results
 
-      - name: Run comprehensive test suite
+      - name: Run comprehensive test suite (All 50+ tests)
         run: |
           cd tests
           chmod +x run-all-tests.sh
           ./run-all-tests.sh
+        timeout-minutes: 75
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -302,16 +291,48 @@ jobs:
             tests/results/*_*.log
           retention-days: 30
 
-      - name: Fail if any tests failed
+      - name: Parse and display test results
+        if: always()
         run: |
-          # Check if comprehensive tests passed by checking that no tests failed
-          if grep -q "Failed: 0" tests/results/test_report_*.txt; then
-            passed_count=$(grep -o "Passed: [0-9]*" tests/results/test_report_*.txt | cut -d' ' -f2)
-            echo "✅ All $passed_count test suites passed successfully"
+          echo "════════════════════════════════════════════════════════"
+          echo "Comprehensive Test Suite Results"
+          echo "════════════════════════════════════════════════════════"
+
+          if [ -f tests/results/test_report_*.txt ]; then
+            cat tests/results/test_report_*.txt
           else
-            echo "❌ Comprehensive test suite failed"
-            echo "Test report contents:"
-            cat tests/results/test_report_*.txt || echo "No test report found"
+            echo "WARNING: No test report found"
+          fi
+
+      - name: Verify all tests passed
+        run: |
+          # Check if test report exists
+          if ! ls tests/results/test_report_*.txt 1> /dev/null 2>&1; then
+            echo "❌ FAILED: No test report file found"
+            exit 1
+          fi
+
+          # Get the test report file (should be only one)
+          REPORT_FILE=$(ls tests/results/test_report_*.txt | head -1)
+
+          # Extract summary section from the top of the file (first 15 lines)
+          # The summary is in the header: "- Passed: X" and "- Failed: Y"
+          SUMMARY=$(head -15 "$REPORT_FILE")
+
+          # Extract Passed and Failed from summary (without ANSI codes)
+          PASSED=$(echo "$SUMMARY" | grep "^- Passed:" | awk '{print $NF}')
+          FAILED=$(echo "$SUMMARY" | grep "^- Failed:" | awk '{print $NF}')
+
+          echo "Test Results:"
+          echo "  Passed: $PASSED"
+          echo "  Failed: $FAILED"
+
+          # Check if all tests passed
+          if [ "$FAILED" = "0" ] && [ -n "$PASSED" ] && [ "$PASSED" -gt 0 ]; then
+            echo "✅ SUCCESS: All $PASSED test suites passed"
+            exit 0
+          else
+            echo "❌ FAILED: $FAILED test suite(s) failed (or test results could not be parsed)"
             exit 1
           fi
 
