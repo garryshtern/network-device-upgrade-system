@@ -82,15 +82,21 @@ jobs:
             exit 1
           fi
 
-          # Extract final test results from report
-          # Strip ANSI color codes from entire report first, then grep
-          ESC=$(printf '\033')
-          CLEAN_REPORT=$(sed "s/${ESC}\[[0-9;]*m//g" tests/results/test_report_*.txt)
-          RESULT=$(echo "$CLEAN_REPORT" | grep -E "^(Passed|Failed):" | tail -2)
+          # Extract test results - strip ANSI codes using multiple methods
+          # First try perl, then fall back to awk-based extraction
+          RESULT=$(perl -pe 's/\x1b\[[0-9;]*m//g' tests/results/test_report_*.txt 2>/dev/null | grep -E "^(Passed|Failed):" | tail -2)
 
-          # Extract numeric values
-          PASSED=$(echo "$RESULT" | grep "^Passed:" | tail -1 | awk -F: '{print $2}' | xargs)
-          FAILED=$(echo "$RESULT" | grep "^Failed:" | tail -1 | awk -F: '{print $2}' | xargs)
+          # If perl didn't work or didn't remove codes, use awk to extract just numbers
+          if echo "$RESULT" | grep -q '[0-9]';then
+            # perl worked, extract using simple grep/awk
+            PASSED=$(echo "$RESULT" | grep "^Passed:" | tail -1 | awk '{print $NF}')
+            FAILED=$(echo "$RESULT" | grep "^Failed:" | tail -1 | awk '{print $NF}')
+          else
+            # Fallback: extract using sed to remove control characters
+            RESULT=$(sed 's/[[:cntrl:]]\[[^m]*m//g' tests/results/test_report_*.txt | grep -E "^(Passed|Failed):" | tail -2)
+            PASSED=$(echo "$RESULT" | grep "^Passed:" | tail -1 | awk '{for(i=NF;i>0;i--)if($i~/^[0-9]+$/)print $i}')
+            FAILED=$(echo "$RESULT" | grep "^Failed:" | tail -1 | awk '{for(i=NF;i>0;i--)if($i~/^[0-9]+$/)print $i}')
+          fi
 
           echo "Test Results:"
           echo "  Passed: $PASSED"
