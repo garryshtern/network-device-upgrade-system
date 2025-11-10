@@ -75,7 +75,6 @@ jobs:
           fi
 
       - name: Verify all tests passed
-        shell: bash
         run: |
           # Check if test report exists
           if ! ls tests/results/test_report_*.txt 1> /dev/null 2>&1; then
@@ -83,27 +82,25 @@ jobs:
             exit 1
           fi
 
-          # Get the test report and strip ANSI color codes (both literal \033 and actual ESC bytes)
-          REPORT=$(cat tests/results/test_report_*.txt | perl -pe 's/\\033\[[0-9;]*m//g; s/\x1b\[[0-9;]*m//g')
+          # Extract final test results from report
+          # Strip ANSI color codes from entire report first, then grep
+          ESC=$(printf '\033')
+          CLEAN_REPORT=$(sed "s/${ESC}\[[0-9;]*m//g" tests/results/test_report_*.txt)
+          RESULT=$(echo "$CLEAN_REPORT" | grep -E "^(Passed|Failed):" | tail -2)
 
-          # Extract Failed and Passed counts - look for the final summary counts
-          FAILED_COUNT=$(echo "$REPORT" | grep -o "^Failed: [0-9]*" | tail -1 | awk '{print $2}')
-          PASSED_COUNT=$(echo "$REPORT" | grep -o "^Passed: [0-9]*" | tail -1 | awk '{print $2}')
+          # Extract numeric values
+          PASSED=$(echo "$RESULT" | grep "^Passed:" | tail -1 | awk -F: '{print $2}' | xargs)
+          FAILED=$(echo "$RESULT" | grep "^Failed:" | tail -1 | awk -F: '{print $2}' | xargs)
 
           echo "Test Results:"
-          echo "  Passed: $PASSED_COUNT"
-          echo "  Failed: $FAILED_COUNT"
+          echo "  Passed: $PASSED"
+          echo "  Failed: $FAILED"
 
           # Check if all tests passed
-          if [ -z "$FAILED_COUNT" ] || [ "$FAILED_COUNT" = "0" ]; then
-            if [ -n "$PASSED_COUNT" ] && [ "$PASSED_COUNT" -gt 0 ]; then
-              echo "✅ SUCCESS: All $PASSED_COUNT test suites passed"
-              exit 0
-            fi
+          if [ "$FAILED" = "0" ] && [ -n "$PASSED" ] && [ "$PASSED" -gt 0 ]; then
+            echo "✅ SUCCESS: All $PASSED test suites passed"
+            exit 0
+          else
+            echo "❌ FAILED: $FAILED test suite(s) failed"
+            exit 1
           fi
-
-          echo "❌ FAILED: $FAILED_COUNT test suite(s) failed"
-          echo ""
-          echo "Failed test details:"
-          grep -i "failed\|error" tests/results/test_report_*.txt || true
-          exit 1
