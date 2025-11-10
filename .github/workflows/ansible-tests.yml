@@ -256,6 +256,8 @@ jobs:
     name: Comprehensive Test Suite (50+ Tests)
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    # Only run on schedule, manual trigger, or pull requests to main/develop
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
 
     steps:
       - name: Checkout code
