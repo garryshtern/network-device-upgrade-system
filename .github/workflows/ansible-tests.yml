@@ -151,7 +151,7 @@ jobs:
     name: Molecule Tests
     runs-on: ubuntu-latest
     # Run molecule tests only for main branch pushes, PRs to main, or manual triggers
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.base_ref == 'main') || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.base_ref == 'main') || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout code
