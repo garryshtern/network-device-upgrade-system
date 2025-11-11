@@ -924,13 +924,7 @@ class MockDeviceManager:
     def __init__(self):
         self.devices: Dict[str, MockDeviceEngine] = {}
         self.error_scenarios: List[Dict[str, Any]] = []
-    
-    def create_device(self, config: MockDeviceConfig) -> MockDeviceEngine:
-        """Create and register a mock device"""
-        device = MockDeviceEngine(config)
-        self.devices[config.device_id] = device
-        return device
-    
+
     def get_device(self, device_id: str) -> Optional[MockDeviceEngine]:
         """Get device by ID"""
         return self.devices.get(device_id)
