@@ -163,7 +163,7 @@
           ansible.builtin.assert:
             that:
               - post_upgrade_sync.sync_status == "COMPLETED"
-              - post_upgrade_sync_versions.versions_match == True
+              - post_upgrade_versions.versions_match == True
             fail_msg: "Post-upgrade synchronization failed"
             success_msg: "✓ Post-upgrade synchronization completed successfully"
 
