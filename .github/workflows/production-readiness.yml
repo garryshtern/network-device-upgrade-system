@@ -216,9 +216,10 @@ jobs:
           ansible --version
           echo "✅ Ansible environment: OK"
           
-          # Validate playbook syntax
+          # Validate playbook syntax (provide required variables for syntax check)
           ansible-playbook --syntax-check \
-            ansible-content/playbooks/main-upgrade-workflow.yml
+            ansible-content/playbooks/main-upgrade-workflow.yml \
+            --extra-vars "target_hosts=localhost target_firmware=test.bin maintenance_window=true"
           echo "✅ Main workflow syntax: OK"
           
           # Check mock inventories
