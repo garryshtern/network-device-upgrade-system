@@ -692,9 +692,10 @@ Usage for bootflash://sup-local
 
 class FortiOSBehavior(DeviceBehavior):
     """FortiOS specific behavior simulation"""
-    
+
     def _build_command_map(self) -> Dict[str, Callable]:
         return {
+            "show version": self._show_version,
             "get system status": self._get_system_status,
             "get system ha status": self._get_ha_status,
             "execute restore image*": self._restore_image,
@@ -704,6 +705,13 @@ class FortiOSBehavior(DeviceBehavior):
             "execute backup config*": self._backup_config
         }
     
+    def _show_version(self, **kwargs) -> Dict[str, Any]:
+        """Simulate 'show version' command for FortiOS compatibility"""
+        return {
+            "status": "success",
+            "output": f"FortiOS {self.device.config.firmware_version} on {self.device.config.model} ({self.device.config.device_id})"
+        }
+
     def _get_system_status(self, **kwargs) -> Dict[str, Any]:
         """Simulate FortiOS system status"""
         return {
@@ -876,12 +884,20 @@ Motherboard Serial Number       : {self.device.config.device_id}"""
 
 class OpengearBehavior(DeviceBehavior):
     """Opengear behavior simulation"""
-    
+
     def _build_command_map(self) -> Dict[str, Callable]:
         return {
+            "show version": self._show_version,
             "config -g config.system.model": self._get_model,
             "config -g config.system.version": self._get_version,
             "upgrade *": self._upgrade_firmware
+        }
+
+    def _show_version(self, **kwargs) -> Dict[str, Any]:
+        """Simulate 'show version' command for Opengear compatibility"""
+        return {
+            "status": "success",
+            "output": f"Opengear {self.device.config.firmware_version} on {self.device.config.model} ({self.device.config.device_id})"
         }
     
     def _get_model(self, **kwargs) -> Dict[str, Any]:
