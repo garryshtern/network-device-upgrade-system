@@ -500,12 +500,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: production-validation
     if: always()
-    
+
     steps:
       - name: Download all test results
         uses: actions/download-artifact@v4
         with:
           path: validation-results
+
+      - name: List downloaded artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find validation-results -type f -name "*.md" | head -20
+          echo ""
+          echo "Artifact directories:"
+          ls -la validation-results/ | head -20
 
       - name: Generate comprehensive certification report
         run: |
@@ -515,32 +523,37 @@ jobs:
           echo "Target Environment: ${{ github.event.inputs.target_environment }}" >> certification-report.md
           echo "Release Candidate: ${{ github.event.inputs.release_candidate }}" >> certification-report.md
           echo "" >> certification-report.md
-          
+
           echo "## Executive Summary" >> certification-report.md
-          
-          # Analyze results
+
+          # Analyze results from downloaded artifacts
           critical_failures=0
           total_tests=0
           passed_tests=0
-          
-          # Check each test result based on job outcomes
-          declare -A test_results
-          test_results[infrastructure]="${{ needs.production-validation.result }}"
-          test_results[mock_framework]="${{ needs.production-validation.result }}"
-          
+
           for test_type in infrastructure mock_framework error_simulation ha_testing disaster_recovery security_compliance performance enterprise_scale; do
             total_tests=$((total_tests + 1))
-            if [ "${{ needs.production-validation.result }}" = "success" ]; then
-              echo "✅ $(echo $test_type | tr '_' ' ' | sed 's/\b\w/\U&/g'): PASSED" >> certification-report.md
-              passed_tests=$((passed_tests + 1))
-            elif [ "${{ needs.production-validation.result }}" = "skipped" ]; then
-              echo "⏭️  $(echo $test_type | tr '_' ' ' | sed 's/\b\w/\U&/g'): SKIPPED" >> certification-report.md
+
+            # Look for artifact file for this test type
+            artifact_file=$(find validation-results -name "*$test_type*" -type f | head -1)
+
+            if [ -f "$artifact_file" ]; then
+              # Check artifact file content for status
+              if grep -q "Status: success" "$artifact_file"; then
+                echo "✅ $(echo $test_type | tr '_' ' ' | sed 's/\b\w/\U&/g'): PASSED" >> certification-report.md
+                passed_tests=$((passed_tests + 1))
+              elif grep -q "Status: skipped" "$artifact_file"; then
+                echo "⏭️  $(echo $test_type | tr '_' ' ' | sed 's/\b\w/\U&/g'): SKIPPED" >> certification-report.md
+              else
+                echo "❌ $(echo $test_type | tr '_' ' ' | sed 's/\b\w/\U&/g'): FAILED" >> certification-report.md
+                critical_failures=$((critical_failures + 1))
+              fi
             else
-              echo "❌ $(echo $test_type | tr '_' ' ' | sed 's/\b\w/\U&/g'): FAILED" >> certification-report.md
-              critical_failures=$((critical_failures + 1))
+              # No artifact found - this might indicate the job was skipped
+              echo "⏭️  $(echo $test_type | tr '_' ' ' | sed 's/\b\w/\U&/g'): SKIPPED (no artifact)" >> certification-report.md
             fi
           done
-          
+
           success_rate=$((passed_tests * 100 / total_tests))
           
           echo "" >> certification-report.md
