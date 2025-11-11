@@ -59,7 +59,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade uv
-          pip install --upgrade ansible paramiko psutil sqlite3
+          pip install --upgrade ansible paramiko psutil
           ansible-galaxy collection install \
             -r ansible-content/collections/requirements.yml \
             --force
