@@ -510,6 +510,7 @@ class CiscoNXOSBehavior(DeviceBehavior):
     def _build_command_map(self) -> Dict[str, Callable]:
         return {
             "show version": self._show_version,
+            "show running-config": self._show_running_config,
             "show install all impact*": self._show_install_impact,
             "show install all status": self._show_install_status,
             "install all*": self._install_command,
@@ -546,6 +547,37 @@ Hardware
   usb1:               0 kB (No media)
 
 Kernel uptime is 15 day(s), 8 hour(s), 23 minute(s), 42 second(s)"""
+        }
+
+    def _show_running_config(self, **kwargs) -> Dict[str, Any]:
+        """Simulate 'show running-config' command"""
+        return {
+            "status": "success",
+            "output": f"""! NX-OS running configuration
+! Device: {self.device.config.device_id}
+! Model: {self.device.config.model}
+! System uptime: 15d8h23m42s
+
+hostname {self.device.config.device_id}
+ip domain-name example.com
+no ip domain-lookup
+
+snmp-server contact admin@example.com
+snmp-server location DataCenter
+
+interface Ethernet1/1
+  description uplink-to-core
+  no shutdown
+
+interface Ethernet2/1
+  description management
+  no shutdown
+
+line con 0
+line vty 0 4
+  login
+
+end"""
         }
     
     def _show_install_impact(self, command: str = "", **kwargs) -> Dict[str, Any]:
@@ -696,6 +728,7 @@ class FortiOSBehavior(DeviceBehavior):
     def _build_command_map(self) -> Dict[str, Callable]:
         return {
             "show version": self._show_version,
+            "show running-config": self._show_running_config,
             "get system status": self._get_system_status,
             "get system ha status": self._get_ha_status,
             "execute restore image*": self._restore_image,
@@ -710,6 +743,39 @@ class FortiOSBehavior(DeviceBehavior):
         return {
             "status": "success",
             "output": f"FortiOS {self.device.config.firmware_version} on {self.device.config.model} ({self.device.config.device_id})"
+        }
+
+    def _show_running_config(self, **kwargs) -> Dict[str, Any]:
+        """Simulate 'show running-config' command for FortiOS"""
+        return {
+            "status": "success",
+            "output": f"""config system global
+    set hostname {self.device.config.device_id}
+    set timezone "UTC"
+    set admin-port 443
+end
+
+config system interface
+    edit "port1"
+        set vdom "root"
+        set type physical
+        set alias "uplink"
+    next
+    edit "port2"
+        set vdom "root"
+        set type physical
+        set alias "management"
+    next
+end
+
+config firewall policy
+    edit 1
+        set name "Default Allow"
+        set srcintf "port1"
+        set dstintf "port2"
+        set action accept
+    next
+end"""
         }
 
     def _get_system_status(self, **kwargs) -> Dict[str, Any]:
@@ -851,14 +917,15 @@ PID    %CPU  TIME+     COMMAND
 # Additional behavior classes for other platforms...
 class CiscoIOSXEBehavior(DeviceBehavior):
     """Cisco IOS-XE behavior simulation - simplified for brevity"""
-    
+
     def _build_command_map(self) -> Dict[str, Callable]:
         return {
             "show version": self._show_version,
+            "show running-config": self._show_running_config,
             "show install summary": self._show_install_summary,
             "request platform software package*": self._install_package
         }
-    
+
     def _show_version(self, **kwargs) -> Dict[str, Any]:
         return {
             "status": "success",
@@ -869,6 +936,42 @@ System image file is "bootflash:packages.conf"
 Base Ethernet MAC Address       : 00:11:22:33:44:55
 Motherboard Assembly Number     : 123456-01
 Motherboard Serial Number       : {self.device.config.device_id}"""
+        }
+
+    def _show_running_config(self, **kwargs) -> Dict[str, Any]:
+        """Simulate 'show running-config' command for IOS-XE"""
+        return {
+            "status": "success",
+            "output": f"""! Cisco IOS XE running configuration
+! Device: {self.device.config.device_id}
+! Model: {self.device.config.model}
+!
+
+hostname {self.device.config.device_id}
+!
+ip domain-name example.com
+!
+snmp-server community public RO
+snmp-server community private RW
+snmp-server location DataCenter
+snmp-server contact admin@example.com
+!
+interface GigabitEthernet0/0/0
+ description uplink-to-core
+ no shutdown
+!
+interface GigabitEthernet0/0/1
+ description management
+ no shutdown
+!
+ip route 0.0.0.0 0.0.0.0 10.0.0.1
+!
+line con 0
+line aux 0
+line vty 0 4
+ login local
+!
+end"""
         }
     
     def handle_upgrade_phase(self, phase: UpgradePhase):
@@ -888,6 +991,7 @@ class OpengearBehavior(DeviceBehavior):
     def _build_command_map(self) -> Dict[str, Callable]:
         return {
             "show version": self._show_version,
+            "show running-config": self._show_running_config,
             "config -g config.system.model": self._get_model,
             "config -g config.system.version": self._get_version,
             "upgrade *": self._upgrade_firmware
@@ -898,6 +1002,46 @@ class OpengearBehavior(DeviceBehavior):
         return {
             "status": "success",
             "output": f"Opengear {self.device.config.firmware_version} on {self.device.config.model} ({self.device.config.device_id})"
+        }
+
+    def _show_running_config(self, **kwargs) -> Dict[str, Any]:
+        """Simulate 'show running-config' command for Opengear"""
+        return {
+            "status": "success",
+            "output": f"""# Opengear Console Server running configuration
+# Device: {self.device.config.device_id}
+# Model: {self.device.config.model}
+# Firmware Version: {self.device.config.firmware_version}
+
+config system
+  set hostname {self.device.config.device_id}
+  set domainname example.com
+  set timezone UTC
+end
+
+config port
+  edit 1
+    set description "Console Port 1"
+    set enabled yes
+  next
+  edit 2
+    set description "Console Port 2"
+    set enabled yes
+  next
+end
+
+config management
+  set http enabled
+  set https enabled
+  set ssh enabled
+end
+
+config dns
+  set primary 8.8.8.8
+  set secondary 8.8.4.4
+end
+
+end"""
         }
     
     def _get_model(self, **kwargs) -> Dict[str, Any]:
